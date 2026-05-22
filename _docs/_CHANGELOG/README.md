@@ -25,6 +25,16 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 903 | 2026-05-22 | TASK-281 product table widget closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 902 | 2026-05-22 | TASK-281-09 product table export and currency | CMS Widgets/Admin UI/Runtime/QA |
+| 901 | 2026-05-22 | TASK-281-08 product table layout variants and sticky header | CMS Widgets/Admin UI/Runtime/QA |
+| 900 | 2026-05-22 | TASK-281-07 product table public controls | CMS Widgets/Admin UI/Runtime/QA |
+| 899 | 2026-05-22 | TASK-281-06 product table media excerpt section header | CMS Widgets/Admin UI/Runtime/QA |
+| 898 | 2026-05-21 | TASK-281-05 product table accessibility semantics | CMS Widgets/Accessibility/Runtime/QA |
+| 897 | 2026-05-21 | TASK-281-04 product table links and action column | CMS Widgets/Admin UI/Runtime/QA |
+| 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
+| 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |
+| 894 | 2026-05-21 | TASK-281-01 product table admin preview parity | CMS Widgets/Admin UI/Runtime/QA |
 | 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |
 | 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |
 | 890 | 2026-05-21 | TASK-322 session expiry resilience | CMS Admin UI/Auth/Reliability |

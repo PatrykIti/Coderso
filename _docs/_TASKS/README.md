@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 184 tasks
+- **To Do:** 174 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1813 tasks
+- **Done:** 1822 tasks
 
 ---
 
@@ -53,17 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Add title weight, bounded padding/max-width/min-height, header title/description, and dated milestone composition |
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
-| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Product Table-only follow-up family for `REPORT_PRODUCT_TABLE_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Hydrate Product Table admin canvas with commerce rows using the existing query contract without persisting preview-only data |
-| TASK-281-02 | Product Table Column Labels and Visibility Model | High | Large | Complete schema-owned label controls and decide bounded title/price visibility behavior |
-| TASK-281-03 | Product Table Status Stock and Row State Presentation | High | Large | Add status badges, stock quantity display, and bounded row-state treatment |
-| TASK-281-04 | Product Table Product Links and Action Column | High | Large | Add safe product navigation and optional action column without public admin actions |
-| TASK-281-05 | Product Table Accessibility and Runtime Semantics | High | Medium | Add Product Table captions/scopes, alert/live semantics, and section/table labels |
-| TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Add optional thumbnails, excerpts, and section header fields from runtime-safe product data |
-| TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Add bounded public query controls with explicit route/security policy |
-| TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Add compact/striped variants, density, zebra/hover, width, typography, and sticky header controls |
-| TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Add safe visible-row export, locale-aware money formatting, and read-only runtime diagnostics |
-| TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Refresh Product Table report/docs/changelog/board and final validation evidence |
 | TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
 | TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Add safer removal and explicit spotlight selection without duplicating shared editor update fixes |
@@ -238,6 +227,17 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Product Table family is fully closed with final report/docs/changelog/board sync, validation evidence, and closure-matrix coverage for every historical finding and no-action row |
+| TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the closure leaf synced the final report matrix, widget docs, board/changelog state, and added the final normalization/public-control regression coverage before the family rerun |
+| TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Done (2026-05-22): Product Table now formats money through widget-owned locale/display settings and can export the current visible rows as hardened SSR CSV without regressing read-only diagnostics |
+| TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Done (2026-05-22): Product Table now ships a compact preset plus bounded density, zebra, hover, width/alignment, typography, and sticky-header controls without regressing links, preview, or clearable surfaces |
+| TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Done (2026-05-22): Product Table now exposes SSR page-query public controls with bounded search, collection filters, sortable headers, published-safe runtime state, and paged/load-more navigation without introducing a second public refresh route |
+| TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Done (2026-05-22): Product Table now renders optional section header copy, public-safe lazy thumbnails, clamped excerpts, and registry-backed Image/Excerpt controls without regressing preview, links, row states, or accessibility |
+| TASK-281-05 | Product Table Accessibility and Runtime Semantics | High | Medium | Done (2026-05-21): Product Table now renders a hidden caption, scoped headers, local alert/status semantics, and deterministic section/table labels while keeping A3 owned by `TASK-281-03` |
+| TASK-281-04 | Product Table Product Links and Action Column | High | Large | Done (2026-05-21): Product Table now resolves safe public detail-route hrefs, can link the Product or Slug column, and optionally adds a bounded Action column with shared new-tab rel policy |
+| TASK-281-03 | Product Table Status Stock and Row State Presentation | High | Large | Done (2026-05-21): Product Table now renders fixed status badges, bounded draft/archived row tones, removes duplicated title suffixes when Status is visible, and optionally appends stock quantity through a gated control |
+| TASK-281-02 | Product Table Column Labels and Visibility Model | High | Large | Done (2026-05-21): Product Table now drives renderer and Visual editor columns from one shared registry, exposes all seven label inputs, and guards Product/Price visibility against unusable empty column pairs |
+| TASK-281-01 | Product Table Admin Preview Resolver Parity | High | Large | Done (2026-05-21): Product Table admin preview now hydrates through an internal widget preview route, keeps runtime diagnostics read-only, and ignores stale async responses without persisting preview-only rows |
 | TASK-325 | Grid Columns Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-21): Grid Columns shared truthfulness is closed with asymmetric preset state, current span totals, CSS-token color coverage, cardize gating, and an explicit no-runtime-guard decision |
 | TASK-325-06 | Grid Columns Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): report/docs/board/changelog now reflect the shipped shared Grid Columns closure and final runtime decision |
 | TASK-325-05 | Grid Columns Overflow Guard Decision | Medium | Medium | Done (2026-05-21): `gridColumnsOverflowDecision` now records an explicit `no-runtime-guard` rejection after the editor truthfulness pass landed |

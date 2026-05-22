@@ -1,14 +1,52 @@
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { previewProductTable } from "@/services/productTablePreviewClient";
+
 import {
   buildProductTableQueryInput,
+  normalizeProductTableControls,
   normalizeProductTableData,
+  normalizeProductTableExport,
+  normalizeProductTableFormat,
+  productTableAlignValues,
+  productTableColumns,
+  productTableCurrencyDisplayValues,
   productTableDefaults,
+  productTableDensityValues,
+  productTableMaxWidthValues,
+  productTableMoneyLocaleValues,
+  productTableRowTreatmentValues,
+  productTableTypographyValues,
+  resolveProductTableAuthoredPageSize,
+  resolveProductTablePresentationStyle,
+  resolveProductTableVariant,
+  type ProductTableAlign,
+  type ProductTableCurrencyDisplay,
   type ProductTableData,
+  type ProductTableDensity,
+  type ProductTableMoneyLocale,
+  type ProductTableLinkColumn,
+  type ProductTableMaxWidth,
+  type ProductTablePaginationMode,
+  type ProductTableRowTreatment,
+  type ProductTableSortingMode,
+  type ProductTableTypography,
+  type ProductTableVariantId,
 } from "../../../../widgets/core/productTable";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
+  CommerceNumberField,
   CommerceSourceFields,
   CommerceTextField,
+  CommerceTextareaField,
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
@@ -51,6 +89,627 @@ const clearStyle = (
     style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
   });
 };
+
+const updateHeader = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["header"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    header: {
+      ...current.header,
+      ...patch,
+    },
+  });
+};
+
+const updateFieldVisibility = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  key: keyof NonNullable<ProductTableData["fields"]>,
+  next: boolean
+) => {
+  const current = normalizeProductTableData(value);
+  const nextFields: NonNullable<ProductTableData["fields"]> = {
+    ...current.fields,
+    [key]: next,
+  };
+
+  if (key === "showStock" && next === false) {
+    nextFields.showStockQuantity = false;
+  }
+
+  update(value, onChange, {
+    fields: nextFields,
+  });
+};
+
+const updateFormat = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["format"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    format: {
+      ...normalizeProductTableFormat(current.format),
+      ...patch,
+    },
+  });
+};
+
+const updateExport = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["export"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    export: {
+      ...normalizeProductTableExport(current.export),
+      ...patch,
+    },
+  });
+};
+
+const updateLabel = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  key: keyof NonNullable<ProductTableData["labels"]>,
+  next: string
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    labels: {
+      ...current.labels,
+      [key]: next,
+    },
+  });
+};
+
+const updateLinks = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["links"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    links: {
+      ...current.links,
+      ...patch,
+    },
+  });
+};
+
+const updateControls = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["controls"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    controls: {
+      ...normalizeProductTableControls(current.controls),
+      ...patch,
+    },
+  });
+};
+
+const productTableLinkColumnOptions: Array<{
+  value: ProductTableLinkColumn;
+  label: string;
+}> = [
+  { value: "none", label: "No linked column" },
+  { value: "title", label: "Product column" },
+  { value: "slug", label: "Slug column" },
+];
+
+const productTableSortingModeOptions: Array<{
+  value: ProductTableSortingMode;
+  label: string;
+}> = [
+  { value: "none", label: "No sorting UI" },
+  { value: "indicator", label: "Indicator only" },
+  { value: "interactive", label: "Interactive headers" },
+];
+
+const productTablePaginationModeOptions: Array<{
+  value: ProductTablePaginationMode;
+  label: string;
+}> = [
+  { value: "none", label: "No pagination" },
+  { value: "paged", label: "Previous and next" },
+  { value: "load-more", label: "Load more link" },
+];
+
+const productTableVariantOptions: Array<{
+  value: ProductTableVariantId;
+  label: string;
+}> = [
+  { value: "default", label: "Default" },
+  { value: "compact", label: "Compact" },
+];
+
+const productTableDensityOptions: Array<{
+  value: ProductTableDensity;
+  label: string;
+}> = productTableDensityValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const productTableRowTreatmentOptions: Array<{
+  value: ProductTableRowTreatment;
+  label: string;
+}> = productTableRowTreatmentValues.map((value) => ({
+  value,
+  label: value === "plain" ? "Plain rows" : "Striped rows",
+}));
+
+const productTableMaxWidthOptions: Array<{
+  value: ProductTableMaxWidth;
+  label: string;
+}> = productTableMaxWidthValues.map((value) => ({
+  value,
+  label: value === "full" ? "Full width" : value === "content" ? "Content width" : "Wide",
+}));
+
+const productTableAlignOptions: Array<{
+  value: ProductTableAlign;
+  label: string;
+}> = productTableAlignValues.map((value) => ({
+  value,
+  label: value === "left" ? "Left aligned" : "Centered",
+}));
+
+const productTableTypographyOptions: Array<{
+  value: ProductTableTypography;
+  label: string;
+}> = productTableTypographyValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const productTableMoneyLocaleOptions: Array<{
+  value: ProductTableMoneyLocale;
+  label: string;
+}> = productTableMoneyLocaleValues.map((value) => ({
+  value,
+  label:
+    value === "en-US"
+      ? "English (US)"
+      : value === "pl-PL"
+        ? "Polish (PL)"
+        : value === "de-DE"
+          ? "German (DE)"
+          : "French (FR)",
+}));
+
+const productTableCurrencyDisplayOptions: Array<{
+  value: ProductTableCurrencyDisplay;
+  label: string;
+}> = productTableCurrencyDisplayValues.map((value) => ({
+  value,
+  label: value === "code" ? "Currency code" : value === "name" ? "Currency name" : "Symbol",
+}));
+
+const resolvePreviewErrorMessage = (error: unknown) => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return "Resolved Product Table preview could not be loaded.";
+};
+
+const resolvePreviewResolvedData = (
+  normalized: ProductTableData,
+  previewState: WidgetPreviewState | null | undefined
+) => {
+  const previewResolved = previewState?.dataPatch?.resolved;
+  if (previewResolved && typeof previewResolved === "object") {
+    return previewResolved as NonNullable<ProductTableData["resolved"]>;
+  }
+  return normalized.resolved ?? { items: [], total: 0, resolvedAt: "" };
+};
+
+const buildProductTablePreviewKey = (value: ProductTableData) => {
+  const normalized = normalizeProductTableData(value);
+  return JSON.stringify({
+    query: buildProductTableQueryInput(normalized),
+    controls: normalizeProductTableControls(normalized.controls),
+  });
+};
+
+const formatResolvedTimestamp = (value: string | undefined) => {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  if (!normalized) return "No resolved preview snapshot is available yet.";
+  const timestamp = Date.parse(normalized);
+  if (Number.isNaN(timestamp)) return normalized;
+  return `Resolved at ${new Date(timestamp).toLocaleString("en-US")}`;
+};
+
+function ProductTableSelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="space-y-1 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function useProductTablePreview({
+  active,
+  value,
+  previewState,
+  setPreviewState,
+  blockId,
+}: {
+  active: boolean;
+  value: ProductTableData;
+  previewState: WidgetPreviewState | null | undefined;
+  setPreviewState?: (state: WidgetPreviewState | null) => void;
+  blockId?: string;
+}) {
+  const [refreshToken, setRefreshToken] = useState(0);
+  const canPreview = typeof setPreviewState === "function";
+  const previewKey = `${blockId ?? "product-table"}:${buildProductTablePreviewKey(value)}`;
+  const lastResolvedPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
+  const previewDataPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
+  const previewInputRef = useRef<ProductTableData>({
+    source: normalizeProductTableData(value).source,
+    controls: normalizeProductTableControls(normalizeProductTableData(value).controls),
+  });
+  const activeRequestKeyRef = useRef<string | undefined>(previewState?.requestKey);
+
+  const setPreviewStateEvent = useEffectEvent((state: WidgetPreviewState | null) => {
+    setPreviewState?.(state);
+  });
+
+  useEffect(() => {
+    const normalized = normalizeProductTableData(value);
+    previewInputRef.current = {
+      source: normalized.source,
+      controls: normalizeProductTableControls(normalized.controls),
+    };
+  }, [value]);
+
+  useEffect(() => {
+    if (previewState?.dataPatch) {
+      lastResolvedPatchRef.current = previewState.dataPatch;
+    }
+    previewDataPatchRef.current = previewState?.dataPatch;
+    activeRequestKeyRef.current = previewState?.requestKey;
+  }, [previewState?.dataPatch, previewState?.requestKey]);
+
+  useEffect(() => {
+    if (!active || !canPreview) return;
+    if (
+      refreshToken === 0 &&
+      activeRequestKeyRef.current === previewKey &&
+      previewDataPatchRef.current
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const previousPatch = lastResolvedPatchRef.current;
+    activeRequestKeyRef.current = previewKey;
+    setPreviewStateEvent({
+      status: "loading",
+      requestKey: previewKey,
+      ...(previousPatch ? { dataPatch: previousPatch } : {}),
+    });
+
+    previewProductTable(previewInputRef.current, { signal: controller.signal })
+      .then((resolved) => {
+        if (controller.signal.aborted || activeRequestKeyRef.current !== previewKey) return;
+        const dataPatch = {
+          resolved,
+        } satisfies Record<string, unknown>;
+        lastResolvedPatchRef.current = dataPatch;
+        previewDataPatchRef.current = dataPatch;
+        setPreviewStateEvent({
+          status: "ready",
+          requestKey: previewKey,
+          dataPatch,
+        });
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || activeRequestKeyRef.current !== previewKey) return;
+        setPreviewStateEvent({
+          status: "error",
+          requestKey: previewKey,
+          message: resolvePreviewErrorMessage(error),
+          ...(previousPatch ? { dataPatch: previousPatch } : {}),
+        });
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [active, canPreview, previewKey, refreshToken]);
+
+  return {
+    refresh: () => setRefreshToken((current) => current + 1),
+    isLoading: previewState?.status === "loading",
+  };
+}
+
+function PreviewStatusCard({
+  value,
+  context,
+  onRefresh,
+  disabled,
+}: {
+  value: ProductTableData;
+  context: WidgetEditorProps<ProductTableData>["context"];
+  onRefresh?: () => void;
+  disabled?: boolean;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
+  const authoredPageSize = resolveProductTableAuthoredPageSize(normalized);
+  const guidanceTone =
+    context?.previewState?.status === "error"
+      ? "border-amber-300 bg-amber-50 text-amber-900"
+      : context?.previewState?.status === "loading"
+        ? "border-sky-300 bg-sky-50 text-sky-900"
+        : "border-border/70 bg-background text-muted-foreground";
+
+  return (
+    <div className={`space-y-2 rounded-md border p-3 text-xs ${guidanceTone}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-1">
+          <p>
+            Resolved items: {resolved.items?.length ?? 0} · Total: {resolved.total ?? 0}
+          </p>
+          <p>
+            Query limit: {authoredPageSize} · Sort: {normalized.source?.sortField ?? "updatedAt"}{" "}
+            {normalized.source?.sortDir ?? "desc"}
+          </p>
+          <p>
+            Public sort UI: {normalized.controls?.sorting ?? "none"} · Pagination:{" "}
+            {normalized.controls?.pagination ?? "none"}
+          </p>
+          <p>
+            {context?.previewState?.status === "loading"
+              ? "Preview refresh is running against the backend-owned commerce resolver."
+              : context?.previewState?.status === "error"
+                ? (context.previewState.message ??
+                  "Preview refresh failed. Showing the last safe preview data when available.")
+                : formatResolvedTimestamp(resolved.resolvedAt)}
+          </p>
+          {resolved.error ? <p>Runtime warning: {resolved.error}</p> : null}
+        </div>
+        {typeof onRefresh === "function" ? (
+          <button
+            type="button"
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onRefresh}
+            disabled={disabled}
+          >
+            Refresh preview
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PublicControlsFields({
+  value,
+  onChange,
+}: {
+  value: ProductTableData;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const controls = normalizeProductTableControls(normalized.controls);
+  const paginationMode = controls.pagination;
+
+  return (
+    <CommerceEditorSection
+      title="Public controls"
+      description="Expose bounded Product Table search, filters, sortable headers, and SSR pagination on published pages."
+    >
+      <CommerceToggleField
+        label="Show search input"
+        description="Front-end search is intended for authored sources without a fixed Source search term."
+        checked={controls.showSearchInput}
+        onChange={(next) => updateControls(normalized, onChange, { showSearchInput: next })}
+      />
+      <CommerceToggleField
+        label="Show collection filter"
+        description="Uses the authored Source collection scope. Add at least two Source collections above to surface visitor checkboxes."
+        checked={controls.showCollectionFilter}
+        onChange={(next) => updateControls(normalized, onChange, { showCollectionFilter: next })}
+      />
+      <CommerceToggleField
+        label="Show status filter"
+        description="Preview can show authored status options, but published pages stay public-safe and usually collapse to published only."
+        checked={controls.showStatusFilter}
+        onChange={(next) => updateControls(normalized, onChange, { showStatusFilter: next })}
+      />
+      <ProductTableSelectField
+        label="Sorting UI"
+        value={controls.sorting}
+        options={productTableSortingModeOptions}
+        onChange={(next) =>
+          updateControls(normalized, onChange, { sorting: next as ProductTableSortingMode })
+        }
+      />
+      <ProductTableSelectField
+        label="Pagination mode"
+        value={paginationMode}
+        options={productTablePaginationModeOptions}
+        onChange={(next) =>
+          updateControls(normalized, onChange, { pagination: next as ProductTablePaginationMode })
+        }
+      />
+      {paginationMode !== "none" ? (
+        <CommerceNumberField
+          label="Page size"
+          value={controls.pageSize}
+          min={1}
+          max={24}
+          onChange={(next) => updateControls(normalized, onChange, { pageSize: next })}
+        />
+      ) : null}
+    </CommerceEditorSection>
+  );
+}
+
+function ExportAndCurrencyFields({
+  value,
+  onChange,
+}: {
+  value: ProductTableData;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const format = normalizeProductTableFormat(normalized.format);
+  const exportSettings = normalizeProductTableExport(normalized.export);
+
+  return (
+    <CommerceEditorSection
+      title="Export and currency"
+      description="Product Table owns explicit money formatting and optional SSR CSV export for the currently visible rows. Runtime diagnostics remain read-only in Advanced mode."
+    >
+      <ProductTableSelectField
+        label="Money locale"
+        value={format.moneyLocale}
+        options={productTableMoneyLocaleOptions}
+        onChange={(next) =>
+          updateFormat(normalized, onChange, { moneyLocale: next as ProductTableMoneyLocale })
+        }
+      />
+      <ProductTableSelectField
+        label="Currency display"
+        value={format.currencyDisplay}
+        options={productTableCurrencyDisplayOptions}
+        onChange={(next) =>
+          updateFormat(normalized, onChange, {
+            currencyDisplay: next as ProductTableCurrencyDisplay,
+          })
+        }
+      />
+      <CommerceToggleField
+        label="Show CSV export"
+        description="Adds a public download button for the currently visible rows and columns only."
+        checked={exportSettings.enabled}
+        onChange={(next) => updateExport(normalized, onChange, { enabled: next })}
+      />
+      {exportSettings.enabled ? (
+        <CommerceTextField
+          label="Export label"
+          value={exportSettings.label}
+          onChange={(next) => updateExport(normalized, onChange, { label: next })}
+        />
+      ) : null}
+    </CommerceEditorSection>
+  );
+}
+
+function LayoutStyleFields({
+  value,
+  variant,
+  onVariantChange,
+  onChange,
+}: {
+  value: ProductTableData;
+  variant: string;
+  onVariantChange?: (next: string) => void;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const resolvedVariant = resolveProductTableVariant(variant);
+  const style = resolveProductTablePresentationStyle(resolvedVariant, normalized.style);
+
+  return (
+    <CommerceEditorSection
+      title="Layout and style"
+      description="Variant is a preset axis. Density, striping, hover, sticky header, width, alignment, and typography stay bounded Product Table controls."
+    >
+      <ProductTableSelectField
+        label="Table variant"
+        value={resolvedVariant}
+        options={productTableVariantOptions}
+        onChange={(next) => onVariantChange?.(next as ProductTableVariantId)}
+      />
+      <ProductTableSelectField
+        label="Row density"
+        value={style.density}
+        options={productTableDensityOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { density: next as ProductTableDensity })
+        }
+      />
+      <ProductTableSelectField
+        label="Row treatment"
+        value={style.rowTreatment}
+        options={productTableRowTreatmentOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { rowTreatment: next as ProductTableRowTreatment })
+        }
+      />
+      <CommerceToggleField
+        label="Show row hover"
+        description="Adds a gentle table-wide hover treatment. Linked rows still keep their stronger interaction cue."
+        checked={style.hoverRows}
+        onChange={(next) => updateStyle(normalized, onChange, { hoverRows: next })}
+      />
+      <CommerceToggleField
+        label="Use sticky header"
+        description="Keeps Product Table headers visible while long tables scroll vertically inside the page."
+        checked={style.stickyHeader}
+        onChange={(next) => updateStyle(normalized, onChange, { stickyHeader: next })}
+      />
+      <ProductTableSelectField
+        label="Table max width"
+        value={style.maxWidth}
+        options={productTableMaxWidthOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { maxWidth: next as ProductTableMaxWidth })
+        }
+      />
+      <ProductTableSelectField
+        label="Table alignment"
+        value={style.align}
+        options={productTableAlignOptions}
+        onChange={(next) => updateStyle(normalized, onChange, { align: next as ProductTableAlign })}
+      />
+      <ProductTableSelectField
+        label="Typography"
+        value={style.typography}
+        options={productTableTypographyOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { typography: next as ProductTableTypography })
+        }
+      />
+    </CommerceEditorSection>
+  );
+}
 
 function SurfaceFields({
   value,
@@ -102,12 +761,23 @@ function SurfaceFields({
   );
 }
 
-export function ProductTableWizardEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
+export function ProductTableWizardEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
   const source = normalizeSourceForEditor(normalized.source, {
     limit: productTableDefaults.source?.limit ?? 12,
     sortField: "updatedAt",
     sortDir: "desc",
+  });
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "wizard",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
   });
 
   return (
@@ -121,116 +791,154 @@ export function ProductTableWizardEditor({ value, onChange }: WidgetEditorProps<
           onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
         />
       </CommerceEditorSection>
+      <PreviewStatusCard
+        value={normalized}
+        context={context}
+        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+        disabled={preview.isLoading}
+      />
       <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
 
-export function ProductTableVisualEditor({ value, onChange }: WidgetEditorProps<ProductTableData>) {
+export function ProductTableVisualEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+  context,
+}: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "visual",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
+  });
 
   return (
     <div className="space-y-4">
-      <CommerceEditorSection title="Columns" description="Choose columns visible in the table.">
-        <CommerceToggleField
-          label="Show slug"
-          checked={normalized.fields?.showSlug !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showSlug: next,
-              },
-            })
-          }
+      <PreviewStatusCard
+        value={normalized}
+        context={context}
+        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+        disabled={preview.isLoading}
+      />
+
+      <LayoutStyleFields
+        value={normalized}
+        variant={variant}
+        onVariantChange={onVariantChange}
+        onChange={onChange}
+      />
+
+      <CommerceEditorSection
+        title="Section header"
+        description="Optional context above the table. Section title becomes the preferred accessible table label when present."
+      >
+        <CommerceTextField
+          label="Section eyebrow"
+          value={normalized.header?.eyebrow}
+          onChange={(next) => updateHeader(normalized, onChange, { eyebrow: next })}
         />
-        <CommerceToggleField
-          label="Show status"
-          checked={normalized.fields?.showStatus !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showStatus: next,
-              },
-            })
-          }
+        <CommerceTextField
+          label="Section title"
+          value={normalized.header?.title}
+          onChange={(next) => updateHeader(normalized, onChange, { title: next })}
         />
-        <CommerceToggleField
-          label="Show stock"
-          checked={normalized.fields?.showStock !== false}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showStock: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show compare-at price"
-          checked={normalized.fields?.showCompareAt === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showCompareAt: next,
-              },
-            })
-          }
-        />
-        <CommerceToggleField
-          label="Show collection count"
-          checked={normalized.fields?.showCollectionCount === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showCollectionCount: next,
-              },
-            })
-          }
+        <CommerceTextareaField
+          label="Section description"
+          rows={3}
+          value={normalized.header?.description}
+          onChange={(next) => updateHeader(normalized, onChange, { description: next })}
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Column labels" description="Customize table header labels.">
-        <CommerceTextField
-          label="Product"
-          value={normalized.labels?.title}
+      <CommerceEditorSection
+        title="Columns"
+        description="Choose columns visible in the table. Product and Price stay visible when their paired context column is also hidden."
+      >
+        {productTableColumns.map((column) => (
+          <CommerceToggleField
+            key={column.key}
+            label={column.toggleLabel}
+            description={column.guardDescription}
+            checked={normalized.fields?.[column.visibilityKey] ?? false}
+            onChange={(next) =>
+              updateFieldVisibility(normalized, onChange, column.visibilityKey, next)
+            }
+          />
+        ))}
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        title="Column labels"
+        description="Customize every Product Table header label from the shared column registry."
+      >
+        {productTableColumns.map((column) => (
+          <CommerceTextField
+            key={column.key}
+            label={column.labelControlLabel}
+            value={normalized.labels?.[column.labelKey]}
+            onChange={(next) => updateLabel(normalized, onChange, column.labelKey, next)}
+          />
+        ))}
+      </CommerceEditorSection>
+
+      <PublicControlsFields value={normalized} onChange={onChange} />
+
+      <ExportAndCurrencyFields value={normalized} onChange={onChange} />
+
+      {normalized.fields?.showStock ? (
+        <CommerceEditorSection
+          title="Stock presentation"
+          description="Append normalized quantity to the stock label when the runtime card includes it."
+        >
+          <CommerceToggleField
+            label="Show stock quantity"
+            checked={normalized.fields?.showStockQuantity === true}
+            onChange={(next) =>
+              updateFieldVisibility(normalized, onChange, "showStockQuantity", next)
+            }
+          />
+        </CommerceEditorSection>
+      ) : null}
+
+      <CommerceEditorSection
+        title="Links and actions"
+        description="Product links and actions use the enabled products detail route from Site Settings. When no route is available, runtime keeps the table text-only."
+      >
+        <ProductTableSelectField
+          label="Linked column"
+          value={normalized.links?.linkedColumn ?? "none"}
+          options={productTableLinkColumnOptions}
           onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                title: next,
-              },
+            updateLinks(normalized, onChange, {
+              linkedColumn: next as ProductTableLinkColumn,
             })
           }
         />
-        <CommerceTextField
-          label="Price"
-          value={normalized.labels?.price}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                price: next,
-              },
-            })
-          }
+        <CommerceToggleField
+          label="Show action column"
+          checked={normalized.links?.showAction === true}
+          onChange={(next) => updateLinks(normalized, onChange, { showAction: next })}
         />
-        <CommerceTextField
-          label="Status"
-          value={normalized.labels?.status}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              labels: {
-                ...normalized.labels,
-                status: next,
-              },
-            })
-          }
-        />
+        {normalized.links?.showAction ? (
+          <CommerceTextField
+            label="Action label"
+            value={normalized.links?.actionLabel}
+            onChange={(next) => updateLinks(normalized, onChange, { actionLabel: next })}
+          />
+        ) : null}
+        {normalized.links?.linkedColumn !== "none" || normalized.links?.showAction ? (
+          <CommerceToggleField
+            label="Open product links in new tab"
+            checked={normalized.links?.openInNewTab === true}
+            onChange={(next) => updateLinks(normalized, onChange, { openInNewTab: next })}
+          />
+        ) : null}
       </CommerceEditorSection>
 
       <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
@@ -266,32 +974,29 @@ export function ProductTableVisualEditor({ value, onChange }: WidgetEditorProps<
 
 export function ProductTableAdvancedEditor({
   value,
-  onChange,
+  context,
 }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
   const previewQuery = buildProductTableQueryInput(normalized);
+  const preview = useProductTablePreview({
+    active: context?.editorMode === "advanced",
+    value: normalized,
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
+  });
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
         title="Runtime payload"
-        description="Resolved items are injected by runtime resolver."
+        description="Read-only admin preview from the commerce runtime resolver."
       >
-        <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Resolved items: {normalized.resolved?.items?.length ?? 0} · Total:{" "}
-          {normalized.resolved?.total ?? 0}
-        </div>
-        <CommerceTextField
-          label="Runtime error flag"
-          value={normalized.resolved?.error ?? ""}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              resolved: {
-                ...normalized.resolved,
-                error: next,
-              },
-            })
-          }
+        <PreviewStatusCard
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
         />
       </CommerceEditorSection>
 

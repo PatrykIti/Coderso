@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-281, TASK-256-01, TASK-256-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -40,12 +40,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define a single Product Table column metadata list for existing columns.
-- [ ] Add editor controls for all schema-owned labels:
+- [x] Define a single Product Table column metadata list for existing columns.
+- [x] Add editor controls for all schema-owned labels:
   `title`, `slug`, `price`, `compareAt`, `status`, `stock`, and `collections`.
-- [ ] Decide and implement the guarded title/price visibility policy.
-- [ ] Keep legacy payloads defaulting to current visible title/price behavior.
-- [ ] Add renderer/editor/validator coverage for label and visibility changes.
+- [x] Decide and implement the guarded title/price visibility policy.
+- [x] Keep legacy payloads defaulting to current visible title/price behavior.
+- [x] Add renderer/editor/validator coverage for label and visibility changes.
 
 ## Files to Change
 
@@ -124,10 +124,11 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with the final column label and
-  visibility model.
-- Update `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md` BUG-01/BUG-04
-  evidence after implementation.
+- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with the final shared column label
+  and guarded visibility model.
+- Update `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md` with `BUG-01`,
+  `BUG-04`, and `BF-13` evidence after implementation.
+- Keep `_docs/_TASKS/README.md` synchronized with the leaf status transition.
 
 ## Changelog Policy
 
@@ -143,3 +144,27 @@ No API routes are added.
   explicitly documented as non-hideable with no misleading missing controls.
 - Legacy Product Table payloads render exactly as before unless users opt into
   new visibility settings.
+
+
+## Validation Evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`
+
+## Closure Notes
+
+- Product Table now owns a shared `productTableColumns` registry that drives
+  renderer headers/cells and Visual editor controls from the same normalized
+  label and visibility contract.
+- `showTitle` and `showPrice` are now schema-owned toggles with guardrails:
+  Product restores when Slug is also hidden, and Price restores when Compare at
+  is also hidden.
+- Visual mode now exposes label inputs for `title`, `slug`, `price`,
+  `compareAt`, `status`, `stock`, and `collections`, closing the editor drift
+  behind the Collections count header context.
