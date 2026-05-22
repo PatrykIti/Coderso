@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Slots + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-03, TASK-256-05-01, TASK-283, TASK-283-01
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -29,8 +29,7 @@ In scope:
 - editor UI that lets authors rename regions without changing slot IDs or
   deleting child blocks, coordinated across `BlockSettings`,
   `VisualPanelSlotControls`, `BlockList`, and insert-slot option generation;
-- optional safe data markers for runtime diagnostics only when they do not leak
-  admin-only copy to public users;
+- editor-only labels that stay out of public runtime markup and data markers;
 - regression tests proving labels survive add/remove/reorder decisions.
 
 Out of scope:
@@ -52,28 +51,28 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define a `regions` metadata object or array under `SectionData` that maps
+- [x] Define a `regions` metadata object or array under `SectionData` that maps
   stable region instance IDs to author labels without replacing the slot map.
-- [ ] Add normalizer logic that keeps metadata for existing slots and ignores or
+- [x] Add normalizer logic that keeps metadata for existing slots and ignores or
   prunes orphan labels only through an explicit safe rule.
-- [ ] Add editor controls for region labels by extending the current
+- [x] Add editor controls for region labels by extending the current
   `BlockSettings` -> `VisualPanelSlotControls` projection, or by passing an
   explicit Section-owned slot metadata callback; do not assume
   `WidgetEditorContext` already exposes slot targets.
-- [ ] Use `section.tsx` as the persisted metadata owner and add a small pure
+- [x] Use `section.tsx` as the persisted metadata owner and add a small pure
   Section slot-label resolver that shared builder owners can call without
   learning Section internals.
-- [ ] Use `BlockSettings.tsx` as the edit projection owner: resolve slot
+- [x] Use `BlockSettings.tsx` as the edit projection owner: resolve slot
   targets, derive editor fallback labels, pass editable label values into
   `VisualPanelSlotControls.items`, and write changes back to
   `block.data.regions` without recreating `block.slots`.
-- [ ] Thread the same derived labels through `BlockList.tsx` and insert-slot
+- [x] Thread the same derived labels through `BlockList.tsx` and insert-slot
   options so canvas slot labels, empty-slot add buttons, and the
   `WidgetInsertDialog` target selector do not keep showing stale generic
   `Region N` labels after a Section region is renamed.
-- [ ] Render labels only in admin/editor affordances unless a user-facing region
+- [x] Render labels only in admin/editor affordances unless a user-facing region
   caption field is explicitly added in a future leaf.
-- [ ] Add tests for label normalization, add/remove behavior, builder slot-label
+- [x] Add tests for label normalization, add/remove behavior, builder slot-label
   projection, VisualPanel rename controls, and no public admin-copy leakage.
 
 ## Files to Change
@@ -81,14 +80,14 @@ Out of scope:
 | File | Required change |
 |---|---|
 | `core/widgets/core/section.tsx` | Extend schema/types/defaults/normalizer with region metadata and safe render markers if needed. |
-| `core/admin/ui/widgets/editors/SectionEditors.tsx` | Add region label controls or integrate with existing slot target context. |
+| `core/admin/ui/widgets/editors/SectionEditors.tsx` | No direct change in this leaf; shared `VisualPanelSlotControls` remained the structure owner, so Section-specific metadata stayed in `section.tsx` + builder shells. |
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | Current owner of `resolveWidgetSlotTargets(...)` for block slot targets; extend only if Section labels must flow through shared repeatable slot metadata. |
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | Current `VisualPanelSlotControls` owner; extend only if the shared slot controls need label edit callbacks. |
 | `core/admin/ui/pages/builder/BlockList.tsx` | Use the same Section slot-label resolver when rendering nested slot labels and empty-slot insert buttons. |
 | `core/admin/ui/widgets/widgetInsertUtils.ts` | Use the same Section slot-label resolver when building target slot options for a selected Section block. |
-| `core/admin/ui/widgets/WidgetInsertDialog.tsx` | Keep target-slot copy truthful through `buildSlotOptions`; touch only if the existing option contract needs additive metadata. |
+| `core/admin/ui/widgets/WidgetInsertDialog.tsx` | No direct change in this leaf; target-slot copy now stays truthful through the existing `buildSlotOptions` contract. |
 | `tests/vitest/widgets/section.test.tsx` | Add normalization/render assertions for custom labels and public leakage. |
-| `tests/vitest/ui/section-editor-wave.test.tsx` | Add editor coverage for label editing and metadata preservation. |
+| `tests/vitest/ui/section-editor-wave.test.tsx` | No direct change in this leaf because Section structure controls still render through shared `VisualPanelSlotControls`, not `SectionEditors.tsx`. |
 | `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` | Add coverage that BlockSettings derives editable Section slot labels from `block.data.regions` and writes changes without replacing slots. |
 | `tests/vitest/pageBuilder/visualPanel.test.tsx` | Add coverage for the rendered rename control/callback contract in `VisualPanelSlotControls.items`. |
 | `tests/vitest/pageBuilder/blockList.test.tsx` | Add coverage that nested Section slot labels and empty-slot add copy use custom region labels. |

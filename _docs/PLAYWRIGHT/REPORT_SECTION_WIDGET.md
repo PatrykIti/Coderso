@@ -65,7 +65,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W1 | Zamknięte (2026-05-21, TASK-283-04): Section ma lokalne presety `Standard content`, `Framed panel`, `Edge-to-edge`, `Hero band`, i `Two-column region group`, które zachowują heading copy i region slot content | Workflow |
 | W2 | Zamknięte (2026-05-21, TASK-283-05-01): Visual ma `Surface shadow` z `Match variant` fallbackiem i tokenami `none/sm/md/lg/xl`; `contained` zachowuje legacy `shadow-sm` dopóki autor nie wybierze override | Styl |
 | W3 | Zamknięte (2026-05-21, TASK-283-05-01): W3 domknięto jako bounded CSS-only reveal (`none` / `fade` / `slide-up`) z `motion-safe` / `motion-reduce`; scroll observers i parallax nie wchodzą do kontraktu Section | Efekty |
-| W4 | Brak niestandardowych nazw regionów — wszystkie jako generyczne „Region" | UX struktury |
+| W4 | Zamknięte (2026-05-22, TASK-283-07): Section ma editor-only custom region labels keyed by stable `region:<id>` instances; Visual structure controls, canvas slot headers, i insert-target selector pokazują nazwy autora bez public runtime leakage | UX struktury |
 | W5 | Zamknięte (2026-05-21, TASK-283-03): Section ma bounded `left` / `center` / `right` alignment dla nagłówka | Typografia |
 | W6 | Zamknięte (2026-05-22, TASK-283-06): Section ma bounded `mobilePaddingBlock` / `mobilePaddingInline` / `desktopPaddingBlock` / `desktopPaddingInline` z `Match base` fallbackiem i automatycznym `md` restore do base tokenu | Responsywność |
 | W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
@@ -347,7 +347,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
 | **P1** | TASK-283-05-02 — po `TASK-326` zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX bez dublowania ownera | Średni | UX edytora / Truthfulness |
 | **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
-| **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
 ## 8. Podsumowanie sesji testowej
@@ -356,6 +355,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 - Wszystkie 3 warianty (default, contained, bleed) przełączają się poprawnie
 - Regiony: dodawanie (max 8), usuwanie (min 1), limit enforcement
+- Custom region labels są zamknięte przez `TASK-283-07`: autor może nazwać regiony bez zmiany `region:<id>` slot ids, a Visual/canvas/insert-target surfaces pokazują te nazwy tylko w adminie
 - Synchronizacja stanu między zakładkami Wizard / Visual / Advanced
 - Gradient, overlay, border, radius — renderowanie i DOM zgodne z konfiguracją
 - Surface shadow / motion / preview są zamknięte przez `TASK-283-05-01`: contained zachowuje legacy `shadow-sm`, autor może wybrać bounded `none/sm/md/lg/xl`, a motion pozostaje CSS-only (`none` / `fade` / `slide-up`)
@@ -374,7 +374,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults, zdublowane `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed`; to zostało wycięte do `TASK-326` zamiast lokalnej łaty w `TASK-283`.
 - **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
 - **Angle/opacity UX**: finalne slider/stepper controls czekają na `TASK-283-05-02` po domknięciu shared owner drift w `TASK-326`.
-- **Custom region labels**: ten ostatni widget-local Section owner pozostaje otwarty w `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 
 ### Uwagi do sesji testowej
@@ -403,6 +402,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   match-variant fallback, CSS-only reduced-motion-safe `fade` / `slide-up`
   surface motion, and a derived preview swatch, so W2, W3, and U5 are no
   longer active while U2 stays in `TASK-283-05-02` after `TASK-326`.
+- `TASK-283-07`: Section now stores editor-only `regions[]` metadata keyed by
+  stable region instance ids, so Visual rename controls, canvas slot headers,
+  and insert-target selectors can show author labels without changing public
+  runtime output.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/section.test.tsx
   tests/vitest/pageBuilder/visualPanel.test.tsx` passed on 2026-05-17.

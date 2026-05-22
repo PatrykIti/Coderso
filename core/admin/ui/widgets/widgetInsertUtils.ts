@@ -1,3 +1,4 @@
+import { applySectionRegionLabels, type SectionData } from "../../../widgets/core/section";
 import {
   getWidgetSlotKind,
   isSlotIdMatchingDefinition,
@@ -37,6 +38,7 @@ type SlotDefinition = {
 type BlockLike = {
   id?: unknown;
   type?: unknown;
+  data?: unknown;
   children?: unknown;
   slots?: unknown;
 };
@@ -81,9 +83,7 @@ export const mapWidgetBlockOptions = (
     const slotMap = getSlotMap(record);
     for (const slotBlocks of Object.values(slotMap)) {
       if (!Array.isArray(slotBlocks) || slotBlocks.length === 0) continue;
-      options.push(
-        ...mapWidgetBlockOptions(slotBlocks, resolveLabel, depth + 1)
-      );
+      options.push(...mapWidgetBlockOptions(slotBlocks, resolveLabel, depth + 1));
     }
   }
   return options;
@@ -96,8 +96,12 @@ export const buildSlotOptions = (
 ): WidgetSlotOption[] => {
   const slotMap = getSlotMap(block);
   const resolvedSlots = resolveWidgetSlotTargets(slotDefinitions, slotMap);
+  const displaySlots =
+    typeof block.type === "string" && block.type.trim() === "section"
+      ? applySectionRegionLabels(resolvedSlots, block.data as SectionData | undefined)
+      : resolvedSlots;
 
-  return resolvedSlots.map((resolvedSlot) => {
+  return displaySlots.map((resolvedSlot) => {
     const slot = slotDefinitions.find((item) =>
       isSlotIdMatchingDefinition(item, resolvedSlot.slotId)
     );
@@ -119,20 +123,13 @@ export const buildSlotOptions = (
       ? slotMap[resolvedSlot.slotId]!.length
       : 0;
     const isFixed = getWidgetSlotKind(slot) === "fixed";
-    const isFull =
-      isFixed &&
-      typeof slot.maxItems === "number" &&
-      count >= slot.maxItems;
+    const isFull = isFixed && typeof slot.maxItems === "number" && count >= slot.maxItems;
     const isAllowed =
       !slot.allowedTypes ||
       slot.allowedTypes.length === 0 ||
       (widgetType ? slot.allowedTypes.includes(widgetType) : false);
     const disabled = isFull || !isAllowed;
-    const reason = isFull
-      ? "Slot is full"
-      : !isAllowed
-        ? "Widget type not allowed"
-        : undefined;
+    const reason = isFull ? "Slot is full" : !isAllowed ? "Widget type not allowed" : undefined;
     const parsed = parseRepeatableSlotId(resolvedSlot.slotId);
     return {
       id: resolvedSlot.slotId,

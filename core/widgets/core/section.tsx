@@ -2,7 +2,7 @@ import type { CSSProperties, ComponentType, ReactNode } from "react";
 
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import { resolveWidgetSlotTargets } from "../slots";
+import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
 import type {
   DeviceTarget,
   WidgetBlock,
@@ -39,6 +39,11 @@ export type SectionLayerOrder = "media-under-overlay" | "overlay-under-media";
 export type SectionShadow = "none" | "sm" | "md" | "lg" | "xl";
 export type SectionMotion = "none" | "fade" | "slide-up";
 
+export type SectionRegionMeta = {
+  id?: string;
+  label?: string;
+};
+
 export type SectionBackgroundMedia = {
   type?: SectionBackgroundMediaType;
   source?: SectionBackgroundMediaSource;
@@ -57,6 +62,7 @@ export type SectionBackgroundMedia = {
 };
 
 export type SectionData = {
+  regions?: SectionRegionMeta[];
   heading?: {
     label?: string;
     title?: string;
@@ -142,6 +148,17 @@ export const sectionSchema = {
         element: { enum: ["section", "div"] },
         anchorId: { type: "string" },
         ariaLabel: { type: "string" },
+      },
+    },
+    regions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+        },
       },
     },
     layout: {
@@ -411,12 +428,127 @@ const sectionBackgroundHrefOptions = {
 
 const sectionImageUrlPattern = /\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/i;
 const sectionVideoUrlPattern = /\.(?:m4v|mov|mp4|ogg|webm)(?:[?#].*)?$/i;
+const sectionRegionInstanceIdPattern = /^[a-zA-Z0-9_-]+$/;
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
 const trimOptionalString = (value: string | undefined) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+
+const normalizeSectionRegionInstanceId = (value: string | undefined) => {
+  const trimmed = trimOptionalString(value);
+  if (!trimmed) return undefined;
+  const parsed = parseRepeatableSlotId(trimmed);
+  if (parsed) {
+    return parsed.definitionId === sectionRegionSlot.id ? parsed.instanceId : undefined;
+  }
+  return sectionRegionInstanceIdPattern.test(trimmed) ? trimmed : undefined;
+};
+
+const normalizeSectionRegionLabel = (value: string | undefined) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+export const normalizeSectionRegions = (
+  value: SectionRegionMeta[] | undefined
+): SectionRegionMeta[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+
+  const normalized = new Map<string, SectionRegionMeta>();
+  for (const item of value) {
+    const id = normalizeSectionRegionInstanceId(item?.id);
+    const label = normalizeSectionRegionLabel(item?.label);
+    if (!id || !label) continue;
+    normalized.set(id, { id, label });
+  }
+
+  return normalized.size > 0 ? Array.from(normalized.values()) : undefined;
+};
+
+const resolveSectionRegionInstanceId = (slotId: string, instanceId?: string) =>
+  normalizeSectionRegionInstanceId(instanceId) ?? normalizeSectionRegionInstanceId(slotId);
+
+const withSectionRegions = (
+  data: SectionData | undefined,
+  regions: SectionRegionMeta[] | undefined
+) => {
+  const nextData: SectionData = data ? { ...data } : {};
+  if (regions && regions.length > 0) {
+    nextData.regions = regions;
+    return nextData;
+  }
+  delete nextData.regions;
+  return nextData;
+};
+
+export const resolveSectionRegionLabelValue = (
+  data: SectionData | undefined,
+  slotId: string,
+  instanceId?: string
+) => {
+  const regionId = resolveSectionRegionInstanceId(slotId, instanceId);
+  if (!regionId) return "";
+  const regions = normalizeSectionRegions(data?.regions) ?? [];
+  return regions.find((region) => region.id === regionId)?.label ?? "";
+};
+
+export const applySectionRegionLabels = <
+  T extends {
+    definitionId: string;
+    slotId: string;
+    label: string;
+    instanceId?: string;
+  },
+>(
+  targets: T[],
+  data: SectionData | undefined
+): T[] => {
+  const regions = normalizeSectionRegions(data?.regions);
+  if (!regions || regions.length === 0) return targets;
+
+  const byId = new Map(regions.map((region) => [region.id!, region.label!] as const));
+  return targets.map((target) => {
+    if (target.definitionId !== sectionRegionSlot.id) return target;
+    const regionId = resolveSectionRegionInstanceId(target.slotId, target.instanceId);
+    const label = regionId ? byId.get(regionId) : undefined;
+    return label ? { ...target, label } : target;
+  });
+};
+
+export const updateSectionRegionLabelData = (
+  data: SectionData | undefined,
+  slotId: string,
+  label: string
+): SectionData => {
+  const regionId = resolveSectionRegionInstanceId(slotId);
+  if (!regionId) return data ? { ...data } : {};
+
+  const currentRegions = normalizeSectionRegions(data?.regions) ?? [];
+  const nextLabel = normalizeSectionRegionLabel(label);
+  const nextRegions = currentRegions.filter((region) => region.id !== regionId);
+  if (nextLabel) nextRegions.push({ id: regionId, label: nextLabel });
+  return withSectionRegions(data, nextRegions.length > 0 ? nextRegions : undefined);
+};
+
+export const syncSectionRegionDataWithSlotMap = (
+  data: SectionData | undefined,
+  slotMap: Record<string, unknown>
+): SectionData => {
+  const currentRegions = normalizeSectionRegions(data?.regions);
+  if (!currentRegions || currentRegions.length === 0) return data ? { ...data } : {};
+
+  const validInstanceIds = new Set(
+    resolveWidgetSlotTargets([sectionRegionSlot], slotMap)
+      .filter((target) => target.definitionId === sectionRegionSlot.id)
+      .map((target) => resolveSectionRegionInstanceId(target.slotId, target.instanceId))
+      .filter((instanceId): instanceId is string => Boolean(instanceId))
+  );
+  const nextRegions = currentRegions.filter((region) => validInstanceIds.has(region.id ?? ""));
+  return withSectionRegions(data, nextRegions.length > 0 ? nextRegions : undefined);
+};
 
 const normalizeSectionMediaHref = (value: string | undefined) =>
   normalizeWidgetSafeHref(value, sectionBackgroundHrefOptions);
@@ -723,6 +855,7 @@ export function normalizeSectionData(data: SectionData): SectionData {
   const regionFlow = resolveSectionRegionFlow(data.layout?.regionFlow ?? layoutDefaults.regionFlow);
 
   return {
+    regions: normalizeSectionRegions(data.regions),
     heading: {
       label: data.heading?.label ?? headingDefaults.label,
       title: data.heading?.title ?? headingDefaults.title,

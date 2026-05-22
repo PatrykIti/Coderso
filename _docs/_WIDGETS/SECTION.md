@@ -42,6 +42,9 @@ Notes:
 - Section owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Region count is controlled by builder-owned repeatable slot controls in the
   `Regions` Visual section rather than by a banner above the mode tabs.
+- Section also owns optional editor-only region labels keyed by the stable
+  repeatable slot instance id; the shared builder surfaces reuse them without
+  changing `region:<id>` storage or public runtime copy.
 - Shared inspector rows emit stable `data-widget-editor-section` and
   `data-widget-control` metadata for automation and accessible labels.
 - Width, min-height, region flow, and spacing are bounded by schema-owned
@@ -91,6 +94,9 @@ Notes:
 - Optional `style.motion` is bounded to CSS-only `none`, `fade`, and
   `slide-up`, always emitted through `motion-safe` / `motion-reduce` classes and
   never through observers or inline scripts.
+- Optional `regions[]` metadata can relabel builder-only slot affordances by
+  stable repeatable instance id, but runtime markup keeps generic structural
+  markers only and never emits author labels publicly.
 - Section headings default to a safe `h2` path and can opt into bounded `h1`-`h6`,
   left/center/right alignment, size tokens, and optional clearable text colors
   without widening into rich text or raw HTML.
@@ -217,6 +223,15 @@ or desktop deviation from the base padding tokens.
 - `layout.regionGap`: optional `none`, `sm`, `md`, `lg`, `xl`; if omitted, the
   renderer keeps the legacy variant spacing (`default=lg`, `contained=md`,
   `bleed=xl`)
+
+## Region Metadata
+
+- `regions[]`: optional editor-only `{ id, label }` entries keyed by the
+  repeatable region instance id (`1`, `2`, ... or normalized from `region:<id>`).
+- Empty or missing labels fall back to the shared builder copy (`Region N`).
+- Shared builder surfaces (`VisualPanelSlotControls`, canvas slot headers, and
+  insert-target selectors) may render custom labels, but public runtime output
+  stays unlabeled unless a future user-facing caption contract is added.
 
 ## Surface Tokens
 

@@ -10,12 +10,16 @@ import {
 } from "../../../core/admin/ui/widgets/editors/SectionEditors";
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
+  applySectionRegionLabels,
   createSectionWidget,
   normalizeSectionData,
+  resolveSectionRegionLabelValue,
   resolveSectionVariant,
   sectionDefaults,
   SectionBlock,
+  syncSectionRegionDataWithSlotMap,
   type SectionData,
+  updateSectionRegionLabelData,
 } from "../../../core/widgets/core/section";
 import {
   createNavigationWidget,
@@ -116,8 +120,85 @@ test("section renders empty-region placeholders only in editor preview", () => {
   expect(previewHtml).toContain("Empty region.");
 });
 
+test("section region labels stay editor-only and instance-stable", () => {
+  const updated = updateSectionRegionLabelData(
+    {
+      regions: [
+        { id: "1", label: "Primary hero" },
+        { id: "3", label: "Legacy orphan" },
+      ],
+    },
+    "region:2",
+    " Supporting proof "
+  );
+  expect(updated).toEqual({
+    regions: [
+      { id: "1", label: "Primary hero" },
+      { id: "3", label: "Legacy orphan" },
+      { id: "2", label: "Supporting proof" },
+    ],
+  });
+
+  const synced = syncSectionRegionDataWithSlotMap(updated, {
+    "region:1": [],
+    "region:2": [],
+  });
+  expect(synced).toEqual({
+    regions: [
+      { id: "1", label: "Primary hero" },
+      { id: "2", label: "Supporting proof" },
+    ],
+  });
+
+  const relabeled = applySectionRegionLabels(
+    [
+      {
+        definitionId: "region",
+        slotId: "region:1",
+        label: "Region 1",
+        kind: "repeatable" as const,
+        instanceId: "1",
+      },
+      {
+        definitionId: "region",
+        slotId: "region:2",
+        label: "Region 2",
+        kind: "repeatable" as const,
+        instanceId: "2",
+      },
+    ],
+    synced
+  );
+  expect(relabeled.map((target) => target.label)).toEqual(["Primary hero", "Supporting proof"]);
+  expect(resolveSectionRegionLabelValue(synced, "region:2")).toBe("Supporting proof");
+  expect(resolveSectionRegionLabelValue(synced, "region:4")).toBe("");
+
+  const cleared = updateSectionRegionLabelData(synced, "region:1", "   ");
+  expect(cleared).toEqual({
+    regions: [{ id: "2", label: "Supporting proof" }],
+  });
+
+  const publicHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        regions: synced.regions,
+      }}
+      variant="default"
+    />
+  );
+  expect(publicHtml).not.toContain("Primary hero");
+  expect(publicHtml).not.toContain("Supporting proof");
+});
+
 test("section normalization keeps deterministic style and layout bounds", () => {
   const normalized = normalizeSectionData({
+    regions: [
+      { id: "region:1", label: " Primary hero " },
+      { id: "2", label: " Supporting proof " },
+      { id: "main:3", label: "Wrong slot" },
+      { id: "2", label: " Proof corrected " },
+    ],
     heading: {
       level: "banner" as never,
       align: "middle" as never,
@@ -165,6 +246,10 @@ test("section normalization keeps deterministic style and layout bounds", () => 
     },
   });
 
+  expect(normalized.regions).toEqual([
+    { id: "1", label: "Primary hero" },
+    { id: "2", label: "Proof corrected" },
+  ]);
   expect(normalized.heading).toMatchObject({
     level: "h2",
     align: "left",
@@ -252,6 +337,10 @@ test("section validator accepts expanded model", () => {
       type: "section",
       variant: "contained",
       data: {
+        regions: [
+          { id: "1", label: "Primary hero" },
+          { id: "2", label: "Supporting proof" },
+        ],
         heading: {
           label: "Landing",
           title: "Conversion section",

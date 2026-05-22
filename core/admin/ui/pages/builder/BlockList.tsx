@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
+import { applySectionRegionLabels, type SectionData } from "../../../../widgets/core/section";
 import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
 import type { WidgetPreviewState } from "../../../../widgets/types";
 import type { Block, WidgetDefinition } from "./types";
@@ -118,7 +119,7 @@ export function BlockList({
                 },
               }
             : block;
-        const slotTargets =
+        const resolvedSlotTargets =
           widget?.slots && widget.slots.length > 0
             ? resolveWidgetSlotTargets(widget.slots, slotMap)
             : Object.keys(slotMap).map((slotId) => ({
@@ -127,6 +128,10 @@ export function BlockList({
                 label: slotId === "default" ? "Default slot" : slotId,
                 kind: "fixed" as const,
               }));
+        const slotTargets =
+          block.type === "section"
+            ? applySectionRegionLabels(resolvedSlotTargets, block.data as SectionData | undefined)
+            : resolvedSlotTargets;
         const nestedCount = Object.values(slotMap).reduce((sum, items) => sum + items.length, 0);
         return (
           <div

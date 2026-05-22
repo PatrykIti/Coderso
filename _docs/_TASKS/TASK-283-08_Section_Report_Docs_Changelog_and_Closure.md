@@ -64,7 +64,8 @@ Data flow:
 
 - Read the final TASK-283 scope matrix and each implementation leaf status.
 - Update the source report with one textual status row per finding:
-  TASK-256 exclusion, TASK-283 fixed evidence, TASK-283 deferral, or no action.
+  shared-owner evidence (`TASK-256`, `TASK-326`, `TASK-327`), TASK-283 fixed
+  evidence, TASK-283 deferral, or no action.
 - Synchronize Section docs, changelog entry, and task-board rows after report
   evidence is complete.
 - Record exact validation commands and commit SHAs in the closure leaf.

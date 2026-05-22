@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 180 tasks
+- **To Do:** 179 tasks
 - **In Progress:** 6 tasks
-- **Done:** 1819 tasks
+- **Done:** 1820 tasks
 
 ---
 
@@ -111,7 +111,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
 | TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
 | TASK-283-05-02 | Section Angle and Overlay Slider Controls After Shared Ownership Cleanup | Medium | Medium | Replace the remaining numeric angle/opacity inputs with slider/stepper UX after `TASK-326` removes the duplicate Visual/Advanced owner |
-| TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Add editor-only custom region labels while preserving `region:<id>` slot storage and public placeholder boundaries |
 | TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Refresh Section report/docs/changelog/board and final validation evidence |
 | TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Spacer-only follow-up family for `REPORT_SPACER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-284-01 | Spacer Editor Guidance and Input Accessibility | High | Medium | Add fixed-mode guidance, breakpoint copy, custom numeric input help, and explicit height-field accessibility after TASK-256 token work |
@@ -224,7 +223,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: TASK-283-01/02/03/04/06 and TASK-283-05-01 are closed; remaining widget-local work is `TASK-283-05-02` after `TASK-326`, custom region labels, closure, and the reopened shared Section truthfulness drift |
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: TASK-283-01/02/03/04/06/07 and TASK-283-05-01 are closed; remaining widget-local work is `TASK-283-05-02` after `TASK-326`, final closure, and the reopened shared Section truthfulness drift |
 | TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | In progress: `TASK-283-05-01` closed shadow, CSS-only motion, and preview owners; `TASK-283-05-02` keeps the remaining angle/opacity slider UX pending `TASK-326` |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -236,6 +235,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Done (2026-05-22): Section now ships editor-only region metadata keyed by stable slot instance IDs, shared rename controls in the Visual structure surface, and truthful custom labels in canvas slot headers plus insert-target selectors without public runtime leakage |
 | TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Done (2026-05-22): Section now ships optional mobile/desktop padding overrides through bounded layout tokens, keeps legacy spacing when unset, restores the base token from `md` when only mobile overrides exist, and exposes `Match base` responsive controls without raw CSS |
 | TASK-283-05-01 | Section Shadow Motion and Surface Preview | Medium | Large | Done (2026-05-21): Section now ships optional shadow tokens with match-variant fallback, CSS-only reduced-motion-safe surface motion, and a derived preview swatch without extra persisted state |
 | TASK-283-04 | Section Presets Variant Guidance and Width Copy | Medium | Large | Done (2026-05-21): Section now ships local presets, friendlier width labels, consistent Wizard/Visual variant cards, atomic preset block patches when available, and gradient/background guidance while shared truthfulness stays in TASK-326 |

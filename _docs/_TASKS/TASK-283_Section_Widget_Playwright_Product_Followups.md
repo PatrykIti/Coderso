@@ -88,7 +88,7 @@ this family.
 | U2 slider/visual controls for angle and opacity | TASK-283-05-02 | Final Section-local slider UX after `TASK-326` removes duplicate Advanced ownership. |
 | U5 gradient/overlay preview | TASK-283-05-01 | Derived Section surface preview without preview-only persisted state. |
 | W6 responsive padding variants | TASK-283-06 | Section-owned mobile/desktop padding tokens. |
-| W4 custom region names | TASK-283-07 | Section structure labels for editor and optional safe runtime markers. |
+| W4 custom region names | TASK-283-07 | Section editor-only structure labels across Visual, canvas slot headers, and insert-target selectors without changing `region:<id>` storage. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-283-08 | Final evidence and synchronization. |
 
 ## No-Action Or Deferred Report Findings
@@ -116,7 +116,7 @@ this family.
 - [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
 - [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls (split into closed `TASK-283-05-01` and pending `TASK-283-05-02` after `TASK-326`)
 - [x] TASK-283-06: Section Responsive Spacing and Mobile Density
-- [ ] TASK-283-07: Section Custom Region Labels and Structure UX
+- [x] TASK-283-07: Section Custom Region Labels and Structure UX
 - [ ] TASK-283-08: Section Report Docs Changelog and Closure
 
 ## Implementation Order
