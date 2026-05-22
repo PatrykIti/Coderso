@@ -96,6 +96,10 @@ export const productTableSortingModeValues = ["none", "indicator", "interactive"
 export type ProductTableSortingMode = (typeof productTableSortingModeValues)[number];
 export const productTablePaginationModeValues = ["none", "paged", "load-more"] as const;
 export type ProductTablePaginationMode = (typeof productTablePaginationModeValues)[number];
+export const productTableMoneyLocaleValues = ["en-US", "pl-PL", "de-DE", "fr-FR"] as const;
+export type ProductTableMoneyLocale = (typeof productTableMoneyLocaleValues)[number];
+export const productTableCurrencyDisplayValues = ["symbol", "code", "name"] as const;
+export type ProductTableCurrencyDisplay = (typeof productTableCurrencyDisplayValues)[number];
 export const productTablePublicPageSizeMin = 1;
 export const productTablePublicPageSizeMax = 24;
 
@@ -168,6 +172,16 @@ export type ProductTableControls = {
   pageSize?: number;
 };
 
+export type ProductTableFormat = {
+  moneyLocale?: ProductTableMoneyLocale;
+  currencyDisplay?: ProductTableCurrencyDisplay;
+};
+
+export type ProductTableExport = {
+  enabled?: boolean;
+  label?: string;
+};
+
 export type ProductTableLabels = {
   image?: string;
   title?: string;
@@ -195,6 +209,8 @@ export type ProductTableData = {
   header?: ProductTableHeader;
   fields?: ProductTableFields;
   controls?: ProductTableControls;
+  format?: ProductTableFormat;
+  export?: ProductTableExport;
   labels?: ProductTableLabels;
   links?: ProductTableLinks;
   emptyState?: {
@@ -231,6 +247,16 @@ const productTableControlDefaults: Required<ProductTableControls> = {
   sorting: "none",
   pagination: "none",
   pageSize: 12,
+};
+
+const productTableFormatDefaults: Required<ProductTableFormat> = {
+  moneyLocale: "en-US",
+  currencyDisplay: "symbol",
+};
+
+const productTableExportDefaults: Required<ProductTableExport> = {
+  enabled: false,
+  label: "Export CSV",
 };
 
 const productTableLabelFallbacks: Required<ProductTableLabels> = {
@@ -519,6 +545,8 @@ export const productTableDefaults: ProductTableData = {
   header: {},
   fields: productTableFieldDefaults,
   controls: productTableControlDefaults,
+  format: productTableFormatDefaults,
+  export: productTableExportDefaults,
   labels: productTableLabelFallbacks,
   links: productTableLinkDefaults,
   emptyState: productTableEmptyStateDefaults,
@@ -937,6 +965,26 @@ export const normalizeProductTableFields = (
   return fields;
 };
 
+export const normalizeProductTableFormat = (
+  value: ProductTableData["format"] | undefined
+): Required<ProductTableFormat> => ({
+  moneyLocale: productTableMoneyLocaleValues.includes(value?.moneyLocale as ProductTableMoneyLocale)
+    ? (value?.moneyLocale as ProductTableMoneyLocale)
+    : productTableFormatDefaults.moneyLocale,
+  currencyDisplay: productTableCurrencyDisplayValues.includes(
+    value?.currencyDisplay as ProductTableCurrencyDisplay
+  )
+    ? (value?.currencyDisplay as ProductTableCurrencyDisplay)
+    : productTableFormatDefaults.currencyDisplay,
+});
+
+export const normalizeProductTableExport = (
+  value: ProductTableData["export"] | undefined
+): Required<ProductTableExport> => ({
+  enabled: value?.enabled === true,
+  label: text(value?.label, productTableExportDefaults.label),
+});
+
 export const normalizeProductTableLabels = (
   value: ProductTableData["labels"] | undefined
 ): Required<ProductTableLabels> => ({
@@ -1117,6 +1165,22 @@ export const productTableSchema = {
           minimum: productTablePublicPageSizeMin,
           maximum: productTablePublicPageSizeMax,
         },
+      },
+    },
+    format: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        moneyLocale: { enum: [...productTableMoneyLocaleValues] },
+        currencyDisplay: { enum: [...productTableCurrencyDisplayValues] },
+      },
+    },
+    export: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        label: { type: "string" },
       },
     },
     labels: {
@@ -1302,6 +1366,8 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
   const header = normalizeProductTableHeader(value.header);
   const fields = normalizeProductTableFields(value.fields);
   const controls = normalizeProductTableControls(value.controls);
+  const format = normalizeProductTableFormat(value.format);
+  const exportSettings = normalizeProductTableExport(value.export);
   const labels = normalizeProductTableLabels(value.labels);
   const links = normalizeProductTableLinks(value.links);
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
@@ -1313,6 +1379,8 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     ...(header ? { header } : {}),
     fields,
     controls,
+    format,
+    export: exportSettings,
     labels,
     links,
     emptyState: {
@@ -1449,6 +1517,102 @@ const formatProductTableStockValue = (
   return `${label} (${stock.quantity})`;
 };
 
+export const formatProductTableMoney = (
+  amount: number,
+  currency: string,
+  format: Required<ProductTableFormat>
+) => formatCommerceMoney(amount, currency, format.moneyLocale, format.currencyDisplay);
+
+const serializeProductTableCsvCell = (
+  column: ProductTableColumnDefinition,
+  item: ProductTableRuntimeItem,
+  options: {
+    showStatusColumn: boolean;
+    showStockQuantity: boolean;
+    format: Required<ProductTableFormat>;
+  }
+) => {
+  switch (column.key) {
+    case "image":
+      return item.media?.url ?? "No image";
+    case "title":
+      return productTitleValue(item, { showStatusColumn: options.showStatusColumn });
+    case "excerpt":
+      return clampProductTableExcerpt(item.excerpt) ?? "-";
+    case "slug":
+      return `/${item.slug}`;
+    case "price":
+      return formatProductTableMoney(item.pricing.amount, item.pricing.currency, options.format);
+    case "compareAt":
+      return typeof item.pricing.compareAtAmount === "number"
+        ? formatProductTableMoney(
+            item.pricing.compareAtAmount,
+            item.pricing.currency,
+            options.format
+          )
+        : "-";
+    case "status":
+      return productTableStatusLabelMap[item.status];
+    case "stock":
+      return formatProductTableStockValue(item.stock, {
+        showStockQuantity: options.showStockQuantity,
+      });
+    case "collections":
+      return String(item.collectionIds.length);
+    default:
+      return "";
+  }
+};
+
+const productTableCsvFormulaPattern = /^[=+\-@]/;
+
+const escapeProductTableCsvValue = (value: string) => {
+  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const guarded = productTableCsvFormulaPattern.test(normalized.trimStart())
+    ? `'${normalized}`
+    : normalized;
+  return `"${guarded.replaceAll('"', '""')}"`;
+};
+
+const buildProductTableCsvMatrix = (data: ProductTableData) => {
+  const normalized = normalizeProductTableData(data);
+  const fields = normalizeProductTableFields(normalized.fields);
+  const format = normalizeProductTableFormat(normalized.format);
+  const visibleColumns = resolveVisibleProductTableColumns(fields);
+  const showStatusColumn = visibleColumns.some((column) => column.key === "status");
+  const headerRow = visibleColumns.map(
+    (column) => normalized.labels?.[column.labelKey] ?? column.key
+  );
+  const valueRows = (normalized.resolved?.items ?? []).map((item) =>
+    visibleColumns.map((column) =>
+      serializeProductTableCsvCell(column, item, {
+        showStatusColumn,
+        showStockQuantity: fields.showStockQuantity,
+        format,
+      })
+    )
+  );
+
+  return [headerRow, ...valueRows];
+};
+
+export const buildProductTableCsvContent = (data: ProductTableData) =>
+  buildProductTableCsvMatrix(data)
+    .map((row) => row.map(escapeProductTableCsvValue).join(","))
+    .join("\n");
+
+export const buildProductTableCsvHref = (data: ProductTableData) =>
+  `data:text/csv;charset=utf-8,${encodeURIComponent(`﻿${buildProductTableCsvContent(data)}`)}`;
+
+export const resolveProductTableCsvFilename = (header: ProductTableHeader | undefined) => {
+  const stemSource = header?.title ?? header?.eyebrow ?? productTableDefaultCaptionText;
+  const normalizedStem = stemSource
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${normalizedStem || "product-table"}.csv`;
+};
+
 const productTableCellLinkClassName =
   "inline-flex rounded-sm font-medium text-[var(--color-text)] transition hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const productTableActionLinkClassName =
@@ -1504,6 +1668,7 @@ const renderProductTableCell = (
   options: {
     showStatusColumn: boolean;
     showStockQuantity: boolean;
+    format: Required<ProductTableFormat>;
     links: Required<ProductTableLinks>;
     linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>;
     presentation: ProductTableResolvedStyle;
@@ -1591,7 +1756,7 @@ const renderProductTableCell = (
             "text-[var(--color-text)]/80"
           )}
         >
-          {formatCommerceMoney(item.pricing.amount, item.pricing.currency)}
+          {formatProductTableMoney(item.pricing.amount, item.pricing.currency, options.format)}
         </td>
       );
     case "compareAt":
@@ -1604,7 +1769,11 @@ const renderProductTableCell = (
           )}
         >
           {typeof item.pricing.compareAtAmount === "number"
-            ? formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)
+            ? formatProductTableMoney(
+                item.pricing.compareAtAmount,
+                item.pricing.currency,
+                options.format
+              )
             : "-"}
         </td>
       );
@@ -1784,6 +1953,7 @@ function ProductTablePublicControls({
 }) {
   const normalized = normalizeProductTableData(data);
   const controls = normalizeProductTableControls(normalized.controls);
+  const exportSettings = normalizeProductTableExport(normalized.export);
   const runtime = normalized.resolved?.runtime;
   const availableCollections = runtime?.availableCollections ?? [];
   const availableStatuses = runtime?.availableStatuses ?? [];
@@ -1794,7 +1964,10 @@ function ProductTablePublicControls({
   const sortingEnabled = controls.sorting !== "none";
   const paginationEnabled = controls.pagination !== "none";
   const hasRejectedTokens = (runtime?.rejectedTokens?.length ?? 0) > 0;
-  const showShell = hasFormControls || sortingEnabled || paginationEnabled || hasRejectedTokens;
+  const hasExportRows = (normalized.resolved?.items?.length ?? 0) > 0;
+  const showExport = exportSettings.enabled && hasExportRows;
+  const showShell =
+    hasFormControls || sortingEnabled || paginationEnabled || hasRejectedTokens || showExport;
   if (!showShell) return null;
 
   const keys = buildProductTableRuntimeParamKeys(blockId);
@@ -1813,6 +1986,8 @@ function ProductTablePublicControls({
       ? resolveProductTableSortLabel(runtime.sortField, runtime.sortDir)
       : null;
   const showReset = hasActiveProductTableRuntimeState(normalized, runtime) || hasRejectedTokens;
+  const exportHref = showExport ? buildProductTableCsvHref(normalized) : undefined;
+  const exportFilename = showExport ? resolveProductTableCsvFilename(normalized.header) : undefined;
 
   return (
     <div className="rounded-xl border border-[var(--color-border)]/70 bg-[var(--color-bg)]/35 p-4">
@@ -1821,14 +1996,26 @@ function ProductTablePublicControls({
           <p className="font-medium text-[var(--color-text)]">{rangeCopy}</p>
           {currentSortCopy ? <p>Sort: {currentSortCopy}</p> : null}
         </div>
-        {showReset ? (
-          <a
-            href={runtime?.clearHref ?? "?"}
-            className="text-xs font-medium underline-offset-4 hover:underline"
-          >
-            Reset table
-          </a>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {showExport && exportHref && exportFilename ? (
+            <a
+              href={exportHref}
+              download={exportFilename}
+              data-product-table-export="csv"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--color-border)] px-4 text-sm font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70"
+            >
+              {exportSettings.label}
+            </a>
+          ) : null}
+          {showReset ? (
+            <a
+              href={runtime?.clearHref ?? "?"}
+              className="text-xs font-medium underline-offset-4 hover:underline"
+            >
+              Reset table
+            </a>
+          ) : null}
+        </div>
       </div>
 
       {hasFormControls ? (
@@ -2009,6 +2196,7 @@ export function ProductTableBlock({
   const items = normalized.resolved?.items ?? [];
   const fields = normalizeProductTableFields(normalized.fields);
   const controls = normalizeProductTableControls(normalized.controls);
+  const format = normalizeProductTableFormat(normalized.format);
   const links = normalizeProductTableLinks(normalized.links);
   const visibleColumns = resolveVisibleProductTableColumns(fields);
   const showStatusColumn = visibleColumns.some((column) => column.key === "status");
@@ -2279,6 +2467,7 @@ export function ProductTableBlock({
                               {renderProductTableCell(column, item, {
                                 showStatusColumn,
                                 showStockQuantity: fields.showStockQuantity,
+                                format,
                                 links,
                                 linkAttrs,
                                 presentation,

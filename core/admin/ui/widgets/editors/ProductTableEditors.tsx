@@ -13,19 +13,25 @@ import {
   buildProductTableQueryInput,
   normalizeProductTableControls,
   normalizeProductTableData,
+  normalizeProductTableExport,
+  normalizeProductTableFormat,
   productTableAlignValues,
   productTableColumns,
+  productTableCurrencyDisplayValues,
   productTableDefaults,
   productTableDensityValues,
   productTableMaxWidthValues,
+  productTableMoneyLocaleValues,
   productTableRowTreatmentValues,
   productTableTypographyValues,
   resolveProductTableAuthoredPageSize,
   resolveProductTablePresentationStyle,
   resolveProductTableVariant,
   type ProductTableAlign,
+  type ProductTableCurrencyDisplay,
   type ProductTableData,
   type ProductTableDensity,
+  type ProductTableMoneyLocale,
   type ProductTableLinkColumn,
   type ProductTableMaxWidth,
   type ProductTablePaginationMode,
@@ -116,6 +122,34 @@ const updateFieldVisibility = (
 
   update(value, onChange, {
     fields: nextFields,
+  });
+};
+
+const updateFormat = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["format"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    format: {
+      ...normalizeProductTableFormat(current.format),
+      ...patch,
+    },
+  });
+};
+
+const updateExport = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["export"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    export: {
+      ...normalizeProductTableExport(current.export),
+      ...patch,
+    },
   });
 };
 
@@ -235,6 +269,29 @@ const productTableTypographyOptions: Array<{
 }> = productTableTypographyValues.map((value) => ({
   value,
   label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const productTableMoneyLocaleOptions: Array<{
+  value: ProductTableMoneyLocale;
+  label: string;
+}> = productTableMoneyLocaleValues.map((value) => ({
+  value,
+  label:
+    value === "en-US"
+      ? "English (US)"
+      : value === "pl-PL"
+        ? "Polish (PL)"
+        : value === "de-DE"
+          ? "German (DE)"
+          : "French (FR)",
+}));
+
+const productTableCurrencyDisplayOptions: Array<{
+  value: ProductTableCurrencyDisplay;
+  label: string;
+}> = productTableCurrencyDisplayValues.map((value) => ({
+  value,
+  label: value === "code" ? "Currency code" : value === "name" ? "Currency name" : "Symbol",
 }));
 
 const resolvePreviewErrorMessage = (error: unknown) => {
@@ -523,6 +580,57 @@ function PublicControlsFields({
   );
 }
 
+function ExportAndCurrencyFields({
+  value,
+  onChange,
+}: {
+  value: ProductTableData;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const format = normalizeProductTableFormat(normalized.format);
+  const exportSettings = normalizeProductTableExport(normalized.export);
+
+  return (
+    <CommerceEditorSection
+      title="Export and currency"
+      description="Product Table owns explicit money formatting and optional SSR CSV export for the currently visible rows. Runtime diagnostics remain read-only in Advanced mode."
+    >
+      <ProductTableSelectField
+        label="Money locale"
+        value={format.moneyLocale}
+        options={productTableMoneyLocaleOptions}
+        onChange={(next) =>
+          updateFormat(normalized, onChange, { moneyLocale: next as ProductTableMoneyLocale })
+        }
+      />
+      <ProductTableSelectField
+        label="Currency display"
+        value={format.currencyDisplay}
+        options={productTableCurrencyDisplayOptions}
+        onChange={(next) =>
+          updateFormat(normalized, onChange, {
+            currencyDisplay: next as ProductTableCurrencyDisplay,
+          })
+        }
+      />
+      <CommerceToggleField
+        label="Show CSV export"
+        description="Adds a public download button for the currently visible rows and columns only."
+        checked={exportSettings.enabled}
+        onChange={(next) => updateExport(normalized, onChange, { enabled: next })}
+      />
+      {exportSettings.enabled ? (
+        <CommerceTextField
+          label="Export label"
+          value={exportSettings.label}
+          onChange={(next) => updateExport(normalized, onChange, { label: next })}
+        />
+      ) : null}
+    </CommerceEditorSection>
+  );
+}
+
 function LayoutStyleFields({
   value,
   variant,
@@ -780,6 +888,8 @@ export function ProductTableVisualEditor({
       </CommerceEditorSection>
 
       <PublicControlsFields value={normalized} onChange={onChange} />
+
+      <ExportAndCurrencyFields value={normalized} onChange={onChange} />
 
       {normalized.fields?.showStock ? (
         <CommerceEditorSection

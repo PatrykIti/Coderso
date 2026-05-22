@@ -82,7 +82,7 @@ the Product Table slice.
 | BF-07 section heading | TASK-281-06 | Product Table-owned contextual header above the table. |
 | UX-02, UX-04, UX-06, UX-08, BF-15 front-end controls | TASK-281-07 | Pagination/load-more, search, filters, and sortable headers through the existing SSR page-query pattern. `BF-15` is the report alias for the `UX-06` frontend search gap, not a second closure item. |
 | UX-01, UX-10, BF-05, BF-06, BF-08, BF-09, BF-10, BF-12 layout/table styling | TASK-281-08 | Variants, density, zebra/hover, max-width, sticky header, typography. `UX-10` is the report summary alias for the row-hover finding documented as `BF-10`. |
-| UX-07, UX-09, BF-14 export/currency/diagnostics | TASK-281-09 | CSV/clipboard, locale-aware money formatting, read-only runtime diagnostics. |
+| UX-07, BF-14 export/currency | TASK-281-09 | SSR CSV export for visible rows plus Product Table-owned locale-aware money formatting while preserving the read-only diagnostics baseline from TASK-281-01. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-281-10 | Final documentation and validation evidence. |
 
 ## No-Action Report Findings
@@ -103,8 +103,8 @@ the Product Table slice.
 - [x] TASK-281-05: Product Table Accessibility and Runtime Semantics
 - [x] TASK-281-06: Product Table Media Excerpt and Section Header Context
 - [x] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
-- [ ] TASK-281-08: Product Table Variants Density Layout and Sticky Header
-- [ ] TASK-281-09: Product Table Export Currency and Advanced Diagnostics
+- [x] TASK-281-08: Product Table Variants Density Layout and Sticky Header
+- [x] TASK-281-09: Product Table Export Currency and Advanced Diagnostics
 - [ ] TASK-281-10: Product Table Report, Docs, Changelog, and Closure
 
 ## Implementation Order

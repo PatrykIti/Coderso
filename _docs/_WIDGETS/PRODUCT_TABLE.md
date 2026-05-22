@@ -6,9 +6,10 @@ Render a resolved commerce table with an optional section header, shared
 column metadata, guarded column visibility, bounded status and stock
 presentation, public-safe product thumbnails, optional excerpt context, safe
 product links, an optional action column, compact/default layout presets,
-bounded density/typography/zebra/hover/sticky-header controls, SSR page-query
-public controls for search/filter/sort/pagination, empty-state styling, and
-admin preview parity for the current source query.
+bounded density/typography/zebra/hover/sticky-header controls, explicit money
+locale/currency display settings, SSR page-query public controls for
+search/filter/sort/pagination, optional SSR CSV export, empty-state styling,
+and admin preview parity for the current source query.
 
 ## Widget ID
 
@@ -33,6 +34,7 @@ admin preview parity for the current source query.
 - columns
 - column labels
 - public controls
+- export and currency
 - stock presentation
 - links and actions
 - empty state
@@ -133,6 +135,23 @@ admin preview parity for the current source query.
   non-widget params, available collection/status options, and clear/previous/
   next hrefs.
 
+## Currency and Export
+
+- `format.moneyLocale` is a Product Table-owned enum: `en-US`, `pl-PL`,
+  `de-DE`, or `fr-FR`.
+- `format.currencyDisplay` is a bounded enum: `symbol`, `code`, or `name`.
+- Price and Compare at cells now format through the shared money helper with
+  explicit locale/display inputs, so Product Table can render multi-currency
+  values without changing Product Gallery or Product Compare defaults.
+- `export.enabled` adds a public SSR CSV download button for the currently
+  visible rows and columns only; `export.label` controls the button copy.
+- CSV output is derived from the rendered column registry, uses the active
+  Product Table money-format settings, escapes quotes/newlines, and prefixes
+  formula-like values with an apostrophe before export.
+- Export filenames derive from `header.title` when present and otherwise fall
+  back to `product-table.csv`.
+
+
 ## Accessibility Notes
 
 - Product Table now renders an sr-only caption and keeps `scope="col"` on every rendered header, including the optional Action column.
@@ -212,6 +231,14 @@ admin preview parity for the current source query.
     "sorting": "none",
     "pagination": "none",
     "pageSize": 12
+  },
+  "format": {
+    "moneyLocale": "en-US",
+    "currencyDisplay": "symbol"
+  },
+  "export": {
+    "enabled": false,
+    "label": "Export CSV"
   },
   "labels": {
     "image": "Image",

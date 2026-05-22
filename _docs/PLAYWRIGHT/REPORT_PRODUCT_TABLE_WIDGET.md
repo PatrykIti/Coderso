@@ -275,6 +275,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-07 — Brak opcji eksportu (CSV / clipboard)
 **Opis:** Tabela prezentuje dane produktowe, ale brak przycisku eksportu. W kontekście CMS/admin użycie tablicy produktów sugeruje potrzebę eksportu danych.
+**Status (2026-05-22):** Fixed in `TASK-281-09`.
 **Rekomendacja:** Opcjonalny przycisk "Kopiuj do schowka" lub "Eksportuj CSV".
 
 #### UX-08 — Brak filtrów widocznych dla użytkownika frontendu
@@ -346,6 +347,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-14 — Brak obsługi walut multi-currency w display
 **Opis:** Formatowanie przez `Intl.NumberFormat("en-US", ...)` — zawsze lokalizacja en-US. Dla walut innych niż USD wyświetlana jest waluta z currency code (np. PLN 100.00), ale format liczby zawsze anglojęzyczny.
+**Status (2026-05-22):** Fixed in `TASK-281-09`.
 
 ### BF-15 — Brak wyszukiwarki po stronie klienta
 **Opis:** Patrz UX-06. Brak inline search inputu widocznego dla odwiedzającego stronę.

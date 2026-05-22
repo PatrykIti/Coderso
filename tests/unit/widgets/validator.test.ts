@@ -259,6 +259,14 @@ test("normalizeWidgetBlock accepts Product Table compact variant and bounded sty
           pagination: "paged",
           pageSize: 8,
         },
+        format: {
+          moneyLocale: "pl-PL",
+          currencyDisplay: "code",
+        },
+        export: {
+          enabled: true,
+          label: "Download rows",
+        },
         resolved: {
           items: [],
           total: 0,
@@ -314,6 +322,22 @@ test("normalizeWidgetBlock accepts Product Table compact variant and bounded sty
         ...productTableDefaults,
         style: {
           density: "compact",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-export-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        export: {
+          enabled: true,
+          label: "Download rows",
           extra: "nope",
         },
       } as never,

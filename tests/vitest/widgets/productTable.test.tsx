@@ -10,7 +10,9 @@ import {
 } from "../../../core/admin/ui/widgets/editors/ProductTableEditors";
 import {
   ProductTableBlock,
+  buildProductTableCsvContent,
   createProductTableWidget,
+  formatProductTableMoney,
   normalizeProductTableData,
   normalizeProductTableFields,
   normalizeProductTableLabels,
@@ -430,6 +432,119 @@ test("product table renders rows with shared column labels and visibility", () =
   expect(html).not.toContain("Starter Home");
   expect(html).not.toContain("$1,200.00");
   expect(html).not.toContain("Availability");
+});
+
+test("product table applies explicit money locale settings and renders SSR csv export action", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        header: {
+          title: "Summer release",
+        },
+        fields: {
+          showImage: false,
+          showTitle: true,
+          showExcerpt: false,
+          showSlug: false,
+          showPrice: true,
+          showStatus: false,
+          showStock: false,
+          showStockQuantity: false,
+          showCompareAt: true,
+          showCollectionCount: false,
+        },
+        format: {
+          moneyLocale: "de-DE",
+          currencyDisplay: "code",
+        },
+        export: {
+          enabled: true,
+          label: "Download rows",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-eur",
+              title: "European Home",
+              slug: "european-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 123400, currency: "EUR", compareAtAmount: 144400 },
+              stock: { state: "in_stock", quantity: 2, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: ["collection-1"],
+              productHref: null,
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+        },
+      })}
+    />
+  ).replace(/\u00a0/g, " ");
+
+  expect(html).toContain("1.234,00 EUR");
+  expect(html).toContain("1.444,00 EUR");
+  expect(html).toContain('data-product-table-export="csv"');
+  expect(html).toContain('download="summer-release.csv"');
+  expect(html).toContain(">Download rows<");
+  expect(html).toContain('href="data:text/csv;charset=utf-8,');
+});
+
+test("product table csv export uses visible columns, locale formatting, and formula-safe escaping", () => {
+  const price = formatProductTableMoney(123400, "PLN", {
+    moneyLocale: "pl-PL",
+    currencyDisplay: "code",
+  }).replace(/\u00a0/g, " ");
+  const csv = buildProductTableCsvContent(
+    normalizeProductTableData({
+      ...productTableDefaults,
+      fields: {
+        showImage: false,
+        showTitle: true,
+        showExcerpt: true,
+        showSlug: false,
+        showPrice: true,
+        showStatus: false,
+        showStock: false,
+        showStockQuantity: false,
+        showCompareAt: false,
+        showCollectionCount: false,
+      },
+      format: {
+        moneyLocale: "pl-PL",
+        currencyDisplay: "code",
+      },
+      resolved: {
+        items: [
+          {
+            id: "product-formula",
+            title: "=SUM(A1:A2)",
+            slug: "formula-home",
+            excerpt: 'Line "1"\nNext line',
+            status: "published",
+            pricing: { amount: 123400, currency: "PLN", compareAtAmount: null },
+            stock: { state: "in_stock", quantity: 1, inStock: true },
+            primaryMediaId: null,
+            mediaIds: [],
+            collectionIds: [],
+            productHref: null,
+          },
+        ],
+        total: 1,
+        resolvedAt: "2026-05-22T12:00:00.000Z",
+      },
+    })
+  ).replace(/\u00a0/g, " ");
+
+  expect(csv).toContain('"Product","Excerpt","Price"');
+  expect(csv).toContain('"\'=SUM(A1:A2)"');
+  expect(csv).toContain('"Line ""1""\nNext line"');
+  expect(csv).toContain(`"${price}"`);
+  expect(csv).not.toContain("/formula-home");
 });
 
 test("product table renders status badges and bounded row-state treatment", () => {

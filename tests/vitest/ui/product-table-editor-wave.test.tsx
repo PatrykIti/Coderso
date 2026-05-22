@@ -232,7 +232,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ProductTable editors normalize source, layout styles, section header, full column registry, labels, and read-only preview diagnostics", async () => {
+test("ProductTable editors normalize source, layout styles, export/currency controls, section header, full column registry, labels, and read-only preview diagnostics", async () => {
   const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
@@ -354,6 +354,9 @@ test("ProductTable editors normalize source, layout styles, section header, full
     expect(findInputByLabel(view.container, "Show status filter")).toBeInstanceOf(HTMLInputElement);
     expect(findSelectByLabel(view.container, "Sorting UI")).toBeInstanceOf(HTMLSelectElement);
     expect(findSelectByLabel(view.container, "Pagination mode")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Money locale")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Currency display")).toBeInstanceOf(HTMLSelectElement);
+    expect(findInputByLabel(view.container, "Show CSV export")).toBeInstanceOf(HTMLInputElement);
     expect(findSelectByLabel(view.container, "Linked column")).toBeInstanceOf(HTMLSelectElement);
     expect(findInputByLabel(view.container, "Image")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
@@ -412,6 +415,10 @@ test("ProductTable editors normalize source, layout styles, section header, full
     setSelectValue(findSelectByLabel(view.container, "Sorting UI"), "interactive");
     setSelectValue(findSelectByLabel(view.container, "Pagination mode"), "paged");
     setInputValue(findInputByLabel(view.container, "Page size"), "7");
+    setSelectValue(findSelectByLabel(view.container, "Money locale"), "pl-PL");
+    setSelectValue(findSelectByLabel(view.container, "Currency display"), "code");
+    toggleCheckbox(findInputByLabel(view.container, "Show CSV export"));
+    setInputValue(findInputByLabel(view.container, "Export label"), "Download rows");
     setSelectValue(findSelectByLabel(view.container, "Linked column"), "slug");
     toggleCheckbox(findInputByLabel(view.container, "Show action column"));
     setInputValue(findInputByLabel(view.container, "Action label"), "Learn more");
@@ -485,6 +492,14 @@ test("ProductTable editors normalize source, layout styles, section header, full
       sorting: "interactive",
       pagination: "paged",
       pageSize: 7,
+    });
+    expect(latestValue.format).toEqual({
+      moneyLocale: "pl-PL",
+      currencyDisplay: "code",
+    });
+    expect(latestValue.export).toEqual({
+      enabled: true,
+      label: "Download rows",
     });
     expect(latestValue.links).toEqual({
       linkedColumn: "slug",

@@ -54,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
 | TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Add compact/striped variants, density, zebra/hover, width, typography, and sticky header controls |
-| TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Add safe visible-row export, locale-aware money formatting, and read-only runtime diagnostics |
 | TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Refresh Product Table report/docs/changelog/board and final validation evidence |
 | TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
@@ -224,13 +223,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): eight Product Table leaves are landed, and the family remains open for export/diagnostics plus final closure sync |
+| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): nine Product Table leaves are landed, and the family remains open only for final report/docs/changelog/board closure in TASK-281-10 |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Done (2026-05-22): Product Table now formats money through widget-owned locale/display settings and can export the current visible rows as hardened SSR CSV without regressing read-only diagnostics |
 | TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Done (2026-05-22): Product Table now ships a compact preset plus bounded density, zebra, hover, width/alignment, typography, and sticky-header controls without regressing links, preview, or clearable surfaces |
 | TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Done (2026-05-22): Product Table now exposes SSR page-query public controls with bounded search, collection filters, sortable headers, published-safe runtime state, and paged/load-more navigation without introducing a second public refresh route |
 | TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Done (2026-05-22): Product Table now renders optional section header copy, public-safe lazy thumbnails, clamped excerpts, and registry-backed Image/Excerpt controls without regressing preview, links, row states, or accessibility |

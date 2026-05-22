@@ -165,7 +165,12 @@ export const normalizeResolvedMeta = (value: CommerceWidgetResolvedMeta | undefi
   error: toText(value?.error),
 });
 
-export const formatCommerceMoney = (amount: number, currency: string, locale = "en-US") => {
+export const formatCommerceMoney = (
+  amount: number,
+  currency: string,
+  locale = "en-US",
+  currencyDisplay: "symbol" | "code" | "name" | "narrowSymbol" = "symbol"
+) => {
   if (!Number.isFinite(amount)) return "-";
   const normalizedCurrency = toText(currency).toUpperCase() || "USD";
   const normalizedAmount = amount / 100;
@@ -173,6 +178,7 @@ export const formatCommerceMoney = (amount: number, currency: string, locale = "
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: normalizedCurrency,
+      currencyDisplay,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(normalizedAmount);
