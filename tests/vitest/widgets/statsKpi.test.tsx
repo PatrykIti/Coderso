@@ -15,7 +15,6 @@ import {
   normalizeStatsKpiItems,
   statsKpiDefaults,
   statsKpiItemMax,
-  statsKpiSchema,
   StatsKpiBlock,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
@@ -25,76 +24,64 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 
-const getSchemaProperties = (schemaValue: unknown): Record<string, unknown> => {
-  if (!schemaValue || typeof schemaValue !== "object") return {};
-  const properties = (schemaValue as { properties?: unknown }).properties;
-  return properties && typeof properties === "object"
-    ? (properties as Record<string, unknown>)
-    : {};
-};
-
-const statsKpiRootProperties = getSchemaProperties(statsKpiSchema);
-const statsKpiStyleProperties = getSchemaProperties(statsKpiRootProperties.style);
-const statsKpiItemProperties = getSchemaProperties(
-  typeof statsKpiRootProperties.items === "object" && statsKpiRootProperties.items !== null
-    ? (statsKpiRootProperties.items as { items?: unknown }).items
-    : undefined
-);
-
-const hasStatsKpiStyleField = (field: string) =>
-  Object.prototype.hasOwnProperty.call(statsKpiStyleProperties, field);
-const hasStatsKpiItemField = (field: string) =>
-  Object.prototype.hasOwnProperty.call(statsKpiItemProperties, field);
-
-const hasTask287ExpandedSchema =
-  hasStatsKpiStyleField("valueSize") &&
-  hasStatsKpiStyleField("descriptionColor") &&
-  hasStatsKpiStyleField("sectionBackground") &&
-  hasStatsKpiStyleField("maxWidth") &&
-  hasStatsKpiStyleField("padding") &&
-  hasStatsKpiStyleField("minHeight") &&
-  hasStatsKpiStyleField("iconSize") &&
-  hasStatsKpiStyleField("iconSurface") &&
-  hasStatsKpiStyleField("iconBorderColor") &&
-  hasStatsKpiItemField("prefix") &&
-  hasStatsKpiItemField("suffix") &&
-  hasStatsKpiItemField("accentColor") &&
-  hasStatsKpiItemField("trend");
-
-const hasTask287MetricLinks = hasStatsKpiItemField("link");
-
-const expectHtmlToContainOneOf = (html: string, fragments: string[]) => {
-  expect(fragments.some((fragment) => html.includes(fragment))).toBe(true);
-};
-
-test("stats kpi renders defaults", () => {
+test("stats kpi renders defaults with new style markers", () => {
   const html = renderToString(<StatsKpiBlock data={statsKpiDefaults} variant="cards" />);
 
   expect(html).toContain(statsKpiDefaults.header?.title ?? "");
   expect(html).toContain('data-stats-kpi-variant="cards"');
   expect(html).toContain('data-stats-kpi-count="4"');
+  expect(html).toContain('data-stats-kpi-value-size="md"');
+  expect(html).toContain('data-stats-kpi-max-width="lg"');
+  expect(html).toContain('data-stats-kpi-padding="md"');
+  expect(html).toContain('data-stats-kpi-icon-size="md"');
+  expect(html).toContain('data-stats-kpi-trend-direction="up"');
+  expect(html).toContain('data-stats-kpi-link="true"');
+  expect(html).toContain("data-stats-kpi-suffix");
 });
 
-test("stats kpi normalization keeps deterministic ids and count bounds", () => {
+test("stats kpi normalization keeps deterministic ids, count bounds, and nested optional fields", () => {
   const items = normalizeStatsKpiItems(
     [
-      { id: "same", value: "10", label: "A" },
-      { id: "same", value: "", label: "" },
+      {
+        id: "same",
+        value: "10",
+        label: "A",
+        prefix: "$",
+        suffix: "K",
+        accentColor: "#123456",
+        trend: { label: "+9%", direction: "up" },
+        link: { href: "/pricing", label: "View pricing", openInNewTab: true },
+      } as never,
+      { id: "same", value: "", label: "", trend: { label: "", direction: "sideways" } } as never,
     ],
     2
   );
 
   expect(items).toHaveLength(2);
-  expect(items[0]?.id).toBe("same");
+  expect(items[0]).toMatchObject({
+    id: "same",
+    prefix: "$",
+    suffix: "K",
+    accentColor: "#123456",
+    trend: { label: "+9%", direction: "up" },
+    link: { href: "/pricing", label: "View pricing", openInNewTab: true },
+  });
   expect(items[1]?.id).toBe("kpi-2");
   expect(items[1]?.value).toBeTruthy();
   expect(items[1]?.label).toBeTruthy();
+  expect(items[1]?.trend).toBeUndefined();
   expect(normalizeStatsKpiItemCount(999)).toBe(statsKpiItemMax);
   expect(normalizeStatsKpiItemCount(0)).toBe(1);
 
   const normalized = normalizeStatsKpiData({ items: [] });
   expect(normalized.items).toHaveLength(4);
-  expect(normalized.style?.spacing).toBe("md");
+  expect(normalized.style).toMatchObject({
+    spacing: "md",
+    valueSize: "md",
+    maxWidth: "lg",
+    padding: "md",
+    iconSize: "md",
+  });
 });
 
 test("stats kpi validator accepts expanded model", () => {
@@ -106,177 +93,136 @@ test("stats kpi validator accepts expanded model", () => {
   });
   registerWidget(widget);
 
-  const expandedData = {
-    header: {
-      title: "Metrics",
-      description: "Performance indicators overview.",
-    },
-    items: [
-      {
-        id: "kpi-1",
-        value: "120",
-        label: "Projects",
-        description: "Delivered campaigns",
-        icon: "🚀",
-        ...(hasStatsKpiItemField("prefix") ? { prefix: "$" } : {}),
-        ...(hasStatsKpiItemField("suffix") ? { suffix: "K" } : {}),
-        ...(hasStatsKpiItemField("accentColor") ? { accentColor: "#2563eb" } : {}),
-        ...(hasStatsKpiItemField("trend")
-          ? {
-              trend: {
-                label: "+12% MoM",
-                direction: "up",
-              },
-            }
-          : {}),
-        ...(hasTask287MetricLinks
-          ? {
-              link: {
-                href: "/case-studies/growth",
-                label: "See growth story",
-              },
-            }
-          : {}),
-      },
-      {
-        id: "kpi-2",
-        value: "99.9",
-        label: "Uptime",
-        description: "Stable platform",
-        icon: "⏱",
-        ...(hasTask287MetricLinks
-          ? {
-              link: {
-                href: "javascript:alert(1)",
-                label: "Unsafe",
-              },
-            }
-          : {}),
-      },
-      {
-        id: "kpi-3",
-        value: "3",
-        label: "Faster release",
-        description: "Content throughput",
-        icon: "⚡",
-      },
-    ],
-    style: {
-      alignment: "center",
-      spacing: "lg",
-      valueColor: "#0f172a",
-      labelColor: "#334155",
-      divider: true,
-      ...(hasStatsKpiStyleField("valueSize") ? { valueSize: "lg" } : {}),
-      ...(hasStatsKpiStyleField("descriptionColor") ? { descriptionColor: "#475569" } : {}),
-      ...(hasStatsKpiStyleField("sectionBackground") ? { sectionBackground: "#f8fafc" } : {}),
-      ...(hasStatsKpiStyleField("maxWidth") ? { maxWidth: "full" } : {}),
-      ...(hasStatsKpiStyleField("padding") ? { padding: "lg" } : {}),
-      ...(hasStatsKpiStyleField("minHeight") ? { minHeight: "compact" } : {}),
-      ...(hasStatsKpiStyleField("iconSize") ? { iconSize: "lg" } : {}),
-      ...(hasStatsKpiStyleField("iconSurface") ? { iconSurface: "#fff7ed" } : {}),
-      ...(hasStatsKpiStyleField("iconBorderColor") ? { iconBorderColor: "#ea580c" } : {}),
-    },
-  };
-
   expect(() =>
     normalizeWidgetBlock({
       id: "stats-kpi-1",
       type: "stats-kpi",
       variant: "split-highlight",
-      data: expandedData as StatsKpiData,
+      data: {
+        header: {
+          title: "Metrics",
+          description: "Performance indicators overview.",
+        },
+        items: [
+          {
+            id: "kpi-1",
+            value: "120",
+            suffix: "%",
+            label: "Projects",
+            description: "Delivered campaigns",
+            icon: "🚀",
+            accentColor: "#ff5500",
+            trend: {
+              label: "+18% QoQ",
+              direction: "up",
+            },
+            link: {
+              href: "/work",
+              label: "See work",
+              openInNewTab: false,
+            },
+          },
+          {
+            id: "kpi-2",
+            value: "99.9",
+            suffix: "%",
+            label: "Uptime",
+            description: "Stable platform",
+            icon: "⏱",
+          },
+          {
+            id: "kpi-3",
+            value: "3",
+            suffix: "x",
+            label: "Faster release",
+            description: "Content throughput",
+            icon: "⚡",
+          },
+        ],
+        style: {
+          alignment: "center",
+          spacing: "lg",
+          valueColor: "#0f172a",
+          labelColor: "#334155",
+          descriptionColor: "#475569",
+          valueSize: "lg",
+          divider: true,
+          dividerIntensity: "strong",
+          maxWidth: "xl",
+          padding: "lg",
+          minHeight: "compact",
+          iconSize: "lg",
+        },
+      },
     })
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
-
-  if (hasTask287ExpandedSchema || hasTask287MetricLinks) {
-    const normalized = normalizeStatsKpiData(expandedData as StatsKpiData) as StatsKpiData & {
-      items: Array<Record<string, unknown>>;
-      style?: Record<string, unknown>;
-    };
-    const html = renderToString(<StatsKpiBlock data={normalized} variant="cards" />);
-
-    if (hasStatsKpiStyleField("valueSize")) {
-      expect(normalized.style?.valueSize).toBe("lg");
-      expect(html).toContain('data-stats-kpi-value-size="lg"');
-    }
-    if (hasStatsKpiStyleField("descriptionColor")) {
-      expect(normalized.style?.descriptionColor).toBe("#475569");
-      expect(html).toContain("#475569");
-    }
-    if (hasStatsKpiStyleField("sectionBackground")) {
-      expect(normalized.style?.sectionBackground).toBe("#f8fafc");
-      expect(html).toContain("#f8fafc");
-    }
-    if (hasStatsKpiStyleField("maxWidth")) {
-      expect(normalized.style?.maxWidth).toBe("full");
-    }
-    if (hasStatsKpiStyleField("padding")) {
-      expect(normalized.style?.padding).toBe("lg");
-    }
-    if (hasStatsKpiStyleField("minHeight")) {
-      expect(normalized.style?.minHeight).toBe("compact");
-    }
-    if (hasStatsKpiStyleField("iconSize")) {
-      expect(normalized.style?.iconSize).toBe("lg");
-    }
-    if (hasStatsKpiStyleField("iconSurface")) {
-      expect(normalized.style?.iconSurface).toBe("#fff7ed");
-      expect(html).toContain("#fff7ed");
-    }
-    if (hasStatsKpiStyleField("iconBorderColor")) {
-      expect(normalized.style?.iconBorderColor).toBe("#ea580c");
-      expect(html).toContain("#ea580c");
-    }
-    if (hasStatsKpiItemField("prefix")) {
-      expect(normalized.items[0]?.prefix).toBe("$");
-    }
-    if (hasStatsKpiItemField("suffix")) {
-      expect(normalized.items[0]?.suffix).toBe("K");
-    }
-    if (hasStatsKpiItemField("prefix") && hasStatsKpiItemField("suffix")) {
-      expect(html).toContain("$120K");
-    }
-    if (hasStatsKpiItemField("accentColor")) {
-      expect(normalized.items[0]?.accentColor).toBe("#2563eb");
-      expect(html).toContain("#2563eb");
-    }
-    if (hasStatsKpiItemField("trend")) {
-      expect(normalized.items[0]?.trend).toEqual(
-        expect.objectContaining({
-          label: "+12% MoM",
-          direction: "up",
-        })
-      );
-      expect(html).toContain("+12% MoM");
-      expect(html).toContain('data-stats-kpi-trend-direction="up"');
-    }
-    if (hasTask287MetricLinks) {
-      expect(normalized.items[0]?.link).toEqual(
-        expect.objectContaining({
-          href: "/case-studies/growth",
-        })
-      );
-      expect(html).toContain('href="/case-studies/growth"');
-      expect(html).not.toContain("javascript:alert(1)");
-    }
-  }
 });
 
-test("stats kpi cleared card surfaces omit card background and border styles", () => {
+test("stats kpi renders safe links but blocks unsafe href output", () => {
+  const safeHtml = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...statsKpiDefaults,
+        items: [
+          {
+            id: "kpi-1",
+            value: "120",
+            suffix: "%",
+            label: "Growth",
+            link: {
+              href: "https://example.com/report",
+              label: "Read report",
+              openInNewTab: true,
+            },
+          },
+        ],
+      }}
+      variant="cards"
+    />
+  );
+  const unsafeHtml = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...statsKpiDefaults,
+        items: [
+          {
+            id: "kpi-1",
+            value: "120",
+            label: "Growth",
+            link: {
+              href: "javascript:alert(1)",
+              label: "Bad",
+            },
+          },
+        ],
+      }}
+      variant="cards"
+    />
+  );
+
+  expect(safeHtml).toContain('href="https://example.com/report"');
+  expect(safeHtml).toContain('target="_blank"');
+  expect(safeHtml).toContain('rel="noopener noreferrer"');
+  expect(safeHtml).toContain("Read report");
+  expect(unsafeHtml).not.toContain("javascript:alert(1)");
+  expect(unsafeHtml).toContain('data-stats-kpi-link="false"');
+});
+
+test("stats kpi cleared section and card surfaces omit inline styles", () => {
   const normalized = normalizeStatsKpiData({
     ...statsKpiDefaults,
     style: {},
   });
   const html = renderToString(<StatsKpiBlock data={normalized} variant="cards" />);
-  const inlineHtml = renderToString(<StatsKpiBlock data={normalized} variant="inline" />);
 
+  expect(normalized.style?.sectionBackground).toBeUndefined();
   expect(normalized.style?.cardBackground).toBeUndefined();
   expect(normalized.style?.cardBorderColor).toBeUndefined();
+  expect(normalized.style?.iconSurface).toBeUndefined();
   expect(html).not.toContain("background-color:");
   expect(html).not.toContain("border-color:");
-  expect(inlineHtml).toContain('data-stats-kpi-variant="inline"');
 });
 
 test("stats kpi validator rejects invalid variant", () => {
@@ -299,7 +245,7 @@ test("stats kpi validator rejects invalid variant", () => {
   ).toThrow("widget_invalid_variant");
 });
 
-test("stats kpi wizard renders onboarding fields", () => {
+test("stats kpi wizard renders publishable onboarding fields", () => {
   const html = renderToString(
     <StatsKpiWizardEditor
       value={statsKpiDefaults}
@@ -309,19 +255,14 @@ test("stats kpi wizard renders onboarding fields", () => {
     />
   );
 
-  expectHtmlToContainOneOf(html, ["Stats layout", "Cards", "Split Highlight"]);
-  expectHtmlToContainOneOf(html, ["Metric count", "Metrics count"]);
-
-  if (hasTask287ExpandedSchema) {
-    expectHtmlToContainOneOf(html, ["Proof in numbers", "Title"]);
-    expectHtmlToContainOneOf(html, ["Projects launched", "Metric 1 label"]);
-    expectHtmlToContainOneOf(html, ["🚀", "Metric 1 icon"]);
-  } else {
-    expect(html).toContain("Primary metric values");
-  }
+  expect(html).toContain("Stats layout");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Primary metric content");
+  expect(html).toContain("Clear header");
+  expect(html).toContain("Spacing guidance");
 });
 
-test("stats kpi visual renders section-based IA", () => {
+test("stats kpi visual renders grouped IA", () => {
   const html = renderToString(
     <StatsKpiVisualEditor
       value={statsKpiDefaults}
@@ -333,17 +274,10 @@ test("stats kpi visual renders section-based IA", () => {
 
   expect(html).toContain("Variant and metric structure");
   expect(html).toContain("Header copy");
-  expectHtmlToContainOneOf(html, ["Metrics content and order", "Metrics and links"]);
-
-  if (hasTask287ExpandedSchema) {
-    expectHtmlToContainOneOf(html, ["Typography and colors", "Text and value styling"]);
-    expectHtmlToContainOneOf(html, ["Card surfaces", "Surface styling"]);
-    expectHtmlToContainOneOf(html, ["Icon styling", "Icon style"]);
-    expectHtmlToContainOneOf(html, ["Layout display options", "Section layout"]);
-  } else {
-    expect(html).toContain("Typography and colors");
-    expect(html).toContain("Layout display options");
-  }
+  expect(html).toContain("Metrics content and links");
+  expect(html).toContain("Text and value styling");
+  expect(html).toContain("Card and icon surfaces");
+  expect(html).toContain("Section layout and spacing");
 });
 
 test("stats kpi advanced keeps technical-only scope", () => {
@@ -359,5 +293,5 @@ test("stats kpi advanced keeps technical-only scope", () => {
   expect(html).toContain("Technical spacing and alignment tokens");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
-  expect(html).not.toContain("Metrics content and order");
+  expect(html).not.toContain("Metrics content and links");
 });

@@ -8,6 +8,29 @@
 
 ---
 
+
+## 0. Addendum zamknięcia 2026-05-22
+
+| Obszar | Status końcowy | Owner / evidence |
+|--------|----------------|------------------|
+| C1, U3 | Naprawione shared | `TASK-256-06-01` zamknął truthful divider controls; `Show dividers` jest teraz zablokowane poza `inline` i opisuje realny runtime contract. |
+| C2, R5 | Naprawione shared | `TASK-256-06-01` usunął stałe `lg:grid-cols-4`; siatka `cards` dobiera liczbę kolumn do liczby metryk. |
+| C3, U1, U4, U5, U9 | Naprawione w TASK-287-03 | Wizard ma teraz variant cards, `header.title`, `header.description`, `value`, `label`, `description`, `icon`, `Clear header`, guidance dla ikon i spacingu. |
+| W1, W2, W3, W8, W10 | Naprawione w TASK-287-01 | Dodano `valueSize`, `descriptionColor`, `prefix`, `suffix`, `accentColor`, `trend.label`, i `trend.direction`. |
+| W4, W5, W6, W7, R7, R8 | Naprawione w TASK-287-02 | Dodano `sectionBackground`, `maxWidth`, `padding`, `minHeight`, `iconSize`, `iconSurface`, `iconBorderColor`, i `dividerIntensity`. |
+| W9 | Naprawione w TASK-287-04 | Metryki mogą renderować bezpieczne linki przez `resolveWidgetLinkAttrs`, a unsafe href wraca do nieklikalnej karty. |
+| U7, U8 | Naprawione w TASK-287-05 | Visual editor ma drag-friendly reorder z fallbackiem Move up/Move down, confirm remove, i rozdzielone sekcje text/value, card/icon, section layout. |
+| W11, R6 | Otwarte shared | Pozostały drift `split-highlight` secondary grid został wydzielony do `TASK-331` zamiast być ukryty w zamkniętym TASK-287. |
+| W12 | Odrzucone / deferred | `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` nadal odrzuca animated counters bez osobnego tasku accessibility/performance. |
+
+### 0.1 Finalna walidacja zamknięcia
+
+- Zielone focused lanes: `tests/vitest/widgets/statsKpi.test.tsx`, `tests/vitest/widgets/renderer.test.tsx`, `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx`, `tests/unit/widgets/validator.test.ts`.
+- Zielone quality gates w scope zadania: `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run precommit`.
+- `bun run scan:security:strict` nadal jest lokalnie zablokowany środowiskowo przez brak binarek `semgrep`, `trivy`, i `gitleaks`; nie jest to regression w kodzie TASK-287.
+- Shared closure pozostaje truthful: `TASK-287` nie claimuje napraw dla `TASK-331`, ani nie odwraca decyzji o braku count-up animation.
+
+
 ## 1. Przegląd widgetu
 
 **Typ:** Composite

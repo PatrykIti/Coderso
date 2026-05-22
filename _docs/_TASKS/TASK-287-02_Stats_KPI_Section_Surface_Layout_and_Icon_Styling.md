@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-06-01, TASK-287, TASK-287-01
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 

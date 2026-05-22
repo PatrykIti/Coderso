@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Documentation + Playwright QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-287-01, TASK-287-02, TASK-287-03, TASK-287-04, TASK-287-05, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 

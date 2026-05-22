@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-287, TASK-287-01
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 

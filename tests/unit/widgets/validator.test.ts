@@ -280,6 +280,81 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
   ).toThrow("widget_schema_invalid");
 });
 
+test("normalizeWidgetBlock accepts stats kpi authoring extensions and rejects invalid trend enums", () => {
+  registerWidget(
+    createStatsKpiWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stats-kpi-valid",
+      type: "stats-kpi",
+      variant: "split-highlight",
+      data: {
+        ...statsKpiDefaults,
+        items: [
+          {
+            id: "kpi-1",
+            value: "120",
+            prefix: "$",
+            suffix: "+",
+            label: "Launches",
+            description: "Latest quarter",
+            icon: "🚀",
+            accentColor: "#ff5500",
+            trend: {
+              label: "+12% QoQ",
+              direction: "up",
+            },
+            link: {
+              href: "/work",
+              label: "See work",
+              openInNewTab: true,
+            },
+          },
+        ],
+        style: {
+          ...statsKpiDefaults.style,
+          descriptionColor: "#475569",
+          valueSize: "lg",
+          divider: true,
+          dividerIntensity: "strong",
+          maxWidth: "xl",
+          padding: "lg",
+          minHeight: "compact",
+          iconSize: "lg",
+          iconSurface: "var(--color-bg-muted)",
+          iconBorderColor: "var(--color-border)",
+        },
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stats-kpi-invalid-trend",
+      type: "stats-kpi",
+      variant: "cards",
+      data: {
+        ...statsKpiDefaults,
+        items: [
+          {
+            ...statsKpiDefaults.items[0],
+            trend: {
+              label: "+12% QoQ",
+              direction: "sideways",
+            },
+          },
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
 test("normalizeWidgetBlock accepts split layout mobile ratio and rejects unknown ratio keys", () => {
   registerWidget(
     createSplitLayoutWidget({

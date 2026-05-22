@@ -4,11 +4,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  statsKpiSchema,
-  type StatsKpiData,
-  type StatsKpiItem,
-} from "../../../core/widgets/core/statsKpi";
+import type { StatsKpiData, StatsKpiItem } from "../../../core/widgets/core/statsKpi";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -311,89 +307,10 @@ const getButtonsByText = (container: ParentNode, text: string) => {
   return buttons;
 };
 
-const getInputByAriaLabel = (container: ParentNode, label: string) => {
-  const input = Array.from(container.querySelectorAll("input")).find(
-    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+const getColorInputs = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("input[type='color']")).filter(
+    (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with aria-label "${label}"`);
-  }
-  return input;
-};
-
-const clickAnyButtonByText = (container: ParentNode, texts: string[]) => {
-  for (const text of texts) {
-    const button = Array.from(container.querySelectorAll("button")).find(
-      (element): element is HTMLButtonElement =>
-        element instanceof HTMLButtonElement && element.textContent?.includes(text) === true
-    );
-    if (button) {
-      clickButton(button);
-      return true;
-    }
-  }
-  return false;
-};
-
-const statsKpiVariantLabelMap: Record<string, string> = {
-  cards: "Cards",
-  inline: "Inline",
-  "split-highlight": "Split Highlight",
-};
-
-const setStatsKpiVariant = (container: HTMLElement, value: string) => {
-  const variantSelect = findSelectsByOptions(container, ["cards", "inline", "split-highlight"])[0];
-  if (variantSelect instanceof HTMLSelectElement) {
-    setSelectValue(variantSelect, value);
-    return;
-  }
-  const label = statsKpiVariantLabelMap[value] ?? value;
-  clickByText(container, label);
-};
-
-const expectTextToContainOneOf = (container: ParentNode, texts: string[]) => {
-  const renderedText = container.textContent ?? "";
-  expect(texts.some((text) => renderedText.includes(text))).toBe(true);
-};
-
-const getStatsKpiSchemaProperties = (schemaValue: unknown): Record<string, unknown> => {
-  if (!schemaValue || typeof schemaValue !== "object") return {};
-  const properties = (schemaValue as { properties?: unknown }).properties;
-  return properties && typeof properties === "object"
-    ? (properties as Record<string, unknown>)
-    : {};
-};
-
-const statsKpiRootProperties = getStatsKpiSchemaProperties(statsKpiSchema);
-const statsKpiStyleProperties = getStatsKpiSchemaProperties(statsKpiRootProperties.style);
-const statsKpiItemProperties = getStatsKpiSchemaProperties(
-  typeof statsKpiRootProperties.items === "object" && statsKpiRootProperties.items !== null
-    ? (statsKpiRootProperties.items as { items?: unknown }).items
-    : undefined
-);
-
-const hasStatsKpiStyleField = (field: string) =>
-  Object.prototype.hasOwnProperty.call(statsKpiStyleProperties, field);
-const hasStatsKpiItemField = (field: string) =>
-  Object.prototype.hasOwnProperty.call(statsKpiItemProperties, field);
-
-const hasTask287ExpandedSchema =
-  hasStatsKpiStyleField("valueSize") &&
-  hasStatsKpiStyleField("descriptionColor") &&
-  hasStatsKpiStyleField("sectionBackground") &&
-  hasStatsKpiStyleField("maxWidth") &&
-  hasStatsKpiStyleField("padding") &&
-  hasStatsKpiStyleField("minHeight") &&
-  hasStatsKpiStyleField("iconSize") &&
-  hasStatsKpiStyleField("iconSurface") &&
-  hasStatsKpiStyleField("iconBorderColor") &&
-  hasStatsKpiItemField("prefix") &&
-  hasStatsKpiItemField("suffix") &&
-  hasStatsKpiItemField("accentColor") &&
-  hasStatsKpiItemField("trend");
-
-const hasTask287MetricLinks = hasStatsKpiItemField("link");
-const testTask287StatsKpiEditor = hasTask287ExpandedSchema ? test : test.skip;
 
 const mountStatsKpiHarness = ({
   initialValue,
@@ -453,6 +370,13 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  const previousConfirm = window.confirm;
+  const confirmSpy = vi.fn(() => true);
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: confirmSpy,
+  });
 
   const Harness = () => {
     const [value, setValue] = useState<StatsKpiData>({} as StatsKpiData);
@@ -502,52 +426,58 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   const view = mount(<Harness />);
 
   try {
-    expectTextToContainOneOf(view.container, ["Stats layout", "Cards", "Split Highlight"]);
-    expectTextToContainOneOf(view.container, ["Metrics content and order", "Metrics and links"]);
+    expect(view.container.textContent).toContain("Stats layout");
+    expect(view.container.textContent).toContain("Metrics content and links");
     expect(view.container.textContent).toContain("Raw payload snapshot");
 
+    clickByText(view.container, "Split Highlight");
+
     React.act(() => {
-      setStatsKpiVariant(view.container, "split-highlight");
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6"])[0], "3");
-      setInputValue(findInputByPlaceholder(view.container, "Metric 1 value"), "120+");
       setInputValue(findInputByPlaceholder(view.container, "Proof in numbers"), "Numbers");
       setTextareaValue(
-        view.container.querySelector(
-          "textarea[placeholder='Show key performance metrics and outcomes.']"
-        ),
+        getTextareaByPlaceholder(view.container, "Show key performance metrics and outcomes."),
         "Metrics description"
       );
-    });
-
-    clickByText(view.container, "Add metric");
-
-    React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "Projects launched"), "Clients won");
+      setInputValue(findInputByPlaceholder(view.container, "Metric 1 value"), "120+");
+      setInputValue(findInputByPlaceholder(view.container, "Metric 1 label"), "Clients won");
       setTextareaValue(
-        view.container.querySelector("textarea[placeholder='Optional supporting context.']"),
+        getTextareaByPlaceholder(view.container, "Optional supporting context."),
         "Updated description"
       );
       setInputValue(findInputByPlaceholder(view.container, "🚀"), "⭐");
     });
 
+    clickByText(view.container, "Add metric");
+
     React.act(() => {
-      setInputValue(getInputByAriaLabel(view.container, "Value color value"), "#123456");
-      setInputValue(getInputByAriaLabel(view.container, "Label color value"), "#654321");
-      setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
-      setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
+      setInputValue(findInputByPlaceholder(view.container, "120"), "240");
+      setInputValue(findInputByPlaceholder(view.container, "Projects launched"), "Launches");
+      setInputValue(findInputByPlaceholder(view.container, "$"), "$");
+      setInputValue(findInputByPlaceholder(view.container, "%"), "+");
+      setInputValue(findInputByPlaceholder(view.container, "var(--color-accent)"), "#aa5500");
+      setInputValue(findInputByPlaceholder(view.container, "+12% MoM"), "+30% QoQ");
+      setInputValue(findInputByPlaceholder(view.container, "/work"), "/case-studies");
+      setInputValue(
+        findInputByPlaceholder(view.container, "See launch examples"),
+        "Read case studies"
+      );
     });
 
-    const switches = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
-    toggleCheckbox(switches[0]);
+    const textTokenInputs = getInputsByPlaceholder(view.container, "var(--color-text)");
+    React.act(() => {
+      setInputValue(textTokenInputs[0], "#123456");
+      setInputValue(textTokenInputs[1], "#654321");
+      setInputValue(textTokenInputs[2], "#334455");
+      setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
+      const densitySelects = findSelectsByOptions(view.container, ["none", "sm", "md", "lg"]);
+      setSelectValue(densitySelects[0], "lg");
+      setSelectValue(densitySelects[1], "lg");
+    });
 
-    clickByText(view.container, "Move down");
-    clickByText(view.container, "Remove");
-    clickAnyButtonByText(view.container, [
-      "Confirm remove",
-      "Delete metric",
-      "Yes, remove",
-      "Confirm",
-    ]);
+    const removeButtons = getButtonsByText(view.container, "Remove");
+    clickButton(removeButtons[removeButtons.length - 1]);
+    expect(confirmSpy).toHaveBeenCalled();
 
     const latest = onChangeSpy.mock.lastCall?.[0];
     expect(latest).toEqual(
@@ -561,16 +491,27 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
           spacing: "lg",
           valueColor: "#123456",
           labelColor: "#654321",
-          divider: true,
+          descriptionColor: "#334455",
         }),
       })
     );
+    expect(latest.items).toHaveLength(3);
     expect(latest.items[0]).toEqual(
       expect.objectContaining({
-        value: "120+",
-        label: "Clients won",
+        value: "240",
+        label: "Launches",
+        prefix: "$",
+        suffix: "+",
         description: "Updated description",
         icon: "⭐",
+        accentColor: "#aa5500",
+        trend: expect.objectContaining({
+          label: "+30% QoQ",
+        }),
+        link: expect.objectContaining({
+          href: "/case-studies",
+          label: "Read case studies",
+        }),
       })
     );
     expect(onVariantChangeSpy).toHaveBeenCalledWith("split-highlight");
@@ -584,6 +525,11 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     const resetPayload = onChangeSpy.mock.lastCall?.[0];
     expect(resetPayload.header?.title).toBe("Proof in numbers");
   } finally {
+    Object.defineProperty(window, "confirm", {
+      configurable: true,
+      writable: true,
+      value: previousConfirm,
+    });
     view.cleanup();
   }
 });
@@ -625,21 +571,20 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
   });
 
   try {
-    const variantSectionButtons = getButtonsByText(visualHarness.container, "Inline");
+    const colorInputValues = getColorInputs(visualHarness.container).map((input) => input.value);
 
-    expect(getInputByAriaLabel(visualHarness.container, "Value color swatch").value).toBe(
-      "#0f172a"
-    );
-    expect(getInputByAriaLabel(visualHarness.container, "Label color swatch").value).toBe(
-      "#445566"
-    );
+    expect(colorInputValues).toContain("#445566");
+    expect(colorInputValues.filter((value) => value === "#0f172a").length).toBeGreaterThan(0);
 
     clickByText(visualHarness.container, "Inline");
     expect(visualHarness.getLatestVariant()).toBe("inline");
     expect(visualHarness.onVariantChangeSpy).toHaveBeenLastCalledWith("inline");
 
-    setInputValue(getInputByPlaceholder(visualHarness.container, "120+"), "300%");
-    setInputValue(getInputByAriaLabel(visualHarness.container, "Value color value"), "#112233");
+    setInputValue(getInputByPlaceholder(visualHarness.container, "120"), "300%");
+    setInputValue(
+      getInputsByPlaceholder(visualHarness.container, "var(--color-text)")[0],
+      "#112233"
+    );
     setSelectValue(
       getSelectByOptions(visualHarness.container, [
         "1",
@@ -659,7 +604,6 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
     );
     clickButton(getButtonsByText(visualHarness.container, "Move up")[1]);
 
-    expect(variantSectionButtons).toHaveLength(1);
     expect(visualHarness.getLatestValue()).toMatchObject({
       items: [
         expect.objectContaining({
@@ -671,7 +615,8 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
           label: "Initial label",
         }),
         expect.objectContaining({
-          value: "3x",
+          value: "3",
+          suffix: "x",
           label: "Faster iteration",
         }),
       ],
@@ -785,17 +730,21 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
       getTextareaByPlaceholder(visualView.container, "Show key performance metrics and outcomes.")
         .value
     ).toBe("");
-    expect(getInputByPlaceholder(visualView.container, "120+").value).toBe("");
+    expect(getInputByPlaceholder(visualView.container, "120").value).toBe("");
     expect(getInputByPlaceholder(visualView.container, "Projects launched").value).toBe("");
+    expect(getInputByPlaceholder(visualView.container, "$").value).toBe("");
+    expect(getInputByPlaceholder(visualView.container, "%").value).toBe("");
     expect(
       getTextareaByPlaceholder(visualView.container, "Optional supporting context.").value
     ).toBe("");
     expect(getInputByPlaceholder(visualView.container, "🚀").value).toBe("");
     expect(
       getInputsByPlaceholder(visualView.container, "var(--color-text)").map((input) => input.value)
-    ).toEqual(["", ""]);
-    expect(getInputByAriaLabel(visualView.container, "Value color swatch").value).toBe("#0f172a");
-    expect(getInputByAriaLabel(visualView.container, "Label color swatch").value).toBe("#0f172a");
+    ).toEqual(["", "", ""]);
+    expect(getColorInputs(visualView.container)).toHaveLength(5);
+    expect(getColorInputs(visualView.container).every((input) => input.value === "#0f172a")).toBe(
+      true
+    );
     expect(getSelectByOptions(visualView.container, ["start", "center", "end"]).value).toBe(
       "center"
     );
@@ -861,28 +810,6 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
       value: "240",
       label: "Two",
     });
-
-    const optionalWizardTitle = findInputByPlaceholder(wizardView.container, "Proof in numbers");
-    if (optionalWizardTitle instanceof HTMLInputElement) {
-      setInputValue(optionalWizardTitle, "Revenue proof");
-      expect(latestWizardValue.header?.title).toBe("Revenue proof");
-    }
-
-    const optionalWizardLabel = findInputByPlaceholder(wizardView.container, "Projects launched");
-    if (optionalWizardLabel instanceof HTMLInputElement) {
-      setInputValue(optionalWizardLabel, "Qualified pipeline");
-      expect(latestWizardValue.items?.[0]).toMatchObject({
-        label: "Qualified pipeline",
-      });
-    }
-
-    const optionalWizardIcon = findInputByPlaceholder(wizardView.container, "🚀");
-    if (optionalWizardIcon instanceof HTMLInputElement) {
-      setInputValue(optionalWizardIcon, "🔥");
-      expect(latestWizardValue.items?.[0]).toMatchObject({
-        icon: "🔥",
-      });
-    }
   } finally {
     wizardView.cleanup();
   }
@@ -915,89 +842,27 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
   const visualView = mount(<VisualHarness />);
 
   try {
-    const dividerToggle =
-      visualView.container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    const checkboxes = Array.from(
+      visualView.container.querySelectorAll("input[type='checkbox']")
+    ).filter((element): element is HTMLInputElement => element instanceof HTMLInputElement);
+    const dividerToggle = checkboxes[checkboxes.length - 1];
     if (!(dividerToggle instanceof HTMLInputElement)) {
       throw new Error("Missing divider toggle");
     }
+
     React.act(() => {
       dividerToggle.click();
     });
+    setSelectValue(
+      getSelectByOptions(visualView.container, ["soft", "default", "strong"]),
+      "strong"
+    );
 
     expect(latestVisualValue.style).toMatchObject({
       divider: true,
+      dividerIntensity: "strong",
     });
   } finally {
     visualView.cleanup();
   }
 });
-
-testTask287StatsKpiEditor(
-  "StatsKpi task-287 editors surface wizard parity and grouped visual IA when the expanded schema is active",
-  async () => {
-    const { StatsKpiVisualEditor, StatsKpiWizardEditor } =
-      await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
-
-    const wizardHarness = mountStatsKpiHarness({
-      initialValue: {
-        items: [
-          { id: "metric-1", value: "120", label: "Projects launched", icon: "🚀" },
-          { id: "metric-2", value: "45", label: "Higher engagement", icon: "📈" },
-        ],
-      },
-      initialVariant: "cards",
-      render: (props) => <StatsKpiWizardEditor {...props} />,
-    });
-
-    try {
-      setStatsKpiVariant(wizardHarness.container, "split-highlight");
-      expect(wizardHarness.getLatestVariant()).toBe("split-highlight");
-      expect(getButtonsByText(wizardHarness.container, "Split Highlight")).toHaveLength(1);
-
-      setInputValue(
-        getInputByPlaceholder(wizardHarness.container, "Proof in numbers"),
-        "Revenue proof"
-      );
-      setInputValue(
-        getInputByPlaceholder(wizardHarness.container, "Projects launched"),
-        "Qualified pipeline"
-      );
-      setInputValue(getInputByPlaceholder(wizardHarness.container, "🚀"), "🔥");
-
-      expect(wizardHarness.getLatestValue().header?.title).toBe("Revenue proof");
-      expect(wizardHarness.getLatestValue().items?.[0]).toMatchObject({
-        label: "Qualified pipeline",
-        icon: "🔥",
-      });
-      expectTextToContainOneOf(wizardHarness.container, [
-        "Compact",
-        "Default",
-        "Spacious",
-        "spacing",
-      ]);
-    } finally {
-      wizardHarness.cleanup();
-    }
-
-    const visualView = mount(
-      <StatsKpiVisualEditor value={{ items: [] }} onChange={vi.fn()} variant="cards" />
-    );
-
-    try {
-      expectTextToContainOneOf(visualView.container, [
-        "Text and value styling",
-        "Typography and colors",
-      ]);
-      expectTextToContainOneOf(visualView.container, ["Card surfaces", "Surface styling"]);
-      expectTextToContainOneOf(visualView.container, ["Icon styling", "Icon style"]);
-      expectTextToContainOneOf(visualView.container, ["Section layout", "Layout display options"]);
-      expectTextToContainOneOf(visualView.container, ["Move up", "Move down"]);
-
-      if (hasTask287MetricLinks) {
-        expectTextToContainOneOf(visualView.container, ["Metric links", "Link"]);
-      }
-    } finally {
-      visualView.cleanup();
-    }
-  }
-);

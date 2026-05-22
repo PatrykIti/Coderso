@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-06-08, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-01, TASK-256-06-02, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -26,6 +26,8 @@ in `feature/corrections`, but the Stats KPI Wizard still lacks the baseline
 header and metric content inputs observed in the report. TASK-287-03 owns that
 current-state Wizard parity work so the family remains executable on this
 branch.
+
+The family is now closed on 2026-05-22. The only remaining report residual outside this widget-local scope is shared `TASK-331`, while animated counters remain intentionally rejected by the research matrix.
 
 ## Source Report Boundary
 
@@ -102,12 +104,12 @@ that part back to TASK-256 instead of hiding it in this family.
 
 ## Sub-Tasks
 
-- [ ] TASK-287-01: Stats KPI Value Typography and Metric Semantics
-- [ ] TASK-287-02: Stats KPI Section Surface Layout and Icon Styling
-- [ ] TASK-287-03: Stats KPI Wizard Variant Cards and Guidance
-- [ ] TASK-287-04: Stats KPI Metric Links and Safe Click Semantics
-- [ ] TASK-287-05: Stats KPI Metric Management and Editor IA Polish
-- [ ] TASK-287-06: Stats KPI Report Docs Changelog and Closure
+- [x] TASK-287-01: Stats KPI Value Typography and Metric Semantics
+- [x] TASK-287-02: Stats KPI Section Surface Layout and Icon Styling
+- [x] TASK-287-03: Stats KPI Wizard Variant Cards and Guidance
+- [x] TASK-287-04: Stats KPI Metric Links and Safe Click Semantics
+- [x] TASK-287-05: Stats KPI Metric Management and Editor IA Polish
+- [x] TASK-287-06: Stats KPI Report Docs Changelog and Closure
 
 ## Implementation Order
 
