@@ -2,8 +2,9 @@
 
 ## Purpose
 
-Render a resolved commerce table with shared column metadata, guarded column
-visibility, editable labels, bounded status and stock presentation, safe
+Render a resolved commerce table with an optional section header, shared
+column metadata, guarded column visibility, bounded status and stock
+presentation, public-safe product thumbnails, optional excerpt context, safe
 product links, an optional action column, empty-state styling, and admin
 preview parity for the current source query.
 
@@ -24,6 +25,7 @@ preview parity for the current source query.
 
 ### Visual
 - admin preview status summary
+- section header
 - columns
 - column labels
 - stock presentation
@@ -38,14 +40,27 @@ preview parity for the current source query.
 
 ## Column Model
 
-- Shared column order: Product, Slug, Price, Compare at, Status, Stock,
-  Collections.
-- Visual mode exposes toggles and header labels for all seven columns through
+- Shared column order: Image, Product, Excerpt, Slug, Price, Compare at,
+  Status, Stock, Collections.
+- Visual mode exposes toggles and header labels for all nine columns through
   the shared `productTableColumns` registry.
 - `showTitle` can be disabled only while Slug remains visible. If both identity
   columns are turned off, Product is restored automatically.
 - `showPrice` can be disabled only while Compare at remains visible. If both
   pricing columns are turned off, Price is restored automatically.
+
+## Section Header, Media, and Excerpt
+
+- `header.eyebrow`, `header.title`, and `header.description` add optional
+  context above the table without changing the shared widget-section contract.
+- `header.title` becomes the preferred section/table accessible label when it
+  is present; otherwise the sr-only caption falls back to `Product table`.
+- `fields.showImage` adds a bounded thumbnail column backed only by public-safe
+  media data resolved in `hydrateProductTableRuntimeData()`.
+- `fields.showExcerpt` adds a plain-text excerpt column that clamps long values
+  to 160 characters in the renderer.
+- Missing media degrades to a `No image` fallback instead of rendering a broken
+  request or exposing a private URL.
 
 ## Status and Stock Presentation
 
@@ -76,8 +91,9 @@ preview parity for the current source query.
 
 ## Accessibility Notes
 
-- Product Table now renders an sr-only `Product table` caption and keeps `scope="col"` on every rendered header, including the optional Action column.
-- The widget section and scroll region use the same deterministic accessible label until visible section header fields land in `TASK-281-06`.
+- Product Table now renders an sr-only caption and keeps `scope="col"` on every rendered header, including the optional Action column.
+- When `header.title` is present, the section, scroll region, and sr-only caption all reuse it as the preferred accessible table label; otherwise they fall back to `Product table`.
+- Thumbnail images use `loading="lazy"`, `decoding="async"`, and safe alt fallback to the product title when media metadata omits alt text.
 - Commerce runtime warnings announce through `role="alert"`, preview refresh banners announce through `role="status"` with polite live behavior, and the existing editor-preview empty state keeps polite live semantics without broadening this into a shared helper.
 - The existing `TASK-281-03` status badge/title copy baseline remains intact and is now locked by focused SSR assertions.
 
@@ -96,9 +112,12 @@ preview parity for the current source query.
   - `data-product-status`
 - `resolved.items[].productHref` is derived from the shared commerce
   content-route contract and normalized to safe relative URLs before render.
+- `resolved.items[].media` is attached only from public image media resolved via
+  `primaryMediaId` or the first `mediaIds[]` entry; missing or non-image media
+  resolves to a local fallback instead of an exposed URL.
 - Empty-state copy is rendered when no items resolve.
-- Product status and stock values are normalized through the shared commerce
-  card contract.
+- Product status, stock values, and excerpt text are normalized through the
+  shared commerce card contract before render.
 
 ## Clear Controls
 
@@ -120,8 +139,15 @@ preview parity for the current source query.
     "sortField": "updatedAt",
     "sortDir": "desc"
   },
+  "header": {
+    "eyebrow": "Featured catalog",
+    "title": "Summer release",
+    "description": "Curated product context above the table."
+  },
   "fields": {
+    "showImage": false,
     "showTitle": true,
+    "showExcerpt": false,
     "showSlug": true,
     "showPrice": true,
     "showStatus": true,
@@ -131,7 +157,9 @@ preview parity for the current source query.
     "showCollectionCount": false
   },
   "labels": {
+    "image": "Image",
     "title": "Product",
+    "excerpt": "Excerpt",
     "slug": "Slug",
     "price": "Price",
     "compareAt": "Compare at",

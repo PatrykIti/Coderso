@@ -22,6 +22,7 @@ import {
   CommerceEditorSection,
   CommerceSourceFields,
   CommerceTextField,
+  CommerceTextareaField,
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
@@ -62,6 +63,20 @@ const clearStyle = (
   const { [key]: _removed, ...nextStyle } = current.style ?? {};
   update(value, onChange, {
     style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+  });
+};
+
+const updateHeader = (
+  value: ProductTableData,
+  onChange: (next: ProductTableData) => void,
+  patch: Partial<NonNullable<ProductTableData["header"]>>
+) => {
+  const current = normalizeProductTableData(value);
+  update(value, onChange, {
+    header: {
+      ...current.header,
+      ...patch,
+    },
   });
 };
 
@@ -447,6 +462,28 @@ export function ProductTableVisualEditor({
         onRefresh={context?.setPreviewState ? preview.refresh : undefined}
         disabled={preview.isLoading}
       />
+
+      <CommerceEditorSection
+        title="Section header"
+        description="Optional context above the table. Section title becomes the preferred accessible table label when present."
+      >
+        <CommerceTextField
+          label="Section eyebrow"
+          value={normalized.header?.eyebrow}
+          onChange={(next) => updateHeader(normalized, onChange, { eyebrow: next })}
+        />
+        <CommerceTextField
+          label="Section title"
+          value={normalized.header?.title}
+          onChange={(next) => updateHeader(normalized, onChange, { title: next })}
+        />
+        <CommerceTextareaField
+          label="Section description"
+          rows={3}
+          value={normalized.header?.description}
+          onChange={(next) => updateHeader(normalized, onChange, { description: next })}
+        />
+      </CommerceEditorSection>
 
       <CommerceEditorSection
         title="Columns"

@@ -95,6 +95,93 @@ test("product table renders accessible caption, labels, and scoped headers", () 
   expect(html.match(/scope="col"/g)?.length).toBe(8);
 });
 
+test("product table renders section header, media and excerpt columns, and safe thumbnail fallbacks", () => {
+  const longExcerpt =
+    "This introductory product summary is intentionally long enough to verify that the Product Table clamps plain-text excerpts without leaking raw layout overflow into the table cell output for dense catalogs.";
+  const clampedExcerpt = `${longExcerpt.slice(0, 157).trimEnd()}...`;
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        header: {
+          eyebrow: "Featured catalog",
+          title: "Summer release",
+          description: "Curated product context above the table.",
+        },
+        fields: {
+          showImage: true,
+          showTitle: true,
+          showExcerpt: true,
+          showSlug: false,
+          showPrice: true,
+          showStatus: true,
+          showStock: false,
+          showCompareAt: false,
+          showCollectionCount: false,
+        },
+        labels: {
+          image: "Thumbnail",
+          excerpt: "Summary",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-media",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: longExcerpt,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: "media-1",
+              mediaIds: ["media-1"],
+              collectionIds: [],
+              productHref: "/products/starter-home",
+              media: {
+                url: "/media/starter-home.jpg",
+                alt: "Starter Home hero",
+                width: 1200,
+                height: 900,
+              },
+            },
+            {
+              id: "product-no-media",
+              title: "Loft Home",
+              slug: "loft-home",
+              excerpt: null,
+              status: "draft",
+              pricing: { amount: 95000, currency: "USD", compareAtAmount: null },
+              stock: { state: "backorder", quantity: 1, inStock: false },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: null,
+            },
+          ],
+          total: 2,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain("Featured catalog");
+  expect(html).toContain("Summer release");
+  expect(html).toContain("Curated product context above the table.");
+  expect(html).toContain("Thumbnail");
+  expect(html).toContain("Summary");
+  expect(html).toContain(clampedExcerpt);
+  expect(html).toContain('aria-label="Summer release"');
+  expect(html).toContain('loading="lazy"');
+  expect(html).toContain('decoding="async"');
+  expect(html).toContain('src="/media/starter-home.jpg"');
+  expect(html).toContain('alt="Starter Home hero"');
+  expect(html).toContain("No image");
+  expect(html).not.toContain('src="undefined"');
+  expect(html).not.toContain('src=""');
+});
+
 test("product table renders rows with shared column labels and visibility", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -435,41 +522,100 @@ test("product table keeps legacy title and price visibility guardrails", () => {
   ]);
 });
 
-test("product table normalizes source, labels, and guarded fields", () => {
+test("product table normalizes source, header, media, labels, and guarded fields", () => {
   const normalized = normalizeProductTableData({
     source: {
       limit: 999,
       search: "  homes  ",
     },
+    header: {
+      eyebrow: "  Featured  ",
+      title: "  Summer release  ",
+      description: "  Catalog context.  ",
+    },
     fields: {
+      showImage: true,
       showTitle: false,
+      showExcerpt: true,
       showSlug: false,
       showPrice: false,
       showCompareAt: false,
     },
     labels: {
+      image: " ",
+      excerpt: "  Summary  ",
       title: " ",
       slug: " ",
       compareAt: "  MSRP  ",
       stock: " ",
       collections: " ",
     },
+    resolved: {
+      items: [
+        {
+          id: " product-1 ",
+          title: " Starter Home ",
+          slug: " starter-home ",
+          excerpt: " model home ",
+          status: "published",
+          pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 3, inStock: true },
+          primaryMediaId: " hero ",
+          mediaIds: ["hero", " "],
+          collectionIds: ["summer", " "],
+          productHref: "https://evil.example/product",
+          media: {
+            url: " /media/starter-home.jpg ",
+            alt: " ",
+            width: 1200.9,
+            height: 0,
+          },
+        },
+      ],
+      total: 1,
+      resolvedAt: " 2026-02-19T12:00:00.000Z ",
+    },
   });
 
   expect(normalized.source?.limit).toBe(48);
   expect(normalized.source?.search).toBe("homes");
+  expect(normalized.header).toMatchObject({
+    eyebrow: "Featured",
+    title: "Summer release",
+    description: "Catalog context.",
+  });
   expect(normalized.fields).toMatchObject({
+    showImage: true,
     showTitle: true,
+    showExcerpt: true,
     showSlug: false,
     showPrice: true,
     showCompareAt: false,
   });
   expect(normalized.labels).toMatchObject({
+    image: "Image",
+    excerpt: "Summary",
     title: "Product",
     slug: "Slug",
     compareAt: "MSRP",
     stock: "Stock",
     collections: "Collections",
+  });
+  expect(normalized.resolved?.items?.[0]).toMatchObject({
+    id: "product-1",
+    title: "Starter Home",
+    slug: "starter-home",
+    excerpt: "model home",
+    primaryMediaId: "hero",
+    mediaIds: ["hero"],
+    collectionIds: ["summer"],
+    productHref: null,
+    media: {
+      url: "/media/starter-home.jpg",
+      alt: "Starter Home",
+      width: 1200,
+      height: null,
+    },
   });
   expect(normalizeProductTableLabels({ price: " " }).price).toBe("Price");
 });
@@ -491,8 +637,15 @@ test("product table validator accepts resolved payload with title and price visi
       variant: "default",
       data: {
         ...productTableDefaults,
+        header: {
+          eyebrow: "Featured catalog",
+          title: "Summer release",
+          description: "Curated product context above the table.",
+        },
         fields: {
+          showImage: true,
           showTitle: false,
+          showExcerpt: true,
           showSlug: true,
           showPrice: false,
           showStatus: true,
@@ -500,6 +653,10 @@ test("product table validator accepts resolved payload with title and price visi
           showStockQuantity: true,
           showCompareAt: true,
           showCollectionCount: false,
+        },
+        labels: {
+          image: "Thumbnail",
+          excerpt: "Summary",
         },
         links: {
           linkedColumn: "title",
@@ -513,7 +670,7 @@ test("product table validator accepts resolved payload with title and price visi
               id: "product-1",
               title: "Starter Home",
               slug: "starter-home",
-              excerpt: null,
+              excerpt: "Compact modern home.",
               status: "published",
               pricing: {
                 amount: 120000,
@@ -529,6 +686,12 @@ test("product table validator accepts resolved payload with title and price visi
               mediaIds: [],
               collectionIds: [],
               productHref: null,
+              media: {
+                url: "/media/starter-home.jpg",
+                alt: "Starter Home hero",
+                width: 1200,
+                height: 900,
+              },
             },
           ],
           total: 1,
@@ -702,8 +865,14 @@ test("product table editors render expected panels and registry-backed controls"
       onVariantChange={() => undefined}
     />
   );
+  expect(visual).toContain("Section header");
+  expect(visual).toContain("Section eyebrow");
+  expect(visual).toContain("Section title");
+  expect(visual).toContain("Section description");
   expect(visual).toContain("Columns");
+  expect(visual).toContain("Show image");
   expect(visual).toContain("Show product");
+  expect(visual).toContain("Show excerpt");
   expect(visual).toContain("Show price");
   expect(visual).toContain("Show compare-at price");
   expect(visual).toContain("Show stock quantity");
@@ -711,7 +880,9 @@ test("product table editors render expected panels and registry-backed controls"
   expect(visual).toContain("Links and actions");
   expect(visual).toContain("Linked column");
   expect(visual).toContain("Show action column");
+  expect(visual).toContain("Image");
   expect(visual).toContain("Slug");
+  expect(visual).toContain("Excerpt");
   expect(visual).toContain("Compare at");
   expect(visual).toContain("Collections");
   expect(visual).toContain("Column labels");

@@ -13,6 +13,7 @@ import {
   buildProductTableQueryInput,
   normalizeProductTableData,
   type ProductTableData,
+  type ProductTableRuntimeItem,
 } from "../../widgets/core/productTable";
 import { getMediaById } from "../media/mediaService";
 import { listCommerceProducts } from "./commerceService";
@@ -156,6 +157,60 @@ const attachProductGalleryMedia = async (
   });
 };
 
+const attachProductTableMedia = async (
+  items: ProductTableRuntimeItem[],
+  deps: CommerceWidgetRuntimeDeps
+): Promise<ProductTableRuntimeItem[]> => {
+  const lookupIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.primaryMediaId ?? item.mediaIds[0] ?? null)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  );
+
+  const mediaById = new Map<
+    string,
+    { url: string; alt: string | null; width: number | null; height: number | null } | null
+  >();
+
+  await Promise.all(
+    lookupIds.map(async (id) => {
+      try {
+        const media = await deps.getMediaById(id);
+        if (!media || media.type !== "image" || !media.url) {
+          mediaById.set(id, null);
+          return;
+        }
+        mediaById.set(id, {
+          url: media.url,
+          alt: media.alt ?? media.title ?? null,
+          width: media.width ?? null,
+          height: media.height ?? null,
+        });
+      } catch {
+        mediaById.set(id, null);
+      }
+    })
+  );
+
+  return items.map((item) => {
+    const mediaId = item.primaryMediaId ?? item.mediaIds[0] ?? null;
+    const media = mediaId ? (mediaById.get(mediaId) ?? null) : null;
+    return {
+      ...item,
+      media: media
+        ? {
+            url: media.url,
+            alt: media.alt ?? item.title,
+            width: media.width,
+            height: media.height,
+          }
+        : null,
+    } satisfies ProductTableRuntimeItem;
+  });
+};
+
 const resolveProductGalleryRuntime = async (
   value: ProductGalleryData,
   options: CommerceWidgetRuntimeOptions,
@@ -267,10 +322,13 @@ export async function hydrateProductTableRuntimeData(
       runtimeDeps
     );
     const productHrefMap = await runtimeDeps.buildProductHrefMap(runtime.rows);
-    const items = runtime.cards.map((card) => ({
-      ...card,
-      productHref: productHrefMap.get(card.id) ?? null,
-    }));
+    const items = await attachProductTableMedia(
+      runtime.cards.map((card) => ({
+        ...card,
+        productHref: productHrefMap.get(card.id) ?? null,
+      })),
+      runtimeDeps
+    );
 
     return {
       ...normalized,

@@ -180,7 +180,7 @@ test("hydrateProductGalleryRuntimeData returns stable error code for invalid que
   expect(resolved.resolved?.error).toBe("commerce_query_invalid_filters");
 });
 
-test("hydrateProductTableRuntimeData attaches safe product hrefs to resolved rows", async () => {
+test("hydrateProductTableRuntimeData attaches safe product hrefs and public media to resolved rows", async () => {
   const calls: Array<Record<string, unknown>> = [];
   const resolved = await hydrateProductTableRuntimeData(
     {
@@ -233,12 +233,35 @@ test("hydrateProductTableRuntimeData attaches safe product hrefs to resolved row
       },
       buildProductHrefMap: async (rows) =>
         new Map(rows.map((row) => [row.id, `/products/${row.slug}`] as const)),
+      getMediaById: async (id: string) => ({
+        id,
+        key: "media-1.jpg",
+        url: "/media/starter-home.jpg",
+        originalName: "starter-home.jpg",
+        type: "image",
+        mimeType: "image/jpeg",
+        size: 120,
+        width: 1200,
+        height: 900,
+        alt: null,
+        title: "Starter Home hero",
+        caption: null,
+        createdAt: new Date("2026-02-19T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-19T12:00:00.000Z"),
+        createdBy: null,
+      }),
     }
   );
 
   expect(calls).toHaveLength(1);
   expect((calls[0].pagination as { limit: number }).limit).toBe(2);
   expect(resolved.resolved?.items?.[0]?.productHref).toBe("/products/starter-home");
+  expect(resolved.resolved?.items?.[0]?.media).toEqual({
+    url: "/media/starter-home.jpg",
+    alt: "Starter Home hero",
+    width: 1200,
+    height: 900,
+  });
   expect(resolved.resolved?.items?.[0]?.title).toBe("Starter Home");
   expect(resolved.resolved?.total).toBe(1);
 });

@@ -14,8 +14,17 @@ import { compactObject, compactStyle, resolveClearableStyleValue } from "./clear
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type ProductTableVariantId = "default";
+export type ProductTableResolvedMedia = {
+  url: string;
+  alt?: string | null;
+  width?: number | null;
+  height?: number | null;
+};
+
 export type ProductTableColumnKey =
+  | "image"
   | "title"
+  | "excerpt"
   | "slug"
   | "price"
   | "compareAt"
@@ -23,7 +32,9 @@ export type ProductTableColumnKey =
   | "stock"
   | "collections";
 export type ProductTableColumnVisibilityKey =
+  | "showImage"
   | "showTitle"
+  | "showExcerpt"
   | "showSlug"
   | "showPrice"
   | "showCompareAt"
@@ -44,10 +55,19 @@ export type ProductTableLinks = {
 
 export type ProductTableRuntimeItem = CommerceWidgetRuntimeCard & {
   productHref: string | null;
+  media?: ProductTableResolvedMedia | null;
+};
+
+export type ProductTableHeader = {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
 };
 
 export type ProductTableFields = {
+  showImage?: boolean;
   showTitle?: boolean;
+  showExcerpt?: boolean;
   showSlug?: boolean;
   showPrice?: boolean;
   showStatus?: boolean;
@@ -58,7 +78,9 @@ export type ProductTableFields = {
 };
 
 export type ProductTableLabels = {
+  image?: string;
   title?: string;
+  excerpt?: string;
   price?: string;
   compareAt?: string;
   status?: string;
@@ -79,6 +101,7 @@ export type ProductTableColumnDefinition = {
 
 export type ProductTableData = {
   source?: CommerceWidgetSource;
+  header?: ProductTableHeader;
   fields?: ProductTableFields;
   labels?: ProductTableLabels;
   links?: ProductTableLinks;
@@ -102,7 +125,9 @@ export type ProductTableData = {
 };
 
 const productTableFieldDefaults: Required<ProductTableFields> = {
+  showImage: false,
   showTitle: true,
+  showExcerpt: false,
   showSlug: true,
   showPrice: true,
   showStatus: true,
@@ -113,7 +138,9 @@ const productTableFieldDefaults: Required<ProductTableFields> = {
 };
 
 const productTableLabelFallbacks: Required<ProductTableLabels> = {
+  image: "Image",
   title: "Product",
+  excerpt: "Excerpt",
   price: "Price",
   compareAt: "Compare at",
   status: "Status",
@@ -164,6 +191,13 @@ export const productTableVisibilityGuardCopy: Record<ProductTableGuardGroup, str
 
 export const productTableColumns: ProductTableColumnDefinition[] = [
   {
+    key: "image",
+    labelKey: "image",
+    visibilityKey: "showImage",
+    toggleLabel: "Show image",
+    labelControlLabel: "Image",
+  },
+  {
     key: "title",
     labelKey: "title",
     visibilityKey: "showTitle",
@@ -171,6 +205,13 @@ export const productTableColumns: ProductTableColumnDefinition[] = [
     labelControlLabel: "Product",
     guardGroup: "identity",
     guardDescription: productTableVisibilityGuardCopy.identity,
+  },
+  {
+    key: "excerpt",
+    labelKey: "excerpt",
+    visibilityKey: "showExcerpt",
+    toggleLabel: "Show excerpt",
+    labelControlLabel: "Excerpt",
   },
   {
     key: "slug",
@@ -229,6 +270,7 @@ export const productTableDefaults: ProductTableData = {
     sortField: "updatedAt",
     sortDir: "desc",
   },
+  header: {},
   fields: productTableFieldDefaults,
   labels: productTableLabelFallbacks,
   links: productTableLinkDefaults,
@@ -249,6 +291,7 @@ export const productTableDefaults: ProductTableData = {
 
 const maxPreviewStatusMessageLength = 160;
 const productTableDefaultCaptionText = "Product table";
+const productTableExcerptMaxLength = 160;
 
 const text = (value: unknown, fallback: string) => {
   if (typeof value !== "string") return fallback;
@@ -262,79 +305,113 @@ const optionalText = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const positiveInteger = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+  return Math.floor(value);
+};
+
+const normalizeResolvedMedia = (
+  value: unknown,
+  fallbackAlt: string
+): ProductTableResolvedMedia | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+  const payload = value as ProductTableResolvedMedia;
+  const url = optionalText(payload.url);
+  if (!url) return null;
+
+  return {
+    url,
+    alt: optionalText(payload.alt ?? undefined) ?? fallbackAlt,
+    width: positiveInteger(payload.width),
+    height: positiveInteger(payload.height),
+  };
+};
+
 const normalizeRuntimeItems = (value: unknown): ProductTableRuntimeItem[] => {
   if (!Array.isArray(value)) return [];
 
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
-      const payload = item as CommerceWidgetRuntimeCard;
-      const id = optionalText(payload.id);
-      const title = optionalText(payload.title);
-      const slug = optionalText(payload.slug);
-      if (!id || !title || !slug) return null;
+  const items: ProductTableRuntimeItem[] = [];
 
-      return {
-        id,
-        title,
-        slug,
-        excerpt: optionalText(payload.excerpt ?? undefined) ?? null,
-        status:
-          payload.status === "draft" || payload.status === "archived"
-            ? payload.status
-            : "published",
-        pricing: {
-          amount:
-            typeof payload.pricing?.amount === "number" && Number.isFinite(payload.pricing.amount)
-              ? payload.pricing.amount
-              : 0,
-          currency: text(payload.pricing?.currency, "USD"),
-          compareAtAmount:
-            typeof payload.pricing?.compareAtAmount === "number" &&
-            Number.isFinite(payload.pricing.compareAtAmount)
-              ? payload.pricing.compareAtAmount
-              : null,
-        },
-        stock: {
-          state:
-            payload.stock?.state === "in_stock" ||
-            payload.stock?.state === "backorder" ||
-            payload.stock?.state === "out_of_stock"
-              ? payload.stock.state
-              : "out_of_stock",
-          quantity:
-            typeof payload.stock?.quantity === "number" &&
-            Number.isFinite(payload.stock.quantity) &&
-            payload.stock.quantity >= 0
-              ? Math.floor(payload.stock.quantity)
-              : null,
-          inStock: payload.stock?.inStock === true,
-        },
-        primaryMediaId: optionalText(payload.primaryMediaId ?? undefined) ?? null,
-        mediaIds: Array.isArray(payload.mediaIds)
-          ? payload.mediaIds
-              .map((entry) => optionalText(entry))
-              .filter((entry): entry is string => Boolean(entry))
-          : [],
-        collectionIds: Array.isArray(payload.collectionIds)
-          ? payload.collectionIds
-              .map((entry) => optionalText(entry))
-              .filter((entry): entry is string => Boolean(entry))
-          : [],
-        productHref:
-          normalizeWidgetSafeHref(optionalText((payload as ProductTableRuntimeItem).productHref), {
-            allowRelative: true,
-          }) ?? null,
-      } satisfies ProductTableRuntimeItem;
-    })
-    .filter((item): item is ProductTableRuntimeItem => item !== null);
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const payload = item as ProductTableRuntimeItem;
+    const id = optionalText(payload.id);
+    const title = optionalText(payload.title);
+    const slug = optionalText(payload.slug);
+    if (!id || !title || !slug) continue;
+
+    const media = normalizeResolvedMedia(payload.media, title);
+    items.push({
+      id,
+      title,
+      slug,
+      excerpt: optionalText(payload.excerpt ?? undefined) ?? null,
+      status:
+        payload.status === "draft" || payload.status === "archived" ? payload.status : "published",
+      pricing: {
+        amount:
+          typeof payload.pricing?.amount === "number" && Number.isFinite(payload.pricing.amount)
+            ? payload.pricing.amount
+            : 0,
+        currency: text(payload.pricing?.currency, "USD"),
+        compareAtAmount:
+          typeof payload.pricing?.compareAtAmount === "number" &&
+          Number.isFinite(payload.pricing.compareAtAmount)
+            ? payload.pricing.compareAtAmount
+            : null,
+      },
+      stock: {
+        state:
+          payload.stock?.state === "in_stock" ||
+          payload.stock?.state === "backorder" ||
+          payload.stock?.state === "out_of_stock"
+            ? payload.stock.state
+            : "out_of_stock",
+        quantity:
+          typeof payload.stock?.quantity === "number" &&
+          Number.isFinite(payload.stock.quantity) &&
+          payload.stock.quantity >= 0
+            ? Math.floor(payload.stock.quantity)
+            : null,
+        inStock: payload.stock?.inStock === true,
+      },
+      primaryMediaId: optionalText(payload.primaryMediaId ?? undefined) ?? null,
+      mediaIds: Array.isArray(payload.mediaIds)
+        ? payload.mediaIds
+            .map((entry) => optionalText(entry))
+            .filter((entry): entry is string => Boolean(entry))
+        : [],
+      collectionIds: Array.isArray(payload.collectionIds)
+        ? payload.collectionIds
+            .map((entry) => optionalText(entry))
+            .filter((entry): entry is string => Boolean(entry))
+        : [],
+      productHref:
+        normalizeWidgetSafeHref(optionalText(payload.productHref), {
+          allowRelative: true,
+        }) ?? null,
+      ...(media ? { media } : {}),
+    });
+  }
+
+  return items;
 };
+
+const normalizeProductTableHeader = (value: ProductTableData["header"] | undefined) =>
+  compactObject({
+    eyebrow: optionalText(value?.eyebrow),
+    title: optionalText(value?.title),
+    description: optionalText(value?.description),
+  });
 
 export const normalizeProductTableFields = (
   value: ProductTableData["fields"] | undefined
 ): Required<ProductTableFields> => {
   const fields: Required<ProductTableFields> = {
+    showImage: value?.showImage === true,
     showTitle: value?.showTitle !== false,
+    showExcerpt: value?.showExcerpt === true,
     showSlug: value?.showSlug !== false,
     showPrice: value?.showPrice !== false,
     showStatus: value?.showStatus !== false,
@@ -358,7 +435,9 @@ export const normalizeProductTableFields = (
 export const normalizeProductTableLabels = (
   value: ProductTableData["labels"] | undefined
 ): Required<ProductTableLabels> => ({
+  image: text(value?.image, productTableLabelFallbacks.image),
   title: text(value?.title, productTableLabelFallbacks.title),
+  excerpt: text(value?.excerpt, productTableLabelFallbacks.excerpt),
   price: text(value?.price, productTableLabelFallbacks.price),
   compareAt: text(value?.compareAt, productTableLabelFallbacks.compareAt),
   status: text(value?.status, productTableLabelFallbacks.status),
@@ -416,11 +495,22 @@ export const productTableSchema = {
         sortDir: { enum: ["asc", "desc"] },
       },
     },
+    header: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        eyebrow: { type: "string" },
+        title: { type: "string" },
+        description: { type: "string" },
+      },
+    },
     fields: {
       type: "object",
       additionalProperties: false,
       properties: {
+        showImage: { type: "boolean" },
         showTitle: { type: "boolean" },
+        showExcerpt: { type: "boolean" },
         showSlug: { type: "boolean" },
         showPrice: { type: "boolean" },
         showStatus: { type: "boolean" },
@@ -434,7 +524,9 @@ export const productTableSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        image: { type: "string" },
         title: { type: "string" },
+        excerpt: { type: "string" },
         price: { type: "string" },
         compareAt: { type: "string" },
         status: { type: "string" },
@@ -509,6 +601,16 @@ export const productTableSchema = {
               mediaIds: { type: "array", items: { type: "string" } },
               collectionIds: { type: "array", items: { type: "string" } },
               productHref: { type: ["string", "null"] },
+              media: {
+                type: ["object", "null"],
+                additionalProperties: false,
+                properties: {
+                  url: { type: "string" },
+                  alt: { type: ["string", "null"] },
+                  width: { type: ["number", "null"] },
+                  height: { type: ["number", "null"] },
+                },
+              },
             },
           },
         },
@@ -526,6 +628,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
     sortField: "updatedAt",
     sortDir: "desc",
   });
+  const header = normalizeProductTableHeader(value.header);
   const fields = normalizeProductTableFields(value.fields);
   const labels = normalizeProductTableLabels(value.labels);
   const links = normalizeProductTableLinks(value.links);
@@ -543,6 +646,7 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
 
   return {
     source,
+    ...(header ? { header } : {}),
     fields,
     labels,
     links,
@@ -575,6 +679,55 @@ const titleWithStatus = (title: string, status: CommerceWidgetRuntimeCard["statu
   if (status === "published") return title;
   if (status === "draft") return `${title} (draft)`;
   return `${title} (archived)`;
+};
+
+const clampProductTableExcerpt = (value: string | null) => {
+  const excerpt = optionalText(value);
+  if (!excerpt) return null;
+  if (excerpt.length <= productTableExcerptMaxLength) return excerpt;
+  return `${excerpt.slice(0, productTableExcerptMaxLength - 3).trimEnd()}...`;
+};
+
+const renderProductTableHeader = (header: ProductTableHeader | undefined) => {
+  if (!header?.eyebrow && !header?.title && !header?.description) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2">
+      {header.eyebrow ? (
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
+          {header.eyebrow}
+        </p>
+      ) : null}
+      {header.title ? (
+        <h2 className="text-2xl font-semibold text-[var(--color-text)]">{header.title}</h2>
+      ) : null}
+      {header.description ? (
+        <p className="max-w-3xl text-sm leading-6 text-[var(--color-text)]/70">
+          {header.description}
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
+const renderProductTableImage = (item: ProductTableRuntimeItem) => {
+  if (!item.media?.url) {
+    return <span className="text-xs text-[var(--color-text)]/45">No image</span>;
+  }
+
+  return (
+    <img
+      src={item.media.url}
+      alt={item.media.alt ?? item.title}
+      loading="lazy"
+      decoding="async"
+      width={item.media.width ?? undefined}
+      height={item.media.height ?? undefined}
+      className="h-14 w-14 rounded-md object-cover"
+    />
+  );
 };
 
 const productTitleValue = (
@@ -644,6 +797,12 @@ const renderProductTableCell = (
   }
 ) => {
   switch (column.key) {
+    case "image":
+      return (
+        <td className="w-24 px-3 py-2 text-[var(--color-text)]/65">
+          <div className="flex min-h-14 items-center">{renderProductTableImage(item)}</div>
+        </td>
+      );
     case "title": {
       const value = productTitleValue(item, options);
       return (
@@ -658,6 +817,14 @@ const renderProductTableCell = (
         </td>
       );
     }
+    case "excerpt":
+      return (
+        <td className="max-w-md px-3 py-2 text-[var(--color-text)]/70">
+          {clampProductTableExcerpt(item.excerpt) ?? (
+            <span className="text-[var(--color-text)]/45">-</span>
+          )}
+        </td>
+      );
     case "slug": {
       const value = `/${item.slug}`;
       return (
@@ -747,7 +914,7 @@ export function ProductTableBlock({
   const legacyHeaderClass = normalized.style === undefined ? "bg-[var(--color-bg)]/80" : "";
   const legacyEmptyClass =
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
-  const tableCaptionText = productTableDefaultCaptionText;
+  const tableCaptionText = normalized.header?.title ?? productTableDefaultCaptionText;
   const tableCaptionId = React.useId();
 
   return (
@@ -784,6 +951,8 @@ export function ProductTableBlock({
           Commerce runtime warning: {normalized.resolved?.error}
         </div>
       ) : null}
+
+      {renderProductTableHeader(normalized.header)}
 
       {items.length === 0 ? (
         <div

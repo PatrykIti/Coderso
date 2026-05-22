@@ -160,6 +160,16 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLTextAreaElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  React.act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -203,6 +213,9 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
+const findTextareaByLabel = (container: ParentNode, text: string) =>
+  findLabeledField(container, text, "textarea");
+
 const requirePreviewState = (state: WidgetPreviewState | null) => {
   if (!state) throw new Error("expected preview state");
   return state;
@@ -216,7 +229,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ProductTable editors normalize source, full column registry, labels, and read-only preview diagnostics", async () => {
+test("ProductTable editors normalize source, section header, full column registry, labels, and read-only preview diagnostics", async () => {
   const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
@@ -243,6 +256,12 @@ test("ProductTable editors normalize source, full column registry, labels, and r
           mediaIds: ["hero", " ", "gallery"],
           collectionIds: ["summer", " ", "sale"],
           productHref: null,
+          media: {
+            url: " /media/starter-home.jpg ",
+            alt: " ",
+            width: 640.8,
+            height: -2,
+          },
         },
       ],
       total: -2,
@@ -294,13 +313,22 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       normalizeText("Resolved items: 1 · Total: 0")
     );
     expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
+    expect(findInputByLabel(view.container, "Section eyebrow")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Section title")).toBeInstanceOf(HTMLInputElement);
+    expect(findTextareaByLabel(view.container, "Section description")).toBeInstanceOf(
+      HTMLTextAreaElement
+    );
+    expect(findInputByLabel(view.container, "Show image")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Show product")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Show excerpt")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Show price")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Show stock quantity")).toBeInstanceOf(
       HTMLInputElement
     );
     expect(findSelectByLabel(view.container, "Linked column")).toBeInstanceOf(HTMLSelectElement);
+    expect(findInputByLabel(view.container, "Image")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Slug")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Excerpt")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Compare at")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Stock")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Collections")).toBeInstanceOf(HTMLInputElement);
@@ -314,6 +342,12 @@ test("ProductTable editors normalize source, full column registry, labels, and r
 
     setInputValue(findInputByLabel(view.container, "Limit"), "52");
     setInputValue(findInputByLabel(view.container, "Search"), " starter suite ");
+    setInputValue(findInputByLabel(view.container, "Section eyebrow"), " Featured catalog ");
+    setInputValue(findInputByLabel(view.container, "Section title"), " Summer release ");
+    setTextareaValue(
+      findTextareaByLabel(view.container, "Section description"),
+      " Curated context copy. "
+    );
     setInputValue(
       findInputByLabel(view.container, "Collection IDs fallback"),
       "summer, winter, summer"
@@ -324,7 +358,9 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     toggleCheckbox(findInputByLabel(view.container, "archived"));
     toggleCheckbox(findInputByLabel(view.container, "published"));
 
+    toggleCheckbox(findInputByLabel(view.container, "Show image"));
     toggleCheckbox(findInputByLabel(view.container, "Show product"));
+    toggleCheckbox(findInputByLabel(view.container, "Show excerpt"));
     toggleCheckbox(findInputByLabel(view.container, "Show compare-at price"));
     toggleCheckbox(findInputByLabel(view.container, "Show price"));
     toggleCheckbox(findInputByLabel(view.container, "Show stock quantity"));
@@ -337,7 +373,9 @@ test("ProductTable editors normalize source, full column registry, labels, and r
     setInputValue(findInputByLabel(view.container, "Action label"), "Learn more");
     toggleCheckbox(findInputByLabel(view.container, "Open product links in new tab"));
 
+    setInputValue(findInputByLabel(view.container, "Image"), "");
     setInputValue(findInputByLabel(view.container, "Product"), "Catalog item");
+    setInputValue(findInputByLabel(view.container, "Excerpt"), "Summary");
     setInputValue(findInputByLabel(view.container, "Slug"), "Handle");
     setInputValue(findInputByLabel(view.container, "Price"), "");
     setInputValue(findInputByLabel(view.container, "Compare at"), "Was price");
@@ -358,8 +396,15 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       sortField: "pricing.amount",
       sortDir: "asc",
     });
+    expect(latestValue.header).toMatchObject({
+      eyebrow: "Featured catalog",
+      title: "Summer release",
+      description: "Curated context copy.",
+    });
     expect(latestValue.fields).toEqual({
+      showImage: true,
       showTitle: false,
+      showExcerpt: true,
       showSlug: true,
       showPrice: false,
       showStatus: false,
@@ -369,7 +414,9 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       showCollectionCount: true,
     });
     expect(latestValue.labels).toMatchObject({
+      image: "Image",
       title: "Catalog item",
+      excerpt: "Summary",
       slug: "Handle",
       price: "Price",
       compareAt: "Was price",
@@ -409,6 +456,12 @@ test("ProductTable editors normalize source, full column registry, labels, and r
       primaryMediaId: null,
       mediaIds: ["hero", "gallery"],
       collectionIds: ["summer", "sale"],
+      media: {
+        url: "/media/starter-home.jpg",
+        alt: "Starter Home",
+        width: 640,
+        height: null,
+      },
     });
 
     const preview = view.container.querySelector("pre");

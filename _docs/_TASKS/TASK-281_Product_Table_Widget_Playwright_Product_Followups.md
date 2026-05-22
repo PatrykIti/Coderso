@@ -101,7 +101,7 @@ the Product Table slice.
 - [x] TASK-281-03: Product Table Status Stock and Row State Presentation
 - [x] TASK-281-04: Product Table Product Links and Action Column
 - [x] TASK-281-05: Product Table Accessibility and Runtime Semantics
-- [ ] TASK-281-06: Product Table Media Excerpt and Section Header Context
+- [x] TASK-281-06: Product Table Media Excerpt and Section Header Context
 - [ ] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
 - [ ] TASK-281-08: Product Table Variants Density Layout and Sticky Header
 - [ ] TASK-281-09: Product Table Export Currency and Advanced Diagnostics

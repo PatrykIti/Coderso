@@ -31,19 +31,22 @@ Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigu
 | Sekcja | Pola | Uwagi |
 |--------|------|-------|
 | **source** | `limit` (1–48), `search`, `collectionIds[]`, `status[]`, `sortField`, `sortDir` | Limit max 48, brak offsetu/paginacji |
-| **fields** | `showTitle`, `showSlug`, `showPrice`, `showStatus`, `showStock`, `showStockQuantity`, `showCompareAt`, `showCollectionCount` | 7 togglei kolumn + opcjonalna prezentacja ilości stocku z guardrailami dla Product/Price |
-| **labels** | `title`, `price`, `compareAt`, `status`, `stock`, `collections`, `slug` | 7 etykiet w schemacie |
+| **header** | `eyebrow`, `title`, `description` | Opcjonalny kontekst sekcji; `title` zasila preferowaną etykietę tabeli |
+| **fields** | `showImage`, `showTitle`, `showExcerpt`, `showSlug`, `showPrice`, `showStatus`, `showStock`, `showStockQuantity`, `showCompareAt`, `showCollectionCount` | 9 togglei kolumn + opcjonalna prezentacja ilości stocku z guardrailami dla Product/Price |
+| **labels** | `image`, `title`, `excerpt`, `price`, `compareAt`, `status`, `stock`, `collections`, `slug` | 9 etykiet w schemacie |
 | **emptyState** | `title`, `description` | Komunikat gdy brak produktów |
 | **style** | `tableBackground`, `tableBorderColor`, `headerBackground`, `emptyBackground`, `emptyBorderColor` | 5 powierzchni, brak kontroli typografii |
-| **resolved** | `items[]`, `total`, `resolvedAt`, `error` | Runtime only — nie edytowane przez użytkownika |
+| **resolved** | `items[]`, `total`, `resolvedAt`, `error` | Runtime only — nie edytowane przez użytkownika; po hydratacji może zawierać też public-safe `media` |
 
 ### 2.2 Kolumny renderowane
 
 | Kolumna | Zawsze widoczna | Toggle | Label edytowalny w edytorze |
 |---------|-----------------|--------|-----------------------------|
-| Product (title) | ✓ | ✓ `showTitle` (domyślnie ON) | ✓ (Visual) |
+| Image | ✗ | ✓ `showImage` (domyślnie OFF) | ✓ (Visual) |
+| Product (title) | ✗ | ✓ `showTitle` (domyślnie ON; guardrail identity) | ✓ (Visual) |
+| Excerpt | ✗ | ✓ `showExcerpt` (domyślnie OFF) | ✓ (Visual) |
 | Slug | ✗ | ✓ `showSlug` (domyślnie ON) | ✓ (Visual) |
-| Price | ✓ | ✓ `showPrice` (domyślnie ON) | ✓ (Visual) |
+| Price | ✗ | ✓ `showPrice` (domyślnie ON; guardrail pricing) | ✓ (Visual) |
 | Compare At | ✗ | ✓ `showCompareAt` (domyślnie OFF) | ✓ (Visual) |
 | Status | ✗ | ✓ `showStatus` (domyślnie ON) | ✓ (Visual) |
 | Stock | ✗ | ✓ `showStock` (domyślnie ON) | ✓ (Visual) |
@@ -52,14 +55,14 @@ Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigu
 ### 2.3 Tryby edytora
 
 - **Wizard** — źródło danych (`CommerceSourceFields`), style powierzchni (5 clearable inputów)
-- **Visual** — Columns (7 togglei z guardrailami identity/pricing), Column labels (7/7), Stock presentation, Empty state, Surfaces
+- **Visual** — Section header, Columns (9 togglei z guardrailami identity/pricing), Column labels (9/9), Stock presentation, Links and actions, Empty state, Surfaces
 - **Advanced** — read-only preview status card, resolved payload counts, backend-owned runtime warning, query preview JSON
 
 ### 2.4 Pola runtime card (dostępne danych, częściowo nieużywane)
 
 `CommerceWidgetRuntimeCard` zawiera: `id`, `title`, `slug`, `excerpt`, `status`, `pricing.amount`, `pricing.currency`, `pricing.compareAtAmount`, `stock.state`, `stock.quantity`, `stock.inStock`, `primaryMediaId`, `mediaIds[]`, `collectionIds[]`
 
-Z tych pól po `TASK-281-03` nadal **nie są renderowane bezpośrednio**: `excerpt`, `stock.inStock`, `primaryMediaId`, `mediaIds[]`. `stock.quantity` może być opcjonalnie dołączone do kolumny Stock przez `showStockQuantity`, ale nie renderuje się jako osobna kolumna.
+Z tych pól po `TASK-281-06` nadal **nie są renderowane bezpośrednio** tylko: `stock.inStock`. `excerpt` może być teraz renderowany w opcjonalnej kolumnie Excerpt, `primaryMediaId` / `mediaIds[]` służą do backend-owned hydratacji public-safe miniatury, a `stock.quantity` może być opcjonalnie dołączone do kolumny Stock przez `showStockQuantity`, ale nadal nie renderuje się jako osobna kolumna.
 
 ---
 
@@ -259,6 +262,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-05 — Brak miniatury obrazu produktu
 **Opis:** Runtime card zawiera `primaryMediaId` i `mediaIds[]`, ale renderer nie wyświetla żadnego obrazu/thumbnails. Tabela produktów bez zdjęcia jest mniej czytelna — użytkownik musi identyfikować produkty po nazwie.
+**Status (2026-05-22):** Fixed in `TASK-281-06`.
 **Rekomendacja:** Dodać opcjonalną kolumnę thumbnail (`showImage` toggle) z małym `<img>` z `primaryMediaId`.
 
 #### UX-06 — Brak wyszukiwarki inline na froncie
@@ -285,9 +289,11 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-01 — Brak thumbnails / kolumny obraz
 **Opis:** Dane runtime zawierają `primaryMediaId`, ale nie ma żadnej opcji wyświetlenia obrazu w tabeli. Standardowa tabela produktów w e-commerce zawiera miniaturę.
+**Status (2026-05-22):** Fixed in `TASK-281-06`.
 
 ### BF-02 — Brak kolumny excerpt
 **Opis:** `CommerceWidgetRuntimeCard` ma pole `excerpt` (string | null), ale nie ma togla `showExcerpt` ani renderowania w tabeli.
+**Status (2026-05-22):** Fixed in `TASK-281-06`.
 
 ### BF-03 — Brak kolumny ilości (stock.quantity)
 **Opis:** Pole `stock.quantity` jest w modelu danych ale nigdy renderowane. Zamiast "In stock" mogłoby pokazywać "In stock (42)".
@@ -305,6 +311,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-07 — Brak nagłówka sekcji (eyebrow/title/description)
 **Opis:** Widget nie ma opcji nagłówka sekcji — brak eyebrow, title, description nad tabelą. Inne widgety (FeatureGrid, Stats KPI) mają tę funkcjonalność. Brak kontekstu dla tabeli w layoutach wielowidgetowych.
+**Status (2026-05-22):** Fixed in `TASK-281-06`.
 
 ### BF-08 — Brak kontroli typografii
 **Opis:** Rozmiar fonta komórek (`text-sm`), nagłówków (`text-xs font-semibold uppercase`) i opcje stylu tekstowego hardcoded. Brak kontroli przez edytor.
@@ -344,7 +351,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | A4 | Brak `role="table"` / `aria-label` na sekcji nadrzędnej (Fixed in TASK-281-05) | WCAG 4.1.2 | Średni |
 | A5 | Błąd commerce renderuje `<div>` z amber — brak `role="alert"` (Fixed in TASK-281-05) | WCAG 4.1.3 | Średni |
 | A6 | Empty state bez `aria-live` — dynamiczne zmiany niezgłaszane (Fixed in TASK-281-05) | WCAG 4.1.3 | Niski |
-| A7 | Brak `loading="lazy"` na przyszłych thumbnail obrazach | Performance | Niski |
+| A7 | Brak `loading="lazy"` na przyszłych thumbnail obrazach (Fixed in TASK-281-06) | Performance | Niski |
 
 ---
 
@@ -367,7 +374,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 |----|------|-----------|
 | UX-02 | Brak paginacji — max 48 produktów | Wysoki |
 | UX-03 | Brak klikalnych wierszy / linków do produktów (Fixed in TASK-281-04) | Wysoki |
-| UX-05 | Brak thumbnails — produkt bez zdjęcia | Wysoki |
+| UX-05 | Brak thumbnails — produkt bez zdjęcia (Fixed in TASK-281-06) | Wysoki |
 | UX-01 | Tylko jeden wariant (default) | Średni |
 | UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka | Średni |
 | UX-06 | Brak search inline na froncie | Średni |
@@ -379,10 +386,10 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 | ID | Priorytet | Opis |
 |----|-----------|------|
-| BF-01 | Wysoki | Brak thumbnails / kolumny obraz |
-| BF-02 | Wysoki | Brak kolumny excerpt |
+| BF-01 | Wysoki | Brak thumbnails / kolumny obraz (Fixed in TASK-281-06) |
+| BF-02 | Wysoki | Brak kolumny excerpt (Fixed in TASK-281-06) |
 | BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock (Fixed in TASK-281-03) |
-| BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) |
+| BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) (Fixed in TASK-281-06) |
 | BF-04 | Średni | Brak kolorowania wierszy wg statusu (Fixed in TASK-281-03) |
 | BF-05 | Średni | Brak zebra striping |
 | BF-06 | Średni | Brak kontroli gęstości wierszy (row density) |
@@ -579,3 +586,22 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `git diff --check`
 - `bun run precommit`
 - `bun run scan:security:strict`
+
+## Status po TASK-281-06 (2026-05-22)
+
+### Fixed in TASK-281-06
+
+- `UX-05` / `BF-01` / `A7`: Product Table now exposes an optional Image column backed by backend-owned public media enrichment in `hydrateProductTableRuntimeData()`. Rendered thumbnails use `loading="lazy"`, `decoding="async"`, safe alt fallback to the product title, and a stable `No image` fallback instead of broken requests.
+- `BF-02`: Product Table now exposes an optional Excerpt column through the shared `productTableColumns` registry and clamps long plain-text excerpts in the renderer without accepting raw HTML.
+- `BF-07`: Product Table now exposes `header.eyebrow`, `header.title`, and `header.description` in Visual mode; the visible section title also becomes the preferred accessible section/table label on top of the `TASK-281-05` caption baseline.
+- Existing `TASK-281-01` through `TASK-281-05` seams remain preserved: preview-state refresh still resolves only query-backed data, Product/Price guardrails stay intact, safe product links and Action continue to use shared href handling, and row-state/status accessibility regressions stay locked by focused tests.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`
