@@ -74,7 +74,7 @@ Validated on 2026-05-22 with:
 - `bun --cwd core lint:types` — PASS
 - `bun run gates:coderso` — PASS
 - `git diff --check` — PASS
-- `bun run scan:security:strict` — attempted, but local `semgrep`, `trivy`, and `gitleaks` executables were not installed in `PATH`, so the strict scanner suite remains a local-tooling / CI-environment gap rather than a reported widget finding.
+- `bun run scan:security:strict` — PASS after provisioning the required local scanner CLIs in the TASK-292 worktree; Semgrep, `bun audit`, Trivy vuln/config/secret, and Gitleaks history/worktree all completed cleanly.
 - `bun run precommit` — PASS after the final closure state is staged.
 
 Validation evidence is synchronized with the task board and changelog in the

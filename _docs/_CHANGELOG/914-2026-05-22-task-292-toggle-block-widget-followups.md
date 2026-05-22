@@ -17,3 +17,4 @@
 ### QA and documentation
 - Added focused widget/editor/validator coverage for the new Toggle Block contract.
 - Refreshed the Toggle Block widget docs, Playwright report status matrix, task board rows, and final closure metadata for the TASK-292 family.
+- Final closure validation now includes a green `bun run scan:security:strict` pass with Semgrep, `bun audit`, Trivy vuln/config/secret, and Gitleaks history/worktree all completing cleanly in the TASK-292 worktree.
