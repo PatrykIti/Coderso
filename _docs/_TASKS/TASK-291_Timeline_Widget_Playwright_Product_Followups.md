@@ -42,6 +42,7 @@ Timeline.
 - `W8` remains an explicit no-code/static decision: Timeline does not persist a
   motion schema or runtime animation classes in this family.
 
+## Scope Boundary
 
 TASK-291 implements report rows that are specific to `timeline` data, rendering,
 editor affordances, or product surface.

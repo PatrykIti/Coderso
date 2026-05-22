@@ -71,7 +71,11 @@
 
 ---
 
-## 1. Przegląd widgetu
+> **Uwaga:** Sekcje 1-8 poniżej zachowują historyczny snapshot audytu z
+> 2026-05-16. Nie opisują już bieżącego stanu wdrożenia; aktualne rozstrzygnięcia
+> dla każdego findingu znajdują się wyłącznie w matrycy statusów powyżej.
+
+## 1. Historyczny przegląd widgetu
 
 **Typ:** Composite
 **Moduł:** Content
@@ -115,7 +119,7 @@ Timeline widget służy do prezentacji kroków procesu, kamieni milowych, wydarz
 
 ---
 
-## 3. Braki funkcjonalne — analiza kodu
+## 3. Historyczne braki funkcjonalne — analiza kodu
 
 ### 3.1 Krytyczne (bezpośrednio wpływające na usability)
 
@@ -175,7 +179,7 @@ Timeline widget służy do prezentacji kroków procesu, kamieni milowych, wydarz
 
 ---
 
-## 4. Testy w Admin UI Preview
+## 4. Historyczne testy w Admin UI Preview
 
 > **Sesja:** `playwright-cli -s=timeline-audit`
 > **Strona testowa:** UX Audit Scratch 0516 (ID: 6ece9868)
@@ -258,7 +262,7 @@ Każdy krok ma domyślnie "upcoming" w dropdown statusu w Visual editor. Brak mo
 
 ---
 
-## 5. Testy na froncie (localhost:3000)
+## 5. Historyczne testy na froncie (localhost:3000)
 
 **URL:** http://localhost:3000/ux-audit-scratch-0516
 **Strona opublikowana:** Tak (opublikowano podczas testu)
@@ -300,7 +304,7 @@ Alternating: `hidden md:block` na elementach daty — R1 zadziała gdy daty będ
 
 ---
 
-## 6. Porównanie Admin Preview vs Frontend
+## 6. Historyczne porównanie Admin Preview vs Frontend
 
 | Aspekt | Admin Preview | Frontend | Zgodność |
 |--------|--------------|----------|----------|
@@ -318,7 +322,7 @@ Alternating: `hidden md:block` na elementach daty — R1 zadziała gdy daty będ
 
 ---
 
-## 7. Podsumowanie priorytetów
+## 7. Historyczne podsumowanie priorytetów
 
 | Priorytet | ID | Problem | Wpływ |
 |-----------|---|---------|-------|
@@ -337,7 +341,7 @@ Alternating: `hidden md:block` na elementach daty — R1 zadziała gdy daty będ
 
 ---
 
-## 8. Sugerowane naprawy
+## 8. Historyczne sugerowane naprawy
 
 ### 8.1 Naprawa race condition (KRYTYCZNE)
 
