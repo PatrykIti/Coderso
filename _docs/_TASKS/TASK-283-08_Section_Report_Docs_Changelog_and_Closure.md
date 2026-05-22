@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Documentation + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-283, TASK-283-01, TASK-283-02, TASK-283-03, TASK-283-04, TASK-283-05, TASK-283-06, TASK-283-07, TASK-256-08, TASK-326, TASK-327
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -129,9 +129,9 @@ Docs-only closure validation:
 
 ## Current Audit Notes (2026-05-22)
 
-- `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync is now present in the current checkout.
-- A follow-up audit reran `bunx vitest run --config vitest.config.ts tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx`, and both suites passed on 2026-05-22.
-- `TASK-283-05-02` landed on 2026-05-22 after shared `TASK-326`, so U2 is now closed with slider/stepper controls on the single-owner Visual surface. The remaining TASK-283 work is final family closure plus truthful shared `TASK-327` exclusion.
+- `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync remains present in the current checkout.
+- `TASK-326` was integrated into the Section follow-up branch as commit `491f048f`, preserving the truthful shared owner split before the final widget-local U2 closure.
+- `TASK-283-05-02` landed as commit `cbe4ffa6`, closing U2 with slider, stepper, and exact-value controls on the single-owner Visual surface. The only remaining open report item after TASK-283 closure is shared `TASK-327`.
 
 ## Acceptance Criteria
 
@@ -143,3 +143,15 @@ Docs-only closure validation:
 - Validation output proves the changed Section contracts, not just generic
   repository health.
 - No screenshots or generated binary Playwright artifacts are committed.
+
+## Validation Notes
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso` (the dedicated worktree used a temporary local `.env` symlink because the gate wrapper sources `.env` from the current working tree)
+- `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit` ran inside the command.
+- `bun run precommit`
+- `git diff --check`

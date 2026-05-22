@@ -25,8 +25,9 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | Sekcja | Pola |
 |--------|------|
+| **Regions metadata** | editor-only `regions[]` keyed by stable `region:<id>` instances; author labels for Visual, canvas, and insert-target surfaces without public runtime rendering |
 | **Heading** | `label`, `title`, `description`, `level` (`h1`-`h6`), `align`, size tokens, optional clearable text colors |
-| **Layout** | `containerWidth` (content/wide/full), `maxWidth` (none/4xl–7xl), `paddingBlock` (sm/md/lg/xl), `paddingInline` (none/sm/md/lg), `minHeight` (none/compact/hero/screen), `regionFlow` (stack/row/grid), `regionColumns` (1–8 when grid), `headingGap`, optional `regionGap` |
+| **Layout** | `containerWidth` (content/wide/full), `maxWidth` (none/4xl–7xl), `paddingBlock` (sm/md/lg/xl), `paddingInline` (none/sm/md/lg), optional responsive overrides `mobilePaddingBlock`, `mobilePaddingInline`, `desktopPaddingBlock`, `desktopPaddingInline`, `minHeight` (none/compact/hero/screen), `regionFlow` (stack/row/grid), `regionColumns` (1–8 when grid), `headingGap`, optional `regionGap` |
 | **Semantics** | `element` (section/div), `anchorId`, `ariaLabel` |
 | **Style** | `backgroundColor`, `gradientFrom`, `gradientTo`, `gradientAngle`, `borderColor`, `borderWidth` (0–3px), `radius` (none/lg/xl/2xl), optional `shadow`, `motion`, `overlayColor`, `overlayOpacity`, `backgroundMedia` |
 
@@ -344,7 +345,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
 | **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
-| **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
 ## 8. Podsumowanie sesji testowej
 
@@ -410,8 +410,8 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   and insert-target selectors can show author labels without changing public
   runtime output.
 - Targeted evidence for the current 2026-05-22 audit:
-  - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx` passed for the shared TASK-326 owner split.
-  - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run lint` passed on the finalized TASK-326 worktree state.
+  - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx` passed on the finalized TASK-283 worktree state after the U2 slider/stepper closure.
+  - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run lint` passed on the finalized TASK-283 worktree state.
   - `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso` passed after providing the dedicated worktree with a temporary local `.env` symlink for the gate wrapper.
-  - `bun run precommit` and `git diff --check` passed on the completed shared closure.
+  - `bun run precommit` and `git diff --check` passed on the completed TASK-283 closure pass.
   - `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are missing; `bun audit` ran successfully inside the command.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08, TASK-326, TASK-327
-**Status:** In Progress (2026-05-22)
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -47,8 +47,8 @@ Live owners inspected while drafting:
 ## Shared Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-283 because
-TASK-256 already owns them as shared widget-contract drift or structural
-baseline repair.
+truthful shared owners (`TASK-256`, `TASK-326`, `TASK-327`) already own the
+cross-widget contract drift or structural baseline repair.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
@@ -75,7 +75,7 @@ this family.
 | W7 heading-to-regions gap | TASK-283-01 | Section layout spacing around owned heading/region wrapper. |
 | W8 region gap controls | TASK-283-01 | Section-owned gap tokens for repeated regions. |
 | C2 image/video background support | TASK-283-02 | Section-owned media background model using existing safe media patterns. |
-| Future background media source/URL validation from U7 | TASK-283-02 | Applies only if TASK-283-02 adds library or external media sources; current Section data has no URL field. |
+| Media URL validation from U7 | TASK-283-02 | Closed by the landed Section background media model; compatible media sources now fail closed without adding a new widget-local leaf. |
 | W11 layer z-index controls | TASK-283-02 | Bounded overlay/content layering only for Section surface layers. |
 | C3 heading text color and size controls | TASK-283-03 | Product typography controls on top of the already-landed safe default heading baseline. |
 | C4 heading level control | TASK-283-03 | Add bounded `h1`-`h6` product control without re-opening the already-fixed hardcoded baseline defect. |
@@ -98,13 +98,13 @@ this family.
 | Report finding | Decision | Reason |
 |---|---|---|
 | Existing section/div element switch | No TASK-283 task | The report confirms it works. Keep covered by existing Section tests unless future leaves change semantics. |
-| Closed shared current-control truthfulness cleanup (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | Closed on 2026-05-22; TASK-283 keeps only the remaining widget-local slider UX and final closure work. |
+| Closed shared current-control truthfulness cleanup (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | Closed on 2026-05-22; TASK-283 no longer owns any remaining work in this shared boundary. |
 | Reopened shared color-swatch token overwrite drift (`borderColor` swatch replaces CSS-variable/custom token text) | Shared TASK-327 | `SharedColorFieldInputs` still routes swatch writes through generic `onChange`; keep the fix in the shared helper, not in Section-only editor code. |
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
 | Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the separate swatch-overwrite bug is now tracked by shared `TASK-327`. |
-| Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; only future media URL validation belongs to TASK-283-02 when new source fields exist. |
+| Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; the media URL part of U7 is already closed by TASK-283-02. |
 | Media URL validation part of U7 | Closed by TASK-283-02 | Section background media now validates compatible sources and fails closed for unsupported URLs, so no widget-local TASK-283 leaf remains for this part of U7. |
 | Stale gradient Clear report row (W9) | No standalone TASK-283 leaf after report sync | Current Section editors already expose shared Clear actions for `gradientFrom` and `gradientTo`; TASK-283-04 adds focused evidence and corrects the stale report wording instead of restaging a shared fix. |
 | Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
@@ -119,7 +119,7 @@ this family.
 - [x] TASK-283-05: Section Surface Shadow Motion and Preview Controls (closed across `TASK-283-05-01` and `TASK-283-05-02`)
 - [x] TASK-283-06: Section Responsive Spacing and Mobile Density
 - [x] TASK-283-07: Section Custom Region Labels and Structure UX
-- [ ] TASK-283-08: Section Report Docs Changelog and Closure
+- [x] TASK-283-08: Section Report Docs Changelog and Closure
 
 ## Implementation Order
 
@@ -136,9 +136,8 @@ this family.
    product-owned level and typography controls.
 5. Complete TASK-283-04 after width truthfulness and heading basics are stable,
    then add safer presets and variant guidance.
-6. Continue TASK-283-05 through `TASK-283-05-02` now that shared `TASK-326`
-   has landed, keeping the remaining angle/opacity slider UX on the final
-   single-owner Visual model.
+6. `TASK-283-05` is now complete through `TASK-283-05-02`, keeping the final
+   angle/opacity UX on the single-owner Visual model after shared `TASK-326`.
 7. Complete TASK-283-06 after base spacing tokens exist, then add responsive
    overrides with deterministic fallback behavior.
 8. Complete TASK-283-07 after region flow is stable, because custom labels must
@@ -232,3 +231,10 @@ Implementation leaves:
   payloads unless the leaf documents and tests a normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Final Validation Notes
+
+- Shared prerequisite `TASK-326` was integrated into this worktree as commit `491f048f`.
+- `TASK-283-05-02` landed as commit `cbe4ffa6` on the dedicated Section branch/worktree.
+- Final TASK-283 closure keeps the remaining shared color-swatch overwrite drift mapped to `TASK-327` only.
+- Final validation commands and outcomes are recorded in `TASK-283-08`.

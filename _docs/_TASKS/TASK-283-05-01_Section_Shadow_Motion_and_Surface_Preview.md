@@ -17,8 +17,8 @@ shadow controls, CSS-only reduced-motion-safe motion presets, and a derived
 gradient/overlay surface preview.
 
 This subtask closes report findings W2, the CSS-only bounded part of W3, and
-U5. It intentionally excludes the U2 slider/stepper work because duplicate
-`gradientAngle` / `overlayOpacity` ownership still belongs to shared `TASK-326`.
+U5. It intentionally excluded the U2 slider/stepper work until the duplicate
+`gradientAngle` / `overlayOpacity` ownership cleanup landed in shared `TASK-326`.
 
 ## Scope Boundary
 
