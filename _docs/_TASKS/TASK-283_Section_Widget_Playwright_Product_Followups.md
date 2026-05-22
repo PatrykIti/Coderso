@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Section + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08
+**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08, TASK-326, TASK-327
 **Status:** In Progress (2026-05-22)
 
 ---
@@ -16,9 +16,11 @@ Create the Section-only follow-up family for
 `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md`.
 
 This family owns product, editor, and runtime improvements that apply only to
-the `section` layout widget. Shared widget-contract repairs stay in TASK-256,
-especially the structural repair leaf `TASK-256-05-01`, which is already
-landed in the current branch and is a prerequisite rather than open scope here.
+the `section` layout widget. Shared widget-contract repairs stay in the
+truthful shared owners (`TASK-256`, `TASK-326`, `TASK-327`) rather than being
+buried inside widget-local follow-up leaves. `TASK-256-05-01` remains the
+landed baseline prerequisite for placeholder, anchor, and default heading
+semantics.
 
 Do not use TASK-283 to duplicate shared fixes for clear/none token semantics,
 editor-only placeholder leakage, baseline anchor safety, duplicated Advanced
@@ -42,7 +44,7 @@ Live owners inspected while drafting:
 - `_docs/WIDGETS.md`
 - `_docs/_TASKS/TASK-256-05-01_Section_and_Grid_Columns_Structural_Findings.md`
 
-## TASK-256 Exclusion Matrix
+## Shared Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-283 because
 TASK-256 already owns them as shared widget-contract drift or structural
@@ -103,7 +105,7 @@ this family.
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
 | Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the separate swatch-overwrite bug is now tracked by shared `TASK-327`. |
 | Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; only future media URL validation belongs to TASK-283-02 when new source fields exist. |
-| Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
+| Media URL validation part of U7 | Closed by TASK-283-02 | Section background media now validates compatible sources and fails closed for unsupported URLs, so no widget-local TASK-283 leaf remains for this part of U7. |
 | Stale gradient Clear report row (W9) | No standalone TASK-283 leaf after report sync | Current Section editors already expose shared Clear actions for `gradientFrom` and `gradientTo`; TASK-283-04 adds focused evidence and corrects the stale report wording instead of restaging a shared fix. |
 | Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
 | Prior 401 session-limit note | No TASK-283 task | `REPORT_SECTION_WIDGET.md:227,389` records a Playwright environment/session-limit setup issue that was resolved by raising the active-session limit; the current Section widget session completed and no widget implementation task is required. |
@@ -114,7 +116,7 @@ this family.
 - [x] TASK-283-02: Section Background Media and Layering Model
 - [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
 - [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
-- [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls (split into closed `TASK-283-05-01` and pending `TASK-283-05-02` now that `TASK-326` landed)
+- [x] TASK-283-05: Section Surface Shadow Motion and Preview Controls (closed across `TASK-283-05-01` and `TASK-283-05-02`)
 - [x] TASK-283-06: Section Responsive Spacing and Mobile Density
 - [x] TASK-283-07: Section Custom Region Labels and Structure UX
 - [ ] TASK-283-08: Section Report Docs Changelog and Closure

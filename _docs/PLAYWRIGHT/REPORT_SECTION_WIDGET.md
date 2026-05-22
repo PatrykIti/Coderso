@@ -89,12 +89,12 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | # | Problem | Obszar |
 |---|---------|--------|
 | U1 | Zamknięte (2026-05-21, TASK-283-03): Wizard ma teraz także pole `Label`, więc heading model jest kompletny bez przechodzenia do Visual | Wizard editor |
-| U2 | Otwarte: `gradientAngle` i `overlayOpacity` nadal są numeric-only; finalny slider/stepper owner przechodzi do `TASK-283-05-02` po shared cleanup w `TASK-326` | Edytor |
+| U2 | Zamknięte (2026-05-22, TASK-283-05-02): Visual ma teraz slider + stepper controls oraz exact-value inputs dla `gradientAngle` i `overlayOpacity` na pojedynczym ownerze po shared `TASK-326` | Edytor |
 | U3 | Zamknięte (2026-05-21, TASK-283-04): `maxWidth` pokazuje przyjaźniejsze etykiety (`4XL (56rem / 896px)` ... `7XL (80rem / 1280px)`) bez zmiany zapisanych tokenów | Edytor |
 | U4 | Zamknięte (2026-05-21, TASK-283-04): Visual wyjaśnia, że dwa gradient stop-y stają się widoczną powierzchnią, a kolor tła pozostaje fallbackiem po wyczyszczeniu gradientu | Edytor |
 | U5 | Zamknięte (2026-05-21, TASK-283-05-01): Visual ma teraz derived `Surface preview`, który pokazuje gradient, overlay, border, radius, i effective shadow bez dodatkowego persisted state | Edytor |
 | U6 | Zamknięte (2026-05-21, TASK-283-04): Wizard i Visual używają już tego samego card UI dla wariantów, a Wizard dodatkowo pokazuje quick presets | Spójność |
-| U7 | Brak walidacji URL/formatu kolorów w polach tekstowych | Walidacja |
+| U7 | No standalone TASK-283 leaf: media URL validation została domknięta przez `TASK-283-02`, a freeform color/token text pozostaje intencjonalne; jedyny aktywny shared drift to `TASK-327` dla color swatch overwrite | Walidacja |
 | U8 | Zamknięte (2026-05-17, TASK-256-03 + TASK-256-05-01): placeholder „Empty region.” jest już ograniczony do editor/admin preview i nie jest aktywnym frontend defectem | Frontend UX |
 
 ---
@@ -140,13 +140,13 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Side padding (none/sm/md/lg) | ✅ Działa | |
 | Background color (+ Clear) | ✅ Działa | |
 | Gradient start / end | ✅ Działa | Pola mają Clear; guidance wyjaśnia, że aktywny gradient staje się widoczną powierzchnią nad background color |
-| Gradient angle (number input) | ✅ Działa | Domyślnie 180deg (top→bottom); finalny slider/stepper owner pozostaje w `TASK-283-05-02` po `TASK-326` |
+| Gradient angle (slider + exact input) | ✅ Działa | Visual łączy slider, stepper nudges, i exact-value input; zapis nadal clampuje do `0..360` z domyślnym `180deg` |
 | Border color | ⚠️ Problem | Color picker nadpisuje CSS zmienną `var(--color-border)` hexem `#e2e8f0` |
 | Border width (0/1/2/3px) | ✅ Działa | Poprawnie aplikowane |
 | Corner radius | ✅ Działa | |
 | Surface shadow | ✅ Działa | `Match variant` zachowuje legacy `contained -> shadow-sm`, a explicit override obsługuje `none/sm/md/lg/xl` |
 | Overlay color | ✅ Działa | |
-| Overlay opacity (%) | ✅ Działa | Sprawdzono: `opacity: 0.5` w DOM przy 50%; slider UX pozostaje w `TASK-283-05-02` po `TASK-326` |
+| Overlay opacity (slider + exact input) | ✅ Działa | Visual łączy slider, stepper nudges, i exact-value input; zapis nadal clampuje do `0..100`, a `50` daje `opacity: 0.5` w DOM |
 | Surface motion | ✅ Działa | `none` / `fade` / `slide-up`; CSS-only `motion-safe` / `motion-reduce`, bez scroll observerów |
 | Surface preview | ✅ Działa | Derived swatch pokazuje gradient, overlay, border, radius, i effective shadow bez dodatkowego persisted state |
 | Add Region / Remove Region | ✅ Działa | Poprawny limit min=1, max=8 |
@@ -343,7 +343,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
-| **P1** | TASK-283-05-02 — zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX na pojedynczym ownerze Visual | Średni | UX edytora / Truthfulness |
 | **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
@@ -357,6 +356,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Synchronizacja stanu między zakładkami Wizard / Visual / Advanced
 - Gradient, overlay, border, radius — renderowanie i DOM zgodne z konfiguracją
 - Surface shadow / motion / preview są zamknięte przez `TASK-283-05-01`: contained zachowuje legacy `shadow-sm`, autor może wybrać bounded `none/sm/md/lg/xl`, a motion pozostaje CSS-only (`none` / `fade` / `slide-up`)
+- Angle/opacity UX jest zamknięte przez `TASK-283-05-02`: Visual ma teraz slider + stepper nudges oraz exact-value inputs dla `gradientAngle` i `overlayOpacity` bez powrotu duplikacji w Advanced
 - Raw JSON snapshot w Advanced pokazuje poprawny, znormalizowany stan
 - Element section/div — poprawna zmiana semantyki
 - Padding block / inline / max-width — poprawnie aplikowane jako klasy Tailwind
@@ -369,7 +369,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 ### Co wymaga poprawy ❌
 
 - **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
-- **Angle/opacity UX**: finalne slider/stepper controls pozostają w `TASK-283-05-02`; po TASK-326 mają już jeden truthfully owned surface w Visual, ale wciąż są numeric-only.
 
 ### Uwagi do sesji testowej
 
@@ -400,7 +399,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - `TASK-283-05-01`: Section now owns optional shadow tokens with
   match-variant fallback, CSS-only reduced-motion-safe `fade` / `slide-up`
   surface motion, and a derived preview swatch, so W2, W3, and U5 are no
-  longer active while U2 stays in `TASK-283-05-02` after `TASK-326`.
+  longer active.
+- `TASK-283-05-02`: Section `Surface and borders` now pairs sliders, stepper
+  nudges, and exact-value inputs for `gradientAngle` / `overlayOpacity` on the
+  single-owner Visual surface, so U2 is no longer active.
 - `TASK-283-06`: Section now owns bounded mobile/desktop padding overrides with
   `Match base` fallback and deterministic `md` restore to the base token.
 - `TASK-283-07`: Section now stores editor-only `regions[]` metadata keyed by

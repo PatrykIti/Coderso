@@ -347,6 +347,27 @@ const findNumberInputs = (container: ParentNode) =>
     (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
 
+const findSectionSlider = (container: ParentNode, key: string) =>
+  container.querySelector(`[data-section-slider="${key}"]`);
+
+const findSectionRangeValue = (container: ParentNode, key: string) =>
+  container.querySelector(`[data-section-range-value="${key}"]`);
+
+const findSectionStepper = (
+  container: ParentNode,
+  key: string,
+  direction: "increase" | "decrease"
+) => container.querySelector(`[data-section-stepper="${key}-${direction}"]`);
+
+const clickButton = (element: Element | null | undefined) => {
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new Error("Missing button element");
+  }
+  React.act(() => {
+    element.click();
+  });
+};
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -568,6 +589,11 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
     expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("none");
     expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("none");
+
+    expect(findSectionSlider(surfaceSection, "gradient-angle")).not.toBeNull();
+    expect(findSectionSlider(surfaceSection, "overlay-opacity")).not.toBeNull();
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("360°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("100%");
 
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
     expect(angleInput?.value).toBe("360");
@@ -1396,7 +1422,7 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
   }
 });
 
-test("Section surface numeric controls round decimals, clamp boundaries, and stay visible in the advanced snapshot", async () => {
+test("Section surface slider and exact controls round decimals, clamp boundaries, and stay visible in the advanced snapshot", async () => {
   const view = await renderEditors({
     initialValue: {
       semantics: {
@@ -1433,6 +1459,19 @@ test("Section surface numeric controls round decimals, clamp boundaries, and sta
       throw new Error("Missing surface section");
     }
 
+    expect(findSectionSlider(surfaceSection, "gradient-angle")).not.toBeNull();
+    expect(findSectionSlider(surfaceSection, "overlay-opacity")).not.toBeNull();
+
+    clickButton(findSectionStepper(surfaceSection, "gradient-angle", "increase"));
+    clickButton(findSectionStepper(surfaceSection, "overlay-opacity", "decrease"));
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 27,
+      overlayOpacity: 3,
+    });
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("27°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("3%");
+
     const [surfaceAngleInput, surfaceOpacityInput] = findNumberInputs(surfaceSection);
     setInputValue(surfaceAngleInput, "44.6");
     setInputValue(surfaceOpacityInput, "15.5");
@@ -1443,6 +1482,8 @@ test("Section surface numeric controls round decimals, clamp boundaries, and sta
     });
     expect(surfaceAngleInput?.value).toBe("45");
     expect(surfaceOpacityInput?.value).toBe("16");
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("45°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("16%");
 
     setInputValue(surfaceAngleInput, "359.6");
     setInputValue(surfaceOpacityInput, "-0.6");
@@ -1453,6 +1494,8 @@ test("Section surface numeric controls round decimals, clamp boundaries, and sta
     });
     expect(surfaceAngleInput?.value).toBe("360");
     expect(surfaceOpacityInput?.value).toBe("0");
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("360°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("0%");
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"anchorId": "wave-layout"');

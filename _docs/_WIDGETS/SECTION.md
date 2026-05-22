@@ -21,7 +21,7 @@ repeatable internal regions.
 - `region` (repeatable): region instances are stored as `region:<id>` in
   block `slots` map (`region:1`, `region:2`, ...).
 
-## Editor Modes (current after TASK-050-15-02)
+## Editor Modes (current after TASK-283 and TASK-326 follow-ups)
 
 ### Wizard
 - quick preset cards and matching variant cards
@@ -66,6 +66,9 @@ Notes:
 - Surface and borders now adds optional shadow and motion presets plus a derived
   `Surface preview` swatch; the preview reflects current background, gradient,
   overlay, border, radius, and effective shadow without persisting extra state.
+- Gradient angle and overlay opacity now use slider + stepper controls on the
+  single-owner Visual surface while keeping exact numeric inputs for precise
+  bounded values.
 - Background media is decorative only: Visual exposes bounded image/video source,
   fit, position, blend, opacity, and layer-order controls plus video poster
   metadata without widening Section into interactive media.

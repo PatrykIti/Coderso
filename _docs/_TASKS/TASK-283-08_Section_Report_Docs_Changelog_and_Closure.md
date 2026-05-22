@@ -131,7 +131,7 @@ Docs-only closure validation:
 
 - `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync is now present in the current checkout.
 - A follow-up audit reran `bunx vitest run --config vitest.config.ts tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx`, and both suites passed on 2026-05-22.
-- `TASK-283-05-02` remains intentionally blocked by shared `TASK-326`, so the TASK-283 umbrella must stay `In Progress` until U2 can be truthfully resolved or explicitly carried forward at the final family closeout.
+- `TASK-283-05-02` landed on 2026-05-22 after shared `TASK-326`, so U2 is now closed with slider/stepper controls on the single-owner Visual surface. The remaining TASK-283 work is final family closure plus truthful shared `TASK-327` exclusion.
 
 ## Acceptance Criteria
 

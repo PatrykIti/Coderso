@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 178 tasks
-- **In Progress:** 6 tasks
-- **Done:** 1821 tasks
+- **To Do:** 177 tasks
+- **In Progress:** 5 tasks
+- **Done:** 1823 tasks
 
 ---
 
@@ -109,7 +109,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-285-04 | Split Layout Advanced Diagnostics and Mode Ownership | Medium | Medium | Make Advanced useful through Split Layout responsive diagnostics after shared mode rules land |
 | TASK-285-05 | Split Layout Gap Labels and Spacing Context | Low | Medium | Add Split Layout gap scale labels/help after TASK-256 resolves none/zero token semantics |
 | TASK-285-06 | Split Layout Report Docs and Closure | Medium | Medium | Refresh Split Layout report/docs/changelog/board and final validation evidence |
-| TASK-283-05-02 | Section Angle and Overlay Slider Controls After Shared Ownership Cleanup | Medium | Medium | Replace the remaining numeric angle/opacity inputs with slider/stepper UX on the single-owner Visual surface after shared TASK-326 cleanup landed |
 | TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Refresh Section report/docs/changelog/board and final validation evidence |
 | TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Spacer-only follow-up family for `REPORT_SPACER_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-284-01 | Spacer Editor Guidance and Input Accessibility | High | Medium | Add fixed-mode guidance, breakpoint copy, custom numeric input help, and explicit height-field accessibility after TASK-256 token work |
@@ -222,8 +221,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: TASK-283-01/02/03/04/06/07 and TASK-283-05-01 are closed; remaining widget-local work is `TASK-283-05-02` and final report/docs/changelog closure |
-| TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | In progress: `TASK-283-05-01` closed shadow, CSS-only motion, and preview owners; `TASK-283-05-02` keeps the remaining angle/opacity slider UX on the now-single-owner Visual surface |
+| TASK-283 | Section Widget Playwright Product Followups | High | Very Large | In progress: TASK-283-01/02/03/04/05/06/07 are closed; remaining widget-local work is final report/docs/changelog closure |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -234,6 +232,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | Done (2026-05-22): Section now completes its shadow, motion, preview, and final angle/opacity slider UX through the combined `TASK-283-05-01` and `TASK-283-05-02` split |
+| TASK-283-05-02 | Section Angle and Overlay Slider Controls After Shared Ownership Cleanup | Medium | Medium | Done (2026-05-22): Visual now owns slider, stepper, and exact-value controls for `gradientAngle` / `overlayOpacity` on the post-`TASK-326` single-owner surface |
 | TASK-326 | Section Shared Structural Truthfulness Follow-up | High | Large | Done (2026-05-22): Section shared truthfulness now aligns `borderWidth` / `radius` fallbacks with real defaults, keeps `gradientAngle` / `overlayOpacity` owned only by Visual, and makes width/bleed guidance explicit without inventing new runtime semantics |
 | TASK-283-07 | Section Custom Region Labels and Structure UX | Medium | Large | Done (2026-05-22): Section now ships editor-only region metadata keyed by stable slot instance IDs, shared rename controls in the Visual structure surface, and truthful custom labels in canvas slot headers plus insert-target selectors without public runtime leakage |
 | TASK-283-06 | Section Responsive Spacing and Mobile Density | Medium | Large | Done (2026-05-22): Section now ships optional mobile/desktop padding overrides through bounded layout tokens, keeps legacy spacing when unset, restores the base token from `md` when only mobile overrides exist, and exposes `Match base` responsive controls without raw CSS |

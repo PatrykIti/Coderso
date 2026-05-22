@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Style + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-02, TASK-326
-**Status:** In Progress (2026-05-21)
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -19,8 +19,8 @@ This parent leaf covers report findings W2, W3, U2, and U5 and is now
 split between `TASK-283-05-01` and `TASK-283-05-02`.
 
 `TASK-283-05-01` closes the widget-local shadow, CSS-only motion, and preview
-owners. `TASK-283-05-02` keeps the remaining angle/opacity slider UX behind
-shared `TASK-326` duplicate-owner cleanup.
+owners. `TASK-283-05-02` closes the remaining angle/opacity slider UX on the
+single-owner Visual surface after shared `TASK-326` cleanup landed.
 
 ## Scope Boundary
 
@@ -58,8 +58,8 @@ Out of scope:
 
 - `TASK-283-05-01` (Done, 2026-05-21) closes W2, the bounded CSS-only W3
   scope, and U5 with widget-local shadow, motion, and preview owners.
-- `TASK-283-05-02` (To Do) keeps U2 for the final angle/opacity slider
-  contract after shared `TASK-326` removes the duplicate Visual/Advanced owner.
+- `TASK-283-05-02` (Done, 2026-05-22) closes U2 with slider, stepper, and
+  exact-value controls on the final Visual owner surface.
 
 ## Sub-Tasks
 
@@ -70,12 +70,12 @@ Out of scope:
 - [x] `TASK-283-05-01` adds a derived preview swatch that reflects normalized
   Section background, gradient, overlay, border, radius, and effective shadow
   values.
-- [ ] `TASK-283-05-02` replaces the remaining `gradientAngle` /
+- [x] `TASK-283-05-02` replaces the remaining `gradientAngle` /
   `overlayOpacity` number inputs with slider/stepper controls after `TASK-326`.
 - [x] `TASK-283-05-01` adds focused runtime/editor tests for normalization, SSR
   class output, contained shadow fallback, preview rendering, and
   reduced-motion-safe behavior.
-- [ ] `TASK-283-05-02` adds the final slider interaction coverage once the
+- [x] `TASK-283-05-02` adds the final slider interaction coverage once the
   shared owner cleanup lands.
 
 ## Files to Change
@@ -163,8 +163,8 @@ No API routes are added.
 
 - Update `_docs/_WIDGETS/SECTION.md` with shadow, motion, and preview behavior.
 - Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows W2, W3, and U5
-  after `TASK-283-05-01`, and keep U2 explicitly mapped to
-  `TASK-283-05-02` after `TASK-326`.
+  after `TASK-283-05-01`, and close U2 after `TASK-283-05-02` lands on the
+  single-owner Visual surface.
 
 ## Acceptance Criteria
 

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
@@ -630,6 +631,104 @@ function SectionPresetCards({ onApply }: { onApply?: (preset: SectionPresetOptio
         Presets keep your current heading copy and region slot content while resetting only
         supported Section tokens.
       </p>
+    </div>
+  );
+}
+
+type SectionSliderFieldProps = {
+  id: string;
+  ariaLabelledby?: string;
+  ariaDescribedby?: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  nudgeStep: number;
+  unit: string;
+  sliderKey: string;
+  sliderLabel: string;
+  onChange: (next: number) => void;
+};
+
+function SectionSliderField({
+  id,
+  ariaLabelledby,
+  ariaDescribedby,
+  value,
+  min,
+  max,
+  step,
+  nudgeStep,
+  unit,
+  sliderKey,
+  sliderLabel,
+  onChange,
+}: SectionSliderFieldProps) {
+  return (
+    <div className="space-y-3" data-section-range-control={sliderKey}>
+      <div className="flex items-center justify-between gap-3">
+        <span data-section-range-value={sliderKey}>
+          <Badge className="shrink-0" variant="outline">
+            {value}
+            {unit}
+          </Badge>
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            aria-label={`Decrease ${sliderLabel} by ${nudgeStep}${unit}`}
+            data-section-stepper={`${sliderKey}-decrease`}
+            onClick={() => onChange(value - nudgeStep)}
+          >
+            -{nudgeStep}
+            {unit}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            aria-label={`Increase ${sliderLabel} by ${nudgeStep}${unit}`}
+            data-section-stepper={`${sliderKey}-increase`}
+            onClick={() => onChange(value + nudgeStep)}
+          >
+            +{nudgeStep}
+            {unit}
+          </Button>
+        </div>
+      </div>
+      <Slider
+        value={[value]}
+        min={min}
+        max={max}
+        step={step}
+        aria-label={`${sliderLabel} slider`}
+        aria-labelledby={ariaLabelledby}
+        aria-describedby={ariaDescribedby}
+        data-section-slider={sliderKey}
+        onValueChange={(next) => {
+          const [nextValue] = next;
+          onChange(typeof nextValue === "number" ? nextValue : value);
+        }}
+      />
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          className="h-9 w-24"
+          value={String(value)}
+          onChange={(event) => onChange(Number(event.target.value))}
+          aria-labelledby={ariaLabelledby}
+          aria-describedby={ariaDescribedby}
+        />
+        <span className="text-xs text-muted-foreground">Exact value</span>
+      </div>
     </div>
   );
 }
@@ -1981,19 +2080,23 @@ export function SectionVisualEditor({
 
         <WidgetControlRow id="section.style.gradientAngle" label="Gradient angle">
           {(fieldProps) => (
-            <Input
+            <SectionSliderField
               id={fieldProps.id}
-              type="number"
+              ariaLabelledby={fieldProps["aria-labelledby"]}
+              ariaDescribedby={fieldProps["aria-describedby"]}
+              value={clampAngle(normalized.style?.gradientAngle)}
               min={0}
               max={360}
-              value={String(clampAngle(normalized.style?.gradientAngle))}
-              onChange={(event) =>
+              step={1}
+              nudgeStep={15}
+              unit="°"
+              sliderKey="gradient-angle"
+              sliderLabel="Gradient angle"
+              onChange={(next) =>
                 updateStyle(value, onChange, {
-                  gradientAngle: clampAngle(Number(event.target.value)),
+                  gradientAngle: clampAngle(next),
                 })
               }
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
             />
           )}
         </WidgetControlRow>
@@ -2110,19 +2213,23 @@ export function SectionVisualEditor({
 
         <WidgetControlRow id="section.style.overlayOpacity" label="Overlay opacity (%)">
           {(fieldProps) => (
-            <Input
+            <SectionSliderField
               id={fieldProps.id}
-              type="number"
+              ariaLabelledby={fieldProps["aria-labelledby"]}
+              ariaDescribedby={fieldProps["aria-describedby"]}
+              value={clampOpacity(normalized.style?.overlayOpacity)}
               min={0}
               max={100}
-              value={String(clampOpacity(normalized.style?.overlayOpacity))}
-              onChange={(event) =>
+              step={1}
+              nudgeStep={5}
+              unit="%"
+              sliderKey="overlay-opacity"
+              sliderLabel="Overlay opacity"
+              onChange={(next) =>
                 updateStyle(value, onChange, {
-                  overlayOpacity: clampOpacity(Number(event.target.value)),
+                  overlayOpacity: clampOpacity(next),
                 })
               }
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
             />
           )}
         </WidgetControlRow>

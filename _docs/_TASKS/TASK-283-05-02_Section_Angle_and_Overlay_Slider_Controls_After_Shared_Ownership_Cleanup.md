@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Style + Admin UI + Shared Ownership
 **Estimated Effort:** Medium
 **Dependencies:** TASK-283, TASK-283-05, TASK-283-05-01, TASK-326
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -44,12 +44,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Wait for `TASK-326` to remove duplicate `gradientAngle` / `overlayOpacity`
-  ownership from Advanced.
-- [ ] Replace or augment the surviving owner-mode controls with sliders and
+- [x] Shared `TASK-326` removed duplicate `gradientAngle` / `overlayOpacity`
+  ownership from Advanced before this leaf landed.
+- [x] Replace or augment the surviving owner-mode controls with sliders and
   stepper-friendly value labels.
-- [ ] Add focused Section editor tests for the final control contract.
-- [ ] Update Section report/docs/board evidence for U2 closure.
+- [x] Add focused Section editor tests for the final control contract.
+- [x] Update Section report/docs/board evidence for U2 closure.
 
 ## Files to Change
 
@@ -93,6 +93,7 @@ No API routes are added.
 
 ## Testing Requirements
 
+- `bun run test:vitest -- tests/vitest/widgets/section.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/section-editor-wave.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -105,6 +106,7 @@ No API routes are added.
 - Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` row U2 after validation.
 - Update `_docs/_WIDGETS/SECTION.md` if the final owner-mode control model changes.
 - Update `_docs/_TASKS/TASK-283-05_Section_Surface_Shadow_Motion_and_Preview_Controls.md`.
+- Update `_docs/_TASKS/README.md` and the changelog index for the completed leaf.
 
 ## Acceptance Criteria
 
@@ -112,3 +114,14 @@ No API routes are added.
   truthful owner mode only.
 - Slider/stepper controls preserve current clamping semantics.
 - Focused editor tests cover the final control contract.
+
+## Validation Notes
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso`
+- `bun run scan:security:strict` (local `semgrep`, `trivy`, and `gitleaks` binaries are still missing; `bun audit` runs inside the command)
+- `bun run precommit`
+- `git diff --check`

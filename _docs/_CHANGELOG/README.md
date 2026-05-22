@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 901 | 2026-05-22 | TASK-283-05-02 section angle and overlay slider controls | CMS Widgets/Admin UI/QA/Docs |
 | 900 | 2026-05-22 | TASK-326 section shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 899 | 2026-05-22 | TASK-283-07 section region labels and structure UX | CMS Widgets/Admin UI/Builder/QA/Docs |
 | 898 | 2026-05-22 | TASK-283-06 section responsive spacing | CMS Widgets/Admin UI/Runtime/QA/Docs |
