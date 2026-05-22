@@ -1,4 +1,10 @@
-import type { ComponentType, CSSProperties, ReactNode } from "react";
+import {
+  useState,
+  type CSSProperties,
+  type ComponentType,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from "react";
 
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
@@ -15,11 +21,20 @@ import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type TabsVariantId = "pills" | "underline" | "minimal";
 export type TabsOrientation = "horizontal" | "vertical";
+export type TabsTriggerOverflow = "wrap" | "scroll";
+export type TabsSpacing = "sm" | "md" | "lg";
+export type TabsTriggerTextSize = "xs" | "sm" | "base";
+export type TabsTriggerFontWeight = "normal" | "medium" | "semibold";
+export type TabsMotion = "none" | "fade" | "slide";
 
 export type TabsItem = {
   id?: string;
   label?: string;
   description?: string;
+  panelIntro?: string;
+  triggerDescription?: string;
+  icon?: string;
+  disabled?: boolean;
 };
 
 export type TabsData = {
@@ -29,6 +44,13 @@ export type TabsData = {
     activeId?: string;
     alignment?: "start" | "center" | "end";
     orientation?: TabsOrientation;
+    triggerOverflow?: TabsTriggerOverflow;
+    containerPadding?: TabsSpacing;
+    triggerGap?: TabsSpacing;
+    panelGap?: TabsSpacing;
+    triggerTextSize?: TabsTriggerTextSize;
+    triggerFontWeight?: TabsTriggerFontWeight;
+    motion?: TabsMotion;
   };
   style?: {
     surfaceColor?: string;
@@ -42,6 +64,7 @@ export type TabsData = {
 
 export const tabsItemMin = 2;
 export const tabsItemMax = 6;
+const tabsIconMaxLength = 16;
 
 export const tabsPanelSlot = {
   id: "panel",
@@ -50,6 +73,14 @@ export const tabsPanelSlot = {
   minItems: tabsItemMin,
   maxItems: tabsItemMax,
 };
+
+const alignmentOptions = ["start", "center", "end"] as const;
+const orientationOptions = ["horizontal", "vertical"] as const;
+const triggerOverflowOptions = ["wrap", "scroll"] as const;
+const spacingOptions = ["sm", "md", "lg"] as const;
+const triggerTextSizeOptions = ["xs", "sm", "base"] as const;
+const triggerFontWeightOptions = ["normal", "medium", "semibold"] as const;
+const motionOptions = ["none", "fade", "slide"] as const;
 
 export const tabsSchema = {
   type: "object",
@@ -66,6 +97,10 @@ export const tabsSchema = {
           id: { type: "string" },
           label: { type: "string" },
           description: { type: "string" },
+          panelIntro: { type: "string" },
+          triggerDescription: { type: "string" },
+          icon: { type: "string", maxLength: tabsIconMaxLength },
+          disabled: { type: "boolean" },
         },
       },
     },
@@ -75,8 +110,15 @@ export const tabsSchema = {
       properties: {
         defaultItemId: { type: "string" },
         activeId: { type: "string" },
-        alignment: { enum: ["start", "center", "end"] },
-        orientation: { enum: ["horizontal", "vertical"] },
+        alignment: { enum: [...alignmentOptions] },
+        orientation: { enum: [...orientationOptions] },
+        triggerOverflow: { enum: [...triggerOverflowOptions] },
+        containerPadding: { enum: [...spacingOptions] },
+        triggerGap: { enum: [...spacingOptions] },
+        panelGap: { enum: [...spacingOptions] },
+        triggerTextSize: { enum: [...triggerTextSizeOptions] },
+        triggerFontWeight: { enum: [...triggerFontWeightOptions] },
+        motion: { enum: [...motionOptions] },
       },
     },
     style: {
@@ -96,14 +138,21 @@ export const tabsSchema = {
 
 export const tabsDefaults: TabsData = {
   items: [
-    { id: "1", label: "Tab 1", description: "Primary details." },
-    { id: "2", label: "Tab 2", description: "Secondary details." },
+    { id: "1", label: "Tab 1", panelIntro: "Primary details." },
+    { id: "2", label: "Tab 2", panelIntro: "Secondary details." },
   ],
   options: {
     defaultItemId: "1",
     activeId: "1",
     alignment: "start",
     orientation: "horizontal",
+    triggerOverflow: "wrap",
+    containerPadding: "md",
+    triggerGap: "md",
+    panelGap: "md",
+    triggerTextSize: "sm",
+    triggerFontWeight: "medium",
+    motion: "none",
   },
   style: {
     surfaceColor: "var(--color-surface)",
@@ -118,16 +167,62 @@ export const tabsDefaults: TabsData = {
 type NormalizedTabsItem = {
   id: string;
   label: string;
-  description?: string;
+  panelIntro?: string;
+  triggerDescription?: string;
+  icon?: string;
+  disabled: boolean;
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const alignmentClassMap = {
+const horizontalAlignmentClassMap = {
   start: "justify-start",
   center: "justify-center",
   end: "justify-end",
+} as const;
+
+const verticalAlignmentClassMap = {
+  start: "items-start",
+  center: "items-center",
+  end: "items-end",
+} as const;
+
+const containerPaddingClassMap = {
+  sm: "p-3",
+  md: "p-4",
+  lg: "p-6",
+} as const;
+
+const triggerGapClassMap = {
+  sm: "gap-1.5",
+  md: "gap-2",
+  lg: "gap-3",
+} as const;
+
+const panelGapClassMap = {
+  sm: "space-y-3",
+  md: "space-y-4",
+  lg: "space-y-6",
+} as const;
+
+const triggerTextSizeClassMap = {
+  xs: "text-xs",
+  sm: "text-sm",
+  base: "text-base",
+} as const;
+
+const triggerFontWeightClassMap = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+} as const;
+
+const panelMotionClassMap = {
+  none: undefined,
+  fade: "data-[state=active]:motion-safe:animate-in data-[state=active]:motion-safe:fade-in-0 data-[state=active]:motion-safe:duration-200 data-[state=active]:motion-reduce:animate-none",
+  slide:
+    "data-[state=active]:motion-safe:animate-in data-[state=active]:motion-safe:fade-in-0 data-[state=active]:motion-safe:slide-in-from-bottom-2 data-[state=active]:motion-safe:duration-200 data-[state=active]:motion-reduce:animate-none",
 } as const;
 
 const toTrimmedString = (value: unknown) => {
@@ -135,6 +230,9 @@ const toTrimmedString = (value: unknown) => {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 };
+
+const isEnumValue = <T extends string>(value: unknown, options: readonly T[]): value is T =>
+  typeof value === "string" && options.includes(value as T);
 
 const normalizeCount = (value: number) =>
   Math.max(tabsItemMin, Math.min(tabsItemMax, Math.floor(value)));
@@ -156,6 +254,26 @@ const resolveOrientation = (value: string | undefined): TabsOrientation => {
   return "horizontal";
 };
 
+const resolveTriggerOverflow = (value: string | undefined): TabsTriggerOverflow =>
+  isEnumValue(value, triggerOverflowOptions) ? value : "wrap";
+
+const resolveSpacing = (value: string | undefined): TabsSpacing =>
+  isEnumValue(value, spacingOptions) ? value : "md";
+
+const resolveTriggerTextSize = (value: string | undefined): TabsTriggerTextSize =>
+  isEnumValue(value, triggerTextSizeOptions) ? value : "sm";
+
+const resolveTriggerFontWeight = (value: string | undefined): TabsTriggerFontWeight =>
+  isEnumValue(value, triggerFontWeightOptions) ? value : "medium";
+
+const resolveMotion = (value: string | undefined): TabsMotion =>
+  isEnumValue(value, motionOptions) ? value : "none";
+
+const normalizeIcon = (value: unknown) => {
+  const trimmed = toTrimmedString(value);
+  return trimmed ? trimmed.slice(0, tabsIconMaxLength) : undefined;
+};
+
 const normalizeItemId = (value: unknown, fallbackIndex: number, used: Set<string>) => {
   const trimmed = toTrimmedString(value) ?? String(fallbackIndex + 1);
   if (!used.has(trimmed)) {
@@ -169,6 +287,29 @@ const normalizeItemId = (value: unknown, fallbackIndex: number, used: Set<string
   const resolved = String(next);
   used.add(resolved);
   return resolved;
+};
+
+const ensureAtLeastOneEnabled = (items: NormalizedTabsItem[]) => {
+  if (items.some((item) => item.disabled !== true)) {
+    return items;
+  }
+
+  return items.map((item, index) =>
+    index === 0
+      ? {
+          ...item,
+          disabled: false,
+        }
+      : item
+  );
+};
+
+const resolveActiveTabId = (items: NormalizedTabsItem[], requestedId: string | undefined) => {
+  const enabledItems = items.filter((item) => item.disabled !== true);
+  if (requestedId && enabledItems.some((item) => item.id === requestedId)) {
+    return requestedId;
+  }
+  return enabledItems[0]?.id ?? items[0]?.id ?? "1";
 };
 
 export function normalizeTabsItems(
@@ -187,35 +328,46 @@ export function normalizeTabsItems(
   const normalized: NormalizedTabsItem[] = [];
 
   for (let index = 0; index < count; index += 1) {
-    const raw = source[index] ?? tabsDefaults.items?.[index] ?? {};
+    const fallback = tabsDefaults.items?.[index] ?? {};
+    const raw = source[index] ?? fallback;
     const id = normalizeItemId(raw.id, index, used);
     normalized.push({
       id,
       label: toTrimmedString(raw.label) ?? `Tab ${index + 1}`,
-      description: toTrimmedString(raw.description) ?? undefined,
+      panelIntro:
+        toTrimmedString(raw.panelIntro) ??
+        toTrimmedString(raw.description) ??
+        toTrimmedString((fallback as TabsItem).panelIntro) ??
+        undefined,
+      triggerDescription: toTrimmedString(raw.triggerDescription) ?? undefined,
+      icon: normalizeIcon(raw.icon),
+      disabled: raw.disabled === true,
     });
   }
 
-  return normalized;
+  return ensureAtLeastOneEnabled(normalized);
 }
 
 export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsData {
   const items = normalizeTabsItems(data.items, desiredCount);
   const requestedDefaultId = toTrimmedString(data.options?.defaultItemId ?? data.options?.activeId);
-  const defaultItemId =
-    requestedDefaultId && items.some((item) => item.id === requestedDefaultId)
-      ? requestedDefaultId
-      : (items[0]?.id ?? "1");
-
+  const resolvedActiveId = resolveActiveTabId(items, requestedDefaultId ?? undefined);
   const hasStyleObject = data.style !== undefined;
 
   return {
     items,
     options: {
-      defaultItemId,
-      activeId: defaultItemId,
+      defaultItemId: resolvedActiveId,
+      activeId: resolvedActiveId,
       alignment: resolveAlignment(data.options?.alignment),
       orientation: resolveOrientation(data.options?.orientation),
+      triggerOverflow: resolveTriggerOverflow(data.options?.triggerOverflow),
+      containerPadding: resolveSpacing(data.options?.containerPadding),
+      triggerGap: resolveSpacing(data.options?.triggerGap),
+      panelGap: resolveSpacing(data.options?.panelGap),
+      triggerTextSize: resolveTriggerTextSize(data.options?.triggerTextSize),
+      triggerFontWeight: resolveTriggerFontWeight(data.options?.triggerFontWeight),
+      motion: resolveMotion(data.options?.motion),
     },
     style: {
       surfaceColor: hasStyleObject
@@ -246,8 +398,12 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
 type ResolvedTabPanel = {
   slotId: string;
   instanceId: string;
+  selectionId: string;
   label: string;
-  description: string | null;
+  panelIntro: string | null;
+  triggerDescription: string | null;
+  icon: string | null;
+  disabled: boolean;
   blocks: WidgetBlock[];
 };
 
@@ -269,8 +425,12 @@ const resolvePanels = (
     return {
       slotId: target.slotId,
       instanceId,
+      selectionId: source?.id ?? instanceId,
       label: source?.label ?? `Tab ${index + 1}`,
-      description: source?.description ?? null,
+      panelIntro: source?.panelIntro ?? null,
+      triggerDescription: source?.triggerDescription ?? null,
+      icon: source?.icon ?? null,
+      disabled: source?.disabled === true,
       blocks: Array.isArray(slotMap[target.slotId]) ? slotMap[target.slotId]! : [],
     };
   });
@@ -285,15 +445,19 @@ const tabsRuntimeClientScript = `
       (node) => node instanceof HTMLElement,
     );
 
+  const getEnabledTriggers = (root) =>
+    getTriggers(root).filter((trigger) => trigger.getAttribute("aria-disabled") !== "true");
+
   const syncState = (root, activeId) => {
     root.setAttribute("data-coderso-tabs-active-id", activeId);
 
     getTriggers(root).forEach((trigger) => {
       const id = trigger.getAttribute("data-coderso-tabs-id");
+      const disabled = trigger.getAttribute("aria-disabled") === "true";
       const isActive = id === activeId;
       trigger.setAttribute("aria-selected", isActive ? "true" : "false");
       trigger.setAttribute("data-state", isActive ? "active" : "inactive");
-      trigger.setAttribute("tabindex", isActive ? "0" : "-1");
+      trigger.setAttribute("tabindex", !disabled && isActive ? "0" : "-1");
     });
 
     root.querySelectorAll("[data-coderso-tabs-panel]").forEach((panel) => {
@@ -310,6 +474,7 @@ const tabsRuntimeClientScript = `
   };
 
   const focusAndActivate = (root, trigger) => {
+    if (trigger.getAttribute("aria-disabled") === "true") return;
     const activeId = trigger.getAttribute("data-coderso-tabs-id");
     if (!activeId) return;
     syncState(root, activeId);
@@ -321,6 +486,7 @@ const tabsRuntimeClientScript = `
     if (!(target instanceof Element)) return;
     const trigger = target.closest("[data-coderso-tabs-trigger]");
     if (!(trigger instanceof HTMLElement)) return;
+    if (trigger.getAttribute("aria-disabled") === "true") return;
 
     const root = trigger.closest("[data-coderso-tabs='1']");
     if (!(root instanceof HTMLElement)) return;
@@ -340,7 +506,7 @@ const tabsRuntimeClientScript = `
     const root = trigger.closest("[data-coderso-tabs='1']");
     if (!(root instanceof HTMLElement)) return;
 
-    const triggers = getTriggers(root);
+    const triggers = getEnabledTriggers(root);
     const currentIndex = triggers.indexOf(trigger);
     if (currentIndex < 0) return;
 
@@ -383,6 +549,7 @@ const tabsRuntimeClientScript = `
     root.addEventListener("keydown", handleKeydown);
     const activeId =
       root.getAttribute("data-coderso-tabs-active-id") ||
+      getEnabledTriggers(root)[0]?.getAttribute("data-coderso-tabs-id") ||
       getTriggers(root)[0]?.getAttribute("data-coderso-tabs-id");
     if (activeId) {
       syncState(root, activeId);
@@ -393,6 +560,11 @@ const tabsRuntimeClientScript = `
 
 const getTabsRuntimeClientScript = () => tabsRuntimeClientScript;
 
+const resolveHorizontalTablistClassName = (overflow: TabsTriggerOverflow) =>
+  overflow === "scroll"
+    ? "flex flex-nowrap items-center overflow-x-auto pb-1"
+    : "flex flex-wrap items-center";
+
 const resolveTriggerClasses = (variant: TabsVariantId) => {
   if (variant === "underline") {
     return "rounded-none border-b-2 border-transparent pb-2 data-[state=active]:border-current";
@@ -401,6 +573,39 @@ const resolveTriggerClasses = (variant: TabsVariantId) => {
     return "rounded-md px-2 py-1.5 data-[state=active]:underline";
   }
   return "rounded-full border px-3 py-1.5 data-[state=active]:border-transparent";
+};
+
+const isPreviewMode = (
+  previewDevice: DeviceTarget | undefined,
+  renderContext: WidgetRenderContext | undefined
+) =>
+  Boolean(previewDevice) ||
+  renderContext?.mode === "editor-preview" ||
+  renderContext?.mode === "admin-preview";
+
+const resolvePanelSelectionId = (panels: ResolvedTabPanel[], requestedId: string | undefined) => {
+  if (requestedId) {
+    const requestedPanel = panels.find(
+      (panel) =>
+        panel.disabled !== true &&
+        (panel.selectionId === requestedId || panel.instanceId === requestedId)
+    );
+    if (requestedPanel) {
+      return requestedPanel.selectionId;
+    }
+  }
+
+  return (
+    panels.find((panel) => panel.disabled !== true)?.selectionId ?? panels[0]?.selectionId ?? "1"
+  );
+};
+
+const resolveInitialActiveId = (panels: ResolvedTabPanel[], data: TabsData) => {
+  const requestedId =
+    typeof data.options?.defaultItemId === "string"
+      ? data.options.defaultItemId
+      : data.options?.activeId;
+  return resolvePanelSelectionId(panels, requestedId);
 };
 
 export function TabsBlock({
@@ -424,14 +629,16 @@ export function TabsBlock({
   const panels = resolvePanels(data, slotMap);
   const normalized = normalizeTabsData(data, panels.length);
   const resolvedVariant = resolveVariant(variant);
-  const activeId =
-    normalized.options?.defaultItemId &&
-    panels.some((panel) => panel.instanceId === normalized.options?.defaultItemId)
-      ? normalized.options.defaultItemId
-      : (panels[0]?.instanceId ?? "1");
+  const previewMode = isPreviewMode(previewDevice, renderContext);
+  const initialActiveId = resolveInitialActiveId(panels, normalized);
+  const [previewActiveId, setPreviewActiveId] = useState<string | null>(null);
+  const activeId = previewMode
+    ? resolvePanelSelectionId(panels, previewActiveId ?? initialActiveId)
+    : initialActiveId;
   const style = normalized.style ?? tabsDefaults.style!;
-  const orientation = normalized.options?.orientation ?? "horizontal";
-  const rootInstanceId = createWidgetInstanceId("tabs", blockId, activeId || "tabs");
+  const options = normalized.options ?? tabsDefaults.options!;
+  const orientation = options.orientation ?? "horizontal";
+  const rootInstanceId = createWidgetInstanceId("tabs", blockId, panels[0]?.selectionId ?? "tabs");
 
   const containerStyle: CSSProperties =
     compactStyle({
@@ -456,28 +663,88 @@ export function TabsBlock({
       backgroundColor: resolveClearableStyleValue(style.panelBackgroundColor),
     }) ?? {};
 
+  const enabledPanels = panels.filter((panel) => panel.disabled !== true);
+
+  const handlePreviewActivate = (panelId: string) => {
+    const panel = panels.find((entry) => entry.selectionId === panelId);
+    if (!previewMode || !panel || panel.disabled) return;
+    setPreviewActiveId(panel.selectionId);
+  };
+
+  const handlePreviewKeydown = (event: ReactKeyboardEvent<HTMLButtonElement>, panelId: string) => {
+    if (!previewMode) return;
+    const currentIndex = enabledPanels.findIndex((panel) => panel.selectionId === panelId);
+    if (currentIndex < 0) return;
+
+    const moveNext =
+      (orientation === "horizontal" && event.key === "ArrowRight") ||
+      (orientation === "vertical" && event.key === "ArrowDown");
+    const movePrev =
+      (orientation === "horizontal" && event.key === "ArrowLeft") ||
+      (orientation === "vertical" && event.key === "ArrowUp");
+
+    if (!moveNext && !movePrev && event.key !== "Home" && event.key !== "End") {
+      return;
+    }
+
+    event.preventDefault();
+
+    let nextPanel = enabledPanels[currentIndex];
+    if (event.key === "Home") {
+      nextPanel = enabledPanels[0] ?? nextPanel;
+    } else if (event.key === "End") {
+      nextPanel = enabledPanels[enabledPanels.length - 1] ?? nextPanel;
+    } else {
+      const delta = moveNext ? 1 : -1;
+      const nextIndex = (currentIndex + delta + enabledPanels.length) % enabledPanels.length;
+      nextPanel = enabledPanels[nextIndex] ?? nextPanel;
+    }
+
+    if (!nextPanel) return;
+
+    setPreviewActiveId(nextPanel.selectionId);
+    if (typeof document !== "undefined") {
+      const nextTriggerId = scopedId(rootInstanceId, `trigger-${nextPanel.selectionId}`);
+      const element = document.getElementById(nextTriggerId);
+      if (element instanceof HTMLElement) {
+        element.focus();
+      }
+    }
+  };
+
   return (
     <div
-      className="space-y-4 rounded-xl border p-4"
+      className={joinClasses(
+        panelGapClassMap[options.panelGap ?? "md"],
+        containerPaddingClassMap[options.containerPadding ?? "md"],
+        "rounded-xl border"
+      )}
       style={containerStyle}
       data-coderso-tabs="1"
       data-coderso-tabs-variant={resolvedVariant}
       data-coderso-tabs-active-id={activeId}
       data-coderso-tabs-panels={String(panels.length)}
       data-coderso-tabs-orientation={orientation}
+      data-coderso-tabs-motion={options.motion ?? "none"}
+      data-coderso-tabs-overflow={options.triggerOverflow ?? "wrap"}
     >
       <div
         role="tablist"
         aria-orientation={orientation}
         className={joinClasses(
-          orientation === "vertical" ? "flex flex-col gap-2" : "flex flex-wrap gap-2",
-          alignmentClassMap[normalized.options?.alignment ?? "start"]
+          orientation === "vertical"
+            ? "flex flex-col"
+            : resolveHorizontalTablistClassName(options.triggerOverflow ?? "wrap"),
+          triggerGapClassMap[options.triggerGap ?? "md"],
+          orientation === "vertical"
+            ? verticalAlignmentClassMap[options.alignment ?? "start"]
+            : horizontalAlignmentClassMap[options.alignment ?? "start"]
         )}
       >
         {panels.map((panel) => {
-          const isActive = panel.instanceId === activeId;
-          const triggerId = scopedId(rootInstanceId, `trigger-${panel.instanceId}`);
-          const panelId = scopedId(rootInstanceId, `panel-${panel.instanceId}`);
+          const isActive = panel.selectionId === activeId;
+          const triggerId = scopedId(rootInstanceId, `trigger-${panel.selectionId}`);
+          const panelId = scopedId(rootInstanceId, `panel-${panel.selectionId}`);
           return (
             <button
               key={panel.slotId}
@@ -485,42 +752,66 @@ export function TabsBlock({
               type="button"
               role="tab"
               data-coderso-tabs-trigger
-              data-coderso-tabs-id={panel.instanceId}
+              data-coderso-tabs-id={panel.selectionId}
               data-state={isActive ? "active" : "inactive"}
               aria-selected={isActive ? "true" : "false"}
               aria-controls={panelId}
-              tabIndex={isActive ? 0 : -1}
+              aria-disabled={panel.disabled ? "true" : "false"}
+              disabled={panel.disabled}
+              tabIndex={!panel.disabled && isActive ? 0 : -1}
               className={joinClasses(
-                "text-sm font-medium transition",
+                "shrink-0 text-left transition",
+                triggerTextSizeClassMap[options.triggerTextSize ?? "sm"],
+                triggerFontWeightClassMap[options.triggerFontWeight ?? "medium"],
+                panel.disabled && "cursor-not-allowed opacity-50",
                 resolveTriggerClasses(resolvedVariant)
               )}
               style={isActive ? activeTriggerStyle : triggerStyle}
+              onClick={previewMode ? () => handlePreviewActivate(panel.selectionId) : undefined}
+              onKeyDown={
+                previewMode ? (event) => handlePreviewKeydown(event, panel.selectionId) : undefined
+              }
             >
-              {panel.label}
+              <span className="flex items-start gap-2">
+                {panel.icon ? (
+                  <span aria-hidden="true" className="pt-0.5 leading-none">
+                    {panel.icon}
+                  </span>
+                ) : null}
+                <span className="min-w-0">
+                  <span className="block leading-tight">{panel.label}</span>
+                  {panel.triggerDescription ? (
+                    <span className="block text-xs opacity-75">{panel.triggerDescription}</span>
+                  ) : null}
+                </span>
+              </span>
             </button>
           );
         })}
       </div>
 
       {panels.map((panel) => {
-        const isActive = panel.instanceId === activeId;
-        const triggerId = scopedId(rootInstanceId, `trigger-${panel.instanceId}`);
-        const panelId = scopedId(rootInstanceId, `panel-${panel.instanceId}`);
+        const isActive = panel.selectionId === activeId;
+        const triggerId = scopedId(rootInstanceId, `trigger-${panel.selectionId}`);
+        const panelId = scopedId(rootInstanceId, `panel-${panel.selectionId}`);
         return (
           <div
             key={`${panel.slotId}-panel`}
             id={panelId}
             role="tabpanel"
             data-coderso-tabs-panel
-            data-coderso-tabs-id={panel.instanceId}
+            data-coderso-tabs-id={panel.selectionId}
             data-state={isActive ? "active" : "inactive"}
             aria-labelledby={triggerId}
             hidden={!isActive}
-            className="rounded-lg border p-4"
+            className={joinClasses(
+              "rounded-lg border",
+              panelMotionClassMap[options.motion ?? "none"]
+            )}
             style={panelStyle}
           >
-            {panel.description ? (
-              <p className="mb-3 text-sm text-[var(--color-text)]/70">{panel.description}</p>
+            {panel.panelIntro ? (
+              <p className="mb-3 text-sm text-[var(--color-text)]/70">{panel.panelIntro}</p>
             ) : null}
             {panel.blocks.length > 0
               ? panel.blocks.map((block) =>
@@ -540,7 +831,12 @@ export function TabsBlock({
         );
       })}
 
-      <script dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }} />
+      {!previewMode ? (
+        <script
+          type="text/javascript"
+          dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }}
+        />
+      ) : null}
     </div>
   );
 }

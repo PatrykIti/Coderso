@@ -1,7 +1,8 @@
 # RAPORT: Tabs Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony
-> **Data:** 2026-05-16
+> **Status:** Audyt zamknięty, stan wdrożenia zaktualizowany po TASK-288
+> **Data audytu:** 2026-05-16
+> **Aktualizacja statusu:** 2026-05-22
 > **Sesja:** Playwright #8 (Tabs Widget)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Sesja przeglądarki:** `tabs-audit` (oddzielna od innych agentów)
@@ -300,7 +301,7 @@ Vertical tabs na mobile — tablist `nowrap`, 2 triggery jeden pod drugim. Layou
 > Uwaga (2026-05-22): poniższe snippet-y to historyczne notatki z audytu. Na
 > aktualnym branchu nie należy ich wykonywać literalnie tam, gdzie kolidują ze
 > wspólnym kontraktem `TASK-256`, routingiem `TASK-288`, albo nowym shared
-> follow-upem `TASK-328`. W szczególności legacy `nextless` naming i lokalne
+> follow-upem `TASK-330`. W szczególności legacy `nextless` naming i lokalne
 > generowanie ID przez `Math.random()` / `crypto.randomUUID()` nie są już
 > obowiązującym guidance dla tej rodziny tasków.
 
@@ -411,7 +412,7 @@ className={joinClasses(
   wylądowały przez `TASK-256-04` + `TASK-256-05-04`, więc nie wolno ich
   ponownie implementować lokalnie w `TASK-288`.
 - `W4`, `W5`, `R2`, `R3`, i `R6` pozostają shared accessibility residuals, ale
-  po zamknięciu `TASK-256` są teraz śledzone przez `TASK-328`, nie przez rodzinę
+  po zamknięciu `TASK-256` są teraz śledzone przez `TASK-330`, nie przez rodzinę
   produktową `TASK-288`.
 - `C3` należy czytać jako bug ścieżki aktywacji admin preview / runtime
   transportu; samodzielny konflikt `hidden` nie jest jeszcze odizolowanym
@@ -420,3 +421,35 @@ className={joinClasses(
 ---
 
 *Raport zakończony. Sekcje 4-6 zostały uzupełnione po testach przeglądarki.*
+
+
+## 9. Status po TASK-288 (2026-05-22)
+
+| Obszar audytu | Status końcowy | Uwagi |
+|---|---|---|
+| C1 | Fixed | Visual/Advanced dostały osobną sekcję Colors z `inactiveTextColor`, clearable surfaces i bounded contrast advisory. |
+| C2, W4, W5, R2, R3, R4, R6 | Shared follow-up | Pozostają poza TASK-288 i są śledzone w `TASK-330`. |
+| C3 | Fixed | Admin preview przełącza panele przez React-local activation path; public runtime zachowuje osobny inline script tylko poza preview. |
+| W1 | Fixed | `TabsItem` obsługuje `icon` / emoji w triggerze. |
+| W2, U4, U5, U9 | Fixed | Wizard ma własną sekcję Layout, default badge, slot guidance i confirm przy redukcji liczby tabów. |
+| W3, R1, U2 | Fixed | Vertical alignment używa `items-*`, a etykiety alignment/orientation są user-facing. |
+| W6 | Shared follow-up | Tabs zachowuje local inline script guard, ale shared payload transport/dedupe został wyodrębniony do `TASK-329` zamiast dorabiania Tabs-only obejścia. |
+| W7, U3 | Fixed | Legacy `description` normalizuje się do `panelIntro`; osobne `triggerDescription` opisuje trigger zamiast panelu. |
+| W8, W9, U6, U8 | Fixed | Tabs ma bounded overflow, spacing, trigger typography i rozdzielone sekcje Layout / Trigger style / Colors. |
+| W10 | Fixed | `disabled` jest częścią schematu, editora i runtime; aktywacja zawsze wybiera pierwszy enabled tab. |
+| W11, U1 | Fixed | Variant cards mają visual previews, a runtime obsługuje `none` / `fade` / `slide` z `prefers-reduced-motion`. |
+| R5 | Fixed | Public inline script renderuje się z jawnie ustawionym `type="text/javascript"`. |
+
+### 9.1 Walidacja końcowa
+
+- `tests/vitest/widgets/tabs.test.tsx` — green
+- `tests/vitest/ui/tabs-editor-wave.test.tsx` — green
+- `tests/vitest/ui-integration/tabs-preview-activation.test.tsx` — green
+- `bun run lint` — green
+- `git diff --check` — green
+- `bun run scan:security:strict` — local blocker: `semgrep` i `trivy` nie istnieją w `PATH`, a dostępny `gitleaks` binary nie wspiera repo-kontraktu `git` / `dir`.
+
+### 9.2 Residual scope po zamknięciu TASK-288
+
+- `TASK-330` — shared Tabs accessibility / ID residuals po TASK-256
+- `TASK-329` — shared widget runtime-script transport and dedupe

@@ -18,11 +18,20 @@ import {
   tabsItemMax,
   tabsItemMin,
   type TabsData,
+  type TabsMotion,
   type TabsOrientation,
+  type TabsSpacing,
+  type TabsTriggerFontWeight,
+  type TabsTriggerOverflow,
+  type TabsTriggerTextSize,
   type TabsVariantId,
 } from "../../../../widgets/core/tabs";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import {
+  ClearableFieldHeader,
+  SharedColorFieldInputs,
+  resolveColorContrastAdvisory,
+} from "./ClearableFields";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -47,8 +56,45 @@ const variantOptions: Array<{
   },
 ];
 
-const alignmentOptions = ["start", "center", "end"] as const;
-const orientationOptions: TabsOrientation[] = ["horizontal", "vertical"];
+const alignmentOptions = [
+  { value: "start", label: "Start" },
+  { value: "center", label: "Center" },
+  { value: "end", label: "End" },
+] as const;
+
+const orientationOptions: Array<{ value: TabsOrientation; label: string }> = [
+  { value: "horizontal", label: "Horizontal" },
+  { value: "vertical", label: "Vertical" },
+];
+
+const overflowOptions: Array<{ value: TabsTriggerOverflow; label: string }> = [
+  { value: "wrap", label: "Wrap" },
+  { value: "scroll", label: "Scroll" },
+];
+
+const spacingOptions: Array<{ value: TabsSpacing; label: string }> = [
+  { value: "sm", label: "Small" },
+  { value: "md", label: "Medium" },
+  { value: "lg", label: "Large" },
+];
+
+const textSizeOptions: Array<{ value: TabsTriggerTextSize; label: string }> = [
+  { value: "xs", label: "XS" },
+  { value: "sm", label: "Small" },
+  { value: "base", label: "Base" },
+];
+
+const fontWeightOptions: Array<{ value: TabsTriggerFontWeight; label: string }> = [
+  { value: "normal", label: "Normal" },
+  { value: "medium", label: "Medium" },
+  { value: "semibold", label: "Semibold" },
+];
+
+const motionOptions: Array<{ value: TabsMotion; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade" },
+  { value: "slide", label: "Slide" },
+];
 
 const tabCountOptions = Array.from({ length: tabsItemMax - tabsItemMin + 1 }, (_, index) =>
   String(tabsItemMin + index)
@@ -73,25 +119,34 @@ function updateValue(
   onChange(normalizeValue(next));
 }
 
-function setCount(value: TabsData, onChange: (next: TabsData) => void, count: number) {
-  const current = normalizeValue(value, count);
-  const items = normalizeTabsItems(current.items, count);
-  const activeId =
-    current.options?.defaultItemId &&
-    items.some((item) => item.id === current.options?.defaultItemId)
-      ? current.options.defaultItemId
-      : items[0]?.id;
+function resolveRemovedTabs(value: TabsData, count: number) {
+  const currentItems = normalizeTabsItems(normalizeValue(value).items);
+  if (count >= currentItems.length) return [];
+  return currentItems.slice(count).map((item, index) => ({
+    id: item.id,
+    label: item.label || `Tab ${count + index + 1}`,
+  }));
+}
 
+function setCount(value: TabsData, onChange: (next: TabsData) => void, count: number) {
+  const removed = resolveRemovedTabs(value, count);
+  if (removed.length > 0 && typeof window !== "undefined" && typeof window.confirm === "function") {
+    const confirmed = window.confirm(
+      `Reduce tabs to ${count}? This removes tab/panel pairs: ${removed
+        .map((item) => item.label)
+        .join(", ")}. This cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+  }
+
+  const current = normalizeValue(value, count);
   onChange(
     normalizeValue(
       {
         ...current,
-        items,
-        options: {
-          ...current.options,
-          defaultItemId: activeId,
-          activeId,
-        },
+        items: normalizeTabsItems(current.items, count),
       },
       count
     )
@@ -102,7 +157,7 @@ function updateItem(
   value: TabsData,
   onChange: (next: TabsData) => void,
   itemId: string,
-  patch: { label?: string; description?: string }
+  patch: Partial<NonNullable<TabsData["items"]>[number]>
 ) {
   updateValue(value, onChange, (current) => ({
     ...current,
@@ -177,6 +232,44 @@ function EditorSection({
   );
 }
 
+function TabsVariantPreview({ variant, selected }: { variant: TabsVariantId; selected: boolean }) {
+  const activeClass = selected
+    ? "bg-primary text-primary-foreground border-primary"
+    : "border-border bg-muted/40";
+  const inactiveClass = "border-border/70 bg-background text-muted-foreground";
+
+  if (variant === "underline") {
+    return (
+      <span aria-hidden="true" data-tabs-variant-preview={variant} className="mt-2 flex gap-2">
+        <span className={cn("flex flex-col gap-1", selected && "text-primary")}>
+          <span className="text-[10px] font-medium">Tab</span>
+          <span className={cn("h-0.5 w-10 rounded-full", selected ? "bg-primary" : "bg-border")} />
+        </span>
+        <span className="flex flex-col gap-1 text-muted-foreground">
+          <span className="text-[10px] font-medium">Tab</span>
+          <span className="h-0.5 w-8 rounded-full bg-border/70" />
+        </span>
+      </span>
+    );
+  }
+
+  if (variant === "minimal") {
+    return (
+      <span aria-hidden="true" data-tabs-variant-preview={variant} className="mt-2 flex gap-2">
+        <span className={cn("rounded-md border px-2 py-1 text-[10px]", activeClass)}>Tab</span>
+        <span className={cn("rounded-md border px-2 py-1 text-[10px]", inactiveClass)}>Tab</span>
+      </span>
+    );
+  }
+
+  return (
+    <span aria-hidden="true" data-tabs-variant-preview={variant} className="mt-2 flex gap-2">
+      <span className={cn("rounded-full border px-2.5 py-1 text-[10px]", activeClass)}>Tab</span>
+      <span className={cn("rounded-full border px-2.5 py-1 text-[10px]", inactiveClass)}>Tab</span>
+    </span>
+  );
+}
+
 function VariantCards({
   value,
   onChange,
@@ -199,12 +292,15 @@ function VariantCards({
           )}
         >
           <div className="flex w-full items-start justify-between gap-2">
-            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-tight">{option.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+              <TabsVariantPreview variant={option.id} selected={value === option.id} />
+            </div>
             <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
               {value === option.id ? "Selected" : "Pick"}
             </Badge>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
         </button>
       ))}
     </div>
@@ -215,21 +311,25 @@ function TabsStructureSection({
   value,
   onChange,
   context,
+  showMetadata,
 }: {
   value: TabsData;
   onChange: (next: TabsData) => void;
   context?: WidgetEditorProps<TabsData>["context"];
+  showMetadata: boolean;
 }) {
   const normalized = normalizeValue(value);
   const items = normalizeTabsItems(normalized.items);
+  const defaultItemId =
+    normalized.options?.defaultItemId ?? normalized.options?.activeId ?? items[0]?.id ?? "1";
 
   return (
     <EditorSection
       id="tabs.structure"
       title="Tabs Structure"
-      description="Set tab count, labels, and short descriptions."
+      description="Set tab count, labels, and panel intro copy."
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="space-y-3">
         <div className="space-y-2">
           <p className="text-sm font-medium">Number of tabs</p>
           <Select
@@ -247,17 +347,16 @@ function TabsStructureSection({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Each tab owns a matching panel slot in the builder. Reducing the count confirms which
+            tab/panel pairs will be removed.
+          </p>
         </div>
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Default tab</p>
           <Select
-            value={
-              normalized.options?.defaultItemId ??
-              normalized.options?.activeId ??
-              items[0]?.id ??
-              "1"
-            }
+            value={defaultItemId}
             onValueChange={(next) =>
               updateOptions(value, onChange, { defaultItemId: next, activeId: next })
             }
@@ -267,7 +366,11 @@ function TabsStructureSection({
             </SelectTrigger>
             <SelectContent>
               {items.map((item) => (
-                <SelectItem key={`active-tab-${item.id}`} value={item.id}>
+                <SelectItem
+                  key={`active-tab-${item.id}`}
+                  value={item.id}
+                  disabled={item.disabled === true}
+                >
                   {item.label}
                 </SelectItem>
               ))}
@@ -277,40 +380,102 @@ function TabsStructureSection({
       </div>
 
       <div className="space-y-3">
-        {items.map((item, index) => (
-          <div key={item.id} className="space-y-2 rounded-md border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {context?.slotTargets?.[index]?.label ?? `Tab ${index + 1}`}
-            </p>
-            <Input
-              value={item.label}
-              onChange={(event) =>
-                updateItem(value, onChange, item.id, { label: event.target.value })
-              }
-              placeholder={`Tab ${index + 1}`}
-            />
-            <Input
-              value={item.description ?? ""}
-              onChange={(event) =>
-                updateItem(value, onChange, item.id, {
-                  description: event.target.value,
-                })
-              }
-              placeholder="Optional tab description"
-            />
-          </div>
-        ))}
+        {items.map((item, index) => {
+          const slotLabel = context?.slotTargets?.[index]?.label ?? `Panel ${index + 1}`;
+          const isDefault = item.id === defaultItemId;
+          return (
+            <div key={item.id} className="space-y-3 rounded-md border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {slotLabel}
+                </p>
+                <div className="flex items-center gap-2">
+                  {item.disabled ? <Badge variant="outline">Disabled</Badge> : null}
+                  {isDefault ? <Badge>Default</Badge> : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Tab label</p>
+                <Input
+                  value={item.label}
+                  onChange={(event) =>
+                    updateItem(value, onChange, item.id, { label: event.target.value })
+                  }
+                  placeholder={`Tab ${index + 1}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Panel intro text</p>
+                <Input
+                  value={item.panelIntro ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, item.id, { panelIntro: event.target.value })
+                  }
+                  placeholder="Optional panel intro text"
+                />
+              </div>
+
+              {showMetadata ? (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Trigger subtitle</p>
+                    <Input
+                      value={item.triggerDescription ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, item.id, {
+                          triggerDescription: event.target.value,
+                        })
+                      }
+                      placeholder="Optional trigger subtitle"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Icon or emoji</p>
+                    <Input
+                      value={item.icon ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, item.id, { icon: event.target.value })
+                      }
+                      placeholder="e.g. ⭐"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={item.disabled === true}
+                      onChange={(event) =>
+                        updateItem(value, onChange, item.id, { disabled: event.target.checked })
+                      }
+                    />
+                    Disable this tab
+                  </label>
+                </>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Each tab maps to a matching panel slot in the builder, so slot order stays aligned with the
+        tab order.
+      </p>
     </EditorSection>
   );
 }
 
-function TabsBehaviorSection({
+function TabsLayoutSection({
   value,
   onChange,
+  wizardMode,
 }: {
   value: TabsData;
   onChange: (next: TabsData) => void;
+  wizardMode: boolean;
 }) {
   const normalized = normalizeValue(value);
 
@@ -318,9 +483,34 @@ function TabsBehaviorSection({
     <EditorSection
       id="tabs.layout"
       title="Layout"
-      description="Align tab triggers and tune visual colors."
+      description={
+        wizardMode
+          ? "Choose the tab direction and alignment."
+          : "Control tab direction, overflow, and spacing."
+      }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Orientation</p>
+          <Select
+            value={normalized.options?.orientation ?? "horizontal"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, { orientation: next as TabsOrientation })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose orientation" />
+            </SelectTrigger>
+            <SelectContent>
+              {orientationOptions.map((option) => (
+                <SelectItem key={`tabs-orientation-${option.value}`} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-2">
           <p className="text-sm font-medium">Tab alignment</p>
           <Select
@@ -336,38 +526,218 @@ function TabsBehaviorSection({
             </SelectTrigger>
             <SelectContent>
               {alignmentOptions.map((option) => (
-                <SelectItem key={`tabs-align-${option}`} value={option}>
-                  {option}
+                <SelectItem key={`tabs-align-${option.value}`} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!wizardMode ? (
+            <p className="text-xs text-muted-foreground">
+              Vertical tabs align across the row with Start, Center, and End.
+            </p>
+          ) : null}
+        </div>
+
+        {!wizardMode ? (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tab overflow</p>
+              <Select
+                value={normalized.options?.triggerOverflow ?? "wrap"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { triggerOverflow: next as TabsTriggerOverflow })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose overflow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {overflowOptions.map((option) => (
+                    <SelectItem key={`tabs-overflow-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Container padding</p>
+              <Select
+                value={normalized.options?.containerPadding ?? "md"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { containerPadding: next as TabsSpacing })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={`tabs-padding-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Tab gap</p>
+              <Select
+                value={normalized.options?.triggerGap ?? "md"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { triggerGap: next as TabsSpacing })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={`tabs-trigger-gap-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Panel gap</p>
+              <Select
+                value={normalized.options?.panelGap ?? "md"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { panelGap: next as TabsSpacing })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={`tabs-panel-gap-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </EditorSection>
+  );
+}
+
+function TabsTriggerStyleSection({
+  value,
+  onChange,
+}: {
+  value: TabsData;
+  onChange: (next: TabsData) => void;
+}) {
+  const normalized = normalizeValue(value);
+
+  return (
+    <EditorSection
+      id="tabs.trigger-style"
+      title="Trigger style"
+      description="Adjust trigger typography and panel motion."
+    >
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Trigger text size</p>
+          <Select
+            value={normalized.options?.triggerTextSize ?? "sm"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, { triggerTextSize: next as TabsTriggerTextSize })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose text size" />
+            </SelectTrigger>
+            <SelectContent>
+              {textSizeOptions.map((option) => (
+                <SelectItem key={`tabs-trigger-size-${option.value}`} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-2">
-          <p className="text-sm font-medium">Orientation</p>
+          <p className="text-sm font-medium">Trigger weight</p>
           <Select
-            value={normalized.options?.orientation ?? "horizontal"}
+            value={normalized.options?.triggerFontWeight ?? "medium"}
             onValueChange={(next) =>
               updateOptions(value, onChange, {
-                orientation: next as TabsOrientation,
+                triggerFontWeight: next as TabsTriggerFontWeight,
               })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose orientation" />
+              <SelectValue placeholder="Choose trigger weight" />
             </SelectTrigger>
             <SelectContent>
-              {orientationOptions.map((option) => (
-                <SelectItem key={`tabs-orientation-${option}`} value={option}>
-                  {option}
+              {fontWeightOptions.map((option) => (
+                <SelectItem key={`tabs-trigger-weight-${option.value}`} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Panel motion</p>
+          <Select
+            value={normalized.options?.motion ?? "none"}
+            onValueChange={(next) => updateOptions(value, onChange, { motion: next as TabsMotion })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose motion" />
+            </SelectTrigger>
+            <SelectContent>
+              {motionOptions.map((option) => (
+                <SelectItem key={`tabs-motion-${option.value}`} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+    </EditorSection>
+  );
+}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+function TabsColorsSection({
+  value,
+  onChange,
+}: {
+  value: TabsData;
+  onChange: (next: TabsData) => void;
+}) {
+  const normalized = normalizeValue(value);
+  const activeContrast = resolveColorContrastAdvisory({
+    foreground: normalized.style?.activeTextColor,
+    background: normalized.style?.activeBackgroundColor,
+  });
+  const inactiveContrast = resolveColorContrastAdvisory({
+    foreground: normalized.style?.inactiveTextColor,
+    background: normalized.style?.surfaceColor,
+  });
+
+  return (
+    <EditorSection
+      id="tabs.colors"
+      title="Colors"
+      description="Tune the tab surface, trigger, and panel colors."
+    >
+      <div className="space-y-3">
         <div className="space-y-2">
           <ClearableFieldHeader
             label="Surface color"
@@ -375,83 +745,87 @@ function TabsBehaviorSection({
             onClear={() => clearStyleField(value, onChange, "surfaceColor")}
             onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           />
-          <Input
-            value={normalized.style?.surfaceColor ?? tabsDefaults.style?.surfaceColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { surfaceColor: event.target.value })}
+          <SharedColorFieldInputs
+            inputId="tabs-color-surface"
+            value={normalized.style?.surfaceColor}
+            onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
             placeholder="var(--color-surface)"
+            pickerFallback="#f8fafc"
           />
         </div>
+
         <div className="space-y-2">
           <p className="text-sm font-medium">Border color</p>
-          <Input
-            value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { borderColor: event.target.value })}
+          <SharedColorFieldInputs
+            inputId="tabs-color-border"
+            value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor}
+            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
             placeholder="var(--color-border)"
+            pickerFallback="#cbd5e1"
           />
         </div>
+
         <div className="space-y-2">
           <ClearableFieldHeader
             label="Active background"
             value={normalized.style?.activeBackgroundColor}
             onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
-            onRestoreValue={(next) =>
-              updateStyle(value, onChange, {
-                activeBackgroundColor: next,
-              })
-            }
+            onRestoreValue={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
           />
-          <Input
-            value={
-              normalized.style?.activeBackgroundColor ??
-              tabsDefaults.style?.activeBackgroundColor ??
-              ""
-            }
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                activeBackgroundColor: event.target.value,
-              })
-            }
+          <SharedColorFieldInputs
+            inputId="tabs-color-active-background"
+            value={normalized.style?.activeBackgroundColor}
+            onChange={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
             placeholder="var(--color-text)"
+            pickerFallback="#0f172a"
           />
         </div>
+
         <div className="space-y-2">
           <p className="text-sm font-medium">Active text color</p>
-          <Input
-            value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                activeTextColor: event.target.value,
-              })
-            }
+          <SharedColorFieldInputs
+            inputId="tabs-color-active-text"
+            value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor}
+            onChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
             placeholder="var(--color-background)"
+            pickerFallback="#ffffff"
           />
         </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Inactive text color</p>
+          <SharedColorFieldInputs
+            inputId="tabs-color-inactive-text"
+            value={normalized.style?.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor}
+            onChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
+            placeholder="var(--color-text)"
+            pickerFallback="#0f172a"
+          />
+        </div>
+
         <div className="space-y-2">
           <ClearableFieldHeader
             label="Panel background"
             value={normalized.style?.panelBackgroundColor}
             onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
-            onRestoreValue={(next) =>
-              updateStyle(value, onChange, {
-                panelBackgroundColor: next,
-              })
-            }
+            onRestoreValue={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
           />
-          <Input
-            value={
-              normalized.style?.panelBackgroundColor ??
-              tabsDefaults.style?.panelBackgroundColor ??
-              ""
-            }
-            onChange={(event) =>
-              updateStyle(value, onChange, {
-                panelBackgroundColor: event.target.value,
-              })
-            }
+          <SharedColorFieldInputs
+            inputId="tabs-color-panel-background"
+            value={normalized.style?.panelBackgroundColor}
+            onChange={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
             placeholder="var(--color-surface)"
+            pickerFallback="#f8fafc"
           />
         </div>
       </div>
+
+      {activeContrast.status === "warning" && activeContrast.message ? (
+        <p className="text-xs text-amber-700">Active tab: {activeContrast.message}</p>
+      ) : null}
+      {inactiveContrast.status === "warning" && inactiveContrast.message ? (
+        <p className="text-xs text-amber-700">Inactive tab: {inactiveContrast.message}</p>
+      ) : null}
     </EditorSection>
   );
 }
@@ -469,13 +843,20 @@ export function TabsWizardEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
       <EditorSection id="tabs.variant" title="Variant" description="Pick tabs presentation style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} />
+      <TabsLayoutSection value={value} onChange={onChange} wizardMode />
+      <TabsStructureSection
+        value={value}
+        onChange={onChange}
+        context={context}
+        showMetadata={false}
+      />
     </div>
   );
 }
@@ -492,8 +873,10 @@ export function TabsVisualEditor({
       <EditorSection id="tabs.variant" title="Variant" description="Choose tab presentation style.">
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} context={context} />
-      <TabsBehaviorSection value={value} onChange={onChange} />
+      <TabsStructureSection value={value} onChange={onChange} context={context} showMetadata />
+      <TabsLayoutSection value={value} onChange={onChange} wizardMode={false} />
+      <TabsTriggerStyleSection value={value} onChange={onChange} />
+      <TabsColorsSection value={value} onChange={onChange} />
     </div>
   );
 }
@@ -514,8 +897,10 @@ export function TabsAdvancedEditor({
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} context={context} />
-      <TabsBehaviorSection value={value} onChange={onChange} />
+      <TabsStructureSection value={value} onChange={onChange} context={context} showMetadata />
+      <TabsLayoutSection value={value} onChange={onChange} wizardMode={false} />
+      <TabsTriggerStyleSection value={value} onChange={onChange} />
+      <TabsColorsSection value={value} onChange={onChange} />
       <EditorSection
         id="tabs.diagnostics"
         title="Diagnostics"

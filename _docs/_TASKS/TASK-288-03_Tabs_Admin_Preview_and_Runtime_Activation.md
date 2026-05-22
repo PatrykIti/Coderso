@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI Preview + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-05-04, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -32,20 +32,19 @@ here.
 
 ## Sub-Tasks
 
-- [ ] Replace any selector assumptions that still depend on legacy runtime
+- [x] Replace any selector assumptions that still depend on legacy runtime
   namespaces or stale trigger/panel lookup logic after TASK-256 lands
   instance-safe values.
-- [ ] Make the admin preview switch panels without requiring parser-executed
+- [x] Make the admin preview switch panels without requiring parser-executed
   inline scripts.
-- [ ] Prevent React preview state from fighting the runtime-managed `hidden`
+- [x] Prevent React preview state from fighting the runtime-managed `hidden`
   attribute.
-- [ ] Ensure published runtime still initializes once per page or once per
+- [x] Ensure published runtime still initializes once per page or once per
   scoped root according to the final TASK-256 contract.
-- [ ] Avoid duplicate inline script payloads when multiple Tabs widgets render
-  on the same page, or explicitly consume the shared runtime payload helper if
-  one already exists on the branch. If that helper does not exist, split the
-  transport/dedupe mechanism to a new shared task before marking W6 fixed.
-- [ ] Add an explicit script `type` only if the final render path still emits an
+- [x] Avoid duplicate inline script payloads when multiple Tabs widgets render
+  on the same page by truthfully splitting the shared transport/dedupe work to
+  `TASK-329` instead of inventing a Tabs-only workaround on this branch.
+- [x] Add an explicit script `type` only if the final render path still emits an
   inline script tag.
 
 ## Files to Change
@@ -184,7 +183,8 @@ No API routes are added.
 - Tabs can be switched in admin preview without publishing the page.
 - Published pages still switch tabs by click and keyboard after TASK-256
   instance-safe selectors land.
-- Multiple Tabs widgets on a page do not duplicate runtime payloads or share
-  active state.
+- Multiple Tabs widgets on a page do not share active state, and the still-shared
+  runtime-payload dedupe requirement is now tracked explicitly in `TASK-329`
+  instead of being overclaimed as a local Tabs fix.
 - React preview rendering and runtime rendering no longer fight over `hidden`
   state.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Schema + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-288-02, TASK-288-03, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -32,19 +32,19 @@ must keep Tabs item data and editor controls local.
 
 ## Sub-Tasks
 
-- [ ] Preserve legacy `description` as `panelIntro` during normalization and
+- [x] Preserve legacy `description` as `panelIntro` during normalization and
   rename the editor field to `Panel intro text`; add a separate optional
   `triggerDescription` rendered as plain-text subtitle copy near the trigger.
-- [ ] Add a bounded trigger icon/emoji field with schema/defaults/normalizer,
+- [x] Add a bounded trigger icon/emoji field with schema/defaults/normalizer,
   editor controls, runtime rendering, and tests.
-- [ ] Add `disabled` as a persisted boolean on `TabsItem` with editor controls,
+- [x] Add `disabled` as a persisted boolean on `TabsItem` with editor controls,
   runtime `aria-disabled`, keyboard/click exclusion, and a deterministic safe
   fallback that re-enables the first item if external data disables every tab.
-- [ ] Preserve backward compatibility for existing payloads that only contain
+- [x] Preserve backward compatibility for existing payloads that only contain
   `description`.
-- [ ] Keep item IDs stable and continue rejecting unknown item fields through
+- [x] Keep item IDs stable and continue rejecting unknown item fields through
   `tabsSchema`.
-- [ ] Document whether disabled panels are still renderable to screen readers
+- [x] Document whether disabled panels are still renderable to screen readers
   or fully skipped by the activation model.
 
 ## Files to Change

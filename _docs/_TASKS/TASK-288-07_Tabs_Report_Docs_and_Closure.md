@@ -6,7 +6,7 @@
 **Category:** Documentation + Playwright QA + Release Evidence
 **Estimated Effort:** Medium
 **Dependencies:** TASK-288-01, TASK-288-02, TASK-288-03, TASK-288-04, TASK-288-05, TASK-288-06
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -30,19 +30,19 @@ same branch and the report evidence names that commit/task.
 
 ## Sub-Tasks
 
-- [ ] Re-read `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` and build a
+- [x] Re-read `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` and build a
   row-by-row fixed/deferred/routed matrix.
-- [ ] Update `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` with final status notes
+- [x] Update `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` with final status notes
   for TASK-288 rows and explicit links back to TASK-256 for shared rows.
-- [ ] Update `_docs/_WIDGETS/TABS.md` with final schema, editor, runtime,
+- [x] Update `_docs/_WIDGETS/TABS.md` with final schema, editor, runtime,
   accessibility, preview, and testing contracts.
-- [ ] Update `_docs/_TASKS/TASK-288*.md` statuses to `Done (YYYY-MM-DD)` only
+- [x] Update `_docs/_TASKS/TASK-288*.md` statuses to `Done (YYYY-MM-DD)` only
   after implementation and validation land.
-- [ ] Move TASK-288 rows from `To Do` to `Done` in `_docs/_TASKS/README.md` and
+- [x] Move TASK-288 rows from `To Do` to `Done` in `_docs/_TASKS/README.md` and
   recompute task statistics.
-- [ ] Add a changelog entry under `_docs/_CHANGELOG/` and update
+- [x] Add a changelog entry under `_docs/_CHANGELOG/` and update
   `_docs/_CHANGELOG/README.md` with the exact task IDs.
-- [ ] Run final validation commands and record any skipped lane with a concrete
+- [x] Run final validation commands and record any skipped lane with a concrete
   blocker.
 
 ## Files to Change
@@ -80,14 +80,14 @@ Closure checklist:
 
 ```md
 - REPORT rows C1/W1/...: fixed by TASK-288 leaf and commit SHA
-- REPORT rows C2/R4/...: routed to TASK-256 historical evidence or TASK-328 shared follow-up with current status
+- REPORT rows C2/R4/...: routed to TASK-256 historical evidence or TASK-330 shared follow-up with current status
 - Docs updated: _docs/_WIDGETS/TABS.md
 - Validation: exact commands and result
 ```
 
 Error handling:
 
-- If a shared TASK-256 or TASK-328 row is still open, leave it open/routed
+- If a shared TASK-256 or TASK-330 row is still open, leave it open/routed
   instead of claiming TASK-288 closure.
 - If a validation lane cannot run, record the blocker and keep the task open
   unless the user explicitly accepts closure with that blocker.
@@ -97,7 +97,7 @@ Error handling:
 ## Regression Test Shape
 
 - Re-read every formal report row ID and record whether it is fixed by a
-  TASK-288 leaf, routed to TASK-256 historical evidence, routed to TASK-328, or
+  TASK-288 leaf, routed to TASK-256 historical evidence, routed to TASK-330, or
   explicitly deferred with a reason.
 - Verify `_docs/_WIDGETS/TABS.md`, `_docs/_TASKS/TASK-288*.md`,
   `_docs/_TASKS/README.md`, and `_docs/_CHANGELOG/README.md` all reflect the

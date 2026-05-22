@@ -65,7 +65,7 @@ This task does not own:
 |---|---|
 | `core/widgets/core/tabs.tsx` | Add the shared tablist accessible name and tabpanel `tabIndex` adoption. |
 | `tests/vitest/widgets/tabs.test.tsx` | Add or refresh SSR assertions for the shared ARIA contract. |
-| `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` | Route shared accessibility rows to TASK-328 with final fixed/deferred evidence once the code lands. |
+| `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` | Route shared accessibility rows to TASK-330 with final fixed/deferred evidence once the code lands. |
 | `_docs/_WIDGETS/TABS.md` | Document the shared accessibility contract after implementation. |
 | `_docs/_TASKS/TASK-288*.md` | Keep TASK-288 routing aligned with the extracted shared task. |
 

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 920 | 2026-05-22 | TASK-288 tabs widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 919 | 2026-05-22 | TASK-286 stack widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 918 | 2026-05-21 | TASK-284 spacer widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 917 | 2026-05-21 | TASK-284-04 spacer horizontal orientation decision | CMS Widgets/Layout/Runtime/QA/Docs |

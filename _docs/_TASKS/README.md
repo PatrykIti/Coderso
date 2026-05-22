@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 138 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1865 tasks
+- **To Do:** 139 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1873 tasks
 
 ---
 
@@ -39,6 +39,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Shared follow-up extracted during TASK-288 audit: current branch still lacks the final Tabs tablist accessible-name and tabpanel keyboard-reachability adoption promised by the closed TASK-256 contract |
+| TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Shared follow-up extracted during TASK-288 implementation: interactive widgets still duplicate static inline runtime payloads per widget instance until a render-scoped transport helper lands |
 | TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
@@ -72,13 +73,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Add Team section background, eyebrow, typography, CTA, border-width, and contrast feedback after TASK-256 baselines |
 | TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Decide and implement or explicitly defer bounded large-team and compact-mobile presentation behavior |
 | TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Refresh Team report/docs/changelog/board and final validation evidence |
-| TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Add inactive text color, readable labels, section IA, and contrast guidance through shared color-control policy |
-| TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe tab-count impact copy |
-| TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Make admin preview switch panels and prevent duplicate Tabs runtime payload after TASK-256 instance-safe selectors |
-| TASK-288-04 | Tabs Trigger Metadata and Disabled Tab Model | High | Large | Add bounded trigger icon/description semantics and disabled-tab behavior with schema/editor/runtime/tests |
-| TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Add vertical alignment fix plus bounded overflow, typography, spacing, padding, and inner/panel width controls |
-| TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Add reduced-motion-safe transitions and visual variant previews after activation/layout leaves land |
-| TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Refresh Tabs report/docs/changelog/board and final validation evidence |
 | TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Stats KPI-only follow-up family for `REPORT_STATS_KPI_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Add value-size, description color, prefix/suffix, per-metric accent, and static trend fields after TASK-256 shared safety |
 | TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Add inner section surface, max-width, padding, sparse density, icon styling, and optional divider intensity after TASK-256 truthfulness |
@@ -181,7 +175,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): isolated task-family worktree is active, shared accessibility residuals were extracted into `TASK-328`, and the remaining product leaves are being implemented against the audited scope |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -192,6 +185,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Tabs-specific follow-up leaves are closed, widget docs/report/board/changelog are synchronized, and the only remaining open residue lives in shared `TASK-330` and `TASK-329` |
+| TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Done (2026-05-22): final Tabs report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-288 family |
+| TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Done (2026-05-22): Tabs now ships visual variant previews plus bounded `none` / `fade` / `slide` motion with reduced-motion-safe panel classes and regression coverage |
+| TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Done (2026-05-22): Tabs now fixes vertical alignment and owns bounded overflow, trigger typography, spacing, padding, and layout/editor guidance without adding a duplicate local max-width field |
+| TASK-288-04 | Tabs Trigger Metadata and Disabled Tab Model | High | Large | Done (2026-05-22): Tabs now normalizes legacy descriptions into `panelIntro`, supports trigger subtitle/icon metadata, persists disabled tabs, and keeps activation on the first enabled item |
+| TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Done (2026-05-22): Tabs preview switches panels through React-local state, public runtime remains root-scoped and custom-id-safe, and the still-shared inline-script dedupe residue was split to `TASK-329` |
+| TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Done (2026-05-22): Wizard now exposes layout shortcuts, default badges, panel-intro copy, slot guidance, and destructive count-reduction confirmation |
+| TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Done (2026-05-22): Visual/Advanced now split structure, layout, trigger-style, and color surfaces while exposing inactive trigger color and local contrast guidance |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stack family is fully closed with responsive axis/wrap, Wizard guidance, variant miniatures, and synchronized report/docs/board/changelog evidence; only shared TASK-256 residuals remain |
 | TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final Stack report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-286 family |
 | TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Done (2026-05-22): Stack variant cards now render deterministic miniatures and editor-side `content` slot guidance while public runtime remains neutral |

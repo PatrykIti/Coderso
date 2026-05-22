@@ -27,6 +27,8 @@ test("tabs renders defaults with runtime marker", () => {
   expect(html).toContain('data-coderso-tabs="1"');
   expect(html).toContain('data-coderso-tabs-variant="pills"');
   expect(html).toContain('data-coderso-tabs-orientation="horizontal"');
+  expect(html).toContain('data-coderso-tabs-motion="none"');
+  expect(html).toContain('data-coderso-tabs-overflow="wrap"');
   expect(html).toContain('role="tablist"');
   expect(html).toContain('role="tabpanel"');
   expect(html).toContain('aria-controls="tabs-1-panel-1"');
@@ -35,27 +37,68 @@ test("tabs renders defaults with runtime marker", () => {
   expect(html).toContain("codersoTabsBound");
 });
 
-test("tabs normalization keeps valid default tab, alignment, and orientation", () => {
+test("tabs normalization migrates legacy descriptions, keeps disabled tabs out of activation, and resolves extended options", () => {
   const normalized = normalizeTabsData(
     {
       items: [
-        { id: "1", label: "Overview" },
-        { id: "2", label: "Specs" },
+        { id: "overview", label: "Overview", description: "Primary overview.", disabled: true },
+        {
+          id: "details",
+          label: "Details",
+          triggerDescription: "Deep dive",
+          icon: "⭐",
+          disabled: true,
+        },
       ],
       options: {
-        defaultItemId: "2",
-        activeId: "2",
+        defaultItemId: "details",
+        activeId: "details",
         alignment: "center",
         orientation: "vertical",
+        triggerOverflow: "scroll",
+        containerPadding: "lg",
+        triggerGap: "sm",
+        panelGap: "lg",
+        triggerTextSize: "base",
+        triggerFontWeight: "semibold",
+        motion: "slide",
       },
     },
     2
   );
 
-  expect(normalized.options?.defaultItemId).toBe("2");
-  expect(normalized.options?.activeId).toBe("2");
-  expect(normalized.options?.alignment).toBe("center");
-  expect(normalized.options?.orientation).toBe("vertical");
+  expect(normalized.items?.[0]).toEqual(
+    expect.objectContaining({
+      id: "overview",
+      label: "Overview",
+      panelIntro: "Primary overview.",
+      disabled: false,
+    })
+  );
+  expect(normalized.items?.[1]).toEqual(
+    expect.objectContaining({
+      id: "details",
+      label: "Details",
+      triggerDescription: "Deep dive",
+      icon: "⭐",
+      disabled: true,
+    })
+  );
+  expect(normalized.options).toEqual(
+    expect.objectContaining({
+      defaultItemId: "overview",
+      activeId: "overview",
+      alignment: "center",
+      orientation: "vertical",
+      triggerOverflow: "scroll",
+      containerPadding: "lg",
+      triggerGap: "sm",
+      panelGap: "lg",
+      triggerTextSize: "base",
+      triggerFontWeight: "semibold",
+      motion: "slide",
+    })
+  );
 });
 
 test("tabs validator accepts schema", () => {
@@ -74,14 +117,27 @@ test("tabs validator accepts schema", () => {
       variant: "underline",
       data: {
         items: [
-          { id: "1", label: "First" },
-          { id: "2", label: "Second" },
+          { id: "overview", label: "Overview", panelIntro: "Primary overview." },
+          {
+            id: "details",
+            label: "Details",
+            triggerDescription: "Deep dive",
+            icon: "⭐",
+            disabled: true,
+          },
         ],
         options: {
-          defaultItemId: "1",
-          activeId: "1",
+          defaultItemId: "overview",
+          activeId: "overview",
           alignment: "start",
           orientation: "vertical",
+          triggerOverflow: "scroll",
+          containerPadding: "lg",
+          triggerGap: "sm",
+          panelGap: "lg",
+          triggerTextSize: "base",
+          triggerFontWeight: "semibold",
+          motion: "slide",
         },
       },
       slots: {
@@ -90,6 +146,52 @@ test("tabs validator accepts schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("tabs render metadata, disabled tabs, and extended style options", () => {
+  const html = renderToString(
+    <TabsBlock
+      data={normalizeTabsData(
+        {
+          items: [
+            {
+              id: "overview",
+              label: "Overview",
+              triggerDescription: "Start here",
+              icon: "⭐",
+            },
+            { id: "details", label: "Details", panelIntro: "Deep dive." },
+            { id: "faq", label: "FAQ", disabled: true },
+          ],
+          options: {
+            defaultItemId: "details",
+            activeId: "details",
+            triggerOverflow: "scroll",
+            motion: "slide",
+          },
+          style: {
+            ...tabsDefaults.style,
+            activeBackgroundColor: "#111827",
+          },
+        },
+        3
+      )}
+      variant="underline"
+      slots={{
+        "panel:1": [],
+        "panel:2": [],
+        "panel:3": [],
+      }}
+    />
+  );
+
+  expect(html).toContain('data-coderso-tabs-active-id="details"');
+  expect(html).toContain('data-coderso-tabs-motion="slide"');
+  expect(html).toContain('data-coderso-tabs-overflow="scroll"');
+  expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain("Start here");
+  expect(html).toContain("⭐");
+  expect(html).toContain("Deep dive.");
 });
 
 test("tabs cleared surfaces omit tab and panel background styles", () => {
@@ -117,9 +219,10 @@ test("tabs render editor placeholders only in preview contexts", () => {
 
   expect(publicHtml).not.toContain("Add widgets to this tab panel.");
   expect(previewHtml).toContain("Add widgets to this tab panel.");
+  expect(previewHtml).not.toContain("codersoTabsBound");
 });
 
-test("tabs visual editor renders structure sections", () => {
+test("tabs visual editor renders task-288 sections", () => {
   const html = renderToString(
     <TabsVisualEditor
       value={tabsDefaults}
@@ -131,22 +234,38 @@ test("tabs visual editor renders structure sections", () => {
 
   expect(html).toContain("Tabs Structure");
   expect(html).toContain("Layout");
+  expect(html).toContain("Trigger style");
+  expect(html).toContain("Colors");
+  expect(html).toContain("Trigger subtitle");
   expect(html).toContain('data-widget-editor-section="tabs.structure"');
   expect(html).toContain('data-widget-editor-section="tabs.layout"');
+  expect(html).toContain('data-widget-editor-section="tabs.trigger-style"');
+  expect(html).toContain('data-widget-editor-section="tabs.colors"');
 });
 
-const editors = [TabsWizardEditor, TabsAdvancedEditor];
+test("tabs wizard and advanced editors render their task-288 surfaces", () => {
+  const wizardHtml = renderToString(
+    <TabsWizardEditor
+      value={tabsDefaults}
+      onChange={() => undefined}
+      variant="pills"
+      onVariantChange={() => undefined}
+    />
+  );
+  const advancedHtml = renderToString(
+    <TabsAdvancedEditor
+      value={tabsDefaults}
+      onChange={() => undefined}
+      variant="pills"
+      onVariantChange={() => undefined}
+    />
+  );
 
-test("tabs wizard and advanced editors render", () => {
-  for (const Editor of editors) {
-    const html = renderToString(
-      <Editor
-        value={tabsDefaults}
-        onChange={() => undefined}
-        variant="pills"
-        onVariantChange={() => undefined}
-      />
-    );
-    expect(html).toContain("Variant");
-  }
+  expect(wizardHtml).toContain("Variant");
+  expect(wizardHtml).toContain("Layout");
+  expect(wizardHtml).toContain("Panel intro text");
+  expect(wizardHtml).not.toContain("Trigger subtitle");
+  expect(advancedHtml).toContain("Variant");
+  expect(advancedHtml).toContain("Diagnostics");
+  expect(advancedHtml).toContain("Trigger subtitle");
 });

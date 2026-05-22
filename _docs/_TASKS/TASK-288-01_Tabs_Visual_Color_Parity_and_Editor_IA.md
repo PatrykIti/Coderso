@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Design Tokens + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -31,20 +31,20 @@ helper instead of adding another Tabs-only color widget.
 
 ## Sub-Tasks
 
-- [ ] Split the current mixed `tabs.layout` editor section into clear Tabs
+- [x] Split the current mixed `tabs.layout` editor section into clear Tabs
   sections for layout choices and color choices, while preserving existing
   persisted data.
-- [ ] Expose `style.inactiveTextColor` in Visual and Advanced editors beside
+- [x] Expose `style.inactiveTextColor` in Visual and Advanced editors beside
   `activeTextColor`.
-- [ ] Keep clearability aligned with TASK-256-02: only fields that the final
+- [x] Keep clearability aligned with TASK-256-02: only fields that the final
   shared contract marks as clearable should render `Clear`.
-- [ ] Render alignment and orientation labels as user-facing labels
+- [x] Render alignment and orientation labels as user-facing labels
   (`Start`, `Center`, `End`, `Horizontal`, `Vertical`) while persisting the same
   enum values.
-- [ ] Add a bounded Tabs-local contrast warning or consume the shared warning
+- [x] Add a bounded Tabs-local contrast warning or consume the shared warning
   helper when active foreground/background or inactive foreground/surface pairs
   are visibly identical.
-- [ ] Preserve the existing `visualOwnsVariantSelection = true` contract.
+- [x] Preserve the existing `visualOwnsVariantSelection = true` contract.
 
 ## Files to Change
 

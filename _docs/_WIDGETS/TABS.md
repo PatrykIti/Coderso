@@ -17,42 +17,62 @@ bounded visual surface.
 
 ## Slots
 
-- `panel` (repeatable): slot instances are stored as `panel:<id>` in block
+- `panel` (repeatable): slot instances are stored as `panel:<id>` in the block
   `slots` map (`panel:1`, `panel:2`, ...).
 
 ## Editor Modes
 
 ### Wizard
 - variant selection
-- current tab count and labels
-- active/default tab
+- compact layout row for orientation and alignment
+- tab count and destructive count-reduction confirmation
+- default tab selection with badge state
+- labels and `panelIntro` copy
+- repeatable panel-slot guidance
 
 ### Visual
 Sections:
 1. Variant
-2. Structure
+2. Tabs Structure
 3. Layout
+4. Trigger style
+5. Colors
 
 Notes:
 - Tabs owns variant selection in Visual (`visualOwnsVariantSelection = true`).
-- Repeatable panel slot count is managed by the builder slot controls/runtime
-  slot contract.
+- Structure exposes `panelIntro`, `triggerDescription`, `icon`, `disabled`, and
+  default/disabled badges.
+- Colors reuse the shared clearable-surface policy for `surfaceColor`,
+  `activeBackgroundColor`, and `panelBackgroundColor`, plus a bounded contrast
+  advisory for active/inactive trigger text.
 
 ### Advanced
-- structure and layout controls
-- normalized payload snapshot
+- same authoring surfaces as Visual
+- normalized payload snapshot for diagnostics
 
 ## Runtime Behavior Notes
 
 - Runtime resolves repeatable panel slots deterministically from `panel:<id>`.
-- Active tab falls back to the first resolved item when the saved `activeId`
-  no longer matches a panel.
-- Runtime emits deterministic markers:
-  - `data-nextless-tabs`
-  - `data-nextless-tabs-variant`
-  - `data-nextless-tabs-active-id`
-  - `data-nextless-tabs-panels`
-- Triggers render with `role="tab"` and panels render with `role="tabpanel"`.
+- Selection state uses normalized item IDs and still falls back through legacy
+  slot instance IDs when older saved defaults do not match the new selection
+  surface.
+- Admin/editor preview uses a React-local activation path and does not rely on
+  parser-executed inline scripts.
+- Public runtime emits deterministic markers:
+  - `data-coderso-tabs`
+  - `data-coderso-tabs-variant`
+  - `data-coderso-tabs-active-id`
+  - `data-coderso-tabs-panels`
+  - `data-coderso-tabs-orientation`
+  - `data-coderso-tabs-motion`
+  - `data-coderso-tabs-overflow`
+- Disabled tabs are removed from activation order. If every item is disabled,
+  normalization re-enables the first item so the widget always has one valid
+  active panel.
+- Triggers render with `role="tab"`; panels render with `role="tabpanel"`.
+- Shared residuals remain tracked separately:
+  - `TASK-328`: shared Tabs accessibility/ID residuals after TASK-256
+  - `TASK-329`: shared widget runtime-script transport and dedupe
 
 ## Clear Controls
 
@@ -60,17 +80,45 @@ Notes:
   `style.panelBackgroundColor` are clearable. Clear removes the field and keeps
   the runtime from forcing an inline style for that surface.
 
+## Layout Ownership Notes
+
+- Tabs now owns bounded trigger overflow, trigger typography, trigger/panel gap,
+  and container padding.
+- Tabs does not introduce a duplicate local max-width field. Outer container
+  width remains owned by the shared layout/container contract.
+
 ## Data Model (summary)
 
 ```json
 {
   "items": [
-    { "id": "1", "label": "Tab 1", "description": "Primary details." },
-    { "id": "2", "label": "Tab 2", "description": "Secondary details." }
+    {
+      "id": "1",
+      "label": "Tab 1",
+      "panelIntro": "Primary details.",
+      "triggerDescription": "Optional trigger subtitle",
+      "icon": "⭐",
+      "disabled": false
+    },
+    {
+      "id": "2",
+      "label": "Tab 2",
+      "panelIntro": "Secondary details.",
+      "disabled": false
+    }
   ],
   "options": {
+    "defaultItemId": "1",
     "activeId": "1",
-    "alignment": "start"
+    "alignment": "start",
+    "orientation": "horizontal",
+    "triggerOverflow": "wrap",
+    "containerPadding": "md",
+    "triggerGap": "md",
+    "panelGap": "md",
+    "triggerTextSize": "sm",
+    "triggerFontWeight": "medium",
+    "motion": "none"
   },
   "style": {
     "surfaceColor": "var(--color-surface)",
@@ -82,3 +130,14 @@ Notes:
   }
 }
 ```
+
+Legacy note:
+
+- `items[].description` is still accepted for backward compatibility but now
+  normalizes into `items[].panelIntro`.
+
+## Validation Surface
+
+- `tests/vitest/widgets/tabs.test.tsx`
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `tests/vitest/ui-integration/tabs-preview-activation.test.tsx`

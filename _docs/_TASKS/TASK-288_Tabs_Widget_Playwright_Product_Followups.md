@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256
-**Status:** In Progress (2026-05-22)
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -17,7 +17,7 @@ Create the Tabs-specific follow-up family for
 
 TASK-256 owns the already-landed shared widget-contract drift from the
 Playwright reports. This family deliberately excludes shared fixes and keeps
-only product scope that belongs to the standalone `tabs` layout widget:
+only product scope that belongs to the standalone `tabs` layout widget. Shared residuals extracted during implementation stay visible in `TASK-330` (Tabs accessibility / ID carryover after TASK-256) and `TASK-329` (shared runtime-script transport / dedupe):
 
 - `core/widgets/core/tabs.tsx`
 - `core/admin/ui/widgets/editors/TabsEditors.tsx`
@@ -46,7 +46,7 @@ TASK-256:
 TASK-288 also must not silently absorb newly rediscovered shared-contract drift.
 The current branch still lacks the final shared Tabs tablist/panel accessibility
 adoption (`aria-label` + `tabIndex`) even though TASK-256 is closed, so those
-rows are extracted into `TASK-328` instead of being hidden inside the Tabs
+rows are extracted into `TASK-330` instead of being hidden inside the Tabs
 product family.
 
 If a TASK-288 implementation leaf discovers that a desired Tabs product feature
@@ -59,12 +59,12 @@ this family.
 | Report rows | Owner | TASK-288 action |
 |---|---|---|
 | C2, R4 | TASK-256-04 / TASK-256-05-04 | Excluded. Instance-safe IDs and shared runtime root scoping already belong to the closed TASK-256 contract and must not be reimplemented here. |
-| W4, W5, R2, R3, R6 | TASK-328 | Excluded. The shared tablist accessible-name and tabpanel keyboard-reachability residuals were rediscovered during TASK-288 audit and are now tracked as a separate shared follow-up instead of being overclaimed by TASK-288. |
+| W4, W5, R2, R3, R6 | TASK-330 | Excluded. The shared tablist accessible-name and tabpanel keyboard-reachability residuals were rediscovered during TASK-288 audit and are now tracked as a separate shared follow-up instead of being overclaimed by TASK-288. |
 | TASK-256 slot placeholder evidence around empty panels | TASK-256-03 / TASK-256-05-04 | Excluded. Public placeholder gating and technical slot-label cleanup stay shared. |
 | Generic clear-token/color-picker semantics connected to Tabs colors | TASK-256-02 | Excluded. TASK-288 may consume the final helper, not reimplement it. |
 | C1, U2, U7, U8 | TASK-288-01 | Add Tabs-specific Visual color parity, readable labels, section IA, and contrast guidance using the shared color-control model. |
 | W2, U4, U5, U9 | TASK-288-02 | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe slot-removal impact copy. |
-| C3, W6, R5 | TASK-288-03 | Repair Tabs-specific admin preview activation and runtime script duplication/type behavior after TASK-256 finalizes the shared instance contract. |
+| C3, W6, R5 | TASK-288-03 | Repair Tabs-specific admin preview activation and explicit script-type behavior locally, then route the still-shared runtime payload dedupe residue to `TASK-329` after TASK-256 finalizes the shared instance contract. |
 | W1, W7, W10, U3 | TASK-288-04 | Add trigger metadata, description semantics, and disabled-tab product behavior. |
 | W3, W8, W9, W12, U6, R1 | TASK-288-05 | Add Tabs-owned vertical alignment, overflow, typography, spacing, and any inner/panel width controls without duplicating shared `layout.container`. |
 | W11, U1 | TASK-288-06 | Add reduced-motion-safe transitions and visual variant previews after the functional model lands. |
@@ -81,13 +81,13 @@ this family.
 
 ## Sub-Tasks
 
-- [ ] TASK-288-01: Tabs Visual Color Parity and Editor IA
-- [ ] TASK-288-02: Tabs Wizard Layout, Default Tab, and Slot Guidance
-- [ ] TASK-288-03: Tabs Admin Preview and Runtime Activation
-- [ ] TASK-288-04: Tabs Trigger Metadata and Disabled Tab Model
-- [ ] TASK-288-05: Tabs Layout Overflow Typography and Spacing
-- [ ] TASK-288-06: Tabs Motion Variant Previews and Polish
-- [ ] TASK-288-07: Tabs Report Docs and Closure
+- [x] TASK-288-01: Tabs Visual Color Parity and Editor IA
+- [x] TASK-288-02: Tabs Wizard Layout, Default Tab, and Slot Guidance
+- [x] TASK-288-03: Tabs Admin Preview and Runtime Activation
+- [x] TASK-288-04: Tabs Trigger Metadata and Disabled Tab Model
+- [x] TASK-288-05: Tabs Layout Overflow Typography and Spacing
+- [x] TASK-288-06: Tabs Motion Variant Previews and Polish
+- [x] TASK-288-07: Tabs Report Docs and Closure
 
 ## Implementation Order
 
@@ -176,7 +176,7 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` is either routed to
-  TASK-256 historical evidence, routed to TASK-328 shared residual follow-up,
+  TASK-256 historical evidence, routed to TASK-330 shared residual follow-up,
   implemented by a TASK-288 leaf, or explicitly deferred in the closure leaf
   with a reason.
 - TASK-288 leaves do not duplicate implementation already owned by TASK-256.

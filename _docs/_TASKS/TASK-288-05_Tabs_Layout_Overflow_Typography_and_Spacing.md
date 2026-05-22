@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-02, TASK-288-01, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -35,19 +35,19 @@ spacing/size token helper lands there, this leaf must consume it.
 
 ## Sub-Tasks
 
-- [ ] Fix existing vertical alignment so `alignment=center/end` maps to
+- [x] Fix existing vertical alignment so `alignment=center/end` maps to
   horizontal cross-axis alignment for vertical tablists.
-- [ ] Add a bounded `triggerOverflow` or equivalent option for wrap vs
+- [x] Add a bounded `triggerOverflow` or equivalent option for wrap vs
   horizontal scroll behavior.
-- [ ] Add bounded trigger typography fields for size and weight.
-- [ ] Add bounded spacing fields for container padding, tablist gap, and
+- [x] Add bounded trigger typography fields for size and weight.
+- [x] Add bounded spacing fields for container padding, tablist gap, and
   tablist-to-panel gap.
-- [ ] Close W12 by documenting and consuming the existing shared
+- [x] Close W12 by documenting and consuming the existing shared
   `WidgetBlock.layout.container` owner; do not add a duplicate outer max-width
   control in Tabs for this leaf.
-- [ ] Keep the new overflow, typography, and spacing controls in Visual/Advanced;
+- [x] Keep the new overflow, typography, and spacing controls in Visual/Advanced;
   Wizard remains limited to the beginner layout shortcuts from TASK-288-02.
-- [ ] Preserve existing default rendering for legacy payloads.
+- [x] Preserve existing default rendering for legacy payloads.
 
 ## Files to Change
 

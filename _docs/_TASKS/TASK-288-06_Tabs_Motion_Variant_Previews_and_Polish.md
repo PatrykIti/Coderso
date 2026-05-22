@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + UX Polish
 **Estimated Effort:** Large
 **Dependencies:** TASK-288-03, TASK-288-05, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -29,16 +29,16 @@ implementation time, consume it without changing other widgets.
 
 ## Sub-Tasks
 
-- [ ] Add visual variant previews for `pills`, `underline`, and `minimal` in
+- [x] Add visual variant previews for `pills`, `underline`, and `minimal` in
   the Tabs variant picker.
-- [ ] Add a bounded transition option such as `none`, `fade`, and `slide`
+- [x] Add a bounded transition option such as `none`, `fade`, and `slide`
   without making motion required.
-- [ ] Respect `prefers-reduced-motion` by disabling or simplifying transitions.
-- [ ] Ensure hidden/inactive panels remain inaccessible according to the final
+- [x] Respect `prefers-reduced-motion` by disabling or simplifying transitions.
+- [x] Ensure hidden/inactive panels remain inaccessible according to the final
   TASK-256/TASK-288-03 activation contract.
-- [ ] Keep transition classes deterministic and derived from normalized enum
+- [x] Keep transition classes deterministic and derived from normalized enum
   values only.
-- [ ] Add editor and runtime tests for variant preview copy/markup and motion
+- [x] Add editor and runtime tests for variant preview copy/markup and motion
   class output.
 
 ## Files to Change

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Page Builder UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-03, TASK-256-05-04, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -34,19 +34,19 @@ not exist, split that helper to TASK-256 instead of adding a Tabs-only duplicate
 
 ## Sub-Tasks
 
-- [ ] Add a compact Wizard layout row for `options.orientation` and
+- [x] Add a compact Wizard layout row for `options.orientation` and
   `options.alignment` using the same enum values as Visual.
-- [ ] Show a default-tab preview marker beside the item currently selected by
+- [x] Show a default-tab preview marker beside the item currently selected by
   `defaultItemId`.
-- [ ] Replace the confusing description placeholder now with `Panel intro text`
+- [x] Replace the confusing description placeholder now with `Panel intro text`
   so Wizard truthfully describes the current legacy field even before
   TASK-288-04 adds optional trigger metadata.
-- [ ] Add panel-slot guidance that explains each tab owns a matching repeatable
+- [x] Add panel-slot guidance that explains each tab owns a matching repeatable
   panel slot without exposing raw slot IDs as primary copy.
-- [ ] When tab count is reduced, surface which tab labels/panels are removed
+- [x] When tab count is reduced, surface which tab labels/panels are removed
   before applying the change, or use the existing shared confirmation pattern if
   one exists.
-- [ ] Preserve keyboard and screen-reader semantics of the editor controls.
+- [x] Preserve keyboard and screen-reader semantics of the editor controls.
 
 ## Files to Change
 
