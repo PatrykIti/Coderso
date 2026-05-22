@@ -1,15 +1,16 @@
-# Split Layout Widget (v1)
+# Split Layout Widget (v2)
 
 ## Purpose
 
-Two-pane layout primitive for left/right compositions with ratio control and
-mobile collapse behavior.
+Two-pane layout primitive for left/right compositions with explicit breakpoint
+ratio ownership, truthful mobile-collapse behavior, and preview-only empty-pane
+guidance.
 
 ## Widget ID
 
 `split-layout`
 
-## Variants (v1)
+## Variants
 
 - `50-50`: balanced panes
 - `40-60`: narrower left pane
@@ -20,39 +21,62 @@ mobile collapse behavior.
 - `left` (fixed)
 - `right` (fixed)
 
-## Editor Modes (current after TASK-050-15-05)
+## Editor Modes
 
 ### Wizard
+
 - split preset selection
 - mobile collapse mode
 - base gap
+- builder guidance for adding widgets to the left and right panes
 
 ### Visual
+
 Sections:
 1. Variant and pane ratio
 2. Mobile collapse behavior
 3. Spacing and vertical alignment
-4. Pane slots
+4. Pane content
 
 Notes:
-- Split Layout owns variant selection in Visual (`visualOwnsVariantSelection = true`).
+
+- Visual owns variant selection (`visualOwnsVariantSelection = true`).
+- Selecting a preset re-syncs the current desktop/tablet/mobile ratios through
+  the landed shared atomic block-patch path.
+- Variant cards include bounded graphical miniatures plus a ratio summary that
+  states the effective desktop/tablet/mobile ratios and whether a preset
+  override is active.
+- Desktop and tablet ratios remain directly editable.
+- Mobile ratio appears only when `collapseMobile = "keep"`; otherwise Visual
+  shows explicit stack-mode copy instead of an inactive control.
+- Gap controls expose scale labels in rem/px and canonicalize legacy `"0"`
+  payloads to the `none` control state while keeping backward compatibility.
 
 ### Advanced
-- token-level ratio controls (desktop/tablet)
-- collapse mode, reverse mobile order, gap, vertical align
+
+- read-only responsive diagnostics for preset, desktop, tablet, mobile, gap,
+  and vertical alignment
 - normalized payload snapshot
+- no duplicate editable ratio/gap/align controls
 
-## Runtime Behavior Notes
+## Runtime Behavior
 
-- Renders fixed `left` and `right` pane slots.
-- Supports mobile collapse modes:
-  - `stack`: single-column on mobile, split on tablet/desktop
-  - `keep`: split preserved on mobile
-- Supports optional mobile pane order reversal (`reverseOnMobile`).
-- Exposes deterministic markers:
+- renders fixed `left` and `right` pane slots
+- keeps `ratio.desktop`, `ratio.tablet`, and optional `ratio.mobile`; missing
+  mobile ratio falls back to the normalized tablet ratio for backward
+  compatibility
+- supports mobile collapse modes:
+  - `stack`: single-column on phones, split on tablet/desktop
+  - `keep`: split preserved on phones using the normalized mobile ratio
+- supports optional phone-only pane-order reversal (`reverseOnMobile`) with
+  truthful editor copy for both `stack` and `keep`
+- keeps empty-pane helper copy gated to editor/admin preview surfaces; public
+  runtime does not render admin-only placeholder instructions
+- exposes deterministic markers:
   - `data-split-layout-variant`
   - `data-split-ratio-desktop`
   - `data-split-ratio-tablet`
+  - `data-split-ratio-mobile`
   - `data-split-collapse-mobile`
   - `data-split-reverse-mobile`
   - `data-split-gap`
@@ -60,6 +84,16 @@ Notes:
   - `data-split-side` (`left` / `right`)
   - `data-split-items-left`
   - `data-split-items-right`
+  - `data-split-empty-pane` (`left` / `right`) on preview-only empty states
+
+## Bounded Token Sets
+
+- ratios: `50-50`, `40-60`, `60-40`
+- mobile collapse: `stack`, `keep`
+- gap tokens: `none`, `0`, `1`, `2`, `3`, `4`, `5`, `6`, `8`, `10`, `12`
+  - editor controls surface one canonical zero-gap option while runtime keeps
+    legacy `"0"` payload compatibility
+- vertical alignment: `start`, `center`, `end`, `stretch`
 
 ## Data Model (summary)
 
@@ -67,7 +101,8 @@ Notes:
 {
   "ratio": {
     "desktop": "50-50",
-    "tablet": "50-50"
+    "tablet": "50-50",
+    "mobile": "50-50"
   },
   "collapseMobile": "stack",
   "reverseOnMobile": false,
@@ -75,3 +110,21 @@ Notes:
   "verticalAlign": "stretch"
 }
 ```
+
+## Validation Notes
+
+- `ratio.mobile` is optional in persisted data, bounded by schema validation,
+  and normalizes to the resolved tablet ratio when omitted.
+- `splitLayoutSchema` stays strict (`additionalProperties: false`) and rejects
+  unknown ratio keys.
+- Gap labels and diagnostics are derived from static owner metadata instead of
+  arbitrary classes or user-supplied text.
+- Arbitrary ratios, arbitrary class strings, raw HTML, and public admin-only
+  placeholder copy remain out of scope.
+
+## Explicit Non-Scope
+
+- arbitrary custom split ratios or raw class overrides
+- public runtime placeholder instructions for empty panes
+- widget-local reimplementation of shared variant atomic updates or shared
+  `none`/`0` token semantics

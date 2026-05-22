@@ -5,8 +5,8 @@
 **Priority:** Low
 **Category:** Widgets + Admin UI + Design Tokens
 **Estimated Effort:** Medium
-**Dependencies:** TASK-285, TASK-256-02, TASK-256-05-02
-**Status:** To Do
+**Dependencies:** TASK-285, TASK-256-02
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -15,20 +15,20 @@
 Improve Split Layout gap labels from
 `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md` ISSUE-04.
 
-BUG-02 duplicate `None`/`Gap 0` semantics are owned by TASK-256-02 and
-TASK-256-05-02. This leaf starts after that shared token decision and adds
+BUG-02 duplicate `None`/`Gap 0` semantics are owned by TASK-256-02. That
+shared token decision landed on 2026-05-17. This leaf consumes it and adds
 Split Layout-specific spacing context without changing the global `none`/zero
 contract.
 
 ## Sub-Tasks
 
-- [ ] Replace vague `Gap N` labels with labels that include the design-token
+- [x] Replace vague `Gap N` labels with labels that include the design-token
   scale or resolved spacing context approved by TASK-256.
-- [ ] Add concise helper copy that explains the gap affects space between the
+- [x] Add concise helper copy that explains the gap affects space between the
   left and right panes.
-- [ ] Keep labels derived from the current token map, not hardcoded duplicate
+- [x] Keep labels derived from the current token map, not hardcoded duplicate
   values in the editor.
-- [ ] Preserve `splitLayoutGapTokens` compatibility until TASK-256 decides
+- [x] Preserve `splitLayoutGapTokens` compatibility until TASK-256 decides
   whether `none` and `0` both remain valid serialized values.
 
 ## Files to Change
@@ -134,3 +134,8 @@ No API routes are added.
 - Split Layout does not duplicate or contradict TASK-256 `none`/zero decisions.
 - Serialized gap compatibility is preserved unless the shared token task ships a
   tested migration.
+
+## Completion Notes (2026-05-21)
+
+- Gap labels now include rem/px scale context and describe how the selected token changes the space between panes.
+- Legacy serialized `"0"` values still render and validate, but the editor resolves them through the canonical zero-gap control state and helper copy.

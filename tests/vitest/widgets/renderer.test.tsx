@@ -480,6 +480,7 @@ test("renderer outputs split layout markers", () => {
           ratio: {
             desktop: "40-60",
             tablet: "60-40",
+            mobile: "50-50",
           },
           collapseMobile: "keep",
           reverseOnMobile: true,
@@ -497,6 +498,7 @@ test("renderer outputs split layout markers", () => {
   expect(html).toContain('data-split-layout-variant="40-60"');
   expect(html).toContain('data-split-ratio-desktop="40-60"');
   expect(html).toContain('data-split-ratio-tablet="60-40"');
+  expect(html).toContain('data-split-ratio-mobile="50-50"');
   expect(html).toContain('data-split-collapse-mobile="keep"');
   expect(html).toContain('data-split-reverse-mobile="true"');
 });

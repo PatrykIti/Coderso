@@ -2,8 +2,13 @@ import type { ComponentType, ReactNode } from "react";
 
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
-import type { WidgetRenderContext } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 
 export const splitLayoutRatioTokens = ["50-50", "40-60", "60-40"] as const;
 export const splitLayoutCollapseTokens = ["stack", "keep"] as const;
@@ -25,17 +30,66 @@ export type SplitLayoutVariantId = (typeof splitLayoutRatioTokens)[number];
 export type SplitLayoutRatio = (typeof splitLayoutRatioTokens)[number];
 export type SplitLayoutCollapseMobile = (typeof splitLayoutCollapseTokens)[number];
 export type SplitLayoutGap = (typeof splitLayoutGapTokens)[number];
+export type SplitLayoutGapControlValue = Exclude<SplitLayoutGap, "0">;
 export type SplitLayoutVerticalAlign = "start" | "center" | "end" | "stretch";
 
 export type SplitLayoutData = {
   ratio?: {
     desktop?: SplitLayoutRatio;
     tablet?: SplitLayoutRatio;
+    mobile?: SplitLayoutRatio;
   };
   collapseMobile?: SplitLayoutCollapseMobile;
   reverseOnMobile?: boolean;
   gap?: SplitLayoutGap;
   verticalAlign?: SplitLayoutVerticalAlign;
+};
+
+export type SplitLayoutResolvedRatios = {
+  desktop: SplitLayoutRatio;
+  tablet: SplitLayoutRatio;
+  mobile: SplitLayoutRatio;
+};
+
+export type SplitLayoutGapOption = {
+  value: SplitLayoutGapControlValue;
+  label: string;
+  description: string;
+};
+
+export type SplitLayoutRatioDisclosure = {
+  variant: SplitLayoutVariantId;
+  desktop: SplitLayoutRatio;
+  tablet: SplitLayoutRatio;
+  mobile: SplitLayoutRatio;
+  hasExplicitMobile: boolean;
+  hasOverride: boolean;
+};
+
+export type SplitLayoutDiagnostics = {
+  variant: SplitLayoutVariantId;
+  ratios: SplitLayoutResolvedRatios;
+  desktop: { leftSpan: number; rightSpan: number };
+  tablet: { leftSpan: number; rightSpan: number };
+  mobile: {
+    mode: SplitLayoutCollapseMobile;
+    ratio: SplitLayoutRatio | null;
+    leftSpan: number;
+    rightSpan: number;
+    reversed: boolean;
+  };
+  gap: {
+    value: SplitLayoutGap;
+    controlValue: SplitLayoutGapControlValue;
+    label: string;
+    description: string;
+    className: string;
+  };
+  verticalAlign: {
+    value: SplitLayoutVerticalAlign;
+    label: string;
+    className: string;
+  };
 };
 
 export const splitLayoutSchema = {
@@ -48,6 +102,7 @@ export const splitLayoutSchema = {
       properties: {
         desktop: { enum: [...splitLayoutRatioTokens] },
         tablet: { enum: [...splitLayoutRatioTokens] },
+        mobile: { enum: [...splitLayoutRatioTokens] },
       },
     },
     collapseMobile: { enum: [...splitLayoutCollapseTokens] },
@@ -71,10 +126,10 @@ export const splitLayoutDefaults: SplitLayoutData = {
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const ratioSpanMap: Record<SplitLayoutRatio, { left: string; right: string }> = {
-  "50-50": { left: "6", right: "6" },
-  "40-60": { left: "5", right: "7" },
-  "60-40": { left: "7", right: "5" },
+const ratioSpanMap: Record<SplitLayoutRatio, { left: number; right: number }> = {
+  "50-50": { left: 6, right: 6 },
+  "40-60": { left: 5, right: 7 },
+  "60-40": { left: 7, right: 5 },
 };
 
 const mobileKeepLeftSpanMap: Record<SplitLayoutRatio, string> = {
@@ -127,11 +182,71 @@ const gapClassMap: Record<SplitLayoutGap, string> = {
   "12": "gap-12",
 };
 
+const gapOptionMap: Record<SplitLayoutGapControlValue, SplitLayoutGapOption> = {
+  none: {
+    value: "none",
+    label: "None (0px)",
+    description: "No space between the left and right panes.",
+  },
+  "1": {
+    value: "1",
+    label: "Gap 1 (0.25rem / 4px)",
+    description: "Tight space between the left and right panes.",
+  },
+  "2": {
+    value: "2",
+    label: "Gap 2 (0.5rem / 8px)",
+    description: "Compact space between the left and right panes.",
+  },
+  "3": {
+    value: "3",
+    label: "Gap 3 (0.75rem / 12px)",
+    description: "Small separation between the left and right panes.",
+  },
+  "4": {
+    value: "4",
+    label: "Gap 4 (1rem / 16px)",
+    description: "Balanced space between the left and right panes.",
+  },
+  "5": {
+    value: "5",
+    label: "Gap 5 (1.25rem / 20px)",
+    description: "Roomier spacing between the left and right panes.",
+  },
+  "6": {
+    value: "6",
+    label: "Gap 6 (1.5rem / 24px)",
+    description: "Default spacing between the left and right panes.",
+  },
+  "8": {
+    value: "8",
+    label: "Gap 8 (2rem / 32px)",
+    description: "Large space between the left and right panes.",
+  },
+  "10": {
+    value: "10",
+    label: "Gap 10 (2.5rem / 40px)",
+    description: "Extra-large space between the left and right panes.",
+  },
+  "12": {
+    value: "12",
+    label: "Gap 12 (3rem / 48px)",
+    description: "Maximum preset space between the left and right panes.",
+  },
+};
+
 const alignClassMap: Record<SplitLayoutVerticalAlign, string> = {
   start: "items-start",
   center: "items-center",
   end: "items-end",
   stretch: "items-stretch",
+};
+
+const verticalAlignLabelMap: Record<SplitLayoutVerticalAlign, string> = {
+  start: "Start",
+  center: "Center",
+  end: "End",
+  stretch: "Stretch",
 };
 
 const resolveSplitLayoutRatio = (
@@ -161,6 +276,45 @@ export function resolveSplitLayoutVariant(variant: string): SplitLayoutVariantId
   return "50-50";
 }
 
+export function formatSplitLayoutRatioLabel(ratio: SplitLayoutRatio): string {
+  switch (ratio) {
+    case "40-60":
+      return "40 / 60";
+    case "60-40":
+      return "60 / 40";
+    default:
+      return "50 / 50";
+  }
+}
+
+export function getSplitLayoutRatioSpans(ratio: SplitLayoutRatio): { left: number; right: number } {
+  return ratioSpanMap[ratio];
+}
+
+export function getSplitLayoutGapControlValue(
+  value: SplitLayoutGap | undefined
+): SplitLayoutGapControlValue {
+  if (value === "0") {
+    return "none";
+  }
+  return value ?? "6";
+}
+
+export function getSplitLayoutGapOptions(): SplitLayoutGapOption[] {
+  return [
+    gapOptionMap.none,
+    gapOptionMap["1"],
+    gapOptionMap["2"],
+    gapOptionMap["3"],
+    gapOptionMap["4"],
+    gapOptionMap["5"],
+    gapOptionMap["6"],
+    gapOptionMap["8"],
+    gapOptionMap["10"],
+    gapOptionMap["12"],
+  ];
+}
+
 export function normalizeSplitLayoutData(
   data: SplitLayoutData,
   variant: string = "50-50"
@@ -170,17 +324,124 @@ export function normalizeSplitLayoutData(
     desktop: resolvedVariant,
     tablet: resolvedVariant,
   };
+  const desktop = resolveSplitLayoutRatio(data.ratio?.desktop, resolvedVariant);
+  const tablet = resolveSplitLayoutRatio(
+    data.ratio?.tablet,
+    defaultRatio.tablet ?? resolvedVariant
+  );
 
   return {
     ratio: {
-      desktop: resolveSplitLayoutRatio(data.ratio?.desktop, resolvedVariant),
-      tablet: resolveSplitLayoutRatio(data.ratio?.tablet, defaultRatio.tablet ?? resolvedVariant),
+      desktop,
+      tablet,
+      mobile: resolveSplitLayoutRatio(data.ratio?.mobile, tablet),
     },
     collapseMobile: resolveSplitLayoutCollapse(data.collapseMobile),
     reverseOnMobile: typeof data.reverseOnMobile === "boolean" ? data.reverseOnMobile : false,
     gap: resolveSplitLayoutGap(data.gap, splitLayoutDefaults.gap ?? "6"),
     verticalAlign: resolveSplitLayoutVerticalAlign(data.verticalAlign),
   };
+}
+
+export function getSplitLayoutRatioDisclosure(
+  data: SplitLayoutData,
+  variant: string
+): SplitLayoutRatioDisclosure {
+  const resolvedVariant = resolveSplitLayoutVariant(variant);
+  const normalized = normalizeSplitLayoutData(data, resolvedVariant);
+  const ratios = normalized.ratio ?? {
+    desktop: resolvedVariant,
+    tablet: resolvedVariant,
+    mobile: resolvedVariant,
+  };
+  const hasExplicitMobile = typeof data.ratio?.mobile !== "undefined";
+
+  return {
+    variant: resolvedVariant,
+    desktop: ratios.desktop ?? resolvedVariant,
+    tablet: ratios.tablet ?? resolvedVariant,
+    mobile: ratios.mobile ?? ratios.tablet ?? resolvedVariant,
+    hasExplicitMobile,
+    hasOverride:
+      ratios.desktop !== resolvedVariant ||
+      ratios.tablet !== resolvedVariant ||
+      ratios.mobile !== ratios.tablet ||
+      (hasExplicitMobile && ratios.mobile !== resolvedVariant),
+  };
+}
+
+export function getSplitLayoutDiagnostics(
+  data: SplitLayoutData,
+  variant: string
+): SplitLayoutDiagnostics {
+  const disclosure = getSplitLayoutRatioDisclosure(data, variant);
+  const normalized = normalizeSplitLayoutData(data, disclosure.variant);
+  const gapValue = normalized.gap ?? splitLayoutDefaults.gap ?? "6";
+  const gapControlValue = getSplitLayoutGapControlValue(gapValue);
+  const gapOption = gapOptionMap[gapControlValue];
+  const desktop = getSplitLayoutRatioSpans(disclosure.desktop);
+  const tablet = getSplitLayoutRatioSpans(disclosure.tablet);
+  const mobileMode = normalized.collapseMobile ?? "stack";
+  const mobileRatio = mobileMode === "keep" ? disclosure.mobile : null;
+  const mobileSpans = mobileRatio ? getSplitLayoutRatioSpans(mobileRatio) : { left: 1, right: 1 };
+  const verticalAlign = normalized.verticalAlign ?? "stretch";
+
+  return {
+    variant: disclosure.variant,
+    ratios: {
+      desktop: disclosure.desktop,
+      tablet: disclosure.tablet,
+      mobile: disclosure.mobile,
+    },
+    desktop: {
+      leftSpan: desktop.left,
+      rightSpan: desktop.right,
+    },
+    tablet: {
+      leftSpan: tablet.left,
+      rightSpan: tablet.right,
+    },
+    mobile: {
+      mode: mobileMode,
+      ratio: mobileRatio,
+      leftSpan: mobileSpans.left,
+      rightSpan: mobileSpans.right,
+      reversed: Boolean(normalized.reverseOnMobile),
+    },
+    gap: {
+      value: gapValue,
+      controlValue: gapControlValue,
+      label: gapOption.label,
+      description:
+        gapValue === "0"
+          ? `${gapOption.description} Legacy \`Gap 0\` values resolve here.`
+          : gapOption.description,
+      className: gapClassMap[gapValue],
+    },
+    verticalAlign: {
+      value: verticalAlign,
+      label: verticalAlignLabelMap[verticalAlign],
+      className: alignClassMap[verticalAlign],
+    },
+  };
+}
+
+function renderSplitLayoutEmptyPane(
+  side: "left" | "right",
+  renderContext?: WidgetRenderContext
+): ReactNode {
+  const placeholder = renderEditorPlaceholder(
+    side === "left"
+      ? "Left pane is empty. Add a widget from Structure or the insert controls."
+      : "Right pane is empty. Add a widget from Structure or the insert controls.",
+    renderContext
+  );
+
+  if (!placeholder) {
+    return null;
+  }
+
+  return <div data-split-empty-pane={side}>{placeholder}</div>;
 }
 
 export function SplitLayoutBlock({
@@ -203,6 +464,7 @@ export function SplitLayoutBlock({
   const ratio = normalized.ratio ?? {
     desktop: resolvedVariant,
     tablet: resolvedVariant,
+    mobile: resolvedVariant,
   };
   const collapseMobile = normalized.collapseMobile ?? "stack";
   const reverseOnMobile = Boolean(normalized.reverseOnMobile);
@@ -217,7 +479,7 @@ export function SplitLayoutBlock({
 
   const leftClassName = joinClasses(
     "min-w-0",
-    mobileStack ? "col-span-1" : mobileKeepLeftSpanMap[ratio.tablet ?? "50-50"],
+    mobileStack ? "col-span-1" : mobileKeepLeftSpanMap[ratio.mobile ?? ratio.tablet ?? "50-50"],
     tabletLeftSpanMap[ratio.tablet ?? "50-50"],
     desktopLeftSpanMap[ratio.desktop ?? "50-50"],
     reverseOnMobile ? "order-2 md:order-1" : undefined
@@ -225,7 +487,7 @@ export function SplitLayoutBlock({
 
   const rightClassName = joinClasses(
     "min-w-0",
-    mobileStack ? "col-span-1" : mobileKeepRightSpanMap[ratio.tablet ?? "50-50"],
+    mobileStack ? "col-span-1" : mobileKeepRightSpanMap[ratio.mobile ?? ratio.tablet ?? "50-50"],
     tabletRightSpanMap[ratio.tablet ?? "50-50"],
     desktopRightSpanMap[ratio.desktop ?? "50-50"],
     reverseOnMobile ? "order-1 md:order-2" : undefined
@@ -243,6 +505,7 @@ export function SplitLayoutBlock({
       data-split-layout-variant={resolvedVariant}
       data-split-ratio-desktop={ratio.desktop ?? "50-50"}
       data-split-ratio-tablet={ratio.tablet ?? "50-50"}
+      data-split-ratio-mobile={ratio.mobile ?? ratio.tablet ?? "50-50"}
       data-split-collapse-mobile={collapseMobile}
       data-split-reverse-mobile={reverseOnMobile ? "true" : "false"}
       data-split-gap={gap}
@@ -267,7 +530,7 @@ export function SplitLayoutBlock({
             )}
           </div>
         ) : (
-          renderEditorPlaceholder("Empty left pane.", renderContext)
+          renderSplitLayoutEmptyPane("left", renderContext)
         )}
       </div>
 
@@ -288,7 +551,7 @@ export function SplitLayoutBlock({
             )}
           </div>
         ) : (
-          renderEditorPlaceholder("Empty right pane.", renderContext)
+          renderSplitLayoutEmptyPane("right", renderContext)
         )}
       </div>
     </div>

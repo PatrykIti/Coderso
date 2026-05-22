@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-285, TASK-256-05-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -21,21 +21,21 @@ Repair Split Layout-only mobile behavior findings from
   behaves in `stack` versus `keep`.
 
 This leaf must not implement the shared atomic variant+ratio update helper from
-TASK-256-05-02. It starts after that helper exists, or it changes only
-Split Layout mobile fields and copy.
+TASK-256-05-02. That helper landed on 2026-05-17, so this leaf should consume
+the shipped path and change only Split Layout mobile fields and copy.
 
 ## Sub-Tasks
 
-- [ ] Add a Split Layout-owned mobile ratio model for `keep` mode, or explicitly
+- [x] Add a Split Layout-owned mobile ratio model for `keep` mode, or explicitly
   document and test the product decision that mobile keep intentionally follows
   tablet ratio.
-- [ ] If adding `ratio.mobile`, default it to the current tablet ratio for
+- [x] If adding `ratio.mobile`, default it to the current tablet ratio for
   backward compatibility and keep `stack` mode single-column on mobile.
-- [ ] Make the editor describe how reverse ordering behaves in both `stack` and
+- [x] Make the editor describe how reverse ordering behaves in both `stack` and
   `keep` modes.
-- [ ] Show contextual helper text or disabled-state copy when a mobile control is
+- [x] Show contextual helper text or disabled-state copy when a mobile control is
   not applicable.
-- [ ] Keep public output deterministic and free of arbitrary class strings.
+- [x] Keep public output deterministic and free of arbitrary class strings.
 
 ## Files to Change
 
@@ -145,3 +145,8 @@ No API routes are added.
 - Reverse-on-mobile behavior is truthful in both stack and keep modes.
 - Legacy Split Layout payloads render without migration.
 - Schema, normalizer, renderer, editor, tests, and docs stay synchronized.
+
+## Completion Notes (2026-05-21)
+
+- Split Layout now persists an optional `ratio.mobile` field with tablet fallback so existing pages keep their historical phone output until authors save a mobile override.
+- Visual exposes a keep-only mobile-ratio control plus truthful reverse-order copy for both `stack` and `keep` modes.

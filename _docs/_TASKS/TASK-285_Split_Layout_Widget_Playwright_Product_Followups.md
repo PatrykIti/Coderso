@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-05-04, TASK-256-01, TASK-256-02, TASK-256-03, TASK-256-05-02
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -26,6 +26,10 @@ wave. TASK-285 owns only product, editor, and runtime polish that belongs to the
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`;
 - `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md`.
 
+Shared prerequisites from TASK-256-01, TASK-256-02, TASK-256-03, and
+TASK-256-05-02 landed on 2026-05-17. TASK-285 should consume those shipped
+contracts and must not wait for or reimplement them.
+
 This family must not hide shared contract work inside Split Layout-only leaves.
 If a leaf needs a reusable editor atomic update helper, generic `Clear`/`none`
 token behavior, public placeholder gating, or cross-widget mode ownership, split
@@ -40,9 +44,9 @@ excludes these shared-contract rows:
   persisted ratio data through the shared atomic update contract in
   TASK-256-05-02 and TASK-256-01. TASK-285 may improve Split Layout card
   previews and active-ratio disclosure only after that helper exists.
-- BUG-02: duplicate `none` and `0` gap-token semantics stay in TASK-256-02 and
-  TASK-256-05-02. TASK-285 may improve Split Layout gap labels after the shared
-  token decision lands.
+- BUG-02: duplicate `none` and `0` gap-token semantics stay in TASK-256-02.
+  TASK-285 may improve Split Layout gap labels after consuming that shared
+  token decision.
 - Public empty-slot placeholder gating stays in TASK-256-03. TASK-285 may add
   Split Layout admin/editor guidance only through the final preview-context
   contract.
@@ -77,26 +81,25 @@ excludes these shared-contract rows:
 
 ## Sub-Tasks
 
-- [ ] TASK-285-01: Split Layout Mobile Ratio and Reverse Behavior
-- [ ] TASK-285-02: Split Layout Variant Card Preview and Ratio Disclosure
-- [ ] TASK-285-03: Split Layout Pane Slot Guidance and Empty State
-- [ ] TASK-285-04: Split Layout Advanced Diagnostics and Mode Ownership
-- [ ] TASK-285-05: Split Layout Gap Labels and Spacing Context
-- [ ] TASK-285-06: Split Layout Report Docs and Closure
+- [x] TASK-285-01: Split Layout Mobile Ratio and Reverse Behavior
+- [x] TASK-285-02: Split Layout Variant Card Preview and Ratio Disclosure
+- [x] TASK-285-03: Split Layout Pane Slot Guidance and Empty State
+- [x] TASK-285-04: Split Layout Advanced Diagnostics and Mode Ownership
+- [x] TASK-285-05: Split Layout Gap Labels and Spacing Context
+- [x] TASK-285-06: Split Layout Report Docs and Closure
 
 ## Implementation Order
 
-1. Complete TASK-256-05-02 first for shared variant+ratio atomic updates, or
-   keep TASK-285 implementation leaves away from variant persistence until that
-   helper lands.
+1. Consume the landed TASK-256-05-02 shared variant+ratio atomic update path;
+   do not reimplement it inside TASK-285 leaves.
 2. Complete TASK-285-01 before UI preview polish because mobile behavior decides
    what ratio previews must show.
-3. Complete TASK-285-02 after the final variant/data sync contract is available.
-4. Complete TASK-285-03 after TASK-256-03 defines public-vs-preview placeholder
-   gating.
+3. Complete TASK-285-02 on top of the landed variant/data sync contract.
+4. Complete TASK-285-03 on top of the landed TASK-256-03 public-vs-preview
+   placeholder gate.
 5. Complete TASK-285-04 after mobile and slot guidance are stable so Advanced
    diagnostics can report the final responsive behavior.
-6. Complete TASK-285-05 after TASK-256-02 chooses the final `none`/zero token
+6. Complete TASK-285-05 on top of the landed TASK-256-02 `none`/zero token
    semantics.
 7. Complete TASK-285-06 last with report evidence, widget docs, changelog, board
    sync, and final validation.
@@ -183,3 +186,24 @@ No API routes are added.
 - TASK-285 leaves do not weaken or duplicate TASK-256 shared-contract repairs.
 - Admin preview and frontend rendering have textual Playwright evidence after
   implementation closure.
+
+## Outcome
+
+- Split Layout now owns an optional mobile ratio with tablet fallback, truthful phone-order copy, and an explicit `data-split-ratio-mobile` runtime marker.
+- Variant cards now show bounded previews plus effective desktop/tablet/mobile ratio disclosure while consuming the landed shared atomic preset sync contract.
+- Visual now uses actionable pane guidance, Advanced is read-only diagnostics, and gap labels explain both scale context and the legacy `Gap 0` compatibility path.
+- Preview-only empty-pane help remains gated out of public runtime, so the TASK-256 placeholder contract stays intact.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx` - passed (`4` files, `51` tests)
+- `bun test tests/unit/widgets/validator.test.ts` - passed
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- Family-wide `git diff --check` and `bun run precommit` passed; the strict scan tooling limitation is recorded in `TASK-285-06`.
+
+## Completion Notes (2026-05-21)
+
+- The TASK-285 family is closed end-to-end in the dedicated Split Layout worktree.
+- Shared TASK-256 prerequisites were consumed instead of reimplemented, and all report findings now have explicit owners and closure evidence.

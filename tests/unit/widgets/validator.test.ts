@@ -35,6 +35,7 @@ import {
   richTextSectionDefaults,
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
+import { createSplitLayoutWidget } from "../../../core/widgets/core/splitLayout";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -227,6 +228,59 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
           ],
         },
       } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts split layout mobile ratio and rejects unknown ratio keys", () => {
+  registerWidget(
+    createSplitLayoutWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "split-layout-mobile",
+      type: "split-layout",
+      variant: "40-60",
+      data: {
+        ratio: {
+          desktop: "40-60",
+          tablet: "60-40",
+          mobile: "50-50",
+        },
+        collapseMobile: "keep",
+        reverseOnMobile: true,
+        gap: "8",
+        verticalAlign: "center",
+      },
+      slots: {
+        left: [],
+        right: [],
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "split-layout-mobile-bad",
+      type: "split-layout",
+      variant: "40-60",
+      data: {
+        ratio: {
+          desktop: "40-60",
+          tablet: "60-40",
+          mobile: "50-50",
+          phone: "50-50",
+        },
+      } as never,
+      slots: {
+        left: [],
+        right: [],
+      },
     })
   ).toThrow("widget_schema_invalid");
 });

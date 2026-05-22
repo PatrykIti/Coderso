@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-285, TASK-256-05-02, TASK-285-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -21,18 +21,18 @@ variant/data sync fix:
 - ISSUE-05: variant cards lack a visual preview of the split shape.
 
 TASK-256-05-02 owns the actual atomic update from variant selection to persisted
-ratio data. This leaf only adds Split Layout-specific visual disclosure and
-previews after that shared behavior exists.
+ratio data. That shared behavior landed on 2026-05-17. This leaf consumes it
+and adds only Split Layout-specific visual disclosure and previews.
 
 ## Sub-Tasks
 
-- [ ] Add graphical miniatures to the 50/50, 40/60, and 60/40 variant cards.
-- [ ] Display the effective desktop/tablet/mobile ratio summary near the cards.
-- [ ] Make override state explicit when detailed ratio dropdowns differ from
+- [x] Add graphical miniatures to the 50/50, 40/60, and 60/40 variant cards.
+- [x] Display the effective desktop/tablet/mobile ratio summary near the cards.
+- [x] Make override state explicit when detailed ratio dropdowns differ from
   the selected preset.
-- [ ] Consume the TASK-256 atomic variant+data helper instead of reimplementing
+- [x] Consume the TASK-256 atomic variant+data helper instead of reimplementing
   it in `SplitLayoutEditors.tsx`.
-- [ ] Preserve keyboard-accessible button/card behavior.
+- [x] Preserve keyboard-accessible button/card behavior.
 
 ## Files to Change
 
@@ -87,8 +87,8 @@ Editor flow:
 
 Error handling:
 
-- If the shared helper is unavailable, leave this leaf blocked rather than
-  creating a one-off variant patch.
+- Consume the landed shared helper. If the current branch regresses it, restore
+  the TASK-256-05-02 path rather than creating a one-off variant patch.
 - Invalid ratios normalize through `normalizeSplitLayoutData()`.
 
 ## Security Contract
@@ -132,3 +132,8 @@ No API routes are added.
 - Users can see which ratio is actually active across breakpoints.
 - Variant-card selection uses the shared TASK-256 atomic update path.
 - No Split Layout-only variant/data race workaround is introduced.
+
+## Completion Notes (2026-05-21)
+
+- Variant cards now render bounded graphical miniatures and a current-ratio disclosure block for desktop, tablet, and mobile.
+- Preset selection re-syncs persisted ratios atomically, while the editor makes any later breakpoint override explicit instead of leaving the state ambiguous.

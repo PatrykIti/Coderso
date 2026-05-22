@@ -25,11 +25,6 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 918 | 2026-05-21 | TASK-284 spacer widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
-| 917 | 2026-05-21 | TASK-284-04 spacer horizontal orientation decision | CMS Widgets/Layout/Runtime/QA/Docs |
-| 916 | 2026-05-21 | TASK-284-03 spacer named rhythm presets | CMS Widgets/Admin UI/Runtime/QA/Docs |
-| 915 | 2026-05-21 | TASK-284-02 spacer viewport and fluid lengths | CMS Widgets/Admin UI/Runtime/QA/Docs |
-| 914 | 2026-05-21 | TASK-284-01 spacer editor guidance and accessibility | CMS Widgets/Admin UI/Accessibility/QA/Docs |
 | 913 | 2026-05-22 | TASK-283 section widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 912 | 2026-05-22 | TASK-283-05-02 section angle and overlay slider controls | CMS Widgets/Admin UI/QA/Docs |
 | 911 | 2026-05-22 | TASK-326 section shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
@@ -50,6 +45,7 @@ Project Change Log.
 | 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
 | 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |
 | 894 | 2026-05-21 | TASK-281-01 product table admin preview parity | CMS Widgets/Admin UI/Runtime/QA |
+| 893 | 2026-05-21 | TASK-285 Split Layout widget followups | CMS Widgets/Admin UI/Runtime/QA |
 | 893 | 2026-05-21 | TASK-282 Rich Text Section implementation pass | CMS Widgets/Admin UI/Runtime/Accessibility/QA |
 | 892 | 2026-05-21 | TASK-325 Grid Columns shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA |
 | 891 | 2026-05-21 | TASK-319 newsletter responsive variant decision | CMS Widgets/Admin UI/Runtime/QA |

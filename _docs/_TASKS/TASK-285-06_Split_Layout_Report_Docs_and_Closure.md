@@ -6,7 +6,7 @@
 **Category:** Widgets + Documentation + Playwright QA + Release Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-285-01, TASK-285-02, TASK-285-03, TASK-285-04, TASK-285-05
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -22,15 +22,15 @@ reproducible with evidence.
 
 ## Sub-Tasks
 
-- [ ] Refresh `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md` with final
+- [x] Refresh `_docs/PLAYWRIGHT/REPORT_SPLIT_LAYOUT_WIDGET.md` with final
   textual admin/frontend evidence for each finding.
-- [ ] Update `_docs/_WIDGETS/SPLIT_LAYOUT.md` with the final data, editor, and
+- [x] Update `_docs/_WIDGETS/SPLIT_LAYOUT.md` with the final data, editor, and
   runtime contract.
-- [ ] Update `_docs/WIDGETS.md` only for intentional shared contract changes.
-- [ ] Update `_docs/WIDGET_PACK_MATRIX.md` only if Split Layout readiness or
+- [x] Update `_docs/WIDGETS.md` only for intentional shared contract changes.
+- [x] Update `_docs/WIDGET_PACK_MATRIX.md` only if Split Layout readiness or
   pack completeness changes.
-- [ ] Move TASK-285 and completed leaves through task-board status updates.
-- [ ] Add changelog coverage and update `_docs/_CHANGELOG/README.md` when the
+- [x] Move TASK-285 and completed leaves through task-board status updates.
+- [x] Add changelog coverage and update `_docs/_CHANGELOG/README.md` when the
   family or leaf is completed.
 
 ## Files to Change
@@ -70,8 +70,9 @@ Closure flow:
 
 1. Re-read the current report, TASK-256 status, Split Layout code, and tests.
 2. Build a finding-by-finding ledger before editing docs.
-3. Mark BUG-01/BUG-02 and shared public-placeholder/token rows as TASK-256
-   routed unless the exact TASK-256 leaf has landed and provides evidence.
+3. Mark BUG-01/BUG-02 and shared public-placeholder/token rows as fixed via the
+   exact landed TASK-256 leaves, with explicit task IDs and evidence; use
+   deferred only if current-state evidence contradicts that closure.
 4. Record admin and frontend textual evidence for TASK-285 fixes.
 5. Update task statuses, board stats, changelog, and docs in the same closure
    commit.
@@ -132,3 +133,19 @@ No API routes are added.
 - Required validation commands are recorded with exact pass/fail/blocker status.
 - No unrelated TASK-256, TASK-279 through TASK-284, or other widget report edits
   are included in the closure commit.
+
+## Validation Notes (2026-05-21)
+
+- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx` - passed (`4` files, `51` tests)
+- `bun test tests/unit/widgets/validator.test.ts` - passed
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `git diff --check` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete in the local environment because `semgrep`, `trivy`, and `gitleaks` are not installed in `PATH`; `bun audit` still completed inside the same command
+
+## Completion Notes (2026-05-21)
+
+- The Split Layout report, widget doc, task files, board rows, and changelog are now synchronized with the shipped TASK-285 outcome.
+- Final validation results for lint, types, tests, gates, strict security scan, diff, and precommit are recorded in this leaf after the closure pass completes.

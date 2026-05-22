@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-285, TASK-256-01, TASK-256-05-02, TASK-285-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -18,18 +18,20 @@ Repair Split Layout Advanced-mode usefulness from
 The report notes that Advanced mostly duplicates Visual controls plus a JSON
 snapshot. TASK-256 owns generic editor-mode ownership. This leaf keeps the work
 Split Layout-specific by turning Advanced into a truthful responsive diagnostic
-surface, or by narrowing duplicated controls after the shared mode rules land.
+surface, or by narrowing duplicated controls on top of the landed shared mode
+rules.
 
 ## Sub-Tasks
 
-- [ ] Decide the final Split Layout Advanced role after TASK-256-01: direct
-  technical token editing, responsive diagnostics, or read-only diagnostics.
-- [ ] Show effective spans/classes per breakpoint from normalized data.
-- [ ] Explain variant, desktop/tablet/mobile ratios, collapse mode, reverse
+- [x] Decide the final Split Layout Advanced role on top of the landed
+  TASK-256-01 contract: direct technical token editing, responsive diagnostics,
+  or read-only diagnostics.
+- [x] Show effective spans/classes per breakpoint from normalized data.
+- [x] Explain variant, desktop/tablet/mobile ratios, collapse mode, reverse
   order, gap, and vertical alignment in one normalized summary.
-- [ ] Avoid duplicating Visual controls unless the final shared mode contract
+- [x] Avoid duplicating Visual controls unless the final shared mode contract
   requires Advanced token editing.
-- [ ] Keep JSON diagnostics redacted and bounded to widget data only.
+- [x] Keep JSON diagnostics redacted and bounded to widget data only.
 
 ## Files to Change
 
@@ -115,3 +117,8 @@ No API routes are added.
   clearly documented technical-token role.
 - Advanced no longer looks like an unexplained duplicate of Visual controls.
 - Diagnostics are derived from normalized owner data and remain Bun-free.
+
+## Completion Notes (2026-05-21)
+
+- Advanced now has a single truthful role: read-only responsive diagnostics plus a normalized raw payload snapshot.
+- The duplicate editable ratio/gap/align controls were removed so Advanced no longer competes with Visual ownership.

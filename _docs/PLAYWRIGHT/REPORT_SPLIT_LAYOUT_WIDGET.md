@@ -1,243 +1,113 @@
-# REPORT: Split Layout Widget — UX/UI Audit
+# RAPORT: Split Layout Widget — Closure Matrix
 
-**Widget:** `split-layout`
-**Data:** 2026-05-16
-**Status:** Zakończony
-**Pliki:** `core/widgets/core/splitLayout.tsx`, `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx`
-**Strona testowa:** `http://localhost:5173/admin/pages/4a1bbf86-6e3c-4aa7-804c-66df11d34186`
-**Frontend URL:** `http://localhost:3000/test-split-layout-0516`
-
----
-
-## 1. Przegląd widgetu
-
-Split Layout to dwu-panelowy primitive layoutu z konfigurowalnymi proporcjami, zachowaniem na mobile i kontrolą odstępów. Widget oferuje trzy tryby edytora: Wizard, Visual, Advanced.
-
-### Obsługiwane opcje
-
-| Opcja | Wartości | Domyślna |
-|---|---|---|
-| `ratio.desktop` | `50-50`, `40-60`, `60-40` | `50-50` |
-| `ratio.tablet` | `50-50`, `40-60`, `60-40` | `50-50` |
-| `collapseMobile` | `stack`, `keep` | `stack` |
-| `reverseOnMobile` | boolean | `false` |
-| `gap` | `none`, `0`–`12` (11 tokenów) | `6` |
-| `verticalAlign` | `start`, `center`, `end`, `stretch` | `stretch` |
+> **Status:** Zamknięty po TASK-256 i TASK-285
+> **Pierwotna sesja Playwright:** 2026-05-16
+> **Raport closure:** 2026-05-21
+> **Sesja:** Playwright #4 (Split Layout Widget)
+> **Środowisko źródłowe:** http://localhost:5173/admin | http://localhost:3000
 
 ---
 
-## 2. Wyniki testów — Admin UI (http://localhost:5173/admin)
+## 1. Cel raportu
 
-### 2.1 Wizard
+Ten plik zachowuje snapshot z sesji Playwright z 2026-05-16, ale po
+TASK-256 i TASK-285 nie może już być traktowany jako lista nadal otwartych
+problemów Split Layout. Został więc przepisany do closure matrix:
 
-| Test | Wynik | Uwagi |
-|---|---|---|
-| Otwieranie Wizard edytora | ✅ OK | Otwiera się automatycznie po dodaniu widgetu |
-| Split preset dropdown (50/50, 40/60, 60/40) | ✅ OK | Poprawnie pokazuje 3 opcje, zmiana aktualizuje `block.variant` |
-| Mobile behavior (Stack / Keep split) | ✅ OK | Oba tokeny działają |
-| Base gap dropdown (None, Gap 0–12) | ✅ OK | Zmiana odzwierciedlona w `data-split-gap` |
-| "Continue to layout and styling" button | ✅ OK | Prawidłowo przełącza do zakładki Visual |
-| Live preview po zmianie preset | ⚠️ POZORNE | Widget header pokazuje "40-60", ale **faktyczny rendering używa 50/50** (patrz BUG-01) |
+- wskazuje, które findingi były shared-contract drift i zostały zamknięte poza
+  TASK-285,
+- które findingi zostały dostarczone lokalnie przez Split Layout w TASK-285,
+- zapisuje finalną evidence trail w kodzie, testach i dokumentacji.
 
-### 2.2 Visual
+## 2. Snapshot źródłowy z 2026-05-16
 
-| Test | Wynik | Uwagi |
-|---|---|---|
-| Karty wariantów (50/50, 40/60, 60/40) — kliknięcie | ✅ OK | Zmienia `block.variant`, aktualizuje "Selected" badge |
-| Desktop ratio dropdown | ✅ OK | Zmiana poprawnie aktualizuje `data-split-ratio-desktop` |
-| Tablet ratio dropdown | ✅ OK | Zmiana poprawnie aktualizuje `data-split-ratio-tablet` |
-| Collapse mode dropdown | ✅ OK | `stack`/`keep` poprawnie mapuje na `data-split-collapse-mobile` |
-| Reverse on mobile toggle | ✅ OK | Aktualizuje `data-split-reverse-mobile` |
-| Gap dropdown | ✅ OK | Aktualizuje `data-split-gap` |
-| Vertical align dropdown | ✅ OK | Aktualizuje `data-split-vertical-align`, `items-center` itd. |
-| Sekcja "Pane slots" | ⚠️ INFO ONLY | Tylko tekst statyczny; poniżej jest sekcja "Structure" z faktyczną informacją o slotach |
+Pierwotny audit wykrył trzy klasy problemów:
 
-### 2.3 Advanced
+- shared drift: preset/variant sync, `none` versus `0` gap semantics, preview-
+  only placeholder gating i shared editor-mode ownership;
+- lokalne braki produktowe: brak dedykowanego mobile ratio dla `keep`, brak
+  contextual reverse copy, brak miniaturek i breakpoint disclosure, redundant
+  slot guidance, Advanced bez własnej roli, gap labels bez scale context;
+- obserwacje runtime/admin parity: frontend i admin preview renderowały ten sam
+  layout, więc drift dotyczył głównie truthfulness i UX edytora.
 
-| Test | Wynik | Uwagi |
-|---|---|---|
-| JSON snapshot widoczny i aktualny | ✅ OK | Pokazuje znormalizowane dane, aktualizuje się po zmianie |
-| Kontrolki ratio/gap/align | ✅ OK | Identyczne jak w Visual — brak faktycznie "zaawansowanych" opcji |
-| Sekcja "Layout" (Container, Padding, Margin) | ✅ OK | Dodatkowa sekcja względem Visual — wspólna dla wszystkich widgetów |
-| Sekcja "Visibility" | ✅ OK | Dostępna tylko w Advanced |
+## 3. Finalna macierz findingów
 
-### 2.4 Preview dialog (Desktop/Tablet/Mobile)
+| ID | Snapshot z 2026-05-16 | Finalny status | Owner | Evidence |
+|---|---|---|---|---|
+| BUG-01 | Wizard preset zmienia header/variant, ale nie persisted ratio | `fixed outside TASK-285` | TASK-256-05-02 + TASK-256-01 | Shared atomic patch path is now consumed by Split Layout, and `buildVariantSyncedSplitLayoutData()` keeps desktop/tablet/mobile ratios aligned with preset selection; `split-layout-editor-wave.test.tsx` proves Wizard and Visual stay in sync |
+| BUG-02 | Dropdown gap pokazuje osobno `None` i `Gap 0` | `fixed outside TASK-285`, consumed locally | TASK-256-02 + TASK-285-05 | Split Layout still accepts legacy serialized `"0"`, but control state canonicalizes it to `none`, the editor shows one zero-gap option, and diagnostics explain the legacy value path |
+| BUG-03 | `keep` silently reuses `ratio.tablet` on mobile | `fixed` | TASK-285-01 | `ratio.mobile` is now schema-owned, normalized with tablet fallback, exposed only for `keep`, and rendered through `data-split-ratio-mobile`; covered in `splitLayout.test.tsx`, `renderer.test.tsx`, and `validator.test.ts` |
+| BUG-04 | `Reverse on mobile` lacks truthful context in `stack` versus `keep` | `fixed` | TASK-285-01 | Visual now renders mode-aware helper copy in `[data-split-reverse-copy]` and ties the explanation to the selected collapse mode; covered in `split-layout-editor-wave.test.tsx` |
+| ISSUE-01 | Variant cards and ratio dropdowns can contradict each other | `fixed` | TASK-256-05-02 + TASK-285-02 | Variant cards now reapply the current preset atomically, render breakpoint disclosure in `[data-split-ratio-summary]`, and show explicit preset-override state |
+| ISSUE-02 | `Pane slots` section is redundant and not actionable | `fixed` | TASK-285-03 | Visual now uses a single `Pane content` section with Structure/insert guidance instead of duplicate static slot copy |
+| ISSUE-03 | Advanced duplicates Visual instead of owning a clear role | `fixed` | TASK-285-04 | Advanced is now read-only `Responsive diagnostics` plus a normalized payload snapshot, with no duplicate editable ratio/gap/align controls |
+| ISSUE-04 | Gap labels do not show px/rem context | `fixed` | TASK-285-05 | Gap options now include explicit scale labels such as `Gap 6 (1.5rem / 24px)` and helper copy explains the pane spacing effect |
+| ISSUE-05 | Variant cards have no graphical preview | `fixed` | TASK-285-02 | Visual cards now render `data-split-variant-preview` miniatures tied to owner-resolved pane spans |
+| ISSUE-06 | Empty pane placeholder gives no next-step guidance | `fixed` | TASK-285-03 + TASK-256-03 | Preview-only empty panes now instruct authors to add a widget from Structure or insert controls, while public runtime stays free of admin-only placeholder copy |
 
-| Test | Wynik | Uwagi |
-|---|---|---|
-| Preview dialog otwiera się | ✅ OK | Poprawny iframe z podglądem |
-| Przełącznik Desktop/Tablet/Mobile | ✅ OK | Wizualnie zmienia viewport iframe |
-| Podgląd pustych paneli | ✅ OK | Pokazuje "Empty left pane." / "Empty right pane." |
+## 4. TASK-285 shipped scope
 
----
+### TASK-285-01
 
-## 3. Wyniki testów — Frontend (http://localhost:3000/test-split-layout-0516)
+- Split Layout now owns an optional `ratio.mobile` field with tablet fallback
+  for backward compatibility.
+- `keep` mode exposes an explicit mobile-ratio control; `stack` mode explains
+  that phones always collapse to one column.
+- Reverse-order copy now truthfully describes the phone-only effect for both
+  `stack` and `keep`.
 
-| Test | Admin | Frontend | Zgodne? |
-|---|---|---|---|
-| `data-split-layout-variant` | `60-40` | `60-40` | ✅ |
-| `data-split-ratio-desktop` | `60-40` | `60-40` | ✅ |
-| `data-split-ratio-tablet` | `50-50` | `50-50` | ✅ |
-| `data-split-collapse-mobile` | `keep` | `keep` | ✅ |
-| `data-split-reverse-mobile` | `true` | `true` | ✅ |
-| `data-split-gap` | `6` | `6` | ✅ |
-| `data-split-vertical-align` | `center` | `center` | ✅ |
-| CSS klasy kontenera | `grid w-full min-w-0 grid-cols-12 md:grid-cols-12 gap-6 items-center` | identyczne | ✅ |
-| CSS klasy lewego panelu | `min-w-0 col-span-6 md:col-span-6 lg:col-span-7 order-2 md:order-1` | identyczne | ✅ |
-| CSS klasy prawego panelu | `min-w-0 col-span-6 md:col-span-6 lg:col-span-5 order-1 md:order-2` | identyczne | ✅ |
+### TASK-285-02
 
-**Wniosek:** Frontend i admin preview renderują identycznie. Nie ma rozbieżności między podglądem admina a stroną frontendową.
+- Variant cards now include bounded graphical miniatures for `50/50`, `40/60`,
+  and `60/40`.
+- Visual shows the effective desktop/tablet/mobile ratios and whether the saved
+  block still matches the selected preset.
 
----
+### TASK-285-03
 
-## 4. Znalezione błędy i problemy UX
+- `Pane slots` was replaced with actionable `Pane content` guidance.
+- Empty-pane helper copy is preview-only and no longer leaks into public SSR.
 
-### BUG-01 — KRYTYCZNY: Wizard preset nie synchronizuje data.ratio
+### TASK-285-04
 
-**Opis:** Gdy użytkownik zmienia preset w Wizard (np. wybiera "40 / 60"), zmieniony zostaje tylko `block.variant`, ale NIE `data.ratio.desktop` ani `data.ratio.tablet`. Renderer używa `data.ratio.desktop` do obliczenia rzeczywistych span-ów kolumn. Efekt: pomimo że header widgetu pokazuje "40-60", faktyczne kolumny są renderowane w proporcji **50/50** (domyślna wartość data.ratio).
+- Advanced no longer impersonates a second Visual editor.
+- It now explains preset alignment, breakpoint spans, mobile mode, gap token,
+  and vertical alignment through read-only diagnostics.
 
-**Reprodukcja:**
-1. Dodaj Split Layout widget
-2. W Wizard ustaw preset na "40 / 60"
-3. Sprawdź: header widgetu pokazuje "40-60"
-4. Przejdź do Visual editor — Desktop ratio dropdown pokazuje "50 / 50"
-5. Sprawdź `data-split-ratio-desktop` → wartość "50-50"
-6. Faktyczny layout: 6/6 kolumn (50/50), nie 5/7 (40/60)
+### TASK-285-05
 
-**Dane z testów:**
-```
-block.variant = "40-60"
-data-split-layout-variant = "40-60"  ← z block.variant
-data-split-ratio-desktop = "50-50"   ← z data.ratio.desktop (nie zaktualizowane!)
-faktyczne kolumny desktop: lg:col-span-6 / lg:col-span-6 (50/50)
-```
+- Gap labels now expose scale context in rem and px.
+- Legacy `Gap 0` payloads remain valid, but the editor resolves them through the
+  canonical `None (0px)` control state and helper copy.
 
-**Przyczyna kodu:** `splitLayout.tsx:174` — `resolveSplitLayoutRatio(data.ratio?.desktop, resolvedVariant)` — gdy `data.ratio.desktop = "50-50"` (valid token), normalizer zachowuje tę wartość zamiast użyć fallbacku z `resolvedVariant`.
+## 5. Shared closure notes
 
-**Wpływ:** Użytkownik myśli że zmienił layout, ale rendering pozostaje bez zmian.
+- BUG-01 stays explicitly routed to TASK-256 shared atomic-update ownership even
+  though Split Layout now consumes the final landed path.
+- BUG-02 also closes as a shared token-contract repair: Split Layout only
+  consumes the landed `none`/`0` decision and explains it locally.
+- No additional Split Layout findings remain deferred after the 2026-05-21
+  closure pass.
 
----
+## 6. Validation evidence
 
-### BUG-02 — WYSOKI: Duplikat tokenów gap "None" i "Gap 0"
+Focused TASK-285 coverage completed during this closure pass:
 
-**Opis:** W dropdownie gap widoczne są dwie osobne opcje: "None" i "Gap 0". Obie mapują się na identyczną klasę CSS `gap-0` — zachowanie jest identyczne.
+- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - `4` files passed, `51` tests passed on 2026-05-21.
+- `bun test tests/unit/widgets/validator.test.ts`
+  - passed on 2026-05-21 with the new `ratio.mobile` acceptance and reject-
+    unknown coverage.
 
-**Dane z testów:** Dropdown pokazuje kolejno: None → Gap 0 → Gap 1 → Gap 2...
+Family-wide lint, typecheck, gates, strict security scan, diff, and precommit
+results are recorded in `TASK-285-06`.
 
-**Przyczyna kodu:** `splitLayout.tsx:8-20` — `splitLayoutGapTokens` zawiera zarówno `"none"` jak i `"0"`. `gapClassMap` (`splitLayout.tsx:114-126`) mapuje oba na `"gap-0"`.
+## 7. Notes
 
-**Wpływ:** Dezorientacja użytkownika — dwie opcje o różnych nazwach ale identycznym efekcie.
+- Frontend and admin preview remain aligned; TASK-285 closes editor truthfulness
+  and authoring UX, not a frontend/runtime parity bug.
+- This closure matrix intentionally separates TASK-256 shared fixes from the
+  widget-local TASK-285 product pass.
 
----
-
-### BUG-03 — WYSOKI: Mobile layout przy "Keep split" używa ratio.tablet (brak dedykowanego mobile ratio)
-
-**Opis:** Gdy `collapseMobile === "keep"`, panele na mobile używają span-ów z `mobileKeepLeftSpanMap[ratio.tablet]` — czyli proporcje mobilne są takie same jak tabletowe. Nie istnieje dedykowane `ratio.mobile`. Użytkownik ustawiając "Tablet ratio" nieświadomie steruje też mobilem.
-
-**Dane z testów:**
-```css
-/* tablet ratio = 50-50 */
-/* mobile keep: */
-left: col-span-6 md:col-span-6  /* identyczne! */
-```
-
-**Przyczyna kodu:** `splitLayout.tsx:214-215`:
-```tsx
-mobileStack ? "col-span-1" : mobileKeepLeftSpanMap[ratio.tablet ?? "50-50"],
-```
-
-**Wpływ:** Brak możliwości ustawienia innej proporcji na mobile niż na tablecie w trybie "keep".
-
----
-
-### BUG-04 — WYSOKI: "Reverse on mobile" aktywny gdy collapseMobile = "keep" — brak wyjaśnienia
-
-**Opis:** Toggle "Reverse on mobile" jest zawsze aktywny i klikalny, niezależnie od wartości `collapseMobile`. W trybie "keep" zmienia kolejność CSS (`order-1`/`order-2`), co wizualnie "odwraca" panele na WSZYSTKICH rozdzielczościach (nie tylko mobile, bo `md:order-*` blokuje efekt od tabletu wzwyż). Jednak UI mówi tylko "Swap left/right pane order only on mobile" — nie wyjaśnia różnicy w zachowaniu między trybem stack i keep.
-
-**Dane z testów:** Toggle nie jest `disabled` gdy `collapseMobile = "keep"`. Brak disabled state, brak warunkowego opisu.
-
----
-
-### ISSUE-01 — ŚREDNI: Dwa systemy sterowania ratio mogą się rozjechać
-
-**Opis:** Karty wariantów w Visual editor zmieniają `block.variant` (przez `onVariantChange`), podczas gdy dropdown Desktop/Tablet ratio zmienia `data.ratio.desktop/tablet`. Gdy user kliknie kartę "60/40" i jednocześnie ma Desktop ratio ustawiony na "40/60", wynik jest niejasny.
-
-**Dane z testów:**
-- Karta wariantu: "60/40 Selected"
-- Desktop ratio dropdown: "50 / 50" (niezaktualizowany po kliknięciu karty)
-- `data-split-ratio-desktop`: "50-50" (faktyczny rendering)
-
-**Rekomendacja:** Kliknięcie karty wariantu powinno też aktualizować `data.ratio.desktop` i `data.ratio.tablet`.
-
----
-
-### ISSUE-02 — ŚREDNI: Sekcja "Pane slots" w Visual jest redundantna i niefunkcjonalna
-
-**Opis:** Visual editor zawiera sekcję "Pane slots" która wyświetla tylko tekst: *"Use insert dialog targeting to place widgets into each side."* — zero akcji, linków, ani przycisków. Poniżej tej sekcji jest sekcja "Structure" z faktyczną informacją o slotach (liczba elementów, status). Dwie sekcje dotyczące slotów to nadmiar.
-
----
-
-### ISSUE-03 — ŚREDNI: Advanced editor nie oferuje faktycznie "zaawansowanych" opcji
-
-**Opis:** Zakładka Advanced zawiera te same kontrolki co Visual (ratio desktop/tablet, collapse, gap, align, reverse toggle) plus JSON dump. Nie ma żadnych unikalnych "zaawansowanych" funkcji. Dodatkowe sekcje "Layout" i "Visibility" w Advanced to sekcje wspólne dla wszystkich widgetów, nie specyficzne dla split-layout.
-
----
-
-### ISSUE-04 — NISKI: Etykiety gap nie podają px/rem
-
-**Opis:** Opcje "Gap 1", "Gap 2"... "Gap 12" nie komunikują ile pikseli/rem reprezentują. Użytkownik nie może ocenić wartości wizualnej bez kontekstu.
-
-**Dane z testów:** Dropdown gap: None | Gap 0 | Gap 1 | Gap 2 | Gap 3 | Gap 4 | Gap 5 | Gap 6 | Gap 8 | Gap 10 | Gap 12.
-
----
-
-### ISSUE-05 — NISKI: Brak wizualnego podglądu proporcji na kartach wariantów
-
-**Opis:** Karty wariantów (50/50, 40/60, 60/40) pokazują tylko tekst i opis słowny. Brak graficznej miniaturki/ikony która wizualnie pokazuje jak panele będą wyglądać.
-
----
-
-### ISSUE-06 — NISKI: Placeholder pustego panelu nie sugeruje akcji
-
-**Opis:** Puste panele wyświetlają komunikat "Empty left pane." / "Empty right pane." — tekst statyczny, bez przycisku CTA ani wskazówki jak dodać treść. Admin canvas co prawda posiada przycisk "Add widget to Left/Right", ale placeholder w preview podglądu tego nie pokazuje.
-
----
-
-## 5. Podsumowanie priorytetów
-
-### Krytyczne — do naprawy przed releasem
-- [x] **BUG-01**: Wizard preset nie synchronizuje `data.ratio.desktop/tablet` — rendering jest inny niż to co user widzi w headerze widgetu.
-
-### Wysokie — do naprawy w najbliższym sprincie
-- [ ] **BUG-02**: Usunąć duplikat `"none"` / `"0"` w tokenach gap
-- [ ] **BUG-03**: Dokumentacja lub UI musi komunikować że tablet ratio = mobile ratio w trybie "keep"
-- [ ] **BUG-04**: Wyjaśnić lub zablokować "Reverse on mobile" w kontekście `collapseMobile === "keep"`
-
-### Średnie — do uwzględnienia w backlogu
-- [ ] **ISSUE-01**: Kliknięcie karty wariantu powinno synchronizować `data.ratio.desktop/tablet`
-- [ ] **ISSUE-02**: Usunąć lub przekształcić sekcję "Pane slots" w Visual — jest redundantna wobec "Structure"
-- [ ] **ISSUE-03**: Advanced editor powinien mieć faktycznie zaawansowane opcje (lub zmienić jego zakres)
-
-### Niskie — nice-to-have
-- [ ] **ISSUE-04**: Dodać px/rem w etykietach gap (tooltip lub opis)
-- [ ] **ISSUE-05**: Dodać graficzne miniaturki na kartach wariantów
-- [ ] **ISSUE-06**: Zamienić placeholder "Empty left/right pane" na sugestię akcji
-
----
-
-## Status po TASK-256 (2026-05-17)
-
-- `TASK-256-05-02`: split-layout variant changes now use the shared atomic
-  patch path, so selected variant and persisted ratio data no longer drift
-  apart in the editor.
-- `TASK-256-03`: public empty-pane placeholders now fail closed through the
-  shared render-context contract instead of leaking into frontend output.
-- Shared evidence from this turn:
-  `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx
-  tests/vitest/widgets/splitLayout.test.tsx` passed on 2026-05-17.
-
-## 6. Admin vs Frontend: Porównanie
-
-**Wynik: Frontend i Admin preview są w 100% spójne.**
-
-Wszystkie data-atrybuty i klasy CSS są identyczne między podglądem admin a stroną frontend. Żaden z wykrytych błędów nie jest rozbieżnością admin/frontend — są to problemy UX w samym edytorze admin.
+*Raport closure zaktualizowany po finalnym TASK-285 pass na dedykowanym worktree.*

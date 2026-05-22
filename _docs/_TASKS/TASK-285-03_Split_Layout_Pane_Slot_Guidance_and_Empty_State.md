@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + Slots
 **Estimated Effort:** Medium
 **Dependencies:** TASK-285, TASK-256-03
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -18,21 +18,22 @@ Repair Split Layout-only slot guidance and empty-state UX from
 - ISSUE-02: the Visual `Pane slots` section is redundant and non-actionable.
 - ISSUE-06: empty pane placeholders do not suggest the next admin action.
 
-TASK-256-03 owns public placeholder gating and shared slot metadata. This leaf
-must consume that final preview/editor context instead of exposing admin-only
-copy in public runtime output.
+TASK-256-03 owns public placeholder gating and shared slot metadata. That
+contract landed on 2026-05-17. This leaf must consume the shipped
+preview/editor context instead of exposing admin-only copy in public runtime
+output.
 
 ## Sub-Tasks
 
-- [ ] Replace the redundant `Pane slots` section with one actionable Split
+- [x] Replace the redundant `Pane slots` section with one actionable Split
   Layout editor guidance block or remove it when shared Structure already owns
   slot status.
-- [ ] Add preview-only empty-pane guidance for admin/editor surfaces after
+- [x] Add preview-only empty-pane guidance for admin/editor surfaces after
   TASK-256-03 exposes the render context.
-- [ ] Keep public runtime output free of admin-only instructions.
-- [ ] Preserve fixed `left` and `right` slot IDs and existing nested widget
+- [x] Keep public runtime output free of admin-only instructions.
+- [x] Preserve fixed `left` and `right` slot IDs and existing nested widget
   rendering.
-- [ ] Add tests that distinguish public SSR output from editor/preview output.
+- [x] Add tests that distinguish public SSR output from editor/preview output.
 
 ## Files to Change
 
@@ -80,8 +81,9 @@ Flow:
 
 Error handling:
 
-- If TASK-256-03 has not landed a render-context gate, keep this leaf blocked or
-  implement only editor-copy cleanup; do not add public placeholder copy.
+- If the current branch regresses the TASK-256-03 render-context gate, restore
+  that shared contract or limit the change to editor-copy cleanup; do not add
+  public placeholder copy.
 - Existing saved pages with empty slots must remain renderable.
 
 ## Security Contract
@@ -126,3 +128,8 @@ No API routes are added.
 - Empty-pane guidance is useful in admin/editor preview and absent from public
   runtime output unless a shared public placeholder policy explicitly allows it.
 - Fixed left/right slot rendering remains backward compatible.
+
+## Completion Notes (2026-05-21)
+
+- Visual replaces the redundant `Pane slots` section with actionable `Pane content` guidance that points authors to Structure and insert controls.
+- Empty-pane helper copy is now preview-only and instructive, while public runtime output remains free of admin-only placeholders.
