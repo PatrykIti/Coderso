@@ -21,7 +21,7 @@ primitive because the current builder still renders every widget through the
 shared full-width `WidgetRenderer` section/container shell. A local
 `orientation` or `width` field on Spacer would therefore behave like a
 wrapped block, not a truthful inline or row-flow gap. Future implementation
-is reassigned to the new shared follow-up `TASK-326`.
+is reassigned to the new shared follow-up `TASK-328`.
 
 This leaf covers BF-05 only. It intentionally does not add `orientation`,
 `width`, or parent-mutating flex-filler behavior to the current Spacer
@@ -58,7 +58,7 @@ Out of scope:
   full-width block primitive.
 - [x] Defer BF-05 instead of adding misleading `orientation`/`width` fields
   to the current Spacer contract.
-- [x] Create `TASK-326` as the future shared owner for nested row-flow
+- [x] Create `TASK-328` as the future shared owner for nested row-flow
   widget rendering truthfulness.
 - [x] Update Spacer docs, report evidence, task board, and changelog to
   record the defer decision.
@@ -71,10 +71,10 @@ Out of scope:
 | `core/admin/ui/widgets/editors/SpacerEditors.tsx` | No change in this leaf. Existing height/preset editor IA stays truthful while horizontal support is deferred. |
 | `tests/vitest/widgets/spacer.test.tsx` | Re-run only as a regression guard; no new assertions are required because the runtime contract is unchanged. |
 | `tests/vitest/ui/spacer-editor-wave.test.tsx` | Re-run only as a regression guard; no editor contract changed in this defer leaf. |
-| `_docs/_TASKS/TASK-326_Shared_Nested_Widget_Row_Flow_Layout_Truthfulness_Contract.md` | Create the future shared follow-up task for row-flow/container-aware nested widget rendering. |
+| `_docs/_TASKS/TASK-328_Shared_Nested_Widget_Row_Flow_Layout_Truthfulness_Contract.md` | Create the future shared follow-up task for row-flow/container-aware nested widget rendering. |
 | `_docs/_WIDGETS/SPACER.md` | Document the explicit vertical-only decision and the blocker for future horizontal support. |
 | `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md` | Record BF-05 as deferred with a concrete blocker and future owner. |
-| `_docs/_TASKS/README.md` | Move `TASK-284-04` to Done, add `TASK-326`, and keep board statistics synchronized. |
+| `_docs/_TASKS/README.md` | Move `TASK-284-04` to Done, add `TASK-328`, and keep board statistics synchronized. |
 | `_docs/_CHANGELOG/*` | Add and index a changelog entry for the BF-05 defer decision. |
 
 ## Decision Outcome
@@ -83,13 +83,13 @@ Out of scope:
 type HorizontalSpacerDecision = {
   status: "defer";
   blocker: "shared-full-width-widget-shell";
-  futureOwner: "TASK-326";
+  futureOwner: "TASK-328";
 };
 
 const spacerHorizontalDecision: HorizontalSpacerDecision = {
   status: "defer",
   blocker: "shared-full-width-widget-shell",
-  futureOwner: "TASK-326",
+  futureOwner: "TASK-328",
 };
 ```
 
@@ -104,7 +104,7 @@ Evidence behind the decision:
 
 Future owner contract:
 
-- `TASK-326` owns the shared nested row-flow rendering truthfulness work
+- `TASK-328` owns the shared nested row-flow rendering truthfulness work
   that must land before any honest horizontal Spacer implementation can
   reopen.
 - Until that shared task lands, Spacer continues to store and render only
@@ -139,7 +139,7 @@ No API routes are added.
   and the blocker for future horizontal support.
 - Update `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md` with BF-05 deferred
   evidence.
-- Create the shared follow-up `TASK-326` and synchronize
+- Create the shared follow-up `TASK-328` and synchronize
   `_docs/_TASKS/README.md`.
 
 ## Changelog Policy
@@ -161,5 +161,5 @@ No API routes are added.
 - Spacer remains vertical-only because the current shared widget shell is
   still block-first and full-width, which makes a local horizontal Spacer
   contract misleading.
-- `TASK-326` now owns the future shared row-flow/container-aware rendering
+- `TASK-328` now owns the future shared row-flow/container-aware rendering
   work required before horizontal Spacer support can reopen.

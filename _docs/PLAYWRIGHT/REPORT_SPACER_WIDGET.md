@@ -422,7 +422,7 @@ Leaf evidence from this turn:
 
 | Row | Final status | Owner | Evidence |
 |---|---|---|---|
-| BF-05 | `deferred` | `TASK-284-04 -> TASK-326` | Spacer remains vertical-only. The current shared `WidgetRenderer` shell still wraps nested widgets as full-width blocks, so a local `orientation`/`width` field would be misleading instead of acting like a truthful row-flow gap. Future implementation is reassigned to shared `TASK-326`. |
+| BF-05 | `deferred` | `TASK-284-04 -> TASK-328` | Spacer remains vertical-only. The current shared `WidgetRenderer` shell still wraps nested widgets as full-width blocks, so a local `orientation`/`width` field would be misleading instead of acting like a truthful row-flow gap. Future implementation is reassigned to shared `TASK-328`. |
 
 ## Finalny status po TASK-284-05 (2026-05-21)
 
@@ -451,7 +451,7 @@ Family closure validation from this turn:
 | BF-02 | `fixed-task-284` | `TASK-284-02` | Spacer now accepts bounded viewport custom heights (`vh`, `dvh`, `svh`, `vw`). |
 | BF-03 | `fixed-task-284` | `TASK-284-02` | Spacer now accepts safe canonical fluid `clamp(min, preferred, max)` values. |
 | BF-04 | `fixed-task-284` | `TASK-284-03` | Spacer now exposes transient `Card gap`, `Section gap`, and `Hero gap` presets in Wizard and Visual. |
-| BF-05 | `deferred` | `TASK-284-04 -> TASK-326` | Honest horizontal Spacer support still needs a shared nested row-flow rendering owner, so this row stays deferred. |
+| BF-05 | `deferred` | `TASK-284-04 -> TASK-328` | Honest horizontal Spacer support still needs a shared nested row-flow rendering owner, so this row stays deferred. |
 | BF-06 | `fixed-task-284` | `TASK-284-01` | Desktop, tablet, and mobile height controls now explain the active Tailwind breakpoint ranges. |
 | BF-07 | `fixed-task-284` | `TASK-284-01` | Spacer copy now explicitly documents bare-number input such as `48` -> `48px`. |
 | A1 | `no-action` | No TASK-284 implementation | Spacer remains a decorative layout primitive under `aria-hidden="true"`, which is the intended accessibility contract. |

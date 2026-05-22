@@ -19,7 +19,7 @@ Resolution (2026-05-21): the Spacer family is now closed. The report ends
 with explicit final classifications for every BUG/UX/BF/A row, shared rows
 stay attributed to `TASK-256-05-03` or `TASK-303`, Spacer-owned product rows
 stay attributed to `TASK-284-01` through `TASK-284-04`, `UX-04`/`A1`/`A3`
-are recorded as `no-action`, and BF-05 remains deferred to `TASK-326`.
+are recorded as `no-action`, and BF-05 remains deferred to `TASK-328`.
 
 ## Scope Boundary
 
@@ -65,7 +65,7 @@ Out of scope:
 | `_docs/WIDGET_PACK_MATRIX.md` | No change required; Spacer pack readiness is unchanged by this closure leaf. |
 | `_docs/_TASKS/TASK-284*.md` | Move the parent and closure leaf to `Done` and record the final family outcome. |
 | `_docs/_TASKS/README.md` | Move `TASK-284` and `TASK-284-05` to `Done`, remove `TASK-284-05` from `To Do`, and recompute statistics. |
-| `_docs/_CHANGELOG/897-2026-05-21-task-284-spacer-widget-playwright-product-followups.md` | Add the final family changelog entry. |
+| `_docs/_CHANGELOG/918-2026-05-21-task-284-spacer-widget-playwright-product-followups.md` | Add the final family changelog entry. |
 | `_docs/_CHANGELOG/README.md` | Add the final family changelog entry to the index. |
 
 ## Implementation Pseudocode
@@ -183,7 +183,7 @@ No API routes are added.
   `deferred`.
 - `UX-04`, `A1`, and `A3` are intentionally `no-action` under the current
   vertical-only, decorative Spacer contract.
-- BF-05 remains deferred to `TASK-326` because a truthful horizontal Spacer
+- BF-05 remains deferred to `TASK-328` because a truthful horizontal Spacer
   still needs shared nested row-flow rendering ownership.
 - `TASK-284` and `TASK-284-05` are now closed with final validation,
   changelog, and board sync.

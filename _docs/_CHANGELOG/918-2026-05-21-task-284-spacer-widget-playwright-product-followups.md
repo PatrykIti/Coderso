@@ -1,4 +1,4 @@
-# 897. TASK-284 Spacer widget Playwright product followups
+# 918. TASK-284 Spacer widget Playwright product followups
 
 Date: 2026-05-21
 Version: Unreleased
@@ -10,7 +10,7 @@ Tasks: TASK-284, TASK-284-01, TASK-284-02, TASK-284-03, TASK-284-04, TASK-284-05
 
 - Closed the Spacer Playwright follow-up family with one final report table that classifies every BUG, UX, functional-gap, and accessibility row.
 - Kept shared fixes attributed to `TASK-256-05-03` and `TASK-303` instead of re-claiming them inside `TASK-284`.
-- Recorded `UX-04`, `A1`, and `A3` as `no-action`, and kept BF-05 explicitly deferred to `TASK-326`.
+- Recorded `UX-04`, `A1`, and `A3` as `no-action`, and kept BF-05 explicitly deferred to `TASK-328`.
 
 ### Final shipped Spacer contract
 
@@ -21,7 +21,7 @@ Tasks: TASK-284, TASK-284-01, TASK-284-02, TASK-284-03, TASK-284-04, TASK-284-05
 ### Closure sync
 
 - Moved `TASK-284` and `TASK-284-05` to `Done` and synchronized `_docs/_TASKS/README.md` statistics/tables.
-- Added the final family changelog entry and kept the new shared `TASK-326` follow-up open as the future owner for honest horizontal Spacer support.
+- Added the final family changelog entry and kept the new shared `TASK-328` follow-up open as the future owner for honest horizontal Spacer support.
 
 ## Validation
 
