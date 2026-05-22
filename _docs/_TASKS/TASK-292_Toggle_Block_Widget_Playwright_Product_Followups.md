@@ -30,6 +30,11 @@ Toggle Block remains a two-pane layout widget with fixed `primary` and
 product direction or a Tabs-family decision, not a hidden expansion of this
 two-state widget family.
 
+Shared TASK-256 repairs for Toggle Block are already present on the current
+`feature/corrections` base. TASK-292 must build on those landed seams and
+update docs/report ownership instead of re-implementing shared helper clear,
+placeholder gating, ID, ARIA, or runtime-root behavior locally.
+
 ## Scope Boundary Against TASK-256
 
 TASK-292 must not re-open general widget-contract work already routed through
@@ -85,8 +90,8 @@ define a weaker local replacement for a shared contract.
 
 ## Implementation Order
 
-1. Complete TASK-256 shared Toggle Block repairs before implementing leaves that
-   depend on the final clear/helper/ID/placeholder contracts.
+1. Preserve the landed TASK-256 shared Toggle Block repairs and do not replace
+   them with weaker local logic while implementing TASK-292 leaves.
 2. Complete TASK-292-01 first because style fields define the visual model used
    by previews and docs.
 3. Complete TASK-292-02 after TASK-292-01 so transition tokens can use the final

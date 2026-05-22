@@ -42,8 +42,8 @@ changing public placeholder safety, which remains TASK-256 scope.
 - Document that Toggle Block is intentionally limited to two panes in v1.
 - Route 3+ state requirements to Tabs or a future separate task instead of
   broadening this family.
-- Ensure public runtime does not leak admin-only guidance after TASK-256
-  placeholder gating lands.
+- Preserve the already-landed shared public placeholder gating so authoring
+  guidance remains editor/preview-only.
 - Keep page-builder/editor automation metadata on the existing
   `data-widget-control` contract or accessible roles/names. Do not add
   editor-only `data-coderso-*` markers.

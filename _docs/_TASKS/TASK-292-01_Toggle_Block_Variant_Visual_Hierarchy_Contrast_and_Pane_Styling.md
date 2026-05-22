@@ -12,12 +12,14 @@
 
 ## Overview
 
-Make the Toggle Block `cards` variant visually distinct, add safe active-trigger
-contrast control, and add bounded pane styling that stays specific to the
-two-pane Toggle Block product surface.
+Make the Toggle Block `cards` variant visually distinct, add a persisted
+active-trigger contrast field, and add bounded pane styling that stays specific
+to the two-pane Toggle Block product surface.
 
 This leaf owns product-level visual fields. It does not own the shared Clear,
 `none`, CSS-variable picker, or duplicate-ID/ARIA contracts from TASK-256.
+Those shared seams are already landed on the current `feature/corrections`
+base, so this leaf must consume them instead of branching around them.
 
 ## Source Evidence
 
@@ -33,15 +35,16 @@ This leaf owns product-level visual fields. It does not own the shared Clear,
 
 ## Scope
 
-- Add a bounded `style.accentContrastColor` field or a deterministic contrast
-  resolver that keeps active trigger text readable.
+- Add a bounded persisted `style.accentContrastColor` field that keeps active
+  trigger text readable and remains compatible with legacy payloads that omit
+  it.
 - Make `cards` visibly card-like through pane surface, trigger layout, spacing,
   and framing changes that do not alter slot ownership.
 - Add optional pane-level style controls only for bounded values such as surface
   token, padding token, radius token, and border emphasis.
-- Keep pane styling independent for `primary` and `secondary` so the report row
-  is either implemented as per-pane controls or explicitly deferred in
-  TASK-292-06 instead of being collapsed into one global pane style.
+- Keep pane styling independent for `primary` and `secondary`. This is required
+  in this leaf; do not collapse it into one global pane style or defer product
+  behavior to TASK-292-06, which is closure-only.
 - Preserve existing `style.surfaceColor`, `style.borderColor`, and
   `style.accentColor` semantics from TASK-256.
 - Keep arbitrary CSS strings out of new pane-specific fields unless an existing
@@ -52,15 +55,14 @@ This leaf owns product-level visual fields. It does not own the shared Clear,
 - Generic Clear controls or `none` token semantics; TASK-256-02 owns them.
 - Instance-safe IDs, ARIA relationships, or runtime script binding; TASK-256-04
   and TASK-256-05-04 own them.
-- A one-off color picker. Consume the final TASK-256 shared color/token control
-  if it exists; otherwise keep the field contract text-based and documented.
+- A one-off color picker. Consume the existing shared color/token control
+  instead of shipping raw-only local inputs or a second picker contract.
 - Three or more Toggle Block states.
 
 ## Sub-Tasks
 
-- [ ] Decide whether active-trigger contrast is a persisted
-  `accentContrastColor` field or a deterministic resolver, then document the
-  compatibility path.
+- [ ] Add persisted `accentContrastColor` support and document the legacy
+  fallback path for payloads that omit it.
 - [ ] Extend Toggle Block schema/defaults/normalizer with bounded style fields.
 - [ ] Render the final `cards` visual hierarchy and pane style classes from
   normalized enum/token values.
@@ -163,9 +165,9 @@ Data flow:
 1. Normalize every new style field in `normalizeToggleBlockData`.
 2. Render CSS variables/classes from normalized values only.
 3. Keep editor controls bound to the normalized data and write back through the
-   existing `updateStyle` helper.
-4. If the shared TASK-256 color/token picker exists, wrap it instead of adding a
-   local picker.
+   existing `updateStyle` helper plus per-pane patch helpers.
+4. Use the existing shared color/token control instead of adding a local picker
+   or leaving the field raw-only.
 
 Error handling:
 

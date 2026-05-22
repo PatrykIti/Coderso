@@ -17,7 +17,9 @@ adding variant previews, a clearer Wizard flow, reset defaults, and active
 default-state feedback.
 
 This leaf improves editor UX. It must consume shared TASK-256 controls for
-Clear/color behavior instead of inventing a one-off picker.
+Clear/color behavior instead of inventing a one-off picker. The shared
+color/token control already exists on the current base and should replace the
+current raw-only Toggle Block inputs.
 
 ## Source Evidence
 
@@ -42,7 +44,8 @@ Clear/color behavior instead of inventing a one-off picker.
 - Add a reset-to-defaults action that uses normalized defaults and asks for
   confirmation or an undo-safe local pattern if destructive.
 - Add a visible active/default-state preview indicator in the editor.
-- Adopt TASK-256 shared color/token controls only after they exist.
+- Use the existing shared color/token controls and clear helpers instead of
+  keeping raw-only local inputs.
 - Keep editor-only automation metadata on the existing `data-widget-editor*`
   and `data-widget-control` contract or accessible roles/names; reserve
   `data-coderso-*` for runtime markers owned by TASK-256.

@@ -15,10 +15,10 @@
 Expose Toggle Block-owned accessible copy so the radiogroup label and selected
 state announcement are not hardcoded English strings.
 
-TASK-256-04 owns the immediate structural/fallback radiogroup label wiring
-while it fixes scoped IDs, ARIA relationships, and runtime binding. This leaf
-owns configurable copy only after that helper seam lands or TASK-256-08
-confirms the remaining localization row as Toggle Block product scope.
+TASK-256-04 owns the structural/fallback radiogroup label wiring while it fixes
+scoped IDs, ARIA relationships, and runtime binding. That seam is already
+landed on the current base; this leaf adds widget-owned configurable copy on
+top of it without taking over structural ARIA ownership.
 
 ## Source Evidence
 
@@ -32,7 +32,7 @@ confirms the remaining localization row as Toggle Block product scope.
 ## Scope
 
 - Add a schema-backed `labels.ariaLabel` field or similarly named accessible
-  label field only after TASK-256 structural/fallback label wiring is settled.
+  label field on top of the landed TASK-256 structural/fallback label wiring.
 - Add selected-state announcement copy if needed, for example a template or a
   bounded suffix such as `"selected"`.
 - Derive accessible defaults through the final TASK-256 fallback helper so
