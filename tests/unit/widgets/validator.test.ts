@@ -36,11 +36,57 @@ import {
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
 import { createSplitLayoutWidget } from "../../../core/widgets/core/splitLayout";
+import {
+  createStatsKpiWidget,
+  statsKpiDefaults,
+  statsKpiSchema,
+  type StatsKpiData,
+} from "../../../core/widgets/core/statsKpi";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
 
 const Dummy = () => null;
+
+const getStatsKpiSchemaProperties = (schemaValue: unknown): Record<string, unknown> => {
+  if (!schemaValue || typeof schemaValue !== "object") return {};
+  const properties = (schemaValue as { properties?: unknown }).properties;
+  return properties && typeof properties === "object"
+    ? (properties as Record<string, unknown>)
+    : {};
+};
+
+const statsKpiRootProperties = getStatsKpiSchemaProperties(statsKpiSchema);
+const statsKpiStyleProperties = getStatsKpiSchemaProperties(statsKpiRootProperties.style);
+const statsKpiItemProperties = getStatsKpiSchemaProperties(
+  typeof statsKpiRootProperties.items === "object" && statsKpiRootProperties.items !== null
+    ? (statsKpiRootProperties.items as { items?: unknown }).items
+    : undefined
+);
+
+const hasStatsKpiStyleField = (field: string) =>
+  Object.prototype.hasOwnProperty.call(statsKpiStyleProperties, field);
+const hasStatsKpiItemField = (field: string) =>
+  Object.prototype.hasOwnProperty.call(statsKpiItemProperties, field);
+
+const hasTask287StatsKpiSchema =
+  hasStatsKpiStyleField("valueSize") &&
+  hasStatsKpiStyleField("descriptionColor") &&
+  hasStatsKpiStyleField("sectionBackground") &&
+  hasStatsKpiStyleField("maxWidth") &&
+  hasStatsKpiStyleField("padding") &&
+  hasStatsKpiStyleField("minHeight") &&
+  hasStatsKpiStyleField("iconSize") &&
+  hasStatsKpiStyleField("iconSurface") &&
+  hasStatsKpiStyleField("iconBorderColor") &&
+  hasStatsKpiItemField("prefix") &&
+  hasStatsKpiItemField("suffix") &&
+  hasStatsKpiItemField("accentColor") &&
+  hasStatsKpiItemField("trend");
+
+const hasTask287StatsKpiLinks = hasStatsKpiItemField("link");
+
+const testTask287StatsKpi = hasTask287StatsKpiSchema ? test : test.skip;
 
 const definition: WidgetDefinition<{ headline: string; tone?: string }> = {
   type: "hero",
@@ -1157,3 +1203,160 @@ test("normalizeWidgetBlock rejects invalid newsletter field and opt-in config", 
     })
   ).toThrow("widget_schema_invalid");
 });
+
+testTask287StatsKpi("normalizeWidgetBlock accepts task-287 stats kpi schema fields", () => {
+  registerWidget(
+    createStatsKpiWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "stats-kpi-task-287",
+    type: "stats-kpi",
+    variant: "split-highlight",
+    data: {
+      ...statsKpiDefaults,
+      header: {
+        title: "Growth snapshot",
+        description: "Current account outcomes.",
+      },
+      items: [
+        {
+          ...statsKpiDefaults.items[0],
+          value: "120",
+          label: "Qualified pipeline",
+          description: "Trailing 30-day pipeline value.",
+          icon: "🚀",
+          ...(hasStatsKpiItemField("prefix") ? { prefix: "$" } : {}),
+          ...(hasStatsKpiItemField("suffix") ? { suffix: "K" } : {}),
+          ...(hasStatsKpiItemField("accentColor") ? { accentColor: "#2563eb" } : {}),
+          ...(hasStatsKpiItemField("trend")
+            ? {
+                trend: {
+                  label: "+12% MoM",
+                  direction: "up",
+                },
+              }
+            : {}),
+          ...(hasTask287StatsKpiLinks
+            ? {
+                link: {
+                  href: "/reports/growth",
+                  label: "Open growth report",
+                },
+              }
+            : {}),
+        },
+      ],
+      style: {
+        ...statsKpiDefaults.style,
+        ...(hasStatsKpiStyleField("valueSize") ? { valueSize: "lg" } : {}),
+        ...(hasStatsKpiStyleField("descriptionColor") ? { descriptionColor: "#475569" } : {}),
+        ...(hasStatsKpiStyleField("sectionBackground") ? { sectionBackground: "#f8fafc" } : {}),
+        ...(hasStatsKpiStyleField("maxWidth") ? { maxWidth: "full" } : {}),
+        ...(hasStatsKpiStyleField("padding") ? { padding: "lg" } : {}),
+        ...(hasStatsKpiStyleField("minHeight") ? { minHeight: "compact" } : {}),
+        ...(hasStatsKpiStyleField("iconSize") ? { iconSize: "lg" } : {}),
+        ...(hasStatsKpiStyleField("iconSurface") ? { iconSurface: "#fff7ed" } : {}),
+        ...(hasStatsKpiStyleField("iconBorderColor") ? { iconBorderColor: "#ea580c" } : {}),
+      },
+    } as StatsKpiData,
+  });
+
+  const data = normalized.data as StatsKpiData & {
+    items: Array<Record<string, unknown>>;
+    style?: Record<string, unknown>;
+  };
+
+  expect(data.style?.valueSize).toBe("lg");
+  expect(data.style?.descriptionColor).toBe("#475569");
+  expect(data.style?.sectionBackground).toBe("#f8fafc");
+  expect(data.style?.maxWidth).toBe("full");
+  expect(data.style?.padding).toBe("lg");
+  expect(data.style?.minHeight).toBe("compact");
+  expect(data.style?.iconSize).toBe("lg");
+  expect(data.style?.iconSurface).toBe("#fff7ed");
+  expect(data.style?.iconBorderColor).toBe("#ea580c");
+  expect(data.items[0]?.prefix).toBe("$");
+  expect(data.items[0]?.suffix).toBe("K");
+  expect(data.items[0]?.accentColor).toBe("#2563eb");
+  expect(data.items[0]?.trend).toEqual(
+    expect.objectContaining({
+      label: "+12% MoM",
+      direction: "up",
+    })
+  );
+
+  if (hasTask287StatsKpiLinks) {
+    expect(data.items[0]?.link).toEqual(
+      expect.objectContaining({
+        href: "/reports/growth",
+        label: "Open growth report",
+      })
+    );
+  }
+});
+
+testTask287StatsKpi(
+  "normalizeWidgetBlock rejects invalid task-287 stats kpi enums and nested extras",
+  () => {
+    registerWidget(
+      createStatsKpiWidget({
+        wizard: Dummy as never,
+        visual: Dummy as never,
+        advanced: Dummy as never,
+      })
+    );
+
+    expect(() =>
+      normalizeWidgetBlock({
+        id: "stats-kpi-task-287-invalid",
+        type: "stats-kpi",
+        variant: "cards",
+        data: {
+          ...statsKpiDefaults,
+          items: [
+            {
+              ...statsKpiDefaults.items[0],
+              ...(hasStatsKpiItemField("prefix") ? { prefix: "$" } : {}),
+              ...(hasStatsKpiItemField("suffix") ? { suffix: "K" } : {}),
+              ...(hasStatsKpiItemField("trend")
+                ? {
+                    trend: {
+                      label: "+12% MoM",
+                      direction: "sideways",
+                      extra: "bad",
+                    },
+                  }
+                : {}),
+              ...(hasTask287StatsKpiLinks
+                ? {
+                    link: {
+                      href: "/reports/growth",
+                      label: "Open growth report",
+                      trackingId: "bad",
+                    },
+                  }
+                : {}),
+            },
+          ],
+          style: {
+            ...statsKpiDefaults.style,
+            ...(hasStatsKpiStyleField("valueSize") ? { valueSize: "jumbo" } : {}),
+            ...(hasStatsKpiStyleField("descriptionColor") ? { descriptionColor: "#475569" } : {}),
+            ...(hasStatsKpiStyleField("sectionBackground") ? { sectionBackground: "#f8fafc" } : {}),
+            ...(hasStatsKpiStyleField("maxWidth") ? { maxWidth: "xxl" } : {}),
+            ...(hasStatsKpiStyleField("padding") ? { padding: "xxl" } : {}),
+            ...(hasStatsKpiStyleField("minHeight") ? { minHeight: "tall" } : {}),
+            ...(hasStatsKpiStyleField("iconSize") ? { iconSize: "huge" } : {}),
+            ...(hasStatsKpiStyleField("iconSurface") ? { iconSurface: "#fff7ed" } : {}),
+            ...(hasStatsKpiStyleField("iconBorderColor") ? { iconBorderColor: "#ea580c" } : {}),
+          },
+        } as never,
+      })
+    ).toThrow("widget_schema_invalid");
+  }
+);

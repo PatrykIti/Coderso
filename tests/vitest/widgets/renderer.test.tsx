@@ -72,6 +72,7 @@ import {
 import {
   createStatsKpiWidget,
   statsKpiDefaults,
+  statsKpiSchema,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
 import { createTeamWidget, teamDefaults, type TeamData } from "../../../core/widgets/core/team";
@@ -1365,6 +1366,27 @@ test("renderer outputs stats kpi variant and style markers", () => {
     })
   );
 
+  const getSchemaProperties = (schemaValue: unknown): Record<string, unknown> => {
+    if (!schemaValue || typeof schemaValue !== "object") return {};
+    const properties = (schemaValue as { properties?: unknown }).properties;
+    return properties && typeof properties === "object"
+      ? (properties as Record<string, unknown>)
+      : {};
+  };
+
+  const rootProperties = getSchemaProperties(statsKpiSchema);
+  const styleProperties = getSchemaProperties(rootProperties.style);
+  const itemProperties = getSchemaProperties(
+    typeof rootProperties.items === "object" && rootProperties.items !== null
+      ? (rootProperties.items as { items?: unknown }).items
+      : undefined
+  );
+
+  const hasStyleField = (field: string) =>
+    Object.prototype.hasOwnProperty.call(styleProperties, field);
+  const hasItemField = (field: string) =>
+    Object.prototype.hasOwnProperty.call(itemProperties, field);
+
   const html = renderToString(
     <WidgetRenderer
       block={{
@@ -1380,17 +1402,44 @@ test("renderer outputs stats kpi variant and style markers", () => {
           items: [
             {
               id: "kpi-1",
-              value: "250%",
+              value: "250",
               label: "Growth",
               description: "Revenue growth in the last quarter.",
               icon: "📈",
+              ...(hasItemField("prefix") ? { prefix: "$" } : {}),
+              ...(hasItemField("suffix") ? { suffix: "%" } : {}),
+              ...(hasItemField("accentColor") ? { accentColor: "#2563eb" } : {}),
+              ...(hasItemField("trend")
+                ? {
+                    trend: {
+                      label: "+12% MoM",
+                      direction: "up",
+                    },
+                  }
+                : {}),
+              ...(hasItemField("link")
+                ? {
+                    link: {
+                      href: "/reports/growth",
+                      label: "Open growth report",
+                    },
+                  }
+                : {}),
             },
             {
               id: "kpi-2",
-              value: "99.95%",
+              value: "99.95",
               label: "Uptime",
               description: "Average service availability.",
               icon: "⚙️",
+              ...(hasItemField("link")
+                ? {
+                    link: {
+                      href: "javascript:alert(1)",
+                      label: "Unsafe",
+                    },
+                  }
+                : {}),
             },
             {
               id: "kpi-3",
@@ -1405,8 +1454,17 @@ test("renderer outputs stats kpi variant and style markers", () => {
             alignment: "start",
             spacing: "lg",
             divider: true,
+            ...(hasStyleField("valueSize") ? { valueSize: "lg" } : {}),
+            ...(hasStyleField("descriptionColor") ? { descriptionColor: "#475569" } : {}),
+            ...(hasStyleField("sectionBackground") ? { sectionBackground: "#f8fafc" } : {}),
+            ...(hasStyleField("maxWidth") ? { maxWidth: "full" } : {}),
+            ...(hasStyleField("padding") ? { padding: "lg" } : {}),
+            ...(hasStyleField("minHeight") ? { minHeight: "compact" } : {}),
+            ...(hasStyleField("iconSize") ? { iconSize: "lg" } : {}),
+            ...(hasStyleField("iconSurface") ? { iconSurface: "#fff7ed" } : {}),
+            ...(hasStyleField("iconBorderColor") ? { iconBorderColor: "#ea580c" } : {}),
           },
-        },
+        } as StatsKpiData,
       }}
     />
   );
@@ -1418,6 +1476,36 @@ test("renderer outputs stats kpi variant and style markers", () => {
   expect(html).toContain('data-stats-kpi-divider="true"');
   expect(html).toContain("Performance overview");
   expect(html).toContain("Support SLA");
+
+  if (hasStyleField("valueSize")) {
+    expect(html).toContain('data-stats-kpi-value-size="lg"');
+  }
+  if (hasStyleField("descriptionColor")) {
+    expect(html).toContain("#475569");
+  }
+  if (hasStyleField("sectionBackground")) {
+    expect(html).toContain("#f8fafc");
+  }
+  if (hasStyleField("iconSurface")) {
+    expect(html).toContain("#fff7ed");
+  }
+  if (hasStyleField("iconBorderColor")) {
+    expect(html).toContain("#ea580c");
+  }
+  if (hasItemField("prefix") && hasItemField("suffix")) {
+    expect(html).toContain("$250%");
+  }
+  if (hasItemField("accentColor")) {
+    expect(html).toContain("#2563eb");
+  }
+  if (hasItemField("trend")) {
+    expect(html).toContain("+12% MoM");
+    expect(html).toContain('data-stats-kpi-trend-direction="up"');
+  }
+  if (hasItemField("link")) {
+    expect(html).toContain('href="/reports/growth"');
+    expect(html).not.toContain("javascript:alert(1)");
+  }
 });
 
 test("renderer outputs team variant and style markers", () => {

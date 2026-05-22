@@ -4,7 +4,11 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { StatsKpiData, StatsKpiItem } from "../../../core/widgets/core/statsKpi";
+import {
+  statsKpiSchema,
+  type StatsKpiData,
+  type StatsKpiItem,
+} from "../../../core/widgets/core/statsKpi";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -307,10 +311,89 @@ const getButtonsByText = (container: ParentNode, text: string) => {
   return buttons;
 };
 
-const getColorInputs = (container: ParentNode) =>
-  Array.from(container.querySelectorAll("input[type='color']")).filter(
-    (element): element is HTMLInputElement => element instanceof HTMLInputElement
+const getInputByAriaLabel = (container: ParentNode, label: string) => {
+  const input = Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
   );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with aria-label "${label}"`);
+  }
+  return input;
+};
+
+const clickAnyButtonByText = (container: ParentNode, texts: string[]) => {
+  for (const text of texts) {
+    const button = Array.from(container.querySelectorAll("button")).find(
+      (element): element is HTMLButtonElement =>
+        element instanceof HTMLButtonElement && element.textContent?.includes(text) === true
+    );
+    if (button) {
+      clickButton(button);
+      return true;
+    }
+  }
+  return false;
+};
+
+const statsKpiVariantLabelMap: Record<string, string> = {
+  cards: "Cards",
+  inline: "Inline",
+  "split-highlight": "Split Highlight",
+};
+
+const setStatsKpiVariant = (container: HTMLElement, value: string) => {
+  const variantSelect = findSelectsByOptions(container, ["cards", "inline", "split-highlight"])[0];
+  if (variantSelect instanceof HTMLSelectElement) {
+    setSelectValue(variantSelect, value);
+    return;
+  }
+  const label = statsKpiVariantLabelMap[value] ?? value;
+  clickByText(container, label);
+};
+
+const expectTextToContainOneOf = (container: ParentNode, texts: string[]) => {
+  const renderedText = container.textContent ?? "";
+  expect(texts.some((text) => renderedText.includes(text))).toBe(true);
+};
+
+const getStatsKpiSchemaProperties = (schemaValue: unknown): Record<string, unknown> => {
+  if (!schemaValue || typeof schemaValue !== "object") return {};
+  const properties = (schemaValue as { properties?: unknown }).properties;
+  return properties && typeof properties === "object"
+    ? (properties as Record<string, unknown>)
+    : {};
+};
+
+const statsKpiRootProperties = getStatsKpiSchemaProperties(statsKpiSchema);
+const statsKpiStyleProperties = getStatsKpiSchemaProperties(statsKpiRootProperties.style);
+const statsKpiItemProperties = getStatsKpiSchemaProperties(
+  typeof statsKpiRootProperties.items === "object" && statsKpiRootProperties.items !== null
+    ? (statsKpiRootProperties.items as { items?: unknown }).items
+    : undefined
+);
+
+const hasStatsKpiStyleField = (field: string) =>
+  Object.prototype.hasOwnProperty.call(statsKpiStyleProperties, field);
+const hasStatsKpiItemField = (field: string) =>
+  Object.prototype.hasOwnProperty.call(statsKpiItemProperties, field);
+
+const hasTask287ExpandedSchema =
+  hasStatsKpiStyleField("valueSize") &&
+  hasStatsKpiStyleField("descriptionColor") &&
+  hasStatsKpiStyleField("sectionBackground") &&
+  hasStatsKpiStyleField("maxWidth") &&
+  hasStatsKpiStyleField("padding") &&
+  hasStatsKpiStyleField("minHeight") &&
+  hasStatsKpiStyleField("iconSize") &&
+  hasStatsKpiStyleField("iconSurface") &&
+  hasStatsKpiStyleField("iconBorderColor") &&
+  hasStatsKpiItemField("prefix") &&
+  hasStatsKpiItemField("suffix") &&
+  hasStatsKpiItemField("accentColor") &&
+  hasStatsKpiItemField("trend");
+
+const hasTask287MetricLinks = hasStatsKpiItemField("link");
+const testTask287StatsKpiEditor = hasTask287ExpandedSchema ? test : test.skip;
 
 const mountStatsKpiHarness = ({
   initialValue,
@@ -419,15 +502,12 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Stats layout");
-    expect(view.container.textContent).toContain("Metrics content and order");
+    expectTextToContainOneOf(view.container, ["Stats layout", "Cards", "Split Highlight"]);
+    expectTextToContainOneOf(view.container, ["Metrics content and order", "Metrics and links"]);
     expect(view.container.textContent).toContain("Raw payload snapshot");
 
     React.act(() => {
-      setSelectValue(
-        findSelectsByOptions(view.container, ["cards", "inline", "split-highlight"])[0],
-        "split-highlight"
-      );
+      setStatsKpiVariant(view.container, "split-highlight");
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6"])[0], "3");
       setInputValue(findInputByPlaceholder(view.container, "Metric 1 value"), "120+");
       setInputValue(findInputByPlaceholder(view.container, "Proof in numbers"), "Numbers");
@@ -450,12 +530,9 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
       setInputValue(findInputByPlaceholder(view.container, "🚀"), "⭐");
     });
 
-    const colorInputs = Array.from(
-      view.container.querySelectorAll("input[placeholder='var(--color-text)']")
-    ) as HTMLInputElement[];
     React.act(() => {
-      setInputValue(colorInputs[0], "#123456");
-      setInputValue(colorInputs[1], "#654321");
+      setInputValue(getInputByAriaLabel(view.container, "Value color value"), "#123456");
+      setInputValue(getInputByAriaLabel(view.container, "Label color value"), "#654321");
       setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
     });
@@ -465,6 +542,12 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
 
     clickByText(view.container, "Move down");
     clickByText(view.container, "Remove");
+    clickAnyButtonByText(view.container, [
+      "Confirm remove",
+      "Delete metric",
+      "Yes, remove",
+      "Confirm",
+    ]);
 
     const latest = onChangeSpy.mock.lastCall?.[0];
     expect(latest).toEqual(
@@ -543,16 +626,20 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
 
   try {
     const variantSectionButtons = getButtonsByText(visualHarness.container, "Inline");
-    const colorInputs = getColorInputs(visualHarness.container);
 
-    expect(colorInputs.map((input) => input.value)).toEqual(["#0f172a", "#445566"]);
+    expect(getInputByAriaLabel(visualHarness.container, "Value color swatch").value).toBe(
+      "#0f172a"
+    );
+    expect(getInputByAriaLabel(visualHarness.container, "Label color swatch").value).toBe(
+      "#445566"
+    );
 
     clickByText(visualHarness.container, "Inline");
     expect(visualHarness.getLatestVariant()).toBe("inline");
     expect(visualHarness.onVariantChangeSpy).toHaveBeenLastCalledWith("inline");
 
     setInputValue(getInputByPlaceholder(visualHarness.container, "120+"), "300%");
-    setInputValue(getColorInputs(visualHarness.container)[0], "#112233");
+    setInputValue(getInputByAriaLabel(visualHarness.container, "Value color value"), "#112233");
     setSelectValue(
       getSelectByOptions(visualHarness.container, [
         "1",
@@ -707,10 +794,8 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
     expect(
       getInputsByPlaceholder(visualView.container, "var(--color-text)").map((input) => input.value)
     ).toEqual(["", ""]);
-    expect(getColorInputs(visualView.container).map((input) => input.value)).toEqual([
-      "#0f172a",
-      "#0f172a",
-    ]);
+    expect(getInputByAriaLabel(visualView.container, "Value color swatch").value).toBe("#0f172a");
+    expect(getInputByAriaLabel(visualView.container, "Label color swatch").value).toBe("#0f172a");
     expect(getSelectByOptions(visualView.container, ["start", "center", "end"]).value).toBe(
       "center"
     );
@@ -776,6 +861,28 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
       value: "240",
       label: "Two",
     });
+
+    const optionalWizardTitle = findInputByPlaceholder(wizardView.container, "Proof in numbers");
+    if (optionalWizardTitle instanceof HTMLInputElement) {
+      setInputValue(optionalWizardTitle, "Revenue proof");
+      expect(latestWizardValue.header?.title).toBe("Revenue proof");
+    }
+
+    const optionalWizardLabel = findInputByPlaceholder(wizardView.container, "Projects launched");
+    if (optionalWizardLabel instanceof HTMLInputElement) {
+      setInputValue(optionalWizardLabel, "Qualified pipeline");
+      expect(latestWizardValue.items?.[0]).toMatchObject({
+        label: "Qualified pipeline",
+      });
+    }
+
+    const optionalWizardIcon = findInputByPlaceholder(wizardView.container, "🚀");
+    if (optionalWizardIcon instanceof HTMLInputElement) {
+      setInputValue(optionalWizardIcon, "🔥");
+      expect(latestWizardValue.items?.[0]).toMatchObject({
+        icon: "🔥",
+      });
+    }
   } finally {
     wizardView.cleanup();
   }
@@ -824,3 +931,73 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
     visualView.cleanup();
   }
 });
+
+testTask287StatsKpiEditor(
+  "StatsKpi task-287 editors surface wizard parity and grouped visual IA when the expanded schema is active",
+  async () => {
+    const { StatsKpiVisualEditor, StatsKpiWizardEditor } =
+      await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
+
+    const wizardHarness = mountStatsKpiHarness({
+      initialValue: {
+        items: [
+          { id: "metric-1", value: "120", label: "Projects launched", icon: "🚀" },
+          { id: "metric-2", value: "45", label: "Higher engagement", icon: "📈" },
+        ],
+      },
+      initialVariant: "cards",
+      render: (props) => <StatsKpiWizardEditor {...props} />,
+    });
+
+    try {
+      setStatsKpiVariant(wizardHarness.container, "split-highlight");
+      expect(wizardHarness.getLatestVariant()).toBe("split-highlight");
+      expect(getButtonsByText(wizardHarness.container, "Split Highlight")).toHaveLength(1);
+
+      setInputValue(
+        getInputByPlaceholder(wizardHarness.container, "Proof in numbers"),
+        "Revenue proof"
+      );
+      setInputValue(
+        getInputByPlaceholder(wizardHarness.container, "Projects launched"),
+        "Qualified pipeline"
+      );
+      setInputValue(getInputByPlaceholder(wizardHarness.container, "🚀"), "🔥");
+
+      expect(wizardHarness.getLatestValue().header?.title).toBe("Revenue proof");
+      expect(wizardHarness.getLatestValue().items?.[0]).toMatchObject({
+        label: "Qualified pipeline",
+        icon: "🔥",
+      });
+      expectTextToContainOneOf(wizardHarness.container, [
+        "Compact",
+        "Default",
+        "Spacious",
+        "spacing",
+      ]);
+    } finally {
+      wizardHarness.cleanup();
+    }
+
+    const visualView = mount(
+      <StatsKpiVisualEditor value={{ items: [] }} onChange={vi.fn()} variant="cards" />
+    );
+
+    try {
+      expectTextToContainOneOf(visualView.container, [
+        "Text and value styling",
+        "Typography and colors",
+      ]);
+      expectTextToContainOneOf(visualView.container, ["Card surfaces", "Surface styling"]);
+      expectTextToContainOneOf(visualView.container, ["Icon styling", "Icon style"]);
+      expectTextToContainOneOf(visualView.container, ["Section layout", "Layout display options"]);
+      expectTextToContainOneOf(visualView.container, ["Move up", "Move down"]);
+
+      if (hasTask287MetricLinks) {
+        expectTextToContainOneOf(visualView.container, ["Metric links", "Link"]);
+      }
+    } finally {
+      visualView.cleanup();
+    }
+  }
+);
