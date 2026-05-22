@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256
-**Status:** To Do
+**Status:** In Progress (2026-05-22)
 
 ---
 
@@ -15,9 +15,9 @@
 Create the Tabs-specific follow-up family for
 `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md`.
 
-TASK-256 owns shared widget-contract drift from the Playwright reports. This
-family deliberately excludes shared fixes and keeps only product scope that
-belongs to the standalone `tabs` layout widget:
+TASK-256 owns the already-landed shared widget-contract drift from the
+Playwright reports. This family deliberately excludes shared fixes and keeps
+only product scope that belongs to the standalone `tabs` layout widget:
 
 - `core/widgets/core/tabs.tsx`
 - `core/admin/ui/widgets/editors/TabsEditors.tsx`
@@ -34,14 +34,20 @@ duplicating them locally.
 TASK-288 must not re-open general widget-contract work already routed through
 TASK-256:
 
-- duplicate DOM IDs, instance-safe tab/panel relationships, shared tablist
-  `aria-label`, tabpanel `tabIndex`, and keyboard binding ownership remain
-  TASK-256-04 plus TASK-256-05-04;
+- duplicate DOM IDs, instance-safe tab/panel relationships, and shared
+  keyboard binding ownership remain historical TASK-256-04 plus TASK-256-05-04
+  evidence that TASK-288 consumes but does not reimplement;
 - public placeholder gating and friendly repeatable slot labels remain
   TASK-256-03 plus TASK-256-05-04;
 - generic clear/none token semantics, clearable color-field helpers, and shared
   color-picker behavior remain TASK-256-02;
 - report-wide fixed/deferred classification for shared rows remains TASK-256-08.
+
+TASK-288 also must not silently absorb newly rediscovered shared-contract drift.
+The current branch still lacks the final shared Tabs tablist/panel accessibility
+adoption (`aria-label` + `tabIndex`) even though TASK-256 is closed, so those
+rows are extracted into `TASK-328` instead of being hidden inside the Tabs
+product family.
 
 If a TASK-288 implementation leaf discovers that a desired Tabs product feature
 requires a shared page-builder, slot, runtime binding, or generic editor-control
@@ -52,7 +58,8 @@ this family.
 
 | Report rows | Owner | TASK-288 action |
 |---|---|---|
-| C2, W4, W5, R2, R3, R4, R6 | TASK-256-04 / TASK-256-05-04 | Excluded. Instance-safe IDs and ARIA relationships are shared interactive runtime work. |
+| C2, R4 | TASK-256-04 / TASK-256-05-04 | Excluded. Instance-safe IDs and shared runtime root scoping already belong to the closed TASK-256 contract and must not be reimplemented here. |
+| W4, W5, R2, R3, R6 | TASK-328 | Excluded. The shared tablist accessible-name and tabpanel keyboard-reachability residuals were rediscovered during TASK-288 audit and are now tracked as a separate shared follow-up instead of being overclaimed by TASK-288. |
 | TASK-256 slot placeholder evidence around empty panels | TASK-256-03 / TASK-256-05-04 | Excluded. Public placeholder gating and technical slot-label cleanup stay shared. |
 | Generic clear-token/color-picker semantics connected to Tabs colors | TASK-256-02 | Excluded. TASK-288 may consume the final helper, not reimplement it. |
 | C1, U2, U7, U8 | TASK-288-01 | Add Tabs-specific Visual color parity, readable labels, section IA, and contrast guidance using the shared color-control model. |
@@ -169,8 +176,9 @@ This umbrella does not add API routes.
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_TABS_WIDGET.md` is either routed to
-  TASK-256, implemented by a TASK-288 leaf, or explicitly deferred in the
-  closure leaf with a reason.
+  TASK-256 historical evidence, routed to TASK-328 shared residual follow-up,
+  implemented by a TASK-288 leaf, or explicitly deferred in the closure leaf
+  with a reason.
 - TASK-288 leaves do not duplicate implementation already owned by TASK-256.
 - Tabs schema, defaults, normalizer, render, editor, tests, docs, and report
   evidence move together for every new product field.

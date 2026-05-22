@@ -32,15 +32,14 @@ must keep Tabs item data and editor controls local.
 
 ## Sub-Tasks
 
-- [ ] Split or rename the current `description` semantics so the editor tells
-  users where the text renders. Preferred path: preserve legacy
-  `description` as `panelIntro` during normalization, then expose a separate
-  `triggerDescription` only if runtime will render it near the trigger.
+- [ ] Preserve legacy `description` as `panelIntro` during normalization and
+  rename the editor field to `Panel intro text`; add a separate optional
+  `triggerDescription` rendered as plain-text subtitle copy near the trigger.
 - [ ] Add a bounded trigger icon/emoji field with schema/defaults/normalizer,
   editor controls, runtime rendering, and tests.
 - [ ] Add `disabled` as a persisted boolean on `TabsItem` with editor controls,
-  runtime `aria-disabled`, keyboard/click exclusion, and safe fallback when the
-  default tab is disabled.
+  runtime `aria-disabled`, keyboard/click exclusion, and a deterministic safe
+  fallback that re-enables the first item if external data disables every tab.
 - [ ] Preserve backward compatibility for existing payloads that only contain
   `description`.
 - [ ] Keep item IDs stable and continue rejecting unknown item fields through
@@ -97,19 +96,31 @@ Runtime flow:
 ```ts
 function handleTriggerActivation(trigger: HTMLElement) {
   if (trigger.getAttribute("aria-disabled") === "true") return;
-  const activeId = trigger.getAttribute("data-nextless-tabs-id");
+  const activeId = trigger.getAttribute("data-coderso-tabs-id");
   if (activeId) syncState(root, activeId);
 }
 ```
 
 Error handling:
 
-- If all tabs are disabled, normalization must keep one reachable fallback tab
-  or the editor must prevent saving that state.
+- If all tabs are disabled, normalization re-enables the first item and
+  resolves active/default state to it so the widget never becomes unreachable.
 - Disabled default tabs fall back to the first enabled tab without deleting the
-  user's saved default choice until the user edits it.
+  user's saved default choice until the user edits it. Disabled panels stay
+  hidden and out of the activation model until their trigger is re-enabled.
 - Icon/emoji input must be bounded and rendered as text or from a safe enum; do
   not support raw SVG/HTML.
+
+## Regression Test Shape
+
+- `tests/vitest/widgets/tabs.test.tsx`: assert legacy `description` becomes
+  panel intro, trigger subtitle/icon render as plain text only, disabled tabs
+  are skipped by click/keyboard activation, and external all-disabled payloads
+  normalize back to one enabled tab.
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: assert item controls for panel
+  intro, trigger subtitle, icon, and disabled state plus truthful helper copy.
+- `tests/unit/widgets/validator.test.ts`: extend schema coverage for new item
+  keys and unknown-field rejection.
 
 ## Security Contract
 
@@ -152,5 +163,6 @@ No API routes are added.
 - Existing `description` payloads still render predictably after the final
   description semantics are chosen.
 - Disabled tabs are announced, skipped by activation, and cannot become the only
-  unreachable active panel.
+  unreachable active panel because normalization always preserves one enabled
+  fallback tab.
 - No unsafe HTML/script path is introduced through item metadata.

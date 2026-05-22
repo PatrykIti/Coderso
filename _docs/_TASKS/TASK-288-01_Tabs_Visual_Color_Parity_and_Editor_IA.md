@@ -110,6 +110,17 @@ Error handling:
 - Contrast guidance is advisory only; it must not block saving existing widget
   data or mutate persisted colors silently.
 
+## Regression Test Shape
+
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: assert separate `Layout` and
+  `Colors` sections, title-case alignment/orientation options, visible
+  `Inactive text color`, and advisory contrast warning copy for identical token
+  pairs.
+- `tests/vitest/widgets/tabs.test.tsx`: only extend when defaults or clearable
+  style behavior changes; verify SSR stays stable for legacy payloads.
+- `tests/unit/widgets/validator.test.ts`: only extend when schema/value
+  bounding changes, and assert unknown style keys still fail.
+
 ## Security Contract
 
 No API routes are added.

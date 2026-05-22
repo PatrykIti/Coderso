@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 137 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 138 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1865 tasks
 
 ---
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Shared follow-up extracted during TASK-288 audit: current branch still lacks the final Tabs tablist accessible-name and tabpanel keyboard-reachability adoption promised by the closed TASK-256 contract |
 | TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
@@ -71,7 +72,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Add Team section background, eyebrow, typography, CTA, border-width, and contrast feedback after TASK-256 baselines |
 | TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Decide and implement or explicitly defer bounded large-team and compact-mobile presentation behavior |
 | TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Refresh Team report/docs/changelog/board and final validation evidence |
-| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Tabs-only follow-up family for `REPORT_TABS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Add inactive text color, readable labels, section IA, and contrast guidance through shared color-control policy |
 | TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe tab-count impact copy |
 | TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Make admin preview switch panels and prevent duplicate Tabs runtime payload after TASK-256 instance-safe selectors |
@@ -181,6 +181,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): isolated task-family worktree is active, shared accessibility residuals were extracted into `TASK-328`, and the remaining product leaves are being implemented against the audited scope |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

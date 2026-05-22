@@ -21,8 +21,8 @@ because it aligns along the column main axis instead of positioning triggers
 horizontally. Several other visual choices are also hardcoded:
 `text-sm`, `font-medium`, `space-y-4`, `p-4`, and `gap-2`. The outer widget
 container width is already owned by the shared `WidgetBlock.layout.container`
-contract, so this leaf may only add Tabs-internal width controls where they do
-not duplicate that renderer wrapper.
+contract, so this leaf must close W12 truthfully against that shared owner
+instead of duplicating an outer max-width control inside Tabs.
 
 ## Scope Boundary
 
@@ -42,21 +42,20 @@ spacing/size token helper lands there, this leaf must consume it.
 - [ ] Add bounded trigger typography fields for size and weight.
 - [ ] Add bounded spacing fields for container padding, tablist gap, and
   tablist-to-panel gap.
-- [ ] Decide W12 against the existing shared `WidgetBlock.layout.container`
-  owner; only add a bounded Tabs-owned `innerMaxWidth` or `panelMaxWidth` field
-  if the needed control is inside the Tabs chrome rather than the outer widget
-  wrapper.
-- [ ] Update editor controls in Visual/Advanced and only expose beginner-safe
-  choices in Wizard if TASK-288-02 decides they belong there.
+- [ ] Close W12 by documenting and consuming the existing shared
+  `WidgetBlock.layout.container` owner; do not add a duplicate outer max-width
+  control in Tabs for this leaf.
+- [ ] Keep the new overflow, typography, and spacing controls in Visual/Advanced;
+  Wizard remains limited to the beginner layout shortcuts from TASK-288-02.
 - [ ] Preserve existing default rendering for legacy payloads.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/tabs.tsx` | Extend schema/defaults/normalizer and runtime class maps for alignment, overflow, typography, spacing, and any Tabs-internal width field. |
-| `core/admin/ui/widgets/editors/TabsEditors.tsx` | Add bounded controls with labels that explain orientation-specific alignment. |
-| `tests/vitest/widgets/tabs.test.tsx` | Add normalization and SSR assertions for vertical alignment, overflow, typography, spacing, and any Tabs-internal width field. |
+| `core/widgets/core/tabs.tsx` | Extend schema/defaults/normalizer and runtime class maps for alignment, overflow, typography, and spacing while keeping outer width owned by the shared layout container contract. |
+| `core/admin/ui/widgets/editors/TabsEditors.tsx` | Add bounded controls with labels that explain orientation-specific alignment and preserve Wizard scope boundaries. |
+| `tests/vitest/widgets/tabs.test.tsx` | Add normalization and SSR assertions for vertical alignment, overflow, typography, spacing, and truthful no-duplicate handling of outer width ownership. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | Add editor coverage for new controls and enum persistence. |
 | `tests/unit/widgets/validator.test.ts` | Run and update for new schema fields. |
 
@@ -79,7 +78,7 @@ function resolveTablistClassName(options: NormalizedTabsOptions) {
   const orientation = options.orientation ?? "horizontal";
   const alignment = options.alignment ?? "start";
   return joinClasses(
-    orientation === "vertical" ? "flex flex-col" : resolveHorizontalOverflow(options.overflow),
+    orientation === "vertical" ? "flex flex-col" : resolveHorizontalOverflow(options.triggerOverflow),
     resolveGapClass(options.triggerGap),
     orientation === "vertical"
       ? verticalAlignmentClassMap[alignment]
@@ -93,7 +92,6 @@ Data model shape:
 ```ts
 type TabsLayoutOptions = {
   triggerOverflow?: "wrap" | "scroll";
-  innerMaxWidth?: "full" | "3xl" | "5xl" | "readable";
   containerPadding?: "sm" | "md" | "lg";
   triggerGap?: "sm" | "md" | "lg";
   panelGap?: "sm" | "md" | "lg";
@@ -109,9 +107,21 @@ Error handling:
   hide active triggers from horizontal scrolling.
 - Vertical orientation must ignore horizontal wrapping choices that do not
   apply.
-- Tabs-owned width fields must be named and rendered as inner/panel width only;
-  use the existing `layout.container` wrapper for outer widget width.
+- Outer width remains owned by the existing `layout.container` wrapper; this
+  leaf must not introduce a second max-width control for the Tabs shell.
 - No raw Tailwind class names are persisted.
+
+## Regression Test Shape
+
+- `tests/vitest/widgets/tabs.test.tsx`: assert vertical alignment maps to
+  `items-*`, `triggerOverflow` chooses wrap vs scroll behavior, typography and
+  spacing enums normalize safely, and no duplicate outer width control appears in
+  renderer output.
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: assert Visual/Advanced controls
+  for overflow, text size/weight, gap, and padding persist bounded values while
+  Wizard stays limited to TASK-288-02 layout shortcuts.
+- `tests/unit/widgets/validator.test.ts`: extend schema coverage for every new
+  layout/style key and reject unknown enum values.
 
 ## Security Contract
 
@@ -149,8 +159,9 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Vertical Tabs alignment behaves according to the visible alignment control.
-- Overflow, typography, spacing, and any Tabs-internal width controls are
-  bounded and tested.
+- Overflow, typography, and spacing controls are bounded and tested, and W12
+  closes truthfully through the shared outer-width owner instead of a duplicate
+  Tabs-local control.
 - Legacy Tabs render with the same default visual shape unless users opt into
   new fields.
 - No raw class-string persistence or shared token duplication is introduced.

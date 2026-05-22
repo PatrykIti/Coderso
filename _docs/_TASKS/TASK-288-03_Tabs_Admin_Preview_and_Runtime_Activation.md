@@ -32,8 +32,8 @@ here.
 
 ## Sub-Tasks
 
-- [ ] Replace any selector assumptions that depend on the old
-  `data-nextless-tabs="1"` or duplicate trigger/panel IDs after TASK-256 lands
+- [ ] Replace any selector assumptions that still depend on legacy runtime
+  namespaces or stale trigger/panel lookup logic after TASK-256 lands
   instance-safe values.
 - [ ] Make the admin preview switch panels without requiring parser-executed
   inline scripts.
@@ -43,7 +43,8 @@ here.
   scoped root according to the final TASK-256 contract.
 - [ ] Avoid duplicate inline script payloads when multiple Tabs widgets render
   on the same page, or explicitly consume the shared runtime payload helper if
-  TASK-256 provides it.
+  one already exists on the branch. If that helper does not exist, split the
+  transport/dedupe mechanism to a new shared task before marking W6 fixed.
 - [ ] Add an explicit script `type` only if the final render path still emits an
   inline script tag.
 
@@ -51,9 +52,10 @@ here.
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/tabs.tsx` | Add a Tabs-local preview activation path or consume shared runtime helper; remove duplicate script output once shared path exists. |
-| `tests/vitest/widgets/tabs.test.tsx` | Add SSR marker/script de-duplication, state marker, hidden-state assertions, and a happy-dom/client-render preview activation test that renders `TabsBlock` or `WidgetRenderer` with `previewDevice`. |
-| `tests/vitest/ui/tabs-editor-wave.test.tsx` | Keep editor-form coverage only unless the suite is intentionally expanded beyond editor controls; do not rely on this suite as the sole admin-preview interaction proof. |
+| `core/widgets/core/tabs.tsx` | Add a Tabs-local preview activation path or consume a shared runtime helper; remove duplicate script output only if a shared transport helper exists on the branch or is split before implementation. |
+| `tests/vitest/widgets/tabs.test.tsx` | Add SSR marker/state assertions for the public renderer and any runtime transport branch that remains local to Tabs. |
+| `tests/vitest/ui-integration/tabs-preview-activation.test.tsx` | Add the Bun-free client-render proof for admin preview activation, active-state updates, and hidden-state parity when `previewDevice`/editor preview is active. |
+| `tests/vitest/ui/tabs-editor-wave.test.tsx` | Keep editor-form coverage only; do not rely on this suite as the sole admin-preview interaction proof. |
 
 ## Implementation Pseudocode
 
@@ -89,11 +91,11 @@ function TabsBlock({
   const rootId = normalizeTabsRootId(blockId);
 
   return (
-    <div data-nextless-tabs={rootId} data-nextless-tabs-active-id={activeId}>
+    <div data-coderso-tabs={rootId} data-coderso-tabs-active-id={activeId}>
       {panels.map((panel) => (
         <button
           type="button"
-          data-nextless-tabs-trigger
+          data-coderso-tabs-trigger
           onClick={isReactPreview ? () => setPreviewActiveId(panel.instanceId) : undefined}
           aria-selected={panel.instanceId === activeId}
         />
@@ -113,6 +115,13 @@ function TabsBlock({
 }
 ```
 
+Runtime transport note:
+
+- Preview interaction proof must live in a dedicated Bun-free UI integration
+  suite under `tests/vitest/ui-integration/*`.
+- Public script transport de-duplication must either use an existing
+  request-scoped helper or move to a shared follow-up task before W6 is closed.
+
 Error handling:
 
 - Preview state must reset to a valid panel if item count changes and the active
@@ -122,6 +131,18 @@ Error handling:
 - Missing panel slots still fall back to normalized panels.
 - Runtime selectors must ignore unknown or malformed roots rather than throwing.
 - Multiple Tabs widgets on one page must not share mutable active state.
+
+## Regression Test Shape
+
+- `tests/vitest/ui-integration/tabs-preview-activation.test.tsx`: client-render
+  `TabsBlock`/`WidgetRenderer` with preview context, click and keyboard-switch
+  tabs, and assert active panel visibility changes without relying on parser
+  execution of inline `<script>`.
+- `tests/vitest/widgets/tabs.test.tsx`: assert public SSR markers, whichever
+  runtime transport branch remains local to Tabs, and no regression in root-
+  scoped active-state markers.
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: keep only existing editor-form
+  regressions so preview activation proof does not drift back into form tests.
 
 ## Security Contract
 
@@ -137,10 +158,10 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui-integration/tabs-preview-activation.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx` only for
-  unchanged editor-form regressions; add the admin-preview interaction proof to
-  `tests/vitest/widgets/tabs.test.tsx` or a dedicated UI integration harness that
-  client-renders `TabsBlock`/`WidgetRenderer` with `previewDevice`
+  unchanged editor-form regressions; keep the admin-preview interaction proof in
+  the dedicated UI integration harness
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

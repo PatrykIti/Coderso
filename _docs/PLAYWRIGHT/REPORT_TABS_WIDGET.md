@@ -62,7 +62,7 @@ Skrypt client-side obsługuje:
 |---|---------|--------|------------|
 | C1 | **Brak pola `inactiveTextColor` w edytorze Visual** — pole `inactiveTextColor` istnieje w modelu danych (`TabsData.style.inactiveTextColor`) i ma domyślną wartość `var(--color-text)`. Jednak w `TabsBehaviorSection` (sekcja Layout) brak tego pola — użytkownik NIE MOŻE zmienić koloru nieaktywnych zakładek z edytora Visual, tylko przez Advanced JSON | Edytor Visual | `TabsEditors.tsx:368–444` |
 | C2 | **Kolizja `id` dla wielu instancji Tabs na stronie** — `triggerId = "tabs-trigger-${panel.instanceId}"` i `panelId = "tabs-panel-${panel.instanceId}"`. Gdy na stronie są dwa widgety Tabs oba z instanceId="1", generują duplikaty `id` w DOM (np. `tabs-trigger-1` pojawi się dwa razy), łamiąc ARIA `aria-controls` i `aria-labelledby` | Renderer | `tabs.tsx:452,453` |
-| C3 | **`hidden` attribute conflict między React a runtime JS** — React renderuje `hidden={!isActive}` jako prop, runtime skrypt zarządza `hidden` przez `panel.removeAttribute("hidden")` / `panel.setAttribute("hidden", "")`. W admin preview (React hydration) te dwa mechanizmy mogą wchodzić w konflikt — React może przywrócić `hidden` po JS update | Renderer/Admin | `tabs.tsx:488`, skrypt `L293-304` |
+| C3 | **Admin preview activation / runtime transport mismatch** — w admin preview inline runtime skrypt Tabs nie wykonuje się po wstrzyknięciu przez React, więc widget pozostaje statyczny. Potencjalny konflikt `hidden` pozostaje wtórnym ryzykiem implementacyjnym dopiero po naprawie ścieżki aktywacji preview. | Renderer/Admin | `tabs.tsx:488`, skrypt `L293-304` |
 
 ### 3.2 Ważne (ograniczają zakres konfiguracji)
 
@@ -281,7 +281,7 @@ Vertical tabs na mobile — tablist `nowrap`, 2 triggery jeden pod drugim. Layou
 |-----------|---|---------|-------|
 | 🔴 KRYTYCZNY | C1 | **Brak pola `inactiveTextColor` w edytorze Visual** | Użytkownik NIE MOŻE zmienić koloru nieaktywnych zakładek z Visual editora |
 | 🔴 KRYTYCZNY | C2 | **Kolizja ID przy wielu instancjach Tabs na stronie** | Złamane ARIA `aria-controls`/`aria-labelledby`, undefined zachowanie DOM |
-| 🔴 KRYTYCZNY | C3 | **Konflikt `hidden` attribute między React a runtime JS** | Możliwy błąd hydration w admin preview |
+| 🔴 KRYTYCZNY | C3 | **Admin preview activation / runtime transport mismatch** | Admin preview pozostaje statyczny i nie pozwala przetestować przełączania zakładek bez publikacji |
 | 🟠 WYSOKI | W1 | **Brak ikony per tab trigger** | Poważne ograniczenie możliwości wizualnych |
 | 🟠 WYSOKI | W3, R1 | **`justify-*` nie działa dla Vertical orientation** | Alignment nie działa poprawnie dla trybu pionowego |
 | 🟠 WYSOKI | W4, R2, R3 | **Brak ARIA** | Niedostępność dla screen readerów |
@@ -296,6 +296,14 @@ Vertical tabs na mobile — tablist `nowrap`, 2 triggery jeden pod drugim. Layou
 ---
 
 ## 8. Sugerowane naprawy
+
+> Uwaga (2026-05-22): poniższe snippet-y to historyczne notatki z audytu. Na
+> aktualnym branchu nie należy ich wykonywać literalnie tam, gdzie kolidują ze
+> wspólnym kontraktem `TASK-256`, routingiem `TASK-288`, albo nowym shared
+> follow-upem `TASK-328`. W szczególności legacy `nextless` naming i lokalne
+> generowanie ID przez `Math.random()` / `crypto.randomUUID()` nie są już
+> obowiązującym guidance dla tej rodziny tasków.
+
 
 ### 8.1 Naprawa C1 (inactiveTextColor brak w edytorze)
 
@@ -394,6 +402,20 @@ className={joinClasses(
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx
   tests/vitest/ui/tabs-editor-wave.test.tsx` passed on 2026-05-17.
+
+---
+
+## Status po audycie TASK-288 (2026-05-22)
+
+- `C2` + `R4` są historycznym shared evidence: instance-safe `coderso` IDs już
+  wylądowały przez `TASK-256-04` + `TASK-256-05-04`, więc nie wolno ich
+  ponownie implementować lokalnie w `TASK-288`.
+- `W4`, `W5`, `R2`, `R3`, i `R6` pozostają shared accessibility residuals, ale
+  po zamknięciu `TASK-256` są teraz śledzone przez `TASK-328`, nie przez rodzinę
+  produktową `TASK-288`.
+- `C3` należy czytać jako bug ścieżki aktywacji admin preview / runtime
+  transportu; samodzielny konflikt `hidden` nie jest jeszcze odizolowanym
+  potwierdzonym repro na branchu.
 
 ---
 

@@ -80,19 +80,30 @@ Closure checklist:
 
 ```md
 - REPORT rows C1/W1/...: fixed by TASK-288 leaf and commit SHA
-- REPORT rows C2/W4/...: routed to TASK-256 leaf and commit SHA or left open
+- REPORT rows C2/R4/...: routed to TASK-256 historical evidence or TASK-328 shared follow-up with current status
 - Docs updated: _docs/_WIDGETS/TABS.md
 - Validation: exact commands and result
 ```
 
 Error handling:
 
-- If a shared TASK-256 row is still open, leave it open/routed instead of
-  claiming TASK-288 closure.
+- If a shared TASK-256 or TASK-328 row is still open, leave it open/routed
+  instead of claiming TASK-288 closure.
 - If a validation lane cannot run, record the blocker and keep the task open
   unless the user explicitly accepts closure with that blocker.
 - If `_docs/_TASKS/README.md` has adjacent agent changes, preserve all newer
   unrelated task rows and recompute counts from the final visible tables.
+
+## Regression Test Shape
+
+- Re-read every formal report row ID and record whether it is fixed by a
+  TASK-288 leaf, routed to TASK-256 historical evidence, routed to TASK-328, or
+  explicitly deferred with a reason.
+- Verify `_docs/_WIDGETS/TABS.md`, `_docs/_TASKS/TASK-288*.md`,
+  `_docs/_TASKS/README.md`, and `_docs/_CHANGELOG/README.md` all reflect the
+  same final task state and validation evidence.
+- Re-run the exact targeted lint/test/security commands listed in this leaf and
+  record any unavoidable skips with a concrete blocker.
 
 ## Security Contract
 

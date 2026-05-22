@@ -18,7 +18,9 @@ Add Tabs-specific Wizard guidance from
 The Wizard currently edits variant, tab count, labels, descriptions, and the
 default tab. It does not expose the two layout choices that define the most
 visible Tabs shape, and it does not clearly explain the impact of changing tab
-count on repeatable panel slots.
+count on repeatable panel slots. This leaf resolves the current copy ambiguity
+by renaming the existing legacy `description` input to `Panel intro text`
+without waiting for TASK-288-04.
 
 ## Scope Boundary
 
@@ -36,9 +38,9 @@ not exist, split that helper to TASK-256 instead of adding a Tabs-only duplicate
   `options.alignment` using the same enum values as Visual.
 - [ ] Show a default-tab preview marker beside the item currently selected by
   `defaultItemId`.
-- [ ] Replace the confusing description placeholder with copy that matches the
-  final TASK-288-04 decision (`Panel intro text`, `Trigger subtitle`, or a split
-  pair of fields).
+- [ ] Replace the confusing description placeholder now with `Panel intro text`
+  so Wizard truthfully describes the current legacy field even before
+  TASK-288-04 adds optional trigger metadata.
 - [ ] Add panel-slot guidance that explains each tab owns a matching repeatable
   panel slot without exposing raw slot IDs as primary copy.
 - [ ] When tab count is reduced, surface which tab labels/panels are removed
@@ -137,6 +139,16 @@ Error handling:
   untrusted JSON.
 - If confirmation is added, cancellation must leave the existing value
   unchanged.
+
+## Regression Test Shape
+
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: assert Wizard layout selects for
+  orientation/alignment, a visible default-tab marker in the item list, panel
+  intro copy, human-readable slot guidance, and destructive-count impact copy
+  when reducing tab count.
+- `tests/vitest/pageBuilder/blockSettings-wave.test.tsx`: only extend if this
+  leaf changes shared slot-control rendering; assert the shared owner still
+  controls destructive confirmation semantics.
 
 ## Security Contract
 

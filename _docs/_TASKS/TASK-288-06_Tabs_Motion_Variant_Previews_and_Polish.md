@@ -88,6 +88,16 @@ Error handling:
 - Motion settings must be optional and backward compatible.
 - Preview miniatures are decorative and must not replace accessible labels.
 
+## Regression Test Shape
+
+- `tests/vitest/ui/tabs-editor-wave.test.tsx`: assert each variant card renders a
+  miniature preview plus text label, and the motion control persists only
+  bounded values.
+- `tests/vitest/widgets/tabs.test.tsx`: assert SSR/data markers for motion enum
+  output, reduced-motion-safe classes, and inactive-panel inaccessibility.
+- `tests/unit/widgets/validator.test.ts`: extend schema coverage only if a new
+  motion field lands.
+
 ## Security Contract
 
 No API routes are added.
