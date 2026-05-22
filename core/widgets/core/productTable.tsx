@@ -962,6 +962,10 @@ export const normalizeProductTableFields = (
     fields.showPrice = true;
   }
 
+  if (!fields.showStock) {
+    fields.showStockQuantity = false;
+  }
+
   return fields;
 };
 

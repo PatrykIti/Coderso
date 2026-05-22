@@ -6,7 +6,7 @@
 **Category:** Widgets + Commerce + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06, TASK-256-07, TASK-256-08
-**Status:** In Progress (2026-05-22)
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -82,7 +82,7 @@ the Product Table slice.
 | BF-07 section heading | TASK-281-06 | Product Table-owned contextual header above the table. |
 | UX-02, UX-04, UX-06, UX-08, BF-15 front-end controls | TASK-281-07 | Pagination/load-more, search, filters, and sortable headers through the existing SSR page-query pattern. `BF-15` is the report alias for the `UX-06` frontend search gap, not a second closure item. |
 | UX-01, UX-10, BF-05, BF-06, BF-08, BF-09, BF-10, BF-12 layout/table styling | TASK-281-08 | Variants, density, zebra/hover, max-width, sticky header, typography. `UX-10` is the report summary alias for the row-hover finding documented as `BF-10`. |
-| UX-07, BF-14 export/currency | TASK-281-09 | SSR CSV export for visible rows plus Product Table-owned locale-aware money formatting while preserving the read-only diagnostics baseline from TASK-281-01. |
+| UX-07, BF-14 export/currency | TASK-281-09 | SSR CSV export for visible rows plus Product Table-owned locale-aware money formatting while preserving the read-only diagnostics baseline from TASK-281-01; clipboard export was intentionally not added. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-281-10 | Final documentation and validation evidence. |
 
 ## No-Action Report Findings
@@ -105,7 +105,7 @@ the Product Table slice.
 - [x] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
 - [x] TASK-281-08: Product Table Variants Density Layout and Sticky Header
 - [x] TASK-281-09: Product Table Export Currency and Advanced Diagnostics
-- [ ] TASK-281-10: Product Table Report, Docs, Changelog, and Closure
+- [x] TASK-281-10: Product Table Report, Docs, Changelog, and Closure
 
 ## Implementation Order
 
@@ -229,3 +229,9 @@ Implementation leaves:
   specifically about admin/front parity.
 - Final closure records report evidence, task status updates, changelog, and
   exact validation output.
+
+## Closure Notes
+
+- `TASK-281-10` completed the missing `TASK-281-09` report evidence, the final finding/no-action closure matrix, widget-doc drift cleanup, and the final task board/changelog synchronization.
+- Final family validation reran the Product Table Vitest lanes, Bun route/runtime suites, `gates:coderso`, `precommit`, and `git diff --check` before closing the umbrella.
+- Security-scan validation remains partially local because `semgrep`, `trivy`, and `gitleaks` are not installed in this environment; the embedded `bun audit` step still ran.

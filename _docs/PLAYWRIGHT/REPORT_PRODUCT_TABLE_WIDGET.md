@@ -1,7 +1,8 @@
 # RAPORT: Product Table Widget — Analiza UX/UI i brakujące funkcjonalności
 
-> **Status:** Zakończony
-> **Data:** 2026-05-16
+> **Status:** Zamknięty po TASK-281
+> **Pierwotna sesja Playwright:** 2026-05-16
+> **Raport closure:** 2026-05-22
 > **Sesja:** Playwright (Product Table Widget)
 > **Środowisko admin:** http://localhost:5173/admin
 > **Środowisko front:** http://localhost:3000
@@ -13,30 +14,45 @@
 
 **Typ:** `product-table`
 **Moduł:** Commerce (wymaga modułu `commerce`)
-**Warianty:** tylko `default` — jeden wariant
+**Warianty:** `default`, `compact`
 **Złożoność:** composite
 **Odbiorca:** intermediate
 **Kategoria:** content
 
-Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigurowalnymi kolumnami, etykietami, filtrowaniem źródła danych i stylami powierzchni. Hydratacja danych następuje w runtime przez `hydrateProductTableRuntimeData()`.
+Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z
+opcjonalnym nagłówkiem sekcji, współdzielonym rejestrem kolumn, guardrailami
+widoczności Product/Price/Stock, bounded status/stock presentation,
+public-safe thumbnail/excerpt context, bezpiecznymi linkami do produktów,
+opcjonalną kolumną Action, bounded layout/sticky-header controls, publicznymi
+SSR controls dla search/filter/sort/pagination oraz opcjonalnym eksportem CSV.
+Hydratacja danych następuje w runtime przez `hydrateProductTableRuntimeData()`,
+a admin preview korzysta z tego samego query contract przez wewnętrzny preview
+route i `WidgetPreviewState`.
 
-> **Uwaga (2026-05-21):** Sekcje 3-9 zachowują historyczną bazę z sesji Playwright z 2026-05-16. Późniejsze zamknięcia lokalnych findingów są oznaczone inline oraz w sekcjach `Status po TASK-*`.
+> **Uwaga (2026-05-22):** Sekcje 3-11 zachowują historyczną bazę z sesji
+> Playwright z 2026-05-16. Sekcje 1-2 opisują aktualny shipped contract po
+> zamknięciu rodziny `TASK-281`, a późniejsze zamknięcia lokalnych findingów są
+> oznaczone inline oraz w sekcjach `Status po TASK-*`.
 
 ---
 
-## 2. Analiza kodu — struktura konfiguracji
+## 2. Analiza kodu — aktualna struktura konfiguracji
 
 ### 2.1 Model danych
 
 | Sekcja | Pola | Uwagi |
 |--------|------|-------|
-| **source** | `limit` (1–48), `search`, `collectionIds[]`, `status[]`, `sortField`, `sortDir` | Limit max 48, brak offsetu/paginacji |
-| **header** | `eyebrow`, `title`, `description` | Opcjonalny kontekst sekcji; `title` zasila preferowaną etykietę tabeli |
-| **fields** | `showImage`, `showTitle`, `showExcerpt`, `showSlug`, `showPrice`, `showStatus`, `showStock`, `showStockQuantity`, `showCompareAt`, `showCollectionCount` | 9 togglei kolumn + opcjonalna prezentacja ilości stocku z guardrailami dla Product/Price |
-| **labels** | `image`, `title`, `excerpt`, `price`, `compareAt`, `status`, `stock`, `collections`, `slug` | 9 etykiet w schemacie |
-| **emptyState** | `title`, `description` | Komunikat gdy brak produktów |
-| **style** | `tableBackground`, `tableBorderColor`, `headerBackground`, `emptyBackground`, `emptyBorderColor` | 5 powierzchni, brak kontroli typografii |
-| **resolved** | `items[]`, `total`, `resolvedAt`, `error` | Runtime only — nie edytowane przez użytkownika; po hydratacji może zawierać też public-safe `media` |
+| **source** | `limit` (1–48), `search`, `collectionIds[]`, `status[]`, `sortField`, `sortDir` | Bazowy authored query dla runtime/admin preview; public paging korzysta z osobnych block-scoped query params. |
+| **header** | `eyebrow`, `title`, `description` | Opcjonalny kontekst sekcji; `title` jest preferowaną etykietą sekcji/tabeli dla dostępności i CSV filename fallback. |
+| **fields** | `showImage`, `showTitle`, `showExcerpt`, `showSlug`, `showPrice`, `showStatus`, `showStock`, `showStockQuantity`, `showCompareAt`, `showCollectionCount` | 9 kolumn z rejestru + stock quantity sub-toggle; guardraile wymuszają co najmniej jedną kolumnę identity i pricing oraz czyszczą quantity gdy Stock jest wyłączony. |
+| **controls** | `showSearchInput`, `showCollectionFilter`, `showStatusFilter`, `sorting`, `pagination`, `pageSize` | Publiczne SSR controls. `sorting`: `none`, `indicator`, `interactive`; `pagination`: `none`, `paged`, `load-more`; `pageSize` clamp `1..24`. |
+| **format** | `moneyLocale`, `currencyDisplay` | Widget-owned locale/display controls dla Price i Compare at. |
+| **export** | `enabled`, `label` | Opcjonalny SSR CSV download dla aktualnie widocznych wierszy i kolumn. |
+| **labels** | `image`, `title`, `excerpt`, `price`, `compareAt`, `status`, `stock`, `collections`, `slug` | 9 nagłówków współdzielonych przez renderer i edytor. |
+| **links** | `linkedColumn`, `showAction`, `actionLabel`, `openInNewTab` | Safe relative product links dla kolumny Product/Slug i opcjonalnej kolumny Action. |
+| **emptyState** | `title`, `description` | Komunikat gdy brak produktów. |
+| **style** | `density`, `rowTreatment`, `hoverRows`, `stickyHeader`, `maxWidth`, `align`, `typography`, `tableBackground`, `tableBorderColor`, `headerBackground`, `emptyBackground`, `emptyBorderColor` | Bounded layout + typography controls oraz 5 clearable surface fields. |
+| **resolved** | `items[]`, `total`, `resolvedAt`, `error`, `runtime` | Runtime only. `items[]` może zawierać public-safe `media` i `productHref`; `runtime` trzyma aktywny query state, retained params, available filters i bezpieczne hrefy prev/next/clear. |
 
 ### 2.2 Kolumny renderowane
 
@@ -51,20 +67,32 @@ Widget wyświetla produkty z katalogu commerce w układzie tabeli HTML z konfigu
 | Status | ✗ | ✓ `showStatus` (domyślnie ON) | ✓ (Visual) |
 | Stock | ✗ | ✓ `showStock` (domyślnie ON) | ✓ (Visual) |
 | Collections count | ✗ | ✓ `showCollectionCount` (domyślnie OFF) | ✓ (Visual) |
+| Action | ✗ | ✓ `links.showAction` | ✓ `links.actionLabel` |
 
 ### 2.3 Tryby edytora
 
-- **Wizard** — źródło danych (`CommerceSourceFields`), style powierzchni (5 clearable inputów)
-- **Visual** — Section header, Columns (9 togglei z guardrailami identity/pricing), Column labels (9/9), Stock presentation, Links and actions, Empty state, Surfaces
-- **Advanced** — read-only preview status card, resolved payload counts, backend-owned runtime warning, query preview JSON
+- **Wizard** — source/query basics, admin preview status summary, surfaces.
+- **Visual** — admin preview status summary, layout and style, section header,
+  columns, column labels, public controls, export and currency, stock
+  presentation, links and actions, empty state, surfaces.
+- **Advanced** — read-only runtime/admin preview diagnostics, query
+  diagnostics, manual preview refresh.
 
-### 2.4 Pola runtime card (dostępne danych, częściowo nieużywane)
+### 2.4 Runtime i rendering
 
-`CommerceWidgetRuntimeCard` zawiera: `id`, `title`, `slug`, `excerpt`, `status`, `pricing.amount`, `pricing.currency`, `pricing.compareAtAmount`, `stock.state`, `stock.quantity`, `stock.inStock`, `primaryMediaId`, `mediaIds[]`, `collectionIds[]`
+`CommerceWidgetRuntimeCard` nadal dostarcza `id`, `title`, `slug`, `excerpt`,
+`status`, `pricing.*`, `stock.*`, `primaryMediaId`, `mediaIds[]`, oraz
+`collectionIds[]`, a Product Table wykorzystuje je teraz bezpośrednio do:
 
-Z tych pól po `TASK-281-06` nadal **nie są renderowane bezpośrednio** tylko: `stock.inStock`. `excerpt` może być teraz renderowany w opcjonalnej kolumnie Excerpt, `primaryMediaId` / `mediaIds[]` służą do backend-owned hydratacji public-safe miniatury, a `stock.quantity` może być opcjonalnie dołączone do kolumny Stock przez `showStockQuantity`, ale nadal nie renderuje się jako osobna kolumna.
-
----
+- renderowania Title, Slug, Price, Compare at, Status, Stock i opcjonalnego
+  quantity copy;
+- opcjonalnych kolumn Image i Excerpt przez backend-owned public-safe media
+  enrichment i plain-text clamping;
+- bezpiecznych `productHref` dla linked Title/Slug i opcjonalnej kolumny
+  Action;
+- runtime metadata dla search/filter/sort/page state, retained params, clear
+  href, next/previous href, i rejected widget tokens;
+- export filename fallback `header.title -> header.eyebrow -> product-table.csv`.
 
 ## 3. Wyniki testów Playwright — Admin UI (localhost:5173)
 
@@ -619,7 +647,7 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `set -a && source .env && set +a && bun run gates:coderso`
-- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)
 
 ## Status po TASK-281-07 (2026-05-22)
 
@@ -664,3 +692,109 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `set -a && source .env && set +a && bun run gates:coderso`
 - `bun run precommit`
 - `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`
+
+
+## Status po TASK-281-09 (2026-05-22)
+
+### Fixed in TASK-281-09
+
+- `UX-07`: Product Table może teraz renderować opcjonalny SSR CSV download dla
+  aktualnie widocznych wierszy i kolumn. Closure tej fali dotyczy eksportu CSV;
+  clipboard export nie został dodany.
+- `BF-14`: Price i Compare at renderują się teraz przez widget-owned
+  `format.moneyLocale` i `format.currencyDisplay`, więc tabela może pokazywać
+  multi-currency output bez zmiany shared default-argument behavior.
+- Export shell jest ukrywany gdy `export.enabled` jest wyłączone albo gdy
+  runtime nie rozwiązał żadnych wierszy, a filename fallback używa
+  `header.title`, następnie `header.eyebrow`, a dopiero potem
+  `product-table.csv`.
+- `TASK-281-01` read-only diagnostics seam pozostaje nienaruszony: Visual
+  dodaje panel `Export and currency`, a Advanced nadal nie pozwala edytować
+  runtime-owned diagnostics.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` are not installed locally; embedded `bun audit` still ran)
+
+## Status po TASK-281-10 (2026-05-22)
+
+### Finalna macierz findingów
+
+| ID | Snapshot z 2026-05-16 | Finalny status | Owner | Evidence |
+|---|---|---|---|---|
+| BUG-00 | Admin preview nigdy nie hydruje danych commerce | `fixed` | TASK-281-01 | `ProductTableEditors.tsx`, `productTablePreviewClient.test.ts`, `productTablePreview.test.ts` |
+| BUG-01 | Brak label controls dla Slug/Stock/CompareAt/Collections | `fixed` | TASK-281-02 | `ProductTableEditors.tsx`, `productTable.test.tsx`, `product-table-editor-wave.test.tsx` |
+| BUG-02 | Status jako plain text i duplikacja w tytule | `fixed` | TASK-281-03 | `productTable.tsx`, `productTable.test.tsx` |
+| BUG-03 | `stock.quantity` ignorowane | `fixed` | TASK-281-03 | `productTable.tsx`, `productTable.test.tsx` |
+| BUG-04 | Title i Price niewyłączalne | `fixed` | TASK-281-02 | `productTable.tsx`, `product-table-editor-wave.test.tsx`, `validator.test.ts` |
+| UX-01 | Tylko jeden wariant | `fixed` | TASK-281-08 | `productTable.tsx`, `registry.test.ts`, `productTable.test.tsx` |
+| UX-02 | Brak paginacji | `fixed` | TASK-281-07 | `productTable.tsx`, `product-table-runtime-pagination.test.ts` |
+| UX-03 | Brak klikalnych linków do produktów | `fixed` | TASK-281-04 | `productTable.tsx`, `commerceRuntimeResolver.test.ts`, `commerceWidgetRuntime.test.ts` |
+| UX-04 | Brak sortowania interaktywnego | `fixed` | TASK-281-07 | `productTable.tsx`, `productTable.test.tsx`, `product-table-runtime-pagination.test.ts` |
+| UX-05 | Brak miniatur produktu | `fixed` | TASK-281-06 | `productTable.tsx`, `commerceWidgetRuntime.test.ts`, `productTable.test.tsx` |
+| UX-06 | Brak inline search na froncie | `fixed` | TASK-281-07 | `productTable.tsx`, `product-table-runtime-pagination.test.ts` |
+| UX-07 | Brak eksportu danych | `fixed` | TASK-281-09 | `productTable.tsx`, `productTable.test.tsx`, `validator.test.ts` |
+| UX-08 | Brak publicznych filtrów | `fixed` | TASK-281-07 | `productTable.tsx`, `product-table-runtime-pagination.test.ts` |
+| UX-09 | Runtime error flag edytowalny | `fixed` | TASK-281-01 | `ProductTableEditors.tsx`, `product-table-editor-wave.test.tsx` |
+| UX-10 | Brak hover na wierszach | `fixed` | TASK-281-08 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-01 | Brak thumbnails / kolumny obraz | `fixed` | TASK-281-06 | `productTable.tsx`, `commerceWidgetRuntime.test.ts` |
+| BF-02 | Brak kolumny excerpt | `fixed` | TASK-281-06 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-03 | Brak ilości sztuk w Stock | `fixed` | TASK-281-03 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-04 | Brak kolorowania wierszy wg statusu | `fixed` | TASK-281-03 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-05 | Brak zebra striping | `fixed` | TASK-281-08 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-06 | Brak kontroli gęstości wierszy | `fixed` | TASK-281-08 | `productTable.tsx`, `validator.test.ts` |
+| BF-07 | Brak nagłówka sekcji | `fixed` | TASK-281-06 | `ProductTableEditors.tsx`, `productTable.test.tsx` |
+| BF-08 | Brak kontroli typografii | `fixed` | TASK-281-08 | `productTable.tsx`, `validator.test.ts` |
+| BF-09 | Brak kontroli max-width i wyrównania | `fixed` | TASK-281-08 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-10 | Brak row hover efektu | `fixed` | TASK-281-08 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-11 | Brak kolumny akcji | `fixed` | TASK-281-04 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-12 | Brak sticky header | `fixed` | TASK-281-08 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-13 | Collections count header context jest schema-only | `fixed` | TASK-281-02 | `productTableColumns`, `ProductTableEditors.tsx`, `validator.test.ts` |
+| BF-14 | Brak locale-aware money formatting | `fixed` | TASK-281-09 | `productTable.tsx`, `productTable.test.tsx` |
+| BF-15 | Brak wyszukiwarki po stronie klienta | `fixed` | TASK-281-07 | `productTable.tsx`, `product-table-runtime-pagination.test.ts` |
+| A1 | Brak `<caption>` | `fixed` | TASK-281-05 | `productTable.tsx`, `productTable.test.tsx` |
+| A2 | Brak `scope="col"` na `<th>` | `fixed` | TASK-281-05 | `productTable.tsx`, `productTable.test.tsx` |
+| A3 | Niespójny status copy w tytule | `fixed` | TASK-281-03 | `productTable.tsx`, `productTable.test.tsx` |
+| A4 | Brak prawidłowej etykiety sekcji/tabeli | `fixed` | TASK-281-05 | `productTable.tsx`, `productTable.test.tsx` |
+| A5 | Brak `role="alert"` na błędzie commerce | `fixed` | TASK-281-05 | `productTable.tsx`, `productTable.test.tsx` |
+| A6 | Empty state bez live semantics | `fixed` | TASK-281-05 | `productTable.tsx`, `productTable.test.tsx` |
+| A7 | Brak `loading="lazy"` dla thumbnaili | `fixed` | TASK-281-06 | `productTable.tsx`, `commerceWidgetRuntime.test.ts`, `productTable.test.tsx` |
+
+### Current-state / no-action rows
+
+| Snapshot row | Finalny status | Owner | Evidence |
+|---|---|---|---|
+| Empty-state text editing i live admin preview | `no-action/current-state` | No local TASK-281 leaf | Snapshot already showed this working; `TASK-281-01` preview hydration preserved the live empty-state baseline. |
+| Surface color controls i Clear buttons | `no-action/current-state` | No local TASK-281 leaf; shared token semantics remain under TASK-256-02 | Snapshot already showed all five controls working; Product Table kept the clearable-surface baseline through `TASK-281-08`. |
+| Collections empty placeholder w source editorze | `no-action/current-state` | No local TASK-281 leaf | Snapshot marked the placeholder informational and working; no Product Table-local drift reopened it. |
+| Mobile horizontal scroll | `no-action/current-state` | No local TASK-281 leaf | Snapshot already confirmed `overflow-x-auto`; later layout work in `TASK-281-08` preserved this baseline. |
+
+No numerowany Product Table finding pozostał zdeferowany przy zamknięciu
+rodziny. Referencje do `TASK-256` pozostają tylko dla shared current-state
+seams, które były już poprawne dla Product Table i nie wymagały lokalnej
+implementacji.
+
+### Finalna walidacja rodziny
+
+Finalny rerun `TASK-281-10` zakończył się green przed przejściem `TASK-281` do `Done`.
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/admin/productTablePreviewClient.test.ts tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `set -a && source .env && set +a && bun test tests/integration/routes/productTablePreview.test.ts tests/integration/routes/widgets.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/commerce/commerceRuntimeResolver.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/product-table-runtime-pagination.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)
+- `bun run precommit`
+- `git diff --check`

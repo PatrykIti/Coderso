@@ -24,6 +24,7 @@ import {
 } from "../../../core/services/settings/settingsService";
 import { clearSiteCache } from "../../../core/site/cache/siteCache";
 import { handlePublicRequest } from "../../../core/server/publicSite";
+import type { ProductTableControls } from "../../../core/widgets/core/productTable";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -156,7 +157,18 @@ const createActor = async () => {
   return actor;
 };
 
-const buildPageData = (primaryCollectionId: string, secondaryCollectionId: string) => ({
+const buildPageData = (
+  primaryCollectionId: string,
+  secondaryCollectionId: string,
+  controls: ProductTableControls = {
+    showSearchInput: true,
+    showCollectionFilter: true,
+    showStatusFilter: true,
+    sorting: "interactive" as const,
+    pagination: "paged" as const,
+    pageSize: 2,
+  }
+) => ({
   blocks: [
     {
       id: "product-table-1",
@@ -180,14 +192,7 @@ const buildPageData = (primaryCollectionId: string, secondaryCollectionId: strin
           showCompareAt: false,
           showCollectionCount: false,
         },
-        controls: {
-          showSearchInput: true,
-          showCollectionFilter: true,
-          showStatusFilter: true,
-          sorting: "interactive",
-          pagination: "paged",
-          pageSize: 2,
-        },
+        controls,
       },
     },
   ],
@@ -281,6 +286,99 @@ testIfDbWithOptions(
     expect(html).toContain('checked=""');
     expect(html).toContain('href="?foo=bar"');
     expect(html).toContain("Ignored invalid table parameters.");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "product table public runtime supports load-more pagination and indicator-only sort affordances",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+
+    const primaryCollection = await createCommerceCollection({
+      name: `Primary Collection ${token}`,
+    });
+    const secondaryCollection = await createCommerceCollection({
+      name: `Secondary Collection ${token}`,
+    });
+    trackCollection(primaryCollection.id);
+    trackCollection(secondaryCollection.id);
+
+    const createPublishedProduct = async (title: string, collectionIds: string[]) => {
+      const product = await createCommerceProduct({
+        title,
+        status: "published",
+        pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+        stock: { state: "in_stock", quantity: 2 },
+        collectionIds,
+      });
+      trackProduct(product.id);
+      return product;
+    };
+
+    await createPublishedProduct(`Alpha Home ${token}`, [primaryCollection.id]);
+    await createPublishedProduct(`Beta Home ${token}`, [primaryCollection.id]);
+    await createPublishedProduct(`Gamma Home ${token}`, [primaryCollection.id]);
+    await createPublishedProduct(`Omega Home ${token}`, [primaryCollection.id]);
+    await createPublishedProduct(`Zeta Home ${token}`, [secondaryCollection.id]);
+
+    const draftProduct = await createCommerceProduct({
+      title: `Draft Home ${token}`,
+      status: "draft",
+      pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 1 },
+      collectionIds: [primaryCollection.id],
+    });
+    trackProduct(draftProduct.id);
+
+    const slug = `/product-table-load-more-${token}`;
+    const data = buildPageData(primaryCollection.id, secondaryCollection.id, {
+      showSearchInput: true,
+      showCollectionFilter: true,
+      showStatusFilter: true,
+      sorting: "indicator",
+      pagination: "load-more",
+      pageSize: 2,
+    });
+    const page = await createPage({
+      title: `Product Table Load More ${token}`,
+      slug,
+      authorId: actor.id,
+      data,
+    });
+    trackPage(page?.id);
+    if (!page?.id) throw new Error("missing_product_table_load_more_page");
+
+    await publishPage(page.id, actor.id, data);
+
+    const response = await requestPublicPath(
+      `${slug}?foo=bar&pt.product-table-1.q=home&pt.product-table-1.collection=${encodeURIComponent(primaryCollection.id)}&pt.product-table-1.sort=title&pt.product-table-1.dir=asc`
+    );
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    expect(html).toContain('data-widget="product-table"');
+    expect(html).toContain('data-product-table-page="1"');
+    expect(html).toContain("Showing 2 of 4 products");
+    expect(html).toContain("Sort: <!-- -->Title ascending");
+    expect(html).toContain("Load more");
+    expect(html).toContain('aria-sort="ascending"');
+    expect(html).not.toContain('aria-label="Sort by Product descending"');
+    expect(html).not.toContain("Page <!-- -->1<!-- --> of <!-- -->2");
+    expect(html).toContain(
+      `href="?foo=bar&amp;pt.product-table-1.q=home&amp;pt.product-table-1.collection=${primaryCollection.id}&amp;pt.product-table-1.sort=title&amp;pt.product-table-1.dir=asc&amp;pt.product-table-1.page=2"`
+    );
+    expect(html).toContain(`Alpha Home ${token}`);
+    expect(html).toContain(`Beta Home ${token}`);
+    expect(html).not.toContain(`Gamma Home ${token}`);
+    expect(html).not.toContain(`Omega Home ${token}`);
+    expect(html).not.toContain(`Zeta Home ${token}`);
+    expect(html).not.toContain(`Draft Home ${token}`);
   },
   { timeout: dbRuntimeTimeout }
 );

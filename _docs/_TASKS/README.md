@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 176 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1820 tasks
+- **To Do:** 174 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1822 tasks
 
 ---
 
@@ -53,8 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Add title weight, bounded padding/max-width/min-height, header title/description, and dated milestone composition |
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
-| TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Add compact/striped variants, density, zebra/hover, width, typography, and sticky header controls |
-| TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Refresh Product Table report/docs/changelog/board and final validation evidence |
 | TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
 | TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Add safer removal and explicit spotlight selection without duplicating shared editor update fixes |
@@ -223,13 +221,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): nine Product Table leaves are landed, and the family remains open only for final report/docs/changelog/board closure in TASK-281-10 |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Product Table family is fully closed with final report/docs/changelog/board sync, validation evidence, and closure-matrix coverage for every historical finding and no-action row |
+| TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the closure leaf synced the final report matrix, widget docs, board/changelog state, and added the final normalization/public-control regression coverage before the family rerun |
 | TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Done (2026-05-22): Product Table now formats money through widget-owned locale/display settings and can export the current visible rows as hardened SSR CSV without regressing read-only diagnostics |
 | TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Done (2026-05-22): Product Table now ships a compact preset plus bounded density, zebra, hover, width/alignment, typography, and sticky-header controls without regressing links, preview, or clearable surfaces |
 | TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Done (2026-05-22): Product Table now exposes SSR page-query public controls with bounded search, collection filters, sortable headers, published-safe runtime state, and paged/load-more navigation without introducing a second public refresh route |

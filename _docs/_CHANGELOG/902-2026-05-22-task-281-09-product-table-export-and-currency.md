@@ -8,7 +8,7 @@ Tasks: TASK-281, TASK-281-09
 
 ### Product Table export and money-format controls
 
-- Product Table now owns explicit `format.moneyLocale` and `format.currencyDisplay` settings, so price and compare-at cells can render locale-aware multi-currency output without changing the defaults used by other commerce widgets.
+- Product Table now owns explicit `format.moneyLocale` and `format.currencyDisplay` settings, so price and compare-at cells can render locale-aware multi-currency output while preserving the existing default-argument behavior used by other commerce widgets.
 - Public Product Table shells can now expose an optional SSR CSV download button for the currently visible rows and columns only, with deterministic filenames derived from the section header when present.
 - CSV export is built from the shared visible-column registry, reuses the active Product Table money-format settings, escapes quotes/newlines, and prefixes formula-like values before download.
 
@@ -27,4 +27,4 @@ Tasks: TASK-281, TASK-281-09
 - `set -a && source .env && set +a && bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit`
-- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` are not installed locally; embedded `bun audit` still ran)
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)

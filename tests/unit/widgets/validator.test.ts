@@ -226,7 +226,7 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
   ).toThrow("widget_schema_invalid");
 });
 
-test("normalizeWidgetBlock accepts Product Table compact variant and bounded style/public controls but rejects unknown keys", () => {
+test("normalizeWidgetBlock accepts Product Table compact variant, normalizes dependent stock state, and rejects unknown keys", () => {
   registerWidget(
     createProductTableWidget({
       wizard: Dummy,
@@ -235,63 +235,73 @@ test("normalizeWidgetBlock accepts Product Table compact variant and bounded sty
     })
   );
 
-  expect(() =>
-    normalizeWidgetBlock({
-      id: "product-table-runtime",
-      type: "product-table",
-      variant: "compact",
-      data: {
-        ...productTableDefaults,
-        style: {
-          density: "compact",
-          rowTreatment: "striped",
-          hoverRows: true,
-          stickyHeader: true,
-          maxWidth: "content",
-          align: "center",
-          typography: "prominent",
-        },
-        controls: {
-          showSearchInput: true,
-          showCollectionFilter: true,
-          showStatusFilter: true,
-          sorting: "interactive",
-          pagination: "paged",
+  const normalizedProductTableBlock = normalizeWidgetBlock({
+    id: "product-table-runtime",
+    type: "product-table",
+    variant: "compact",
+    data: {
+      ...productTableDefaults,
+      fields: {
+        showTitle: true,
+        showSlug: true,
+        showPrice: true,
+        showStatus: false,
+        showStock: false,
+        showStockQuantity: true,
+        showCompareAt: false,
+        showCollectionCount: false,
+      },
+      style: {
+        density: "compact",
+        rowTreatment: "striped",
+        hoverRows: true,
+        stickyHeader: true,
+        maxWidth: "content",
+        align: "center",
+        typography: "prominent",
+      },
+      controls: {
+        showSearchInput: true,
+        showCollectionFilter: true,
+        showStatusFilter: true,
+        sorting: "interactive",
+        pagination: "paged",
+        pageSize: 8,
+      },
+      format: {
+        moneyLocale: "pl-PL",
+        currencyDisplay: "code",
+      },
+      export: {
+        enabled: true,
+        label: "Download rows",
+      },
+      resolved: {
+        items: [],
+        total: 0,
+        resolvedAt: "2026-05-22T12:00:00.000Z",
+        runtime: {
+          searchQuery: "starter",
+          status: ["published"],
+          collectionIds: ["collection-1"],
+          availableStatuses: ["published"],
+          availableCollections: [{ id: "collection-1", label: "Summer", slug: "summer" }],
+          sortField: "title",
+          sortDir: "asc",
+          page: 2,
           pageSize: 8,
-        },
-        format: {
-          moneyLocale: "pl-PL",
-          currencyDisplay: "code",
-        },
-        export: {
-          enabled: true,
-          label: "Download rows",
-        },
-        resolved: {
-          items: [],
-          total: 0,
-          resolvedAt: "2026-05-22T12:00:00.000Z",
-          runtime: {
-            searchQuery: "starter",
-            status: ["published"],
-            collectionIds: ["collection-1"],
-            availableStatuses: ["published"],
-            availableCollections: [{ id: "collection-1", label: "Summer", slug: "summer" }],
-            sortField: "title",
-            sortDir: "asc",
-            page: 2,
-            pageSize: 8,
-            totalPages: 3,
-            previousPageHref: "?foo=bar",
-            nextPageHref: "?foo=bar&pt.product-table-1.page=3",
-            clearHref: "?foo=bar",
-            retainedParams: [{ name: "foo", value: "bar" }],
-            rejectedTokens: ["status"],
-          },
+          totalPages: 3,
+          previousPageHref: "?foo=bar",
+          nextPageHref: "?foo=bar&pt.product-table-1.page=3",
+          clearHref: "?foo=bar",
+          retainedParams: [{ name: "foo", value: "bar" }],
+          rejectedTokens: ["status"],
         },
       },
-    })
-  ).not.toThrow();
+    },
+  });
+
+  expect(normalizedProductTableBlock.variant).toBe("compact");
 
   expect(() =>
     normalizeWidgetBlock({
@@ -339,6 +349,115 @@ test("normalizeWidgetBlock accepts Product Table compact variant and bounded sty
           enabled: true,
           label: "Download rows",
           extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-controls-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        controls: {
+          showSearchInput: true,
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-format-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        format: {
+          moneyLocale: "en-US",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-links-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        links: {
+          linkedColumn: "title",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-header-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        header: {
+          title: "Summer release",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-labels-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        labels: {
+          title: "Product",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-media-bad",
+      type: "product-table",
+      variant: "default",
+      data: {
+        ...productTableDefaults,
+        resolved: {
+          items: [
+            {
+              id: "product-media-bad",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 2, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: "/products/starter-home",
+              media: {
+                url: "/media/starter-home.jpg",
+                extra: "nope",
+              },
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
         },
       } as never,
     })

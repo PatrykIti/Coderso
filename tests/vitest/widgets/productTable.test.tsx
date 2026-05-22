@@ -364,6 +364,87 @@ test("product table renders public controls, sortable headers, and paged navigat
   );
 });
 
+test("product table renders indicator sorting and load-more pagination without interactive sort links", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      blockId="catalog-2"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        controls: {
+          showSearchInput: false,
+          showCollectionFilter: false,
+          showStatusFilter: false,
+          sorting: "indicator",
+          pagination: "load-more",
+          pageSize: 2,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-5",
+              title: "Atlas Home",
+              slug: "atlas-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 140000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 4, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: null,
+            },
+            {
+              id: "product-6",
+              title: "Harbor Home",
+              slug: "harbor-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 150000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 1, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: null,
+            },
+          ],
+          total: 4,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+          runtime: {
+            searchQuery: "",
+            status: [],
+            collectionIds: [],
+            availableStatuses: ["published"],
+            availableCollections: [],
+            sortField: "title",
+            sortDir: "asc",
+            page: 1,
+            pageSize: 2,
+            totalPages: 2,
+            nextPageHref:
+              "?foo=bar&pt.catalog-2.sort=title&pt.catalog-2.dir=asc&pt.catalog-2.page=2",
+            clearHref: "?foo=bar",
+            retainedParams: [{ name: "foo", value: "bar" }],
+            rejectedTokens: [],
+          },
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-product-table-page="1"');
+  expect(html).toContain("Showing 2 of 4 products");
+  expect(html).toContain("Sort: <!-- -->Title ascending");
+  expect(html).toContain(
+    'href="?foo=bar&amp;pt.catalog-2.sort=title&amp;pt.catalog-2.dir=asc&amp;pt.catalog-2.page=2"'
+  );
+  expect(html).toContain("Load more");
+  expect(html).toContain(">Asc<");
+  expect(html).toContain('aria-sort="ascending"');
+  expect(html).not.toContain('aria-label="Sort by Product descending"');
+  expect(html).not.toContain("Page <!-- -->1<!-- --> of <!-- -->2");
+});
+
 test("product table renders rows with shared column labels and visibility", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -492,6 +573,101 @@ test("product table applies explicit money locale settings and renders SSR csv e
   expect(html).toContain('download="summer-release.csv"');
   expect(html).toContain(">Download rows<");
   expect(html).toContain('href="data:text/csv;charset=utf-8,');
+});
+
+test("product table hides SSR csv export when disabled or when no rows are resolved", () => {
+  const disabledHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        export: {
+          enabled: false,
+          label: "Download rows",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-disabled-export",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 1, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: null,
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  const emptyHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        export: {
+          enabled: true,
+          label: "Download rows",
+        },
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(disabledHtml).not.toContain('data-product-table-export="csv"');
+  expect(disabledHtml).not.toContain(">Download rows<");
+  expect(emptyHtml).not.toContain('data-product-table-export="csv"');
+  expect(emptyHtml).not.toContain(">Download rows<");
+});
+
+test("product table csv export filename falls back to section eyebrow when title is absent", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        header: {
+          eyebrow: "Featured catalog",
+        },
+        export: {
+          enabled: true,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-eyebrow-export",
+              title: "Starter Home",
+              slug: "starter-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 1, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: null,
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('download="featured-catalog.csv"');
 });
 
 test("product table csv export uses visible columns, locale formatting, and formula-safe escaping", () => {
@@ -834,6 +1010,8 @@ test("product table normalizes source, header, media, labels, and guarded fields
       showExcerpt: true,
       showSlug: false,
       showPrice: false,
+      showStock: false,
+      showStockQuantity: true,
       showCompareAt: false,
     },
     labels: {
@@ -896,6 +1074,8 @@ test("product table normalizes source, header, media, labels, and guarded fields
     showExcerpt: true,
     showSlug: false,
     showPrice: true,
+    showStock: false,
+    showStockQuantity: false,
     showCompareAt: false,
   });
   expect(normalized.labels).toMatchObject({

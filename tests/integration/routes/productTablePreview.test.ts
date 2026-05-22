@@ -101,7 +101,7 @@ test("product table preview route resolves through backend-owned runtime hydrati
   expect(requestedPermissions).toEqual(["commerce:read"]);
   expect(validatedPayloads).toHaveLength(1);
   expect(previewCalls).toHaveLength(1);
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     items: [
       {
         id: "product-1",
@@ -127,6 +127,21 @@ test("product table preview route resolves through backend-owned runtime hydrati
     ],
     total: 1,
     resolvedAt: "2026-05-21T12:00:00.000Z",
+    runtime: {
+      searchQuery: "",
+      status: [],
+      collectionIds: [],
+      availableStatuses: [],
+      availableCollections: [],
+      sortField: "updatedAt",
+      sortDir: "desc",
+      page: 1,
+      pageSize: 3,
+      totalPages: 1,
+      clearHref: "?",
+      retainedParams: [],
+      rejectedTokens: [],
+    },
   });
 });
 

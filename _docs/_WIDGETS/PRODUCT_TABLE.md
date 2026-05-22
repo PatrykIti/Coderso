@@ -78,8 +78,9 @@ and admin preview parity for the current source query.
 - Product titles keep the `(draft)` / `(archived)` suffix only when the Status
   column is hidden.
 - Visual mode exposes `showStockQuantity` only while the Stock column is
-  visible, and the flag is cleared when Stock is turned off so hidden quantity
-  state does not linger in widget JSON.
+  visible. The editor clears it when Stock is turned off, and runtime
+  normalization also drops stale imported `showStockQuantity` flags when the
+  Stock column is disabled.
 
 ## Links and Actions
 
@@ -142,14 +143,15 @@ and admin preview parity for the current source query.
 - `format.currencyDisplay` is a bounded enum: `symbol`, `code`, or `name`.
 - Price and Compare at cells now format through the shared money helper with
   explicit locale/display inputs, so Product Table can render multi-currency
-  values without changing Product Gallery or Product Compare defaults.
+  values while preserving the existing default-argument behavior at other
+  shared formatter call sites.
 - `export.enabled` adds a public SSR CSV download button for the currently
   visible rows and columns only; `export.label` controls the button copy.
 - CSV output is derived from the rendered column registry, uses the active
   Product Table money-format settings, escapes quotes/newlines, and prefixes
   formula-like values with an apostrophe before export.
-- Export filenames derive from `header.title` when present and otherwise fall
-  back to `product-table.csv`.
+- Export filenames derive from `header.title`, then `header.eyebrow`, and only
+  then fall back to `product-table.csv`.
 
 
 ## Accessibility Notes

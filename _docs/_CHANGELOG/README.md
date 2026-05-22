@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 903 | 2026-05-22 | TASK-281 product table widget closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 902 | 2026-05-22 | TASK-281-09 product table export and currency | CMS Widgets/Admin UI/Runtime/QA |
 | 901 | 2026-05-22 | TASK-281-08 product table layout variants and sticky header | CMS Widgets/Admin UI/Runtime/QA |
 | 900 | 2026-05-22 | TASK-281-07 product table public controls | CMS Widgets/Admin UI/Runtime/QA |
