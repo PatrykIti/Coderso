@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Copy + Design Tokens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-05-02, TASK-286-01, TASK-286-02, TASK-286
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -34,16 +34,16 @@ data remains the existing allowlisted Stack token model.
 
 ## Sub-Tasks
 
-- [ ] Rename Wizard `Base gap` copy to make the all-breakpoint write explicit.
-- [ ] Add concise gap descriptions such as token and approximate Tailwind scale
+- [x] Rename Wizard `Base gap` copy to make the all-breakpoint write explicit.
+- [x] Add concise gap descriptions such as token and approximate Tailwind scale
   text without persisting px/rem values.
-- [ ] Add Wizard-level align and justify presets that write through the same
+- [x] Add Wizard-level align and justify presets that write through the same
   normalizers as Visual/Advanced.
-- [ ] Make Wizard align/justify controls update all breakpoints intentionally
+- [x] Make Wizard align/justify controls update all breakpoints intentionally
   and label that behavior.
-- [ ] Preserve current Wizard variant and mobile direction controls after
+- [x] Preserve current Wizard variant and mobile direction controls after
   TASK-256-05-02 fixes their data sync.
-- [ ] Add tests for Wizard labels, all-breakpoint gap writes, and align/justify
+- [x] Add tests for Wizard labels, all-breakpoint gap writes, and align/justify
   updates.
 
 ## Files to Change
@@ -168,3 +168,9 @@ No API routes are added.
 - Wizard align/justify writes use the same responsive object contract as
   TASK-286-02 and intentionally write all three breakpoints together.
 - Tests prove Wizard interaction, copy, and all-breakpoint writes.
+
+
+## Completion Notes (2026-05-22)
+
+- Wizard now owns beginner-safe all-breakpoint `gap`, `align`, and `justify` controls with explicit copy that explains the write scope and practical spacing scale.
+- The added guidance stays editor-only; serialized Stack data remains the existing bounded token contract from the widget owner.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Design Tokens + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-286
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -31,15 +31,15 @@ maps, editor labels, schema coverage, and regression tests.
 
 ## Sub-Tasks
 
-- [ ] Add `baseline` to `StackAlign` and `stackSchema.properties.align`.
-- [ ] Add `around` and `evenly` to `StackJustify` and
+- [x] Add `baseline` to `StackAlign` and `stackSchema.properties.align`.
+- [x] Add `around` and `evenly` to `StackJustify` and
   `stackSchema.properties.justify`.
-- [ ] Extend Stack class maps with `items-baseline`, `justify-around`, and
+- [x] Extend Stack class maps with `items-baseline`, `justify-around`, and
   `justify-evenly`.
-- [ ] Extend Stack editor option lists with concise labels.
-- [ ] Update normalizer fallback behavior so unknown values still fall back to
+- [x] Extend Stack editor option lists with concise labels.
+- [x] Update normalizer fallback behavior so unknown values still fall back to
   `stretch` for align and `start` for justify.
-- [ ] Add runtime, validation, and editor tests for every new token.
+- [x] Add runtime, validation, and editor tests for every new token.
 
 ## Files to Change
 
@@ -158,3 +158,9 @@ No API routes are added.
 - Invalid tokens still normalize to existing safe defaults.
 - Editor controls expose the tokens in both Visual and Advanced modes.
 - Tests prove schema, normalizer, runtime class output, and editor interaction.
+
+
+## Completion Notes (2026-05-22)
+
+- Stack now allowlists `baseline`, `around`, and `evenly` end-to-end through schema enums, normalizers, runtime class maps, editor options, and regression tests.
+- Invalid persisted alignment and distribution tokens still clamp to `stretch` and `start` instead of leaking unknown runtime classes.

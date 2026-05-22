@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime Render + UX Polish
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-05-02, TASK-286
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -36,18 +36,18 @@ preview context from TASK-256-03.
 
 ## Sub-Tasks
 
-- [ ] Add a small Stack variant miniature renderer for Vertical, Horizontal,
+- [x] Add a small Stack variant miniature renderer for Vertical, Horizontal,
   and Responsive cards.
-- [ ] Keep miniatures implemented with local, deterministic JSX/CSS classes or
+- [x] Keep miniatures implemented with local, deterministic JSX/CSS classes or
   an existing icon library if already available in the editor surface.
-- [ ] Add accessible labels or hidden text so miniatures do not replace the text
+- [x] Add accessible labels or hidden text so miniatures do not replace the text
   labels.
-- [ ] Add Stack-local empty-slot guidance in the editor/sidebar using the
+- [x] Add Stack-local empty-slot guidance in the editor/sidebar using the
   existing `content` slot language.
-- [ ] If an admin-only render context exists after TASK-256-03, add a neutral
+- [x] If an admin-only render context exists after TASK-256-03, add a neutral
   Stack empty preview with a non-mutating hint; otherwise keep public
   `StackBlock` placeholder safe and document why no CTA was added there.
-- [ ] Add tests for variant miniature rendering and placeholder/guidance copy.
+- [x] Add tests for variant miniature rendering and placeholder/guidance copy.
 
 ## Files to Change
 
@@ -197,3 +197,9 @@ No API routes are added.
 - Empty Stack guidance is available in an admin-safe surface.
 - Public Stack output does not leak admin-only instructions or mutation actions.
 - Tests prove the editor miniatures and placeholder safety behavior.
+
+
+## Completion Notes (2026-05-22)
+
+- Visual variant cards now render deterministic miniatures for `vertical`, `horizontal`, and `responsive`, including a responsive preview that shows stacked mobile flow and row-based larger breakpoints.
+- Editor surfaces now explain how to add child widgets to the `content` slot while public runtime stays on the neutral `Empty stack.` placeholder.

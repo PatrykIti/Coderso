@@ -6,7 +6,7 @@
 **Category:** Widgets + QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-286-01, TASK-286-02, TASK-286-03, TASK-286-04, TASK-286
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -31,21 +31,21 @@ or explicitly deferred with a reason in both the report and this closure doc.
 
 ## Sub-Tasks
 
-- [ ] Re-audit `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md` finding by finding.
-- [ ] Mark each finding as fixed, deferred, or TASK-256-owned with evidence.
-- [ ] Replace or reconcile the report priority checklist and `Status po TASK-256`
+- [x] Re-audit `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md` finding by finding.
+- [x] Mark each finding as fixed, deferred, or TASK-256-owned with evidence.
+- [x] Replace or reconcile the report priority checklist and `Status po TASK-256`
   block with one canonical final-status matrix so the report has no conflicting
   open/fixed sections.
-- [ ] Update `_docs/_WIDGETS/STACK.md` with the final Stack data/editor/runtime
+- [x] Update `_docs/_WIDGETS/STACK.md` with the final Stack data/editor/runtime
   behavior.
-- [ ] Update `_docs/WIDGETS.md` only for shared contract changes that actually
+- [x] Update `_docs/WIDGETS.md` only for shared contract changes that actually
   landed.
-- [ ] Add a changelog entry under `_docs/_CHANGELOG/` that lists TASK-286 and
+- [x] Add a changelog entry under `_docs/_CHANGELOG/` that lists TASK-286 and
   all completed TASK-286 leaves.
-- [ ] Update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-286 and completed leaves in `_docs/_TASKS/README.md` and
+- [x] Update `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-286 and completed leaves in `_docs/_TASKS/README.md` and
   recompute task statistics.
-- [ ] Record final validation commands and any skipped suites with blockers.
+- [x] Record final validation commands and any skipped suites with blockers.
 
 ## Files to Change
 
@@ -176,3 +176,23 @@ No API routes are added by this closure leaf.
 - Task board statistics are recomputed and contain each TASK-286 row once.
 - Changelog and final validation evidence are present before the family is
   marked `Done`.
+
+
+
+## Validation Notes (2026-05-22)
+
+- `git diff --check` - passed
+- `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx` - passed (`2` files, `11` tests)
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` - failed on the pre-existing Rich Text Section assertion expecting `Structured fallback blocks` at `tests/vitest/ui/widget-template-editor.test.tsx:828`; the Stack-specific template-shell expectations passed and the failure does not exercise Stack code
+- `bun test tests/unit/widgets/validator.test.ts` - passed (`24` tests)
+- `bun test tests/unit/widgets/registry.test.ts` - passed (`14` tests)
+- `bun --cwd core lint` - passed
+- `bun --cwd core lint:types` - passed
+- `bun run gates:coderso` - passed
+- `bun run precommit` - passed
+- `bun run scan:security:strict` - could not complete fully in the local environment because `semgrep` and `trivy` are missing from `PATH`, and the installed `gitleaks` binary does not support the repo's `git` / `dir` subcommands; `bun audit` still completed inside the same command
+
+## Completion Notes (2026-05-22)
+
+- The Stack Playwright report, Stack widget doc, task files, board rows, and changelog are now synchronized around one final TASK-286 closure matrix.
+- Remaining open Stack-adjacent drift is explicitly routed back to shared TASK-256 owners instead of being silently re-claimed inside the Stack family.

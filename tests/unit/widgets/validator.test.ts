@@ -42,6 +42,7 @@ import {
   statsKpiSchema,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
+import { createStackWidget, type StackData } from "../../../core/widgets/core/stack";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -1122,6 +1123,113 @@ test("normalizeWidgetBlock rejects invalid navigation active-link mode and targe
           activeLinkMode: "prefix",
         },
       } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts legacy and responsive stack axis or wrap shapes", () => {
+  registerWidget(
+    createStackWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-legacy-axis",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        direction: {
+          desktop: "row",
+          tablet: "row",
+          mobile: "column",
+        },
+        gap: {
+          desktop: "8",
+          tablet: "6",
+          mobile: "4",
+        },
+        align: "center",
+        justify: "around",
+        wrap: false,
+      } satisfies StackData,
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-responsive-axis",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        direction: {
+          desktop: "row",
+          tablet: "row",
+          mobile: "column",
+        },
+        gap: {
+          desktop: "8",
+          tablet: "6",
+          mobile: "4",
+        },
+        align: {
+          desktop: "baseline",
+          tablet: "center",
+          mobile: "stretch",
+        },
+        justify: {
+          desktop: "evenly",
+          tablet: "around",
+          mobile: "start",
+        },
+        wrap: {
+          desktop: true,
+          tablet: false,
+          mobile: true,
+        },
+      } satisfies StackData,
+    })
+  ).not.toThrow();
+});
+
+test("normalizeWidgetBlock rejects invalid stack responsive axis or wrap shapes", () => {
+  registerWidget(
+    createStackWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-invalid-axis-key",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        align: {
+          desktop: "center",
+          widescreen: "start",
+        } as never,
+      },
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "stack-invalid-wrap-value",
+      type: "stack",
+      variant: "responsive",
+      data: {
+        wrap: {
+          desktop: true,
+          tablet: false,
+          mobile: "yes",
+        } as never,
+      },
     })
   ).toThrow("widget_schema_invalid");
 });

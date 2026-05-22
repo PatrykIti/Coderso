@@ -3,56 +3,106 @@ import type { ComponentType } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
+export const stackBreakpoints = ["desktop", "tablet", "mobile"] as const;
 export const stackGapTokens = ["none", "0", "1", "2", "3", "4", "5", "6", "8", "10", "12"] as const;
+export const stackAlignTokens = ["start", "center", "end", "stretch", "baseline"] as const;
+export const stackJustifyTokens = [
+  "start",
+  "center",
+  "end",
+  "between",
+  "around",
+  "evenly",
+] as const;
 
+export type StackBreakpoint = (typeof stackBreakpoints)[number];
 export type StackVariantId = "vertical" | "horizontal" | "responsive";
 export type StackDirection = "row" | "column";
 export type StackGap = (typeof stackGapTokens)[number];
-export type StackAlign = "start" | "center" | "end" | "stretch";
-export type StackJustify = "start" | "center" | "end" | "between";
+export type StackAlign = (typeof stackAlignTokens)[number];
+export type StackJustify = (typeof stackJustifyTokens)[number];
+export type StackResponsiveValue<T> = T | Partial<Record<StackBreakpoint, T>>;
+export type StackResolvedResponsiveValue<T> = Record<StackBreakpoint, T>;
 
 export type StackData = {
-  direction?: {
-    desktop?: StackDirection;
-    tablet?: StackDirection;
-    mobile?: StackDirection;
-  };
-  gap?: {
-    desktop?: StackGap;
-    tablet?: StackGap;
-    mobile?: StackGap;
-  };
-  align?: StackAlign;
-  justify?: StackJustify;
-  wrap?: boolean;
+  direction?: Partial<Record<StackBreakpoint, StackDirection>>;
+  gap?: Partial<Record<StackBreakpoint, StackGap>>;
+  align?: StackResponsiveValue<StackAlign>;
+  justify?: StackResponsiveValue<StackJustify>;
+  wrap?: StackResponsiveValue<boolean>;
 };
+
+export type NormalizedStackData = {
+  direction: StackResolvedResponsiveValue<StackDirection>;
+  gap: StackResolvedResponsiveValue<StackGap>;
+  align: StackResolvedResponsiveValue<StackAlign>;
+  justify: StackResolvedResponsiveValue<StackJustify>;
+  wrap: StackResolvedResponsiveValue<boolean>;
+};
+
+const createBreakpointEnumObjectSchema = (values: readonly string[]) => ({
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    desktop: { enum: [...values] },
+    tablet: { enum: [...values] },
+    mobile: { enum: [...values] },
+  },
+});
+
+const createResponsiveEnumSchema = (values: readonly string[]) => ({
+  anyOf: [{ enum: [...values] }, createBreakpointEnumObjectSchema(values)],
+});
+
+const createResponsiveBooleanSchema = () => ({
+  anyOf: [
+    { type: "boolean" },
+    {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        desktop: { type: "boolean" },
+        tablet: { type: "boolean" },
+        mobile: { type: "boolean" },
+      },
+    },
+  ],
+});
 
 export const stackSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    direction: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        desktop: { enum: ["row", "column"] },
-        tablet: { enum: ["row", "column"] },
-        mobile: { enum: ["row", "column"] },
-      },
-    },
-    gap: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        desktop: { enum: [...stackGapTokens] },
-        tablet: { enum: [...stackGapTokens] },
-        mobile: { enum: [...stackGapTokens] },
-      },
-    },
-    align: { enum: ["start", "center", "end", "stretch"] },
-    justify: { enum: ["start", "center", "end", "between"] },
-    wrap: { type: "boolean" },
+    direction: createBreakpointEnumObjectSchema(["row", "column"]),
+    gap: createBreakpointEnumObjectSchema(stackGapTokens),
+    align: createResponsiveEnumSchema(stackAlignTokens),
+    justify: createResponsiveEnumSchema(stackJustifyTokens),
+    wrap: createResponsiveBooleanSchema(),
   },
+};
+
+export const stackGapDefaults: StackResolvedResponsiveValue<StackGap> = {
+  desktop: "6",
+  tablet: "6",
+  mobile: "4",
+};
+
+export const stackAlignDefaults: StackResolvedResponsiveValue<StackAlign> = {
+  desktop: "stretch",
+  tablet: "stretch",
+  mobile: "stretch",
+};
+
+export const stackJustifyDefaults: StackResolvedResponsiveValue<StackJustify> = {
+  desktop: "start",
+  tablet: "start",
+  mobile: "start",
+};
+
+export const stackWrapDefaults: StackResolvedResponsiveValue<boolean> = {
+  desktop: false,
+  tablet: false,
+  mobile: false,
 };
 
 export const stackDefaults: StackData = {
@@ -61,33 +111,30 @@ export const stackDefaults: StackData = {
     tablet: "column",
     mobile: "column",
   },
-  gap: {
-    desktop: "6",
-    tablet: "6",
-    mobile: "4",
-  },
-  align: "stretch",
-  justify: "start",
-  wrap: false,
+  gap: stackGapDefaults,
+  align: stackAlignDefaults,
+  justify: stackJustifyDefaults,
+  wrap: stackWrapDefaults,
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
+
+const prefixClassMap = <T extends string>(
+  classMap: Record<T, string>,
+  prefix: string
+): Record<T, string> =>
+  Object.fromEntries(
+    Object.entries(classMap).map(([token, className]) => [token, `${prefix}${className}`])
+  ) as Record<T, string>;
 
 const directionClassMap: Record<StackDirection, string> = {
   row: "flex-row",
   column: "flex-col",
 };
 
-const tabletDirectionClassMap: Record<StackDirection, string> = {
-  row: "md:flex-row",
-  column: "md:flex-col",
-};
-
-const desktopDirectionClassMap: Record<StackDirection, string> = {
-  row: "lg:flex-row",
-  column: "lg:flex-col",
-};
+const tabletDirectionClassMap = prefixClassMap(directionClassMap, "md:");
+const desktopDirectionClassMap = prefixClassMap(directionClassMap, "lg:");
 
 const gapClassMap: Record<StackGap, string> = {
   none: "gap-0",
@@ -103,67 +150,99 @@ const gapClassMap: Record<StackGap, string> = {
   "12": "gap-12",
 };
 
-const tabletGapClassMap: Record<StackGap, string> = {
-  none: "md:gap-0",
-  "0": "md:gap-0",
-  "1": "md:gap-1",
-  "2": "md:gap-2",
-  "3": "md:gap-3",
-  "4": "md:gap-4",
-  "5": "md:gap-5",
-  "6": "md:gap-6",
-  "8": "md:gap-8",
-  "10": "md:gap-10",
-  "12": "md:gap-12",
-};
-
-const desktopGapClassMap: Record<StackGap, string> = {
-  none: "lg:gap-0",
-  "0": "lg:gap-0",
-  "1": "lg:gap-1",
-  "2": "lg:gap-2",
-  "3": "lg:gap-3",
-  "4": "lg:gap-4",
-  "5": "lg:gap-5",
-  "6": "lg:gap-6",
-  "8": "lg:gap-8",
-  "10": "lg:gap-10",
-  "12": "lg:gap-12",
-};
+const tabletGapClassMap = prefixClassMap(gapClassMap, "md:");
+const desktopGapClassMap = prefixClassMap(gapClassMap, "lg:");
 
 const alignClassMap: Record<StackAlign, string> = {
   start: "items-start",
   center: "items-center",
   end: "items-end",
   stretch: "items-stretch",
+  baseline: "items-baseline",
 };
+
+const tabletAlignClassMap = prefixClassMap(alignClassMap, "md:");
+const desktopAlignClassMap = prefixClassMap(alignClassMap, "lg:");
 
 const justifyClassMap: Record<StackJustify, string> = {
   start: "justify-start",
   center: "justify-center",
   end: "justify-end",
   between: "justify-between",
+  around: "justify-around",
+  evenly: "justify-evenly",
 };
 
-const resolveDirection = (value: string | undefined, fallback: StackDirection): StackDirection =>
-  value === "row" || value === "column" ? value : fallback;
+const tabletJustifyClassMap = prefixClassMap(justifyClassMap, "md:");
+const desktopJustifyClassMap = prefixClassMap(justifyClassMap, "lg:");
 
-const resolveGap = (value: string | undefined, fallback: StackGap): StackGap =>
-  stackGapTokens.includes(value as StackGap) ? (value as StackGap) : fallback;
+const wrapClassMap = {
+  false: "flex-nowrap",
+  true: "flex-wrap",
+} as const;
 
-const resolveAlign = (value: string | undefined): StackAlign => {
-  if (value === "start" || value === "center" || value === "end") return value;
-  return "stretch";
+const tabletWrapClassMap = prefixClassMap(wrapClassMap, "md:");
+const desktopWrapClassMap = prefixClassMap(wrapClassMap, "lg:");
+
+const isStackDirection = (candidate: unknown): candidate is StackDirection =>
+  candidate === "row" || candidate === "column";
+
+const isStackGap = (candidate: unknown): candidate is StackGap =>
+  typeof candidate === "string" && stackGapTokens.includes(candidate as StackGap);
+
+const isStackAlign = (candidate: unknown): candidate is StackAlign =>
+  typeof candidate === "string" && stackAlignTokens.includes(candidate as StackAlign);
+
+const isStackJustify = (candidate: unknown): candidate is StackJustify =>
+  typeof candidate === "string" && stackJustifyTokens.includes(candidate as StackJustify);
+
+const isBoolean = (candidate: unknown): candidate is boolean => typeof candidate === "boolean";
+
+const normalizeBreakpointObject = <T extends string>(
+  value: unknown,
+  fallback: StackResolvedResponsiveValue<T>,
+  isAllowed: (candidate: unknown) => candidate is T
+): StackResolvedResponsiveValue<T> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Partial<Record<StackBreakpoint, unknown>>;
+    return {
+      desktop: isAllowed(record.desktop) ? record.desktop : fallback.desktop,
+      tablet: isAllowed(record.tablet) ? record.tablet : fallback.tablet,
+      mobile: isAllowed(record.mobile) ? record.mobile : fallback.mobile,
+    };
+  }
+
+  return { ...fallback };
 };
 
-const resolveJustify = (value: string | undefined): StackJustify => {
-  if (value === "center" || value === "end" || value === "between") return value;
-  return "start";
+const normalizeResponsiveValue = <T extends string | boolean>(
+  value: unknown,
+  fallback: StackResolvedResponsiveValue<T>,
+  isAllowed: (candidate: unknown) => candidate is T
+): StackResolvedResponsiveValue<T> => {
+  if (isAllowed(value)) {
+    return {
+      desktop: value,
+      tablet: value,
+      mobile: value,
+    };
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Partial<Record<StackBreakpoint, unknown>>;
+    return {
+      desktop: isAllowed(record.desktop) ? record.desktop : fallback.desktop,
+      tablet: isAllowed(record.tablet) ? record.tablet : fallback.tablet,
+      mobile: isAllowed(record.mobile) ? record.mobile : fallback.mobile,
+    };
+  }
+
+  return { ...fallback };
 };
 
-const resolveVariantDirectionDefaults = (
+export function resolveStackVariantDirectionDefaults(
   variant: StackVariantId
-): Required<NonNullable<StackData["direction"]>> => {
+): StackResolvedResponsiveValue<StackDirection> {
   if (variant === "horizontal") {
     return {
       desktop: "row",
@@ -183,36 +262,27 @@ const resolveVariantDirectionDefaults = (
     tablet: "column",
     mobile: "column",
   };
-};
+}
 
 export function resolveStackVariant(variant: string): StackVariantId {
   if (variant === "horizontal" || variant === "responsive") return variant;
   return "vertical";
 }
 
-export function normalizeStackData(data: StackData, variant: string = "vertical"): StackData {
+export function normalizeStackData(
+  data: StackData = {},
+  variant: string = "vertical"
+): NormalizedStackData {
+  const source = data && typeof data === "object" ? data : {};
   const resolvedVariant = resolveStackVariant(variant);
-  const directionDefaults = resolveVariantDirectionDefaults(resolvedVariant);
-  const gapDefaults = stackDefaults.gap ?? {
-    desktop: "6",
-    tablet: "6",
-    mobile: "4",
-  };
+  const directionDefaults = resolveStackVariantDirectionDefaults(resolvedVariant);
 
   return {
-    direction: {
-      desktop: resolveDirection(data.direction?.desktop, directionDefaults.desktop),
-      tablet: resolveDirection(data.direction?.tablet, directionDefaults.tablet),
-      mobile: resolveDirection(data.direction?.mobile, directionDefaults.mobile),
-    },
-    gap: {
-      desktop: resolveGap(data.gap?.desktop, gapDefaults.desktop ?? "6"),
-      tablet: resolveGap(data.gap?.tablet, gapDefaults.tablet ?? "6"),
-      mobile: resolveGap(data.gap?.mobile, gapDefaults.mobile ?? "4"),
-    },
-    align: resolveAlign(data.align),
-    justify: resolveJustify(data.justify),
-    wrap: typeof data.wrap === "boolean" ? data.wrap : false,
+    direction: normalizeBreakpointObject(source.direction, directionDefaults, isStackDirection),
+    gap: normalizeBreakpointObject(source.gap, stackGapDefaults, isStackGap),
+    align: normalizeResponsiveValue(source.align, stackAlignDefaults, isStackAlign),
+    justify: normalizeResponsiveValue(source.justify, stackJustifyDefaults, isStackJustify),
+    wrap: normalizeResponsiveValue(source.wrap, stackWrapDefaults, isBoolean),
   };
 }
 
@@ -231,33 +301,49 @@ export function StackBlock({
   const normalized = normalizeStackData(data, resolvedVariant);
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const contentBlocks = Array.isArray(slotMap.content) ? slotMap.content : [];
-  const direction = normalized.direction ?? stackDefaults.direction!;
-  const gap = normalized.gap ?? stackDefaults.gap!;
+  const mobileWrap = normalized.wrap.mobile ? "true" : "false";
+  const tabletWrap = normalized.wrap.tablet ? "true" : "false";
+  const desktopWrap = normalized.wrap.desktop ? "true" : "false";
 
   return (
     <div
       className={joinClasses(
         "flex w-full min-w-0",
-        directionClassMap[direction.mobile ?? "column"],
-        tabletDirectionClassMap[direction.tablet ?? "column"],
-        desktopDirectionClassMap[direction.desktop ?? "column"],
-        gapClassMap[gap.mobile ?? "4"],
-        tabletGapClassMap[gap.tablet ?? "6"],
-        desktopGapClassMap[gap.desktop ?? "6"],
-        alignClassMap[normalized.align ?? "stretch"],
-        justifyClassMap[normalized.justify ?? "start"],
-        normalized.wrap ? "flex-wrap" : "flex-nowrap"
+        directionClassMap[normalized.direction.mobile],
+        tabletDirectionClassMap[normalized.direction.tablet],
+        desktopDirectionClassMap[normalized.direction.desktop],
+        gapClassMap[normalized.gap.mobile],
+        tabletGapClassMap[normalized.gap.tablet],
+        desktopGapClassMap[normalized.gap.desktop],
+        alignClassMap[normalized.align.mobile],
+        tabletAlignClassMap[normalized.align.tablet],
+        desktopAlignClassMap[normalized.align.desktop],
+        justifyClassMap[normalized.justify.mobile],
+        tabletJustifyClassMap[normalized.justify.tablet],
+        desktopJustifyClassMap[normalized.justify.desktop],
+        wrapClassMap[mobileWrap],
+        tabletWrapClassMap[tabletWrap],
+        desktopWrapClassMap[desktopWrap]
       )}
       data-stack-variant={resolvedVariant}
-      data-stack-direction-desktop={direction.desktop ?? "column"}
-      data-stack-direction-tablet={direction.tablet ?? "column"}
-      data-stack-direction-mobile={direction.mobile ?? "column"}
-      data-stack-gap-desktop={gap.desktop ?? "6"}
-      data-stack-gap-tablet={gap.tablet ?? "6"}
-      data-stack-gap-mobile={gap.mobile ?? "4"}
-      data-stack-align={normalized.align ?? "stretch"}
-      data-stack-justify={normalized.justify ?? "start"}
-      data-stack-wrap={normalized.wrap ? "true" : "false"}
+      data-stack-direction-desktop={normalized.direction.desktop}
+      data-stack-direction-tablet={normalized.direction.tablet}
+      data-stack-direction-mobile={normalized.direction.mobile}
+      data-stack-gap-desktop={normalized.gap.desktop}
+      data-stack-gap-tablet={normalized.gap.tablet}
+      data-stack-gap-mobile={normalized.gap.mobile}
+      data-stack-align={normalized.align.mobile}
+      data-stack-align-desktop={normalized.align.desktop}
+      data-stack-align-tablet={normalized.align.tablet}
+      data-stack-align-mobile={normalized.align.mobile}
+      data-stack-justify={normalized.justify.mobile}
+      data-stack-justify-desktop={normalized.justify.desktop}
+      data-stack-justify-tablet={normalized.justify.tablet}
+      data-stack-justify-mobile={normalized.justify.mobile}
+      data-stack-wrap={mobileWrap}
+      data-stack-wrap-desktop={desktopWrap}
+      data-stack-wrap-tablet={tabletWrap}
+      data-stack-wrap-mobile={mobileWrap}
       data-stack-items={String(contentBlocks.length)}
     >
       {contentBlocks.length > 0 ? (
@@ -281,24 +367,24 @@ export function createStackWidget(editors: {
   return {
     type: "stack",
     title: "Stack",
-    description: "Flow layout wrapper with responsive direction and spacing.",
+    description: "Flow layout wrapper with responsive direction, spacing, and axis control.",
     category: "layout",
     slots: [{ id: "content", label: "Content" }],
     variants: [
       {
         id: "vertical",
         label: "Vertical",
-        description: "Column flow for long-form page sections.",
+        description: "Preset: column flow on every breakpoint.",
       },
       {
         id: "horizontal",
         label: "Horizontal",
-        description: "Row flow for compact action groups.",
+        description: "Preset: row flow on every breakpoint.",
       },
       {
         id: "responsive",
         label: "Responsive",
-        description: "Column on mobile, row on tablet/desktop.",
+        description: "Preset: column on mobile, row on tablet and desktop.",
       },
     ],
     schema: stackSchema,

@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252-05-05, TASK-256
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -78,11 +78,11 @@ of hiding it inside this family.
 
 ## Sub-Tasks
 
-- [ ] TASK-286-01: Stack Flex Alignment Token Expansion
-- [ ] TASK-286-02: Stack Responsive Axis and Wrap Controls
-- [ ] TASK-286-03: Stack Wizard Gap Scale and Layout Guidance
-- [ ] TASK-286-04: Stack Variant Miniatures and Empty Slot Guidance
-- [ ] TASK-286-05: Stack Report Docs Changelog and Closure
+- [x] TASK-286-01: Stack Flex Alignment Token Expansion
+- [x] TASK-286-02: Stack Responsive Axis and Wrap Controls
+- [x] TASK-286-03: Stack Wizard Gap Scale and Layout Guidance
+- [x] TASK-286-04: Stack Variant Miniatures and Empty Slot Guidance
+- [x] TASK-286-05: Stack Report Docs Changelog and Closure
 
 ## Implementation Order
 
@@ -177,3 +177,9 @@ This umbrella does not add API routes.
   evidence move together for every new product field.
 - Public Stack output remains safe, deterministic, and free of arbitrary classes
   or admin-only slot instructions.
+
+
+## Completion Notes (2026-05-22)
+
+- Stack now ships responsive `align`, `justify`, and `wrap`, the missing Stack-owned flex tokens, clearer Wizard layout guidance, and deterministic variant miniatures without expanding into arbitrary CSS.
+- Final report, widget docs, task files, board rows, and changelog now agree on the TASK-286 outcome; only shared duplicate-zero semantics and Advanced variant ownership remain routed to TASK-256.

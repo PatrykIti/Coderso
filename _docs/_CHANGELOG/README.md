@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 919 | 2026-05-22 | TASK-286 stack widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 918 | 2026-05-21 | TASK-284 spacer widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 917 | 2026-05-21 | TASK-284-04 spacer horizontal orientation decision | CMS Widgets/Layout/Runtime/QA/Docs |
 | 916 | 2026-05-21 | TASK-284-03 spacer named rhythm presets | CMS Widgets/Admin UI/Runtime/QA/Docs |

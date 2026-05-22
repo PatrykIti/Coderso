@@ -461,7 +461,8 @@ test("widget template block settings render stack visual sections", () => {
 
   expect(html).toContain("Variant and flow");
   expect(html).toContain("Responsive direction");
-  expect(html).toContain("Spacing and distribution");
+  expect(html).toContain("Responsive alignment and wrap");
+  expect(html).toContain("Slot guidance");
 });
 
 test("widget template block settings render split layout visual sections", () => {

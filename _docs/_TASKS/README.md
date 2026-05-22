@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 154 tasks
+- **To Do:** 137 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1857 tasks
+- **Done:** 1865 tasks
 
 ---
 
@@ -86,12 +86,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Add optional safe per-metric links using shared safe-href behavior without public-write or action scope |
 | TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Add efficient reorder, merge-safe removal recovery, and Visual IA grouping after content/style/link fields settle |
 | TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Refresh Stats KPI report/docs/changelog/board and final validation evidence |
-| TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Stack-only follow-up family for `REPORT_STACK_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Add Stack-owned `baseline`, `space-around`, and `space-evenly` tokens with schema/editor/runtime/tests/docs coverage |
-| TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Add responsive align/justify/wrap controls while preserving legacy scalar payload compatibility |
-| TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Improve Wizard layout controls, all-breakpoint gap copy, and gap scale context after TASK-256 token cleanup |
-| TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Add variant miniatures and admin-safe empty-slot guidance without leaking public admin CTAs |
-| TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Refresh Stack report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -197,6 +191,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stack family is fully closed with responsive axis/wrap, Wizard guidance, variant miniatures, and synchronized report/docs/board/changelog evidence; only shared TASK-256 residuals remain |
+| TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final Stack report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-286 family |
+| TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Done (2026-05-22): Stack variant cards now render deterministic miniatures and editor-side `content` slot guidance while public runtime remains neutral |
+| TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Done (2026-05-22): Wizard now exposes all-breakpoint gap/align/justify controls with truthful copy and scale context |
+| TASK-286-02 | Stack Responsive Axis and Wrap Controls | High | Large | Done (2026-05-22): Stack now supports responsive align/justify/wrap with scalar legacy compatibility and deterministic breakpoint markers |
+| TASK-286-01 | Stack Flex Alignment Token Expansion | Medium | Medium | Done (2026-05-22): Stack now allowlists baseline, space-around, and space-evenly across schema, editor, runtime, and tests |
 | TASK-283 | Section Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): all widget-local Section follow-up leaves are closed, the report/docs/board/changelog are synchronized, and the only remaining open residue is shared `TASK-327` |
 | TASK-283-08 | Section Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final Section report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-283 family |
 | TASK-283-05 | Section Surface Shadow Motion and Preview Controls | Medium | Large | Done (2026-05-22): Section now completes its shadow, motion, preview, and final angle/opacity slider UX through the combined `TASK-283-05-01` and `TASK-283-05-02` split |

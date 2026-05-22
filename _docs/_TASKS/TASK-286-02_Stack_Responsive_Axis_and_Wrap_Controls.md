@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-05-02, TASK-286-01, TASK-286
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -60,24 +60,24 @@ in scope because Stack already uses those for `direction` and `gap`.
 
 ## Sub-Tasks
 
-- [ ] Define a `StackResponsiveValue<T>` helper type for scalar legacy values
+- [x] Define a `StackResponsiveValue<T>` helper type for scalar legacy values
   and object breakpoint values.
-- [ ] Extend `stackSchema` to accept either scalar legacy values or
+- [x] Extend `stackSchema` to accept either scalar legacy values or
   breakpoint-object values for `align`, `justify`, and `wrap`.
-- [ ] Normalize scalar legacy values by projecting the scalar to all
+- [x] Normalize scalar legacy values by projecting the scalar to all
   breakpoints.
-- [ ] Normalize sparse breakpoint objects with existing defaults:
+- [x] Normalize sparse breakpoint objects with existing defaults:
   `stretch/start/false`.
-- [ ] Add responsive class maps for align, justify, and wrap:
+- [x] Add responsive class maps for align, justify, and wrap:
   base mobile class plus `md:*` and `lg:*` breakpoint overrides.
-- [ ] Add deterministic runtime markers:
+- [x] Add deterministic runtime markers:
   `data-stack-align-desktop|tablet|mobile`,
   `data-stack-justify-desktop|tablet|mobile`, and
   `data-stack-wrap-desktop|tablet|mobile`.
-- [ ] Keep existing `data-stack-align`, `data-stack-justify`, and
+- [x] Keep existing `data-stack-align`, `data-stack-justify`, and
   `data-stack-wrap` as compatibility markers that always mirror the resolved
   mobile breakpoint values until docs can retire them.
-- [ ] Update Visual and Advanced editors with breakpoint-aware controls.
+- [x] Update Visual and Advanced editors with breakpoint-aware controls.
 
 ## Files to Change
 
@@ -247,3 +247,9 @@ No API routes are added.
   axis/wrap fields.
 - Tests prove schema, legacy compatibility, runtime classes, editor updates, and
   data markers.
+
+
+## Completion Notes (2026-05-22)
+
+- Stack now accepts scalar-or-breakpoint `align`, `justify`, and `wrap` values, upgrades legacy reads to full breakpoint objects, and persists deterministic responsive objects after editor writes.
+- Runtime output now exposes breakpoint-specific axis and wrap markers while keeping the legacy single-value markers pinned to the resolved mobile values for compatibility.
