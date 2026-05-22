@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Admin UI + Timeline Editor
 **Estimated Effort:** Large
-**Dependencies:** TASK-291, TASK-256-01
+**Dependencies:** TASK-291
 **Status:** To Do
 
 ---
@@ -62,7 +62,7 @@ function renderWizardStep(step: TimelineStep, index: number) {
     <TimelineWizardStepCard
       key={step.id ?? index}
       titleValue={step.title}
-      statusValue={step.status ?? "upcoming"}
+      statusValue={step.status}
       onTitleChange={(title) => updateStep(value, onChange, index, { title })}
       onStatusChange={(status) => updateWizardStatus(index, status)}
       onIconChange={(icon) => updateStep(value, onChange, index, { icon })}
@@ -81,6 +81,8 @@ Data flow:
 3. Persist changes through `updateStep()` so existing stable IDs remain intact.
 4. Omit `icon` and `accent` when the user clears them; explicit Visual
    no-status clearing is covered by TASK-291-02.
+5. If a step currently has no status, the Wizard shows an unset placeholder
+   instead of implying `upcoming`.
 
 Error handling:
 

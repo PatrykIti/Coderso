@@ -148,5 +148,9 @@ No API routes are added.
 - Timeline supports dot, number, and icon marker modes without breaking old
   payloads.
 - Per-step accents can inherit from a global Timeline accent.
+- Per-step label-position overrides are either implemented truthfully across the
+  supported layouts or explicitly deferred with report evidence.
+- Icon-in-marker rendering supports independent marker background and icon color
+  controls when the marker display uses icon mode.
 - Whole-step links are safe, optional, and do not create nested anchors.
 - Tests cover strict schema, safe normalization, and SSR output.

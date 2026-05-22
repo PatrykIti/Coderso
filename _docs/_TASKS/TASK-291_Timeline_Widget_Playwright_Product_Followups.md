@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Content + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256-01, TASK-256-04
+**Dependencies:** TASK-252, TASK-256-01, TASK-256-04, TASK-299
 **Status:** To Do
 
 ---
@@ -48,10 +48,11 @@ TASK-291 explicitly excludes these shared mechanisms:
 - Broad cross-widget accessibility buckets must route Timeline-specific report
   rows into TASK-291 instead of implementing the same Timeline editor or
   renderer changes inside TASK-256-06-03.
-- W7 color-contrast validation: excluded until a concrete shared
-  contrast-validation physical task exists. TASK-291-07 records this as
-  `blocked-pending-owner`; TASK-291 must not invent a one-off contrast checker
-  or close W7 through a generic TASK-256/TASK-256-08 reference.
+- W7 color-contrast validation: routed to `TASK-299`, which owns the reusable
+  shared contrast-guidance contract already consumed by Timeline color
+  controls. TASK-291 records Timeline-specific proof in TASK-291-07, but must
+  not invent a one-off contrast checker or close W7 through a generic
+  TASK-256/TASK-256-08 reference.
 
 ## Report Classification Matrix
 
@@ -65,7 +66,7 @@ TASK-291 explicitly excludes these shared mechanisms:
 | W1, W5, W9, W11, W12 | TASK-291-05 | Add Timeline-owned typography weight, padding/max-width/min-height tokens, horizontal chronology/milestone composition, and optional section header fields. |
 | W8 | TASK-291-06 | Add or explicitly defer Timeline-local motion presets with reduced-motion safety and no shared runtime-script invention. |
 | Report refresh, widget docs, board/changelog closure | TASK-291-07 | Refresh report evidence, widget docs, changelog, board, and validation once implementation leaves land. |
-| W7 | blocked-pending-owner | Excluded from TASK-291 until a concrete shared contrast-validation owner exists. |
+| W7 | TASK-299 | Excluded from TASK-291 implementation; record Timeline-specific adoption and closure proof through the exact shared contrast owner. |
 
 ## Source Report Ledger
 
@@ -83,7 +84,7 @@ TASK-291 explicitly excludes these shared mechanisms:
 | W4 | TASK-291-04 | Add per-step label-position override only if renderer remains deterministic. |
 | W5 | TASK-291-05 | Add bounded padding/margin or section spacing tokens instead of raw classes. |
 | W6 | TASK-291-04 | Add numbered marker mode without breaking existing dot markers. |
-| W7 | blocked-pending-owner | Do not implement in TASK-291; a concrete shared contrast-validation task must exist before closure can claim this row. |
+| W7 | TASK-299 | Do not implement contrast validation in TASK-291; close this row through the exact shared contrast owner plus Timeline-specific proof. |
 | W8 | TASK-291-06 | Add CSS-safe motion presets or explicitly keep Timeline static with a no-code decision; any shared runtime-motion need must name an exact future task before closure. |
 | W9 | TASK-291-05 | Add bounded max-width tokens; no raw class string fields. |
 | W10 | TASK-291-04 | Add optional whole-step link through `normalizeWidgetSafeHref()`. |
@@ -116,7 +117,7 @@ TASK-291 explicitly excludes these shared mechanisms:
 | Schema, defaults, normalizer, renderer | `core/widgets/core/timeline.tsx` | `tests/vitest/widgets/timeline.test.tsx`, `tests/vitest/widgets/renderer.test.tsx` | Add schema/default/SSR assertions for new fields, ARIA, responsive layout markers, safe links, motion classes, and backward compatibility. |
 | Wizard/Visual/Advanced editors | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | `tests/vitest/ui/timeline-editor-wave.test.tsx`, `tests/vitest/pageBuilder/visualPanel.test.tsx` | Add editor-flow tests for all-step Wizard editing, no-status selection, mode previews, date feedback, reorder fallback, grouped controls, and hidden-title warnings. |
 | Shared atomic mode contract | TASK-256-01 owners | `tests/vitest/pageBuilder/visualPanel.test.tsx`, `tests/vitest/pageBuilder/wizardPanel.test.tsx`, `tests/vitest/pageBuilder/advancedPanel.test.tsx` | TASK-291 runs Timeline editor proof only after the shared helper/API lands. |
-| Shared contrast validation | Blocked until a concrete shared physical owner exists | Shared UI/contrast tests after owner exists | TASK-291 does not add one-off contrast validation and TASK-291-07 cannot close W7 without an exact owner. |
+| Shared contrast validation | TASK-299 shared owner | Shared UI/contrast tests plus Timeline-specific editor proof | TASK-291 does not add one-off contrast validation and TASK-291-07 closes W7 only through exact TASK-299 evidence. |
 | Widget docs and source report | `_docs/_WIDGETS/TIMELINE.md`, `_docs/_WIDGETS/README.md`, `_docs/WIDGETS.md`, `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md` | docs diff checks | Update fixed/deferred status and final usage contract after each implementation wave; remove stale "bez dat" summaries where Timeline dates are already part of the live model. |
 
 ## Sub-Tasks
@@ -203,6 +204,8 @@ No API routes are added.
 - Update `_docs/_WIDGETS/README.md` and `_docs/WIDGETS.md` when their Timeline
   summaries still describe the widget as date-free; broader shared widget
   contract changes remain outside TASK-291.
+- Update `_docs/ARCHITECTURE.md` when its widget inventory still describes
+  Timeline as date-free.
 - Update `core/widgets/modulePackMatrix.ts` and `_docs/WIDGET_PACK_MATRIX.md`
   only if pack readiness/completeness changes.
 - Add a final changelog entry and update `_docs/_CHANGELOG/README.md` when this
@@ -219,8 +222,9 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every finding in `REPORT_TIMELINE_WIDGET.md` is either implemented by a
-  TASK-291 leaf, routed to an exact TASK-256 physical owner, or explicitly
-  deferred with a reason in TASK-291-07.
+  TASK-291 leaf, routed to an exact physical owner task (for example
+  `TASK-256-01` or `TASK-299`), or explicitly deferred with a reason in
+  TASK-291-07.
 - Timeline schema, defaults, normalizer, renderer, editors, tests, and docs stay
   synchronized for every new product field.
 - TASK-291 leaves do not weaken or duplicate shared TASK-256 contracts.

@@ -129,4 +129,5 @@ No API routes are added.
   TASK-256-01 lands.
 - Date fields provide actionable feedback without destroying existing labels.
 - Visual status controls expose no-status/default-upcoming behavior explicitly.
+- Helper text and grouped per-step controls cover U4, U8, and U9 explicitly.
 - Reorder supports pointer users and keeps keyboard button fallback.

@@ -111,8 +111,9 @@ No API routes are added.
   renderer assertions change
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Include accessibility/reliability suites selected by `bun run gates:coderso`
-  before closure when public runtime output changes.
+- `bun run gates:coderso` plus targeted release-gate suites when this leaf
+  changes accessibility, public runtime output, or other release-gated
+  behavior.
 - `bun run scan:security:strict` before committing or closing this leaf
 - `bun run precommit` before committing or closing this leaf
 
