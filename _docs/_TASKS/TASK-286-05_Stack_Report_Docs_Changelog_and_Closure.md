@@ -182,13 +182,15 @@ No API routes are added by this closure leaf.
 ## Validation Notes (2026-05-22)
 
 - `git diff --check` - passed
+- `bun run lint` - passed on the current committed worktree after a retry; the earlier one-off `SIGKILL` was not reproducible once `lint:core` and `lint:repo` were rerun successfully in isolation
 - `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx` - passed (`2` files, `11` tests)
-- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` - failed on the pre-existing Rich Text Section assertion expecting `Structured fallback blocks` at `tests/vitest/ui/widget-template-editor.test.tsx:828`; the Stack-specific template-shell expectations passed and the failure does not exercise Stack code
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx -t "widget template block settings render stack visual sections"` - passed (`1` Stack-specific test, `22` skipped)
+- `bun run test:vitest -- tests/vitest/ui/widget-template-editor.test.tsx` - still fails on the pre-existing Rich Text Section assertion expecting `Structured fallback blocks` at `tests/vitest/ui/widget-template-editor.test.tsx:828`; that failure does not exercise Stack code
 - `bun test tests/unit/widgets/validator.test.ts` - passed (`24` tests)
 - `bun test tests/unit/widgets/registry.test.ts` - passed (`14` tests)
 - `bun --cwd core lint` - passed
 - `bun --cwd core lint:types` - passed
-- `bun run gates:coderso` - passed
+- `bun run gates:coderso` - passed on the current committed worktree
 - `bun run precommit` - passed
 - `bun run scan:security:strict` - could not complete fully in the local environment because `semgrep` and `trivy` are missing from `PATH`, and the installed `gitleaks` binary does not support the repo's `git` / `dir` subcommands; `bun audit` still completed inside the same command
 
