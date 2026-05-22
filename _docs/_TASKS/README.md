@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 139 tasks
+- **To Do:** 140 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1873 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Reopened shared Stats KPI renderer drift: `split-highlight` still hardcodes `sm:grid-cols-2` for secondary metrics on the current branch, leaving odd-count imbalance after closed `TASK-256-06-01` |
 | TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Shared follow-up extracted during TASK-288 audit: current branch still lacks the final Tabs tablist accessible-name and tabpanel keyboard-reachability adoption promised by the closed TASK-256 contract |
 | TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Shared follow-up extracted during TASK-288 implementation: interactive widgets still duplicate static inline runtime payloads per widget instance until a render-scoped transport helper lands |
 | TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
@@ -76,7 +77,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Stats KPI-only follow-up family for `REPORT_STATS_KPI_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Add value-size, description color, prefix/suffix, per-metric accent, and static trend fields after TASK-256 shared safety |
 | TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Add inner section surface, max-width, padding, sparse density, icon styling, and optional divider intensity after TASK-256 truthfulness |
-| TASK-287-03 | Stats KPI Wizard Variant Cards and Guidance | High | Medium | Add Wizard visual variant cards, header clear/guidance, icon guidance, and spacing help after TASK-256 baseline content fields land |
+| TASK-287-03 | Stats KPI Wizard Variant Cards and Guidance | High | Medium | Complete Wizard content parity, add visual variant cards, clear/guidance affordances, and spacing help without reintroducing shared update drift |
 | TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Add optional safe per-metric links using shared safe-href behavior without public-write or action scope |
 | TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Add efficient reorder, merge-safe removal recovery, and Visual IA grouping after content/style/link fields settle |
 | TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Refresh Stats KPI report/docs/changelog/board and final validation evidence |

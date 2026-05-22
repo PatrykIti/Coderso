@@ -22,7 +22,7 @@ ownership; TASK-256-01 owns the shared Advanced duplicate-control policy.
 
 ## Source Findings
 
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:86-88` - U7, U8, U9 editor IA
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:86-87` - U7 and U8 editor IA
   issues that remain after TASK-256-owned Advanced policy is excluded.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:262` - drag/drop is a medium
   priority issue.
@@ -128,8 +128,9 @@ No API routes are added.
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/STATS_KPI.md`
-- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` with U7/U8/U9 evidence or
-  deferral notes, and a pointer that U6 remains TASK-256-01-owned.
+- `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` with U7/U8 evidence or
+  deferral notes, and a pointer that U6 remains TASK-256-01-owned while U9
+  stays with TASK-287-03.
 - `_docs/_TASKS/TASK-287-05_Stats_KPI_Metric_Management_and_Editor_IA_Polish.md`
 - `_docs/_TASKS/README.md` on status changes.
 

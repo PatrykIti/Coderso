@@ -46,7 +46,12 @@ Stats KPI widget służy do prezentacji kluczowych wskaźników wydajności (KPI
 
 ---
 
-## 3. Braki funkcjonalne — analiza kodu
+## 3. Historyczne braki z audytu 2026-05-16 — analiza kodu
+
+> **Uwaga (stan gałęzi `feature/corrections`, 2026-05-22):** C1, C2, U3, R1,
+> R2 i R3 są już naprawione przez shared `TASK-256-06-01`. C3 pozostaje otwarty
+> i jest teraz owned by `TASK-287-03`, a W11/R6 został wycięty do shared
+> follow-up `TASK-331` zamiast pozostawać ukrytym pod zamkniętym `TASK-256`.
 
 ### 3.1 Krytyczne (bezpośrednio wpływające na usability)
 
@@ -245,7 +250,7 @@ Identyczne jak admin preview — `null` dla wszystkich atrybutów ARIA. Błędy 
 
 ---
 
-## 7. Podsumowanie priorytetów
+## 7. Historyczne podsumowanie priorytetów z audytu 2026-05-16
 
 | Priorytet | ID | Problem | Wpływ |
 |-----------|---|---------|-------|
@@ -316,13 +321,16 @@ Lub dodać pole `columns: 2 | 3 | 4` do `StatsKpiData.style`.
 
 ### 8.4 Naprawa C3 (Wizard — brak label/icon)
 
+**Aktualny owner na tej gałęzi:** `TASK-287-03`
+
+
 **Plik:** `StatsKpiEditors.tsx` — `StatsKpiWizardEditor`
 
 Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone pola `header.title`.
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po TASK-256 / drift audit TASK-287 (2026-05-22)
 
 - `TASK-256-06-01`: divider controls are now variant-aware and locked outside
   the `inline` renderer path where divider output is meaningful.
@@ -330,6 +338,12 @@ Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone 
   instead of hardcoding the four-column desktop layout for every cards variant.
 - `TASK-256-06-01`: KPI runtime semantics now include section labels,
   per-article labels, and decorative icon `aria-hidden`.
+- `TASK-287-03`: current branch still lacks Wizard `header` + metric
+  `label`/`description`/`icon` inputs, so C3 now belongs to the widget-local
+  follow-up family instead of the already-closed `TASK-256-06-01`.
+- `TASK-331`: shared split-highlight secondary-grid truthfulness remains open on
+  the current branch because the renderer still hardcodes `sm:grid-cols-2` for
+  secondary metrics. This residual is intentionally tracked outside `TASK-287`.
 - Shared evidence from this turn:
   `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx
   tests/vitest/widgets/statsKpi.test.tsx` passed on 2026-05-17.

@@ -21,6 +21,12 @@ shared divider/grid/ARIA/color-control baseline is fixed. Do not use TASK-287 to
 duplicate shared fixes for truthful controls, generic color-picker behavior,
 interactive/accessibility baseline, or Advanced-mode ownership.
 
+Current-branch note: TASK-256 shared divider/grid/ARIA fixes are already present
+in `feature/corrections`, but the Stats KPI Wizard still lacks the baseline
+header and metric content inputs observed in the report. TASK-287-03 owns that
+current-state Wizard parity work so the family remains executable on this
+branch.
+
 ## Source Report Boundary
 
 Source report:
@@ -52,11 +58,10 @@ TASK-256 already owns them as shared widget-contract drift.
 |---|---|---|---|
 | C1 divider toggle persists without effect outside `inline` | `REPORT_STATS_KPI_WIDGET.md:53-56,126-141,269-282` | TASK-256-06-01 | Shared truthful-control repair for visible controls that do not affect runtime. |
 | C2/R5 cards grid holes from fixed `lg:grid-cols-4` | `REPORT_STATS_KPI_WIDGET.md:56,143-152,252-253,284-298` | TASK-256-06-01 | Shared truthful renderer/control baseline already routes Stats KPI grid behavior. |
-| W11/R6 split-highlight secondary grid imbalance | `REPORT_STATS_KPI_WIDGET.md:73,154-163,242,284-298` | TASK-256-06-01 | Shared renderer truthfulness for existing split-highlight layout. |
+| W11/R6 split-highlight secondary grid imbalance | `REPORT_STATS_KPI_WIDGET.md:73,154-163,242,284-298` | TASK-331 | Shared renderer truthfulness residual remains open on the current branch after `TASK-256-06-01`; keep the fix in the dedicated shared follow-up instead of burying it inside TASK-287. |
 | R1/R2/R3/R4 section, article, icon, and heading semantics | `REPORT_STATS_KPI_WIDGET.md:94-99,165-175,200-226,300-315` | TASK-256-04, TASK-256-06-01 | Baseline runtime accessibility belongs to the shared widget contract. |
 | U2 CSS-variable color picker fallback | `REPORT_STATS_KPI_WIDGET.md:81,177-183,258` | TASK-256-02 | Generic color/token editor semantics must be fixed once for all widgets. |
 | U3 divider switch context | `REPORT_STATS_KPI_WIDGET.md:82,137-139,259` | TASK-256-06-01 | Divider visibility/disablement is the same truthful-control bug as C1. |
-| C3 baseline Wizard content fields | `REPORT_STATS_KPI_WIDGET.md:57,115-124,254,317-321`; `TASK-256-06-01_Feature_Grid_and_Stats_KPI_Truthful_Controls.md:25-29,68,72` | TASK-256-06-01 | The shared truthful setup leaf owns adding the missing Wizard header/metric content fields. |
 | U6 Advanced duplicate-control policy | `REPORT_STATS_KPI_WIDGET.md:43-45,85,185-188`; `TASK-256-01_Shared_Editor_Mode_and_Atomic_Update_Contract.md:41-44,61-64,88` | TASK-256-01 | Shared editor-mode ownership decides whether Stats KPI Advanced controls become raw-token controls, read-only diagnostics, or are removed. |
 
 TASK-287 implementation may touch the same Stats KPI files after TASK-256 lands,
@@ -77,8 +82,9 @@ that part back to TASK-256 instead of hiding it in this family.
 | W7 icon surface/border/size | TASK-287-02 | Add bounded icon presentation fields. |
 | R7 min-height for sparse KPI sections | TASK-287-02 | Add bounded min-height or density behavior with mobile-safe defaults. |
 | R8 divider intensity | TASK-287-02 | Optional Stats KPI-local divider intensity only after TASK-256 divider semantics are truthful. |
-| U1 Wizard variant cards | TASK-287-03 | Stats KPI-local onboarding polish after TASK-256 adds the missing Wizard content fields. |
-| U4/U5/U9 header clear, icon guidance, spacing help | TASK-287-03 | Stats KPI-local guidance and affordances for fields owned by TASK-256/TASK-287-01. |
+| C3 Wizard baseline content parity | TASK-287-03 | Current branch still lacks Wizard header plus metric `label`/`description`/`icon` inputs, so this leaf owns bringing Wizard to canonical Stats KPI content parity before adding extra guidance. |
+| U1 Wizard variant cards | TASK-287-03 | Stats KPI-local onboarding polish layered onto the now-complete Wizard content surface. |
+| U4/U5/U9 header clear, icon guidance, spacing help | TASK-287-03 | Stats KPI-local guidance and affordances for fields owned by TASK-287-03/TASK-287-01. |
 | W9 per-metric CTA/link | TASK-287-04 | Add safe per-metric link semantics using existing safe-href ownership. |
 | U7 drag/drop reorder | TASK-287-05 | Improve repeated metric management while preserving keyboard move controls. |
 | U8 mixed color/surface editor grouping | TASK-287-05 | Split Stats KPI Visual IA into text, card surface, and layout groups. |
@@ -90,7 +96,7 @@ that part back to TASK-256 instead of hiding it in this family.
 | Area | Current owners | Current tests | New or changed tests |
 |---|---|---|---|
 | Stats KPI schema/defaults/normalizer/runtime | `core/widgets/core/statsKpi.tsx:6-502` | `tests/vitest/widgets/statsKpi.test.tsx`, `tests/vitest/widgets/renderer.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx` | Add schema, normalization, SSR, data-marker, safe-link, layout, typography, trend, and icon presentation assertions. |
-| Stats KPI editors | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:33-724` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Add Wizard variant-card/guidance, header clear, repeated-item management, and Visual IA grouping assertions. C3 baseline Wizard content and Advanced cleanup remain TASK-256-owned. |
+| Stats KPI editors | `core/admin/ui/widgets/editors/StatsKpiEditors.tsx:33-724` | `tests/vitest/ui/stats-kpi-editor-wave.test.tsx` | Add Wizard content parity, variant-card/guidance, header clear, repeated-item management, and Visual IA grouping assertions. Advanced cleanup remains TASK-256-owned. |
 | Widget validator/registry | `core/widgets/validator.ts`, registry via `createStatsKpiWidget()` | `tests/unit/widgets/validator.test.ts`, `tests/unit/widgets/registry.test.ts` | Run validator tests whenever persisted fields are added; registry only if definition metadata or variants change. |
 | Widget docs/report | `_docs/_WIDGETS/STATS_KPI.md`, `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` | docs diff checks | Update fixed/deferred evidence after implementation leaves land. |
 
@@ -105,14 +111,17 @@ that part back to TASK-256 instead of hiding it in this family.
 
 ## Implementation Order
 
-1. Rebase over TASK-256 shared fixes first. TASK-287 leaves must build on the
-   final divider/grid/ARIA/color/editor-mode baseline instead of duplicating it.
+1. Build on the TASK-256 shared fixes already present in the current branch.
+   TASK-287 leaves must reuse the current divider/grid/ARIA/color/editor-mode
+   baseline instead of duplicating it.
 2. Complete TASK-287-01 first because value semantics, trend data, and metric
    accent fields define the item model used by editor and link work.
 3. Complete TASK-287-02 after the core item model is stable so section and icon
    presentation fields can reuse the same bounded token maps.
-4. Complete TASK-287-03 after TASK-256-06-01 lands the baseline Wizard content
-   fields, then add only Stats KPI-local variant cards and guidance affordances.
+4. Complete TASK-287-03 after TASK-287-01 stabilizes the current item model so
+   the Wizard can expose canonical header + metric content fields, then layer
+   Stats KPI-local variant cards and guidance affordances on top of the shared
+   TASK-256-01 update semantics.
 5. Complete TASK-287-04 after TASK-256-06-02 exposes the final safe-link helper
    shape and after item semantics from TASK-287-01 are stable.
 6. Complete TASK-287-05 after content/style/link fields settle so repeated-item
@@ -198,8 +207,8 @@ Implementation leaves:
 ## Acceptance Criteria
 
 - Every finding in `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md` is either owned
-  by TASK-256, covered by a TASK-287 physical leaf, or explicitly deferred by
-  TASK-287-06 with a reason.
+  by a shared follow-up (`TASK-256`, `TASK-331`), covered by a TASK-287 physical
+  leaf, or explicitly deferred by TASK-287-06 with a reason.
 - TASK-287 task docs do not duplicate TASK-256 shared-contract implementation
   scope.
 - Each implementation leaf names concrete files, data flow, error handling,

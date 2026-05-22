@@ -26,9 +26,9 @@ implementation leaf or required validation lane remains open.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:248-263` - priority summary that
   must be reconciled before closure.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:267-321` - suggested fixes for
-  divider/grid/ARIA/Wizard. Divider/grid/ARIA and baseline Wizard content fields
-  remain TASK-256-owned; TASK-287-03 only owns Stats KPI Wizard guidance and
-  variant-card polish after that baseline lands.
+  divider/grid/ARIA/Wizard. Divider/grid/ARIA remain shared-owner scope
+  (`TASK-256`, `TASK-331`), while current-branch Wizard content parity is now
+  owned by `TASK-287-03`.
 - `_docs/PLAYWRIGHT/REPORT_STATS_KPI_WIDGET.md:74,263` - W12 count-up animation,
   which should remain rejected/deferred unless a later accessibility/performance
   task approves it.
@@ -64,6 +64,8 @@ implementation leaf or required validation lane remains open.
 | W1 value size | Fixed by TASK-287-01 | tests + code refs |
 | W12 count-up | Deferred | rejected by research matrix until perf/a11y task approves |
 | C1 divider truthfulness | TASK-256-owned | TASK-256-06-01 refs |
+| C3 Wizard content parity | Fixed by TASK-287-03 | tests + code refs |
+| W11/R6 split secondary grid | Shared TASK-331 | report + owner-task refs |
 ```
 
 Closure data flow:
@@ -79,8 +81,9 @@ Closure data flow:
 Error handling:
 
 - If any implementation leaf fails validation, keep that leaf and umbrella open.
-- If TASK-256 is still open for shared divider/grid/ARIA/color findings, record
-  those rows as TASK-256-owned rather than claiming TASK-287 fixed them.
+- If shared divider/grid/ARIA/color findings still belong to `TASK-256` or the
+  split-secondary-grid residual belongs to `TASK-331`, record those rows under
+  the shared owner rather than claiming TASK-287 fixed them.
 - If `bun test:full` or DB-backed lanes are unavailable, state the blocker and
   rerun required focused lanes before closure where applicable.
 - If `_docs/_TASKS/README.md` conflicts with another agent's rows, preserve both
@@ -132,7 +135,8 @@ No API routes are added.
 ## Acceptance Criteria
 
 - Every Stats KPI Playwright report finding is classified with exact evidence.
-- TASK-287 does not claim ownership of TASK-256 shared-contract fixes.
+- TASK-287 does not claim ownership of shared-contract fixes that belong to
+  `TASK-256` or `TASK-331`.
 - Widget docs, report notes, task statuses, board statistics, and changelog all
   agree.
 - Required focused tests, lint/typecheck, gates, security scan, and precommit
