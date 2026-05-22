@@ -129,6 +129,10 @@ test("section normalization keeps deterministic style and layout bounds", () => 
       descriptionColor: " #334155 ",
     },
     layout: {
+      mobilePaddingBlock: "giant" as never,
+      mobilePaddingInline: "wide" as never,
+      desktopPaddingBlock: "huge" as never,
+      desktopPaddingInline: "roomy" as never,
       minHeight: "giant" as never,
       regionFlow: "broken" as never,
       regionColumns: "12" as never,
@@ -177,6 +181,10 @@ test("section normalization keeps deterministic style and layout bounds", () => 
     regionColumns: "1",
     headingGap: "md",
   });
+  expect(normalized.layout?.mobilePaddingBlock).toBeUndefined();
+  expect(normalized.layout?.mobilePaddingInline).toBeUndefined();
+  expect(normalized.layout?.desktopPaddingBlock).toBeUndefined();
+  expect(normalized.layout?.desktopPaddingInline).toBeUndefined();
   expect(normalized.layout?.regionGap).toBeUndefined();
   expect(normalized.style?.gradientAngle).toBe(360);
   expect(normalized.style?.overlayOpacity).toBe(100);
@@ -267,6 +275,10 @@ test("section validator accepts expanded model", () => {
           maxWidth: "7xl",
           paddingBlock: "lg",
           paddingInline: "lg",
+          mobilePaddingBlock: "sm",
+          mobilePaddingInline: "none",
+          desktopPaddingBlock: "xl",
+          desktopPaddingInline: "md",
           minHeight: "hero",
           regionFlow: "grid",
           regionColumns: "4",
@@ -375,6 +387,53 @@ test("section renders row flow without forcing grid classes", () => {
   expect(html).toContain("md:flex-row md:flex-wrap");
   expect(html).toContain("md:min-w-[16rem] md:flex-1");
   expect(html).not.toContain("md:grid-cols-2 xl:grid-cols-4");
+});
+
+test("section restores base padding from md upward when only mobile overrides are set", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          paddingBlock: "xl",
+          paddingInline: "lg",
+          mobilePaddingBlock: "sm",
+          mobilePaddingInline: "none",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("py-4");
+  expect(html).toContain("md:py-10");
+  expect(html).toContain("px-0");
+  expect(html).toContain("md:px-8");
+});
+
+test("section applies desktop padding overrides without widening full bleed wrappers", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          containerWidth: "full",
+          paddingBlock: "md",
+          paddingInline: "lg",
+          desktopPaddingBlock: "xl",
+          desktopPaddingInline: "none",
+        },
+      }}
+      variant="bleed"
+    />
+  );
+
+  expect(html).toContain("py-6");
+  expect(html).toContain("md:py-10");
+  expect(html).not.toContain("px-8");
+  expect(html).not.toContain("md:px-0");
 });
 
 test("section renders legacy contained shadow fallback and bounded motion classes", () => {
@@ -626,6 +685,8 @@ test("section editors render expected sections", () => {
   expect(visualHtml).toContain("Semantics and anchor");
   expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");
+  expect(visualHtml).toContain("Mobile vertical padding");
+  expect(visualHtml).toContain("Desktop side padding");
   expect(visualHtml).toContain("Surface preview");
   expect(visualHtml).toContain('data-section-surface-preview="true"');
   expect(visualHtml).toContain('data-widget-editor-section="section.semantics-anchor"');

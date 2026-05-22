@@ -52,6 +52,9 @@ Notes:
   `No max width`.
 - Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
   can remain unset to keep the legacy variant spacing contract.
+- Responsive padding overrides now use the same bounded padding tokens with
+  `Match base` fallbacks; mobile-only overrides automatically restore the base
+  token from `md` upward.
 - Visual guidance explains that two gradient stops become the visible surface
   while background color remains the fallback after the gradient is cleared.
 - Heading controls now include bounded `h1`-`h6`, left/center/right alignment,
@@ -184,6 +187,9 @@ Notes:
 }
 ```
 
+Responsive padding override keys stay absent until an author chooses a mobile
+or desktop deviation from the base padding tokens.
+
 ## Heading Tokens
 
 - `heading.level`: bounded `h1` to `h6`; legacy and default output stays on `h2`
@@ -196,6 +202,14 @@ Notes:
 
 ## Layout Tokens
 
+- `layout.paddingBlock`: base vertical padding token `sm`, `md`, `lg`, `xl`
+- `layout.paddingInline`: base side padding token `none`, `sm`, `md`, `lg`
+- `layout.mobilePaddingBlock`, `layout.mobilePaddingInline`: optional mobile
+  overrides that replace the base padding on smaller screens while `md` restores
+  the base token when no desktop override is present
+- `layout.desktopPaddingBlock`, `layout.desktopPaddingInline`: optional `md`+
+  overrides that replace the base or restored desktop padding through bounded
+  class maps only
 - `layout.minHeight`: `none`, `compact`, `hero`, `screen`
 - `layout.regionFlow`: `stack`, `row`, `grid`
 - `layout.regionColumns`: `1` to `8`, applied only when `regionFlow = "grid"`

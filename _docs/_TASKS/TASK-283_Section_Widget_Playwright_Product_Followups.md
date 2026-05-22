@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08
-**Status:** In Progress (2026-05-21)
+**Status:** In Progress (2026-05-22)
 
 ---
 
@@ -115,7 +115,7 @@ this family.
 - [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
 - [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
 - [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls (split into closed `TASK-283-05-01` and pending `TASK-283-05-02` after `TASK-326`)
-- [ ] TASK-283-06: Section Responsive Spacing and Mobile Density
+- [x] TASK-283-06: Section Responsive Spacing and Mobile Density
 - [ ] TASK-283-07: Section Custom Region Labels and Structure UX
 - [ ] TASK-283-08: Section Report Docs Changelog and Closure
 

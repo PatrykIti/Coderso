@@ -138,6 +138,18 @@ const paddingInlineOptions: Array<{ id: SectionPaddingInline; label: string }> =
   { id: "lg", label: "Spacious" },
 ];
 
+const sectionResponsivePaddingMatchValue = "__match_base__";
+
+const responsivePaddingBlockOptions: Array<{
+  id: SectionPaddingBlock | typeof sectionResponsivePaddingMatchValue;
+  label: string;
+}> = [{ id: sectionResponsivePaddingMatchValue, label: "Match base" }, ...paddingBlockOptions];
+
+const responsivePaddingInlineOptions: Array<{
+  id: SectionPaddingInline | typeof sectionResponsivePaddingMatchValue;
+  label: string;
+}> = [{ id: sectionResponsivePaddingMatchValue, label: "Match base" }, ...paddingInlineOptions];
+
 const minHeightOptions: Array<{ id: SectionMinHeight; label: string }> = [
   { id: "none", label: "No minimum" },
   { id: "compact", label: "Compact band" },
@@ -1204,6 +1216,14 @@ export function SectionVisualEditor({
   const regionColumnsValue =
     normalized.layout?.regionColumns ?? sectionDefaults.layout?.regionColumns ?? "1";
   const regionGapValue = normalized.layout?.regionGap ?? sectionRegionGapAutoValue;
+  const mobilePaddingBlockValue =
+    normalized.layout?.mobilePaddingBlock ?? sectionResponsivePaddingMatchValue;
+  const mobilePaddingInlineValue =
+    normalized.layout?.mobilePaddingInline ?? sectionResponsivePaddingMatchValue;
+  const desktopPaddingBlockValue =
+    normalized.layout?.desktopPaddingBlock ?? sectionResponsivePaddingMatchValue;
+  const desktopPaddingInlineValue =
+    normalized.layout?.desktopPaddingInline ?? sectionResponsivePaddingMatchValue;
   const backgroundMedia = resolveBackgroundMedia(normalized.style);
   const backgroundMediaType = backgroundMedia.type ?? "none";
   const handleBackgroundMediaTypeChange = (nextType: SectionBackgroundMediaType) =>
@@ -1725,6 +1745,133 @@ export function SectionVisualEditor({
             )}
           </WidgetControlRow>
 
+          <WidgetControlRow id="section.layout.mobilePaddingBlock" label="Mobile vertical padding">
+            {(fieldProps) => (
+              <Select
+                value={mobilePaddingBlockValue}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    mobilePaddingBlock:
+                      next === sectionResponsivePaddingMatchValue
+                        ? undefined
+                        : (next as SectionPaddingBlock),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select mobile vertical padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsivePaddingBlockOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.mobilePaddingInline" label="Mobile side padding">
+            {(fieldProps) => (
+              <Select
+                value={mobilePaddingInlineValue}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    mobilePaddingInline:
+                      next === sectionResponsivePaddingMatchValue
+                        ? undefined
+                        : (next as SectionPaddingInline),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select mobile side padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsivePaddingInlineOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow
+            id="section.layout.desktopPaddingBlock"
+            label="Desktop vertical padding"
+          >
+            {(fieldProps) => (
+              <Select
+                value={desktopPaddingBlockValue}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    desktopPaddingBlock:
+                      next === sectionResponsivePaddingMatchValue
+                        ? undefined
+                        : (next as SectionPaddingBlock),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select desktop vertical padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsivePaddingBlockOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow id="section.layout.desktopPaddingInline" label="Desktop side padding">
+            {(fieldProps) => (
+              <Select
+                value={desktopPaddingInlineValue}
+                onValueChange={(next) =>
+                  updateLayout(value, onChange, {
+                    desktopPaddingInline:
+                      next === sectionResponsivePaddingMatchValue
+                        ? undefined
+                        : (next as SectionPaddingInline),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select desktop side padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {responsivePaddingInlineOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
           <WidgetControlRow id="section.layout.headingGap" label="Heading gap">
             {(fieldProps) => (
               <Select
@@ -1789,6 +1936,11 @@ export function SectionVisualEditor({
           Grid columns stay inactive until Region flow is set to Grid. Leaving Region gap on Match
           variant keeps the legacy spacing for each Section variant until you choose an explicit
           token.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Responsive padding stays on the same bounded tokens. `Match base` inherits the main
+          padding choice for that breakpoint, and mobile-only overrides automatically return to the
+          base token from `md` upward.
         </p>
       </WidgetEditorSection>
 

@@ -709,6 +709,24 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setSelectValue(regionColumnsSelect, "4");
     setSelectValue(findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg"]), "lg");
+    const responsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const responsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    setSelectValue(responsiveBlockSelects[0], "sm");
+    setSelectValue(responsiveInlineSelects[0], "none");
+    setSelectValue(responsiveBlockSelects[1], "xl");
+    setSelectValue(responsiveInlineSelects[1], "lg");
     setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]), "lg");
     setSelectValue(
       findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"]),
@@ -750,6 +768,10 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       regionColumns: "4",
       paddingBlock: "xl",
       paddingInline: "lg",
+      mobilePaddingBlock: "sm",
+      mobilePaddingInline: "none",
+      desktopPaddingBlock: "xl",
+      desktopPaddingInline: "lg",
       headingGap: "lg",
       regionGap: "xl",
     });
@@ -1021,6 +1043,65 @@ test("Section visual editor keeps grid columns disabled until grid flow is selec
     });
     expect(regionColumnsSelect.disabled).toBe(true);
     expect(regionColumnsSelect.value).toBe("1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor clears responsive padding overrides back to match base", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      layout: {
+        mobilePaddingBlock: "sm",
+        mobilePaddingInline: "none",
+        desktopPaddingBlock: "xl",
+        desktopPaddingInline: "lg",
+      },
+    },
+    initialVariant: "default",
+  });
+
+  try {
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+
+    expect(spacingSection.textContent).toContain(
+      "Responsive padding stays on the same bounded tokens."
+    );
+
+    const responsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const responsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+
+    expect(responsiveBlockSelects).toHaveLength(2);
+    expect(responsiveInlineSelects).toHaveLength(2);
+    expect(responsiveBlockSelects[0]?.value).toBe("sm");
+    expect(responsiveInlineSelects[0]?.value).toBe("none");
+    expect(responsiveBlockSelects[1]?.value).toBe("xl");
+    expect(responsiveInlineSelects[1]?.value).toBe("lg");
+
+    setSelectValue(responsiveBlockSelects[0], "__match_base__");
+    setSelectValue(responsiveInlineSelects[0], "__match_base__");
+    setSelectValue(responsiveBlockSelects[1], "__match_base__");
+    setSelectValue(responsiveInlineSelects[1], "__match_base__");
+
+    expect(view.getLatestValue().layout?.mobilePaddingBlock).toBeUndefined();
+    expect(view.getLatestValue().layout?.mobilePaddingInline).toBeUndefined();
+    expect(view.getLatestValue().layout?.desktopPaddingBlock).toBeUndefined();
+    expect(view.getLatestValue().layout?.desktopPaddingInline).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -1463,6 +1544,26 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(sparseColumnsSelect.value).toBe("1");
     expect(sparseColumnsSelect.disabled).toBe(true);
     expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    const sparseResponsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const sparseResponsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    expect(sparseResponsiveBlockSelects).toHaveLength(2);
+    expect(sparseResponsiveInlineSelects).toHaveLength(2);
+    expect(sparseResponsiveBlockSelects[0]?.value).toBe("__match_base__");
+    expect(sparseResponsiveBlockSelects[1]?.value).toBe("__match_base__");
+    expect(sparseResponsiveInlineSelects[0]?.value).toBe("__match_base__");
+    expect(sparseResponsiveInlineSelects[1]?.value).toBe("__match_base__");
     expect(
       findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
         .value
@@ -1591,6 +1692,26 @@ test("Section editors use hardcoded select fallbacks when sparse defaults omit s
     expect(hardcodedColumnsSelect.value).toBe("1");
     expect(hardcodedColumnsSelect.disabled).toBe(true);
     expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    const hardcodedResponsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const hardcodedResponsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    expect(hardcodedResponsiveBlockSelects).toHaveLength(2);
+    expect(hardcodedResponsiveInlineSelects).toHaveLength(2);
+    expect(hardcodedResponsiveBlockSelects[0]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveBlockSelects[1]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveInlineSelects[0]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveInlineSelects[1]?.value).toBe("__match_base__");
     expect(
       findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
         .value

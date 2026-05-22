@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Responsive Layout + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-283, TASK-283-01
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -18,7 +18,8 @@ be tuned without raw CSS.
 This leaf covers report finding W6. It builds on TASK-283-01 so responsive
 spacing uses the same bounded layout token model as base Section spacing.
 Optional density affordances in the editor must stay as padding-only presets
-over the same fields and must not create a second gap contract.
+over the same fields and must not create a second gap contract. This pass kept
+a single responsive padding model and did not add a second density abstraction.
 
 ## Scope Boundary
 
@@ -47,17 +48,18 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.layout` with a small responsive spacing model such as
-  `mobilePaddingBlock`, `mobilePaddingInline`, `desktopPaddingBlock`, and
-  `desktopPaddingInline` or an equivalent explicit token object.
-- [ ] Keep current `paddingBlock` and `paddingInline` as the base/default fields
+- [x] Extend `SectionData.layout` with explicit `mobilePaddingBlock`,
+  `mobilePaddingInline`, `desktopPaddingBlock`, and `desktopPaddingInline`
+  tokens while keeping the schema bounded.
+- [x] Keep current `paddingBlock` and `paddingInline` as the base/default fields
   for backward compatibility.
-- [ ] Render responsive classes through class maps only.
-- [ ] Add Visual controls that expose responsive overrides without requiring
+- [x] Render responsive classes through class maps only, with deterministic
+  `md` restoration when only mobile overrides are present.
+- [x] Add Visual controls that expose responsive overrides without requiring
   users to manage raw breakpoints.
-- [ ] If density presets are exposed in the editor, keep them as pure macros
-  over the same responsive padding fields instead of adding responsive gap data.
-- [ ] Add tests for default fixed spacing, mobile override classes, desktop
+- [x] Keep the responsive authoring model on the same padding fields instead of
+  adding a second density or responsive-gap contract.
+- [x] Add tests for default fixed spacing, mobile override classes, desktop
   override classes, and editor updates.
 
 ## Files to Change

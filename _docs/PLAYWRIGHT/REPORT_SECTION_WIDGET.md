@@ -67,7 +67,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | W3 | Zamknięte (2026-05-21, TASK-283-05-01): W3 domknięto jako bounded CSS-only reveal (`none` / `fade` / `slide-up`) z `motion-safe` / `motion-reduce`; scroll observers i parallax nie wchodzą do kontraktu Section | Efekty |
 | W4 | Brak niestandardowych nazw regionów — wszystkie jako generyczne „Region" | UX struktury |
 | W5 | Zamknięte (2026-05-21, TASK-283-03): Section ma bounded `left` / `center` / `right` alignment dla nagłówka | Typografia |
-| W6 | Brak responsywnych wariantów paddingu (inny padding na mobile/desktop) | Responsywność |
+| W6 | Zamknięte (2026-05-22, TASK-283-06): Section ma bounded `mobilePaddingBlock` / `mobilePaddingInline` / `desktopPaddingBlock` / `desktopPaddingInline` z `Match base` fallbackiem i automatycznym `md` restore do base tokenu | Responsywność |
 | W7 | Zamknięte (2026-05-21, TASK-283-01): odstęp nagłówek → regiony jest kontrolowany przez `layout.headingGap` zamiast hardcoded `gap-4` | Layout |
 | W8 | Zamknięte (2026-05-21, TASK-283-01): `layout.regionGap` pozwala ustawić jawny token, a brak pola zachowuje legacy spacing wariantu | Layout |
 | W9 | Zamknięte w aktualnym baseline (potwierdzone 2026-05-21): pola `gradientFrom` i `gradientTo` mają już przycisk Clear, a TASK-283-04 dopisał fokusowy test, więc wcześniejszy raport był stale drift | UX edytora |
@@ -300,7 +300,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 |------|-------|-----------|
 | Sekcja wypełnia pełną szerokość | ✅ | `sectionWidth: 375px`, `sectionLeft: 0` |
 | Brak poziomego overflow | ✅ | `scrollWidth ≤ innerWidth` |
-| Padding boczny zachowany | ✅ | `padding-left: 24px / padding-right: 24px` (px-6) |
+| Padding boczny zachowany | ✅ | Opublikowana próbka bez responsive override dalej ma `padding-left: 24px / padding-right: 24px` (`px-6`); od 2026-05-22 `TASK-283-06` dodaje jawne mobile/desktop overrides, gdy autor je wybierze |
 | Gradient widoczny | ✅ | Renderuje się poprawnie na mobile |
 | „Empty region.” widoczny | Historyczne | Potwierdzone na mobile w sesji 2026-05-16; zamknięte od 2026-05-17 przez shared TASK-256 placeholder gating |
 
@@ -347,7 +347,6 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
 | **P1** | TASK-283-05-02 — po `TASK-326` zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX bez dublowania ownera | Średni | UX edytora / Truthfulness |
 | **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
-| **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
 | **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
@@ -367,6 +366,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Friendly max-width labels oraz gradient/background guidance są obecne w bieżącym edytorze po TASK-283-04
 - Background media: dekoracyjne image/video tła, poster dla video, bounded blend/layer ordering, i fail-closed dla nieobsługiwanych źródeł są zamknięte przez TASK-283-02
 - Heading controls: Wizard `Label`, bounded `h1`–`h6`, alignment, size tokens, i clearable heading colors są zamknięte przez TASK-283-03
+- Responsive spacing: Section ma teraz bounded mobile/desktop padding overrides z `Match base` fallbackiem; mobile-only override wraca do base tokenu od `md` wzwyż bez raw CSS
 
 ### Co wymaga poprawy ❌
 
@@ -374,7 +374,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults, zdublowane `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed`; to zostało wycięte do `TASK-326` zamiast lokalnej łaty w `TASK-283`.
 - **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
 - **Angle/opacity UX**: finalne slider/stepper controls czekają na `TASK-283-05-02` po domknięciu shared owner drift w `TASK-326`.
-- **Responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-06` i `TASK-283-07`.
+- **Custom region labels**: ten ostatni widget-local Section owner pozostaje otwarty w `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
 
 ### Uwagi do sesji testowej

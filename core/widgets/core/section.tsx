@@ -75,6 +75,10 @@ export type SectionData = {
     maxWidth?: SectionMaxWidth;
     paddingBlock?: SectionPaddingBlock;
     paddingInline?: SectionPaddingInline;
+    mobilePaddingBlock?: SectionPaddingBlock;
+    mobilePaddingInline?: SectionPaddingInline;
+    desktopPaddingBlock?: SectionPaddingBlock;
+    desktopPaddingInline?: SectionPaddingInline;
     minHeight?: SectionMinHeight;
     regionFlow?: SectionRegionFlow;
     regionColumns?: SectionRegionColumns;
@@ -148,6 +152,10 @@ export const sectionSchema = {
         maxWidth: { enum: ["none", "4xl", "5xl", "6xl", "7xl"] },
         paddingBlock: { enum: ["sm", "md", "lg", "xl"] },
         paddingInline: { enum: ["none", "sm", "md", "lg"] },
+        mobilePaddingBlock: { enum: ["sm", "md", "lg", "xl"] },
+        mobilePaddingInline: { enum: ["none", "sm", "md", "lg"] },
+        desktopPaddingBlock: { enum: ["sm", "md", "lg", "xl"] },
+        desktopPaddingInline: { enum: ["none", "sm", "md", "lg"] },
         minHeight: { enum: ["none", "compact", "hero", "screen"] },
         regionFlow: { enum: ["stack", "row", "grid"] },
         regionColumns: { enum: ["1", "2", "3", "4", "5", "6", "7", "8"] },
@@ -292,6 +300,20 @@ const paddingInlineClassMap: Record<SectionPaddingInline, string> = {
   sm: "px-4",
   md: "px-6",
   lg: "px-8",
+};
+
+const desktopPaddingBlockClassMap: Record<SectionPaddingBlock, string> = {
+  sm: "md:py-4",
+  md: "md:py-6",
+  lg: "md:py-8",
+  xl: "md:py-10",
+};
+
+const desktopPaddingInlineClassMap: Record<SectionPaddingInline, string> = {
+  none: "md:px-0",
+  sm: "md:px-4",
+  md: "md:px-6",
+  lg: "md:px-8",
 };
 
 const minHeightClassMap: Record<SectionMinHeight, string> = {
@@ -574,6 +596,22 @@ const resolveSectionPaddingInline = (value: string | undefined): SectionPaddingI
   return "md";
 };
 
+const resolveOptionalSectionPaddingBlock = (
+  value: string | undefined
+): SectionPaddingBlock | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "sm" || value === "md" || value === "lg" || value === "xl") return value;
+  return undefined;
+};
+
+const resolveOptionalSectionPaddingInline = (
+  value: string | undefined
+): SectionPaddingInline | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg") return value;
+  return undefined;
+};
+
 const resolveSectionMinHeight = (value: string | undefined): SectionMinHeight => {
   if (value === "compact" || value === "hero" || value === "screen") return value;
   return "none";
@@ -628,6 +666,23 @@ export const sanitizeSectionAnchorId = (value: string | undefined) => {
 export function resolveSectionVariant(variant: string): SectionVariantId {
   if (variant === "contained" || variant === "bleed") return variant;
   return "default";
+}
+
+function resolveResponsiveSpacingClass<Token extends string>(
+  base: Token,
+  mobileOverride: Token | undefined,
+  desktopOverride: Token | undefined,
+  baseClassMap: Record<Token, string>,
+  desktopClassMap: Record<Token, string>
+) {
+  if (mobileOverride) {
+    return joinClasses(baseClassMap[mobileOverride], desktopClassMap[desktopOverride ?? base]);
+  }
+
+  return joinClasses(
+    baseClassMap[base],
+    desktopOverride ? desktopClassMap[desktopOverride] : undefined
+  );
 }
 
 export function normalizeSectionData(data: SectionData): SectionData {
@@ -694,6 +749,10 @@ export function normalizeSectionData(data: SectionData): SectionData {
       paddingInline: resolveSectionPaddingInline(
         data.layout?.paddingInline ?? layoutDefaults.paddingInline
       ),
+      mobilePaddingBlock: resolveOptionalSectionPaddingBlock(data.layout?.mobilePaddingBlock),
+      mobilePaddingInline: resolveOptionalSectionPaddingInline(data.layout?.mobilePaddingInline),
+      desktopPaddingBlock: resolveOptionalSectionPaddingBlock(data.layout?.desktopPaddingBlock),
+      desktopPaddingInline: resolveOptionalSectionPaddingInline(data.layout?.desktopPaddingInline),
       minHeight: resolveSectionMinHeight(data.layout?.minHeight ?? layoutDefaults.minHeight),
       regionFlow,
       regionColumns:
@@ -757,6 +816,20 @@ export function SectionBlock({
   const style = normalized.style ?? sectionDefaults.style!;
   const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
   const resolvedMotion = resolveSectionMotion(style.motion);
+  const resolvedPaddingBlockClass = resolveResponsiveSpacingClass(
+    layout.paddingBlock ?? "md",
+    layout.mobilePaddingBlock,
+    layout.desktopPaddingBlock,
+    paddingBlockClassMap,
+    desktopPaddingBlockClassMap
+  );
+  const resolvedPaddingInlineClass = resolveResponsiveSpacingClass(
+    layout.paddingInline ?? "md",
+    layout.mobilePaddingInline,
+    layout.desktopPaddingInline,
+    paddingInlineClassMap,
+    desktopPaddingInlineClassMap
+  );
 
   const resolvedRegionGap = layout.regionGap ?? regionGapVariantFallbackMap[resolvedVariant];
   const backgroundMedia = style.backgroundMedia ??
@@ -774,13 +847,13 @@ export function SectionBlock({
     maxWidthClassMap[layout.maxWidth ?? "6xl"],
     layout.containerWidth === "full" && resolvedVariant === "bleed"
       ? undefined
-      : paddingInlineClassMap[layout.paddingInline ?? "md"]
+      : resolvedPaddingInlineClass
   );
 
   const surfaceFrameClass = joinClasses(
     "relative w-full",
     minHeightClassMap[layout.minHeight ?? "none"],
-    paddingBlockClassMap[layout.paddingBlock ?? "md"],
+    resolvedPaddingBlockClass,
     shadowClassMap[resolvedShadow],
     motionClassMap[resolvedMotion]
   );
