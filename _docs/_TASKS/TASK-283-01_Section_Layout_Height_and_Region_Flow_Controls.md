@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-03, TASK-256-05-01, TASK-283
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
@@ -25,8 +25,7 @@ remain TASK-256-05-01.
 In scope:
 
 - `layout.minHeight` with bounded presets such as `none`, `screen`, `hero`,
-  `compact`, and `custom-var` only if the existing design-token system has a
-  safe token owner;
+  and `compact`;
 - `layout.regionFlow` with bounded values such as `stack`, `row`, and `grid`;
 - `layout.regionColumns` only when `regionFlow="grid"`, clamped to the current
   slot max of 8 and responsive-safe defaults;
@@ -52,17 +51,17 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.layout` and `sectionSchema` with bounded height,
+- [x] Extend `SectionData.layout` and `sectionSchema` with bounded height,
   region flow, column, and gap fields.
-- [ ] Add resolver helpers that normalize unknown values to current defaults and
+- [x] Add resolver helpers that normalize unknown values to current defaults and
   keep legacy payloads visually unchanged.
-- [ ] Render region wrappers through explicit class maps instead of hardcoded
+- [x] Render region wrappers through explicit class maps instead of hardcoded
   `flex flex-col` and variant-only gap selection.
-- [ ] Add Visual editor controls for min height, flow, columns, heading gap, and
+- [x] Add Visual editor controls for min height, flow, columns, heading gap, and
   region gap with disabled/hidden dependent controls where appropriate.
-- [ ] Keep Wizard unchanged unless a later TASK-283 preset leaf decides to expose
+- [x] Keep Wizard unchanged unless a later TASK-283 preset leaf decides to expose
   a safe starting layout.
-- [ ] Add regression tests for default legacy output, grid/row output, clamped
+- [x] Add regression tests for default legacy output, grid/row output, clamped
   columns, and editor payload updates.
 
 ## Files to Change
@@ -103,7 +102,7 @@ function normalizeSectionLayout(layout: SectionData["layout"]) {
     regionFlow,
     regionColumns: regionFlow === "grid" ? clampSectionRegionColumns(layout?.regionColumns) : 1,
     headingGap: resolveSectionGap(layout?.headingGap),
-    regionGap: resolveSectionGap(layout?.regionGap),
+    regionGap: resolveOptionalSectionGap(layout?.regionGap),
   };
 }
 ```
@@ -111,10 +110,11 @@ function normalizeSectionLayout(layout: SectionData["layout"]) {
 Renderer flow:
 
 ```tsx
+const resolvedRegionGap = layout.regionGap ?? legacyVariantRegionGapMap[variant];
 const regionClassName = joinClasses(
   regionFlowClassMap[layout.regionFlow],
   layout.regionFlow === "grid" ? regionColumnClassMap[layout.regionColumns] : undefined,
-  regionGapClassMap[layout.regionGap]
+  regionGapClassMap[resolvedRegionGap]
 );
 ```
 
@@ -124,6 +124,8 @@ Error handling:
 - `regionColumns` is ignored unless `regionFlow="grid"`.
 - Existing saved blocks with no new fields must produce the same output as
   before this leaf, except for any TASK-256 placeholder fix already landed.
+- `layout.regionGap` stays optional so legacy saved Sections keep their
+  variant-owned spacing until an editor explicitly stores a new token.
 
 ## Security Contract
 
@@ -158,6 +160,19 @@ No API routes are added.
 - Section can render bounded min-height/fullscreen-style layouts without raw CSS.
 - Section regions can render stack, row, and grid layouts while preserving
   repeatable slot identity.
-- Heading and region gaps are schema-owned tokens, not hardcoded per variant.
+- Heading gap is schema-owned and explicit `regionGap` tokens override the
+  prior variant-owned spacing without changing untouched legacy payloads.
 - Focused widget/editor tests prove defaults, normalization, renderer output,
   and editor controls stay synchronized.
+
+## Completion Notes (2026-05-21)
+
+- Section runtime now owns bounded `layout.minHeight`, `layout.regionFlow`,
+  `layout.regionColumns`, `layout.headingGap`, and optional `layout.regionGap`
+  fields with deterministic normalization and runtime markers.
+- Visual editor now exposes minimum-height, region-flow, grid-column, heading-gap,
+  and region-gap controls; grid columns stay disabled until `regionFlow="grid"`,
+  and `Match variant` preserves the legacy region spacing contract until an
+  explicit token is chosen.
+- Focused SSR and happy-dom coverage now prove default legacy output, grid/row
+  rendering, clamp behavior, and synchronized editor payload updates.

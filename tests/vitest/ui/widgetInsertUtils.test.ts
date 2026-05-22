@@ -4,6 +4,7 @@ import {
   buildSlotOptions,
   mapWidgetBlockOptions,
 } from "../../../core/admin/ui/widgets/widgetInsertUtils";
+import { sectionRegionSlot } from "../../../core/widgets/core/section";
 
 test("mapWidgetBlockOptions filters invalid blocks and empty ids", () => {
   const options = mapWidgetBlockOptions(
@@ -121,6 +122,40 @@ test("buildSlotOptions expands repeatable slots into concrete targets", () => {
     definitionId: "column",
     kind: "repeatable",
     label: "Column 2",
+    count: 0,
+    disabled: false,
+  });
+});
+
+test("buildSlotOptions applies section region labels to repeatable targets", () => {
+  const options = buildSlotOptions(
+    [sectionRegionSlot],
+    {
+      id: "section-1",
+      type: "section",
+      data: {
+        regions: [{ id: "2", label: "Supporting proof" }],
+      },
+      slots: {
+        "region:1": [{ id: "hero-1", type: "hero" }],
+        "region:2": [],
+      },
+    },
+    "hero"
+  );
+
+  expect(options).toHaveLength(2);
+  expect(options[0]).toMatchObject({
+    id: "region:1",
+    definitionId: "region",
+    label: "Region 1",
+    count: 1,
+    disabled: false,
+  });
+  expect(options[1]).toMatchObject({
+    id: "region:2",
+    definitionId: "region",
+    label: "Supporting proof",
     count: 0,
     disabled: false,
   });

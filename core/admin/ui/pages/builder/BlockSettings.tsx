@@ -22,6 +22,14 @@ import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel, type VisualPanelSlotControls } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
 import {
+  applySectionRegionLabels,
+  resolveSectionRegionLabelValue,
+  sectionRegionSlot,
+  syncSectionRegionDataWithSlotMap,
+  updateSectionRegionLabelData,
+  type SectionData,
+} from "../../../../widgets/core/section";
+import {
   addRepeatableSlotInstanceForWidget,
   applyWidgetBlockPatch,
   applyWizardSelection,
@@ -171,15 +179,21 @@ export function BlockSettings({
     );
   }
 
-  const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
-  const slotMap =
-    block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
-      ? (block.slots as Record<string, Block[]>)
-      : Array.isArray(block.children)
-        ? { default: block.children }
+  const getSlotMap = (value: Block) =>
+    value.slots && typeof value.slots === "object" && !Array.isArray(value.slots)
+      ? (value.slots as Record<string, Block[]>)
+      : Array.isArray(value.children)
+        ? { default: value.children }
         : {};
+
+  const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
+  const slotMap = getSlotMap(block);
   const slotDefinitions = widget.slots ?? [];
-  const slotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
+  const rawSlotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
+  const slotTargets =
+    widget.type === "section"
+      ? applySectionRegionLabels(rawSlotTargets, block.data as SectionData | undefined)
+      : rawSlotTargets;
   const supportsSlots = slotTargets.length > 0;
   const repeatableSlotDefinitions = slotDefinitions.filter(
     (slot) => getWidgetSlotKind(slot) === "repeatable"
@@ -202,6 +216,16 @@ export function BlockSettings({
       }
     : undefined;
   const showLivePreview = resolvedEditorContext?.surface === "page-builder";
+  const syncSectionRegionBlock = (nextBlock: Block) =>
+    nextBlock.type === "section"
+      ? {
+          ...nextBlock,
+          data: syncSectionRegionDataWithSlotMap(
+            nextBlock.data as SectionData | undefined,
+            getSlotMap(nextBlock)
+          ),
+        }
+      : nextBlock;
 
   const handleAddRepeatableSlotInstance = (definitionId: string) => {
     const definition = slotDefinitions.find((slot) => slot.id === definitionId);
@@ -212,7 +236,9 @@ export function BlockSettings({
       : undefined;
     if (typeof maximum === "number" && existing.length >= maximum) return;
 
-    patchBlock((current) => addRepeatableSlotInstanceForWidget(current, widget, definitionId));
+    patchBlock((current) =>
+      syncSectionRegionBlock(addRepeatableSlotInstanceForWidget(current, widget, definitionId))
+    );
   };
 
   const handleRemoveRepeatableSlotInstance = (slotId: string) => {
@@ -228,7 +254,9 @@ export function BlockSettings({
     if (existing.length <= minimum) return;
     if (!(slotId in slotMap)) return;
 
-    patchBlock((current) => removeRepeatableSlotInstanceForWidget(current, widget, slotId));
+    patchBlock((current) =>
+      syncSectionRegionBlock(removeRepeatableSlotInstanceForWidget(current, widget, slotId))
+    );
   };
 
   const handleReorderRepeatableSlotInstances = (
@@ -244,7 +272,9 @@ export function BlockSettings({
     const nextIds = reorderBlocks(currentIds, fromIndex, toIndex);
     if (nextIds === currentIds) return;
     patchBlock((current) =>
-      reorderRepeatableSlotInstancesForWidget(current, widget, definitionId, nextIds)
+      syncSectionRegionBlock(
+        reorderRepeatableSlotInstancesForWidget(current, widget, definitionId, nextIds)
+      )
     );
   };
 
@@ -270,7 +300,8 @@ export function BlockSettings({
               onClick: () => handleAddRepeatableSlotInstance(slot.id),
             };
           }),
-          items: slotTargets.map((slot) => {
+          items: slotTargets.map((slot, index) => {
+            const rawSlot = rawSlotTargets[index] ?? slot;
             const count = Array.isArray(slotMap[slot.slotId]) ? slotMap[slot.slotId].length : 0;
             const repeatableDefinition =
               slot.kind === "repeatable"
@@ -294,9 +325,33 @@ export function BlockSettings({
               slot.kind === "repeatable" &&
               repeatableDefinition &&
               repeatableCount > repeatableMinimum;
+            const isSectionRegion =
+              widget.type === "section" && slot.definitionId === sectionRegionSlot.id;
             return {
               id: `${widget.type}.slot.${slot.slotId}`,
               label: `${slot.label} slot`,
+              labelValue: isSectionRegion
+                ? resolveSectionRegionLabelValue(
+                    block.data as SectionData | undefined,
+                    slot.slotId,
+                    slot.instanceId
+                  )
+                : undefined,
+              labelPlaceholder: isSectionRegion ? rawSlot.label : undefined,
+              onLabelChange: isSectionRegion
+                ? (nextLabel: string) =>
+                    patchBlock((current) => ({
+                      ...current,
+                      data: updateSectionRegionLabelData(
+                        syncSectionRegionDataWithSlotMap(
+                          current.data as SectionData | undefined,
+                          getSlotMap(current)
+                        ),
+                        slot.slotId,
+                        nextLabel
+                      ),
+                    }))
+                : undefined,
               count,
               empty: count === 0,
               canRemove: Boolean(canRemoveRepeatable),

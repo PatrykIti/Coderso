@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
 import { applyWidgetBlockPatch } from "./blockUtils";
@@ -11,6 +12,8 @@ import {
 export type VisualPanelSlotControlItem = {
   id: string;
   label: string;
+  labelValue?: string;
+  labelPlaceholder?: string;
   count: number;
   empty: boolean;
   canRemove: boolean;
@@ -19,6 +22,7 @@ export type VisualPanelSlotControlItem = {
   onRemove?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onLabelChange?: (next: string) => void;
 };
 
 export type VisualPanelSlotControls = {
@@ -191,6 +195,18 @@ export function VisualPanel({
                     ) : null}
                   </div>
                 </div>
+                {item.onLabelChange ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-[11px] font-medium text-muted-foreground">Region label</p>
+                    <Input
+                      value={item.labelValue ?? ""}
+                      onChange={(event) => item.onLabelChange?.(event.target.value)}
+                      placeholder={item.labelPlaceholder ?? item.label}
+                      aria-label={`Rename ${item.label}`}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                ) : null}
                 {item.empty ? (
                   <div className="mt-1 text-[11px] text-muted-foreground">
                     Slot is available and currently empty. Use the slot add action in the canvas or

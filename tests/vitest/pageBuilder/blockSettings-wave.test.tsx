@@ -40,6 +40,7 @@ vi.mock("../../../core/widgets/renderers/widgetRenderer", () => ({
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { createBlock } from "../../../core/admin/ui/pages/builder/blockUtils";
 import { createGridColumnsWidget } from "../../../core/widgets/core/gridColumns";
+import { createSectionWidget } from "../../../core/widgets/core/section";
 import type { Block, WidgetDefinition } from "../../../core/admin/ui/pages/builder/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -138,10 +139,14 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
       title: string;
       addActions: Array<{ label: string; onClick: () => void; disabled: boolean }>;
       items: Array<{
+        id?: string;
         label: string;
+        labelValue?: string;
+        labelPlaceholder?: string;
         canRemove?: boolean;
         canMoveUp?: boolean;
         canMoveDown?: boolean;
+        onLabelChange?: (next: string) => void;
         onRemove?: () => void;
         onMoveUp?: () => void;
         onMoveDown?: () => void;
@@ -165,8 +170,8 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
             </button>
           ))}
           {slotControls.items.map((item) => (
-            <span key={item.label}>
-              {item.label}
+            <div key={item.id ?? item.label} data-slot-item={item.label}>
+              <span>{item.label}</span>
               {typeof item.canMoveUp === "boolean" ? (
                 <button type="button" disabled={!item.canMoveUp} onClick={item.onMoveUp}>
                   {`Move up ${item.label}`}
@@ -182,7 +187,15 @@ vi.mock("../../../core/admin/ui/pages/builder/VisualPanel", () => ({
                   Remove
                 </button>
               ) : null}
-            </span>
+              {item.onLabelChange ? (
+                <input
+                  aria-label={`Rename ${item.label}`}
+                  placeholder={item.labelPlaceholder ?? item.label}
+                  value={item.labelValue ?? ""}
+                  onChange={(event) => item.onLabelChange?.(event.currentTarget.value)}
+                />
+              ) : null}
+            </div>
           ))}
           {slotControls.childrenHint ? <span>{slotControls.childrenHint}</span> : null}
         </div>
@@ -269,6 +282,41 @@ const clickByText = (container: HTMLElement, text: string) => {
   }
   React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const getSlotControlItem = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll("[data-slot-item]")).find(
+    (candidate): candidate is HTMLDivElement =>
+      candidate instanceof HTMLDivElement && candidate.getAttribute("data-slot-item") === label
+  ) ?? null;
+
+const clickSlotControlButton = (container: HTMLElement, label: string, text: string) => {
+  const slotItem = getSlotControlItem(container, label);
+  const button = Array.from(slotItem?.querySelectorAll("button") ?? []).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!button) {
+    throw new Error(`Missing button: ${text} for slot ${label}`);
+  }
+  React.act(() => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const setInputValue = (container: HTMLElement, placeholder: string, value: string) => {
+  const input = Array.from(container.querySelectorAll("input")).find(
+    (candidate): candidate is HTMLInputElement =>
+      candidate instanceof HTMLInputElement && candidate.placeholder === placeholder
+  );
+  if (!input) {
+    throw new Error(`Missing input with placeholder: ${placeholder}`);
+  }
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  React.act(() => {
+    valueSetter?.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
 
@@ -452,6 +500,98 @@ test("BlockSettings manages repeatable slots and editor mode transitions", () =>
         data: expect.objectContaining({ advancedTouched: true }),
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings keeps section region labels stable across rename reorder and remove", () => {
+  const widget = createSectionWidget({
+    wizard: Dummy,
+    visual: Dummy,
+    advanced: Dummy,
+  }) as unknown as WidgetDefinition<Record<string, unknown>>;
+  const initialBlock: Block = {
+    ...createBlock("section"),
+    id: "section-structured-1",
+    editor: { mode: "visual", wizardCompleted: true },
+    data: {
+      regions: [{ id: "1", label: "Primary hero" }],
+    },
+    slots: {
+      "region:1": [],
+      "region:2": [],
+    },
+  };
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [block, setBlock] = useState<Block>(initialBlock);
+    return (
+      <BlockSettings
+        block={block}
+        widget={widget}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setBlock(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("Primary hero slot");
+    const firstInput = view.container.querySelector(
+      'input[placeholder="Region 1"]'
+    ) as HTMLInputElement | null;
+    const secondInput = view.container.querySelector(
+      'input[placeholder="Region 2"]'
+    ) as HTMLInputElement | null;
+    expect(firstInput?.value).toBe("Primary hero");
+    expect(secondInput?.value).toBe("");
+
+    setInputValue(view.container, "Region 2", "Supporting proof");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        data: {
+          regions: [
+            { id: "1", label: "Primary hero" },
+            { id: "2", label: "Supporting proof" },
+          ],
+        },
+      })
+    );
+    expect(view.container.textContent).toContain("Supporting proof slot");
+
+    clickSlotControlButton(view.container, "Primary hero slot", "Move down");
+    const reordered = onChangeSpy.mock.lastCall?.[0] as Block;
+    expect(Object.keys(reordered.slots ?? {})).toEqual(["region:2", "region:1"]);
+    expect(reordered.data).toEqual({
+      regions: [
+        { id: "1", label: "Primary hero" },
+        { id: "2", label: "Supporting proof" },
+      ],
+    });
+    expect(
+      Array.from(view.container.querySelectorAll("[data-slot-item]")).map((element) =>
+        element.getAttribute("data-slot-item")
+      )
+    ).toEqual(["Supporting proof slot", "Primary hero slot"]);
+
+    clickSlotControlButton(view.container, "Supporting proof slot", "Remove");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        slots: {
+          "region:1": [],
+        },
+        data: {
+          regions: [{ id: "1", label: "Primary hero" }],
+        },
+      })
+    );
+    expect(view.container.textContent).not.toContain("Supporting proof slot");
   } finally {
     view.cleanup();
   }

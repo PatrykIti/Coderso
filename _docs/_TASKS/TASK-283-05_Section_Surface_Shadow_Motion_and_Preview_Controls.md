@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Section + Style + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-02
-**Status:** To Do
+**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-02, TASK-326
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -15,8 +15,12 @@
 Add Section-owned surface styling controls for shadows, reduced-motion-safe
 effects, and visual preview controls for gradient and overlay values.
 
-This leaf covers report findings W2, W3, U2, and U5. It must build on TASK-256
-for clear/token behavior and duplicate Advanced cleanup.
+This parent leaf covers report findings W2, W3, U2, and U5 and is now
+split between `TASK-283-05-01` and `TASK-283-05-02`.
+
+`TASK-283-05-01` closes the widget-local shadow, CSS-only motion, and preview
+owners. `TASK-283-05-02` closes the remaining angle/opacity slider UX on the
+single-owner Visual surface after shared `TASK-326` cleanup landed.
 
 ## Scope Boundary
 
@@ -24,18 +28,18 @@ In scope:
 
 - bounded `style.shadow` tokens beyond the current `contained` hardcoded
   `shadow-sm`;
-- bounded `style.motion` or `style.reveal` tokens that respect reduced-motion
-  preferences and do not require unsafe inline scripts;
-- slider/stepper style controls for `gradientAngle` and `overlayOpacity` once
-  TASK-256 removes duplicate Advanced ownership;
+- bounded `style.motion` tokens such as `none`, `fade`, and `slide-up` that
+  respect reduced-motion preferences and do not require scroll observers or
+  unsafe inline scripts;
+- slider/stepper style controls for `gradientAngle` and `overlayOpacity` only
+  after `TASK-326` removes duplicate Visual/Advanced ownership;
 - a small editor preview swatch for gradient/overlay composition;
 - renderer output through class maps and safe inline styles only.
 
 Out of scope:
 
 - cross-widget animation framework;
-- scroll observers with global lifecycle complexity unless an existing shared
-  runtime-safe pattern already exists;
+- scroll observers, parallax, or viewport-triggered runtime effects;
 - TASK-256 gradient Clear and token-aware color picker fixes.
 
 ## Source Findings
@@ -50,19 +54,29 @@ Out of scope:
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:95` - U5 gradient/overlay preview
   missing.
 
+## Execution Split
+
+- `TASK-283-05-01` (Done, 2026-05-21) closes W2, the bounded CSS-only W3
+  scope, and U5 with widget-local shadow, motion, and preview owners.
+- `TASK-283-05-02` (Done, 2026-05-22) closes U2 with slider, stepper, and
+  exact-value controls on the final Visual owner surface.
+
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.style` with bounded shadow and motion/effect tokens.
-- [ ] Add resolver helpers that default to current output for legacy payloads.
-- [ ] Render shadows through class maps and motion through bounded classes or
-  inert data markers owned by `section.tsx`; defer scroll-observer effects to
-  TASK-283-08 unless an existing safe runtime owner is identified first.
-- [ ] Replace or augment number inputs for gradient angle and overlay opacity
-  with slider/stepper controls in the owning editor section.
-- [ ] Add a preview swatch that derives from normalized Section data rather than
-  storing extra preview-only payload.
-- [ ] Add tests for normalization, SSR class output, slider updates, preview
-  rendering, and reduced-motion-safe behavior.
+- [x] `TASK-283-05-01` extends `SectionData.style` with bounded `shadow` and
+  `motion` tokens plus legacy-safe resolver helpers.
+- [x] `TASK-283-05-01` renders shadow and motion through bounded class maps and
+  deterministic data markers without observers or preview-only persisted state.
+- [x] `TASK-283-05-01` adds a derived preview swatch that reflects normalized
+  Section background, gradient, overlay, border, radius, and effective shadow
+  values.
+- [x] `TASK-283-05-02` replaces the remaining `gradientAngle` /
+  `overlayOpacity` number inputs with slider/stepper controls after `TASK-326`.
+- [x] `TASK-283-05-01` adds focused runtime/editor tests for normalization, SSR
+  class output, contained shadow fallback, preview rendering, and
+  reduced-motion-safe behavior.
+- [x] `TASK-283-05-02` adds the final slider interaction coverage once the
+  shared owner cleanup lands.
 
 ## Files to Change
 
@@ -116,8 +130,9 @@ Error handling:
 - Unknown shadow/motion values normalize to current defaults.
 - Motion must use `motion-safe:*` classes or become `none` when reduced-motion
   support cannot be proven in tests.
-- Scroll-triggered effects are deferred unless this leaf identifies and tests an
-  existing shared observer/runtime owner.
+- Scroll-triggered effects are intentionally out of scope here; if the closure
+  report mentions them, record an explicit no-action/rejection rather than
+  widening the runtime contract during implementation.
 - Preview controls must not persist preview-only keys.
 
 ## Security Contract
@@ -147,12 +162,14 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/SECTION.md` with shadow, motion, and preview behavior.
-- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows W2, W3, U2, and U5
-  after validation.
+- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows W2, W3, and U5
+  after `TASK-283-05-01`, and close U2 after `TASK-283-05-02` lands on the
+  single-owner Visual surface.
 
 ## Acceptance Criteria
 
 - Section shadows and motion effects are bounded and backward compatible.
+- Motion remains CSS-only, reduced-motion safe, and free of viewport observers.
 - Angle/opacity controls are easier to operate without duplicating Advanced
   ownership.
 - Gradient/overlay preview is derived from normalized data and writes no extra

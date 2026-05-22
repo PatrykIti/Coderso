@@ -10,12 +10,16 @@ import {
 } from "../../../core/admin/ui/widgets/editors/SectionEditors";
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
+  applySectionRegionLabels,
   createSectionWidget,
   normalizeSectionData,
+  resolveSectionRegionLabelValue,
   resolveSectionVariant,
   sectionDefaults,
   SectionBlock,
+  syncSectionRegionDataWithSlotMap,
   type SectionData,
+  updateSectionRegionLabelData,
 } from "../../../core/widgets/core/section";
 import {
   createNavigationWidget,
@@ -37,6 +41,15 @@ test("section renders defaults", () => {
   expect(html).toContain('data-section-variant="default"');
   expect(html).toContain('data-section-container-width="content"');
   expect(html).toContain('data-section-max-width="6xl"');
+  expect(html).toContain('data-section-min-height="none"');
+  expect(html).toContain('data-section-region-flow="stack"');
+  expect(html).toContain('data-section-region-columns="1"');
+  expect(html).toContain('data-section-heading-gap="md"');
+  expect(html).toContain('data-section-region-gap="match-variant"');
+  expect(html).toContain('data-section-shadow="none"');
+  expect(html).toContain('data-section-motion="none"');
+  expect(html).toContain('data-section-background-media="none"');
+  expect(html).toContain('data-section-layer-order="media-under-overlay"');
   expect(html).toContain('data-section-regions="1"');
   expect(html).not.toContain("Empty region.");
   expect(html).toContain("absolute inset-0 overflow-hidden");
@@ -60,6 +73,39 @@ test("section heading uses a safe default level", () => {
   expect(html).not.toContain("<h3");
 });
 
+test("section renders bounded heading typography, alignment, and colors", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          label: "Overview",
+          title: "Pricing section",
+          description: "Supporting copy for the section.",
+          level: "h4",
+          align: "center",
+          labelSize: "md",
+          titleSize: "3xl",
+          descriptionSize: "lg",
+          labelColor: "#475569",
+          titleColor: "var(--color-primary)",
+          descriptionColor: "#334155",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("<h4");
+  expect(html).toContain("text-center");
+  expect(html).toContain("text-base font-semibold uppercase tracking-[0.2em]");
+  expect(html).toContain("text-3xl font-semibold");
+  expect(html).toContain("text-lg");
+  expect(html).toContain('style="color:#475569"');
+  expect(html).toContain('style="color:var(--color-primary)"');
+  expect(html).toContain('style="color:#334155"');
+});
+
 test("section renders empty-region placeholders only in editor preview", () => {
   const publicHtml = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
   const previewHtml = renderToString(
@@ -74,21 +120,230 @@ test("section renders empty-region placeholders only in editor preview", () => {
   expect(previewHtml).toContain("Empty region.");
 });
 
-test("section normalization keeps deterministic style bounds", () => {
+test("section region labels stay editor-only and instance-stable", () => {
+  const updated = updateSectionRegionLabelData(
+    {
+      regions: [
+        { id: "1", label: "Primary hero" },
+        { id: "3", label: "Legacy orphan" },
+      ],
+    },
+    "region:2",
+    " Supporting proof "
+  );
+  expect(updated).toEqual({
+    regions: [
+      { id: "1", label: "Primary hero" },
+      { id: "3", label: "Legacy orphan" },
+      { id: "2", label: "Supporting proof" },
+    ],
+  });
+
+  const synced = syncSectionRegionDataWithSlotMap(updated, {
+    "region:1": [],
+    "region:2": [],
+  });
+  expect(synced).toEqual({
+    regions: [
+      { id: "1", label: "Primary hero" },
+      { id: "2", label: "Supporting proof" },
+    ],
+  });
+
+  const relabeled = applySectionRegionLabels(
+    [
+      {
+        definitionId: "region",
+        slotId: "region:1",
+        label: "Region 1",
+        kind: "repeatable" as const,
+        instanceId: "1",
+      },
+      {
+        definitionId: "region",
+        slotId: "region:2",
+        label: "Region 2",
+        kind: "repeatable" as const,
+        instanceId: "2",
+      },
+    ],
+    synced
+  );
+  expect(relabeled.map((target) => target.label)).toEqual(["Primary hero", "Supporting proof"]);
+  expect(resolveSectionRegionLabelValue(synced, "region:2")).toBe("Supporting proof");
+  expect(resolveSectionRegionLabelValue(synced, "region:4")).toBe("");
+
+  const cleared = updateSectionRegionLabelData(synced, "region:1", "   ");
+  expect(cleared).toEqual({
+    regions: [{ id: "2", label: "Supporting proof" }],
+  });
+
+  const publicHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        regions: synced.regions,
+      }}
+      variant="default"
+    />
+  );
+  expect(publicHtml).not.toContain("Primary hero");
+  expect(publicHtml).not.toContain("Supporting proof");
+});
+
+test("section normalization keeps deterministic style and layout bounds", () => {
   const normalized = normalizeSectionData({
+    regions: [
+      { id: "region:1", label: " Primary hero " },
+      { id: "2", label: " Supporting proof " },
+      { id: "main:3", label: "Wrong slot" },
+      { id: "2", label: " Proof corrected " },
+    ],
+    heading: {
+      level: "banner" as never,
+      align: "middle" as never,
+      labelSize: "tiny" as never,
+      titleSize: "giant" as never,
+      descriptionSize: "body" as never,
+      labelColor: "   ",
+      titleColor: " var(--color-primary) ",
+      descriptionColor: " #334155 ",
+    },
+    layout: {
+      mobilePaddingBlock: "giant" as never,
+      mobilePaddingInline: "wide" as never,
+      desktopPaddingBlock: "huge" as never,
+      desktopPaddingInline: "roomy" as never,
+      minHeight: "giant" as never,
+      regionFlow: "broken" as never,
+      regionColumns: "12" as never,
+      headingGap: "huge" as never,
+      regionGap: "wild" as never,
+    },
     style: {
       gradientAngle: 500,
       overlayOpacity: 120,
       borderWidth: "2",
       radius: "xl",
+      shadow: "massive" as never,
+      motion: "bounce" as never,
+      backgroundMedia: {
+        type: "video",
+        source: "library",
+        assetId: "asset-video",
+        src: "javascript:alert(1)",
+        posterSource: "external",
+        posterAssetId: "poster-asset",
+        posterSrc: "/media/section-poster.jpg",
+        title: " Ambient demo ",
+        description: " Decorative loop ",
+        fit: "stretch" as never,
+        position: "corner" as never,
+        opacity: 180,
+        blendMode: "hard-light" as never,
+        layerOrder: "content-first" as never,
+      },
     },
   });
 
+  expect(normalized.regions).toEqual([
+    { id: "1", label: "Primary hero" },
+    { id: "2", label: "Proof corrected" },
+  ]);
+  expect(normalized.heading).toMatchObject({
+    level: "h2",
+    align: "left",
+    labelSize: "xs",
+    titleSize: "2xl",
+    descriptionSize: "sm",
+    labelColor: undefined,
+    titleColor: "var(--color-primary)",
+    descriptionColor: "#334155",
+  });
+  expect(normalized.layout).toMatchObject({
+    minHeight: "none",
+    regionFlow: "stack",
+    regionColumns: "1",
+    headingGap: "md",
+  });
+  expect(normalized.layout?.mobilePaddingBlock).toBeUndefined();
+  expect(normalized.layout?.mobilePaddingInline).toBeUndefined();
+  expect(normalized.layout?.desktopPaddingBlock).toBeUndefined();
+  expect(normalized.layout?.desktopPaddingInline).toBeUndefined();
+  expect(normalized.layout?.regionGap).toBeUndefined();
   expect(normalized.style?.gradientAngle).toBe(360);
   expect(normalized.style?.overlayOpacity).toBe(100);
   expect(normalized.style?.borderWidth).toBe("2");
   expect(normalized.style?.radius).toBe("xl");
+  expect(normalized.style?.shadow).toBeUndefined();
+  expect(normalized.style?.motion).toBe("none");
+  expect(normalized.style?.backgroundMedia).toMatchObject({
+    type: "video",
+    source: "library",
+    assetId: "asset-video",
+    src: "javascript:alert(1)",
+    posterSource: "external",
+    posterAssetId: undefined,
+    posterSrc: "/media/section-poster.jpg",
+    title: "Ambient demo",
+    description: "Decorative loop",
+    fit: "cover",
+    position: "center",
+    opacity: 100,
+    blendMode: "normal",
+    layerOrder: "media-under-overlay",
+  });
   expect(resolveSectionVariant("unknown")).toBe("default");
+});
+
+test("section normalization falls back to declared border and radius defaults for invalid values", () => {
+  const invalid = normalizeSectionData({
+    style: {
+      borderWidth: "9" as never,
+      radius: "round" as never,
+    },
+  });
+  const explicit = normalizeSectionData({
+    style: {
+      borderWidth: "1",
+      radius: "2xl",
+    },
+  });
+
+  expect(invalid.style).toMatchObject({
+    borderWidth: "0",
+    radius: "none",
+  });
+  expect(explicit.style).toMatchObject({
+    borderWidth: "1",
+    radius: "2xl",
+  });
+});
+
+test("section grid columns clamp only when grid flow is active", () => {
+  const gridNormalized = normalizeSectionData({
+    layout: {
+      regionFlow: "grid",
+      regionColumns: "12" as never,
+      regionGap: "xl",
+    },
+  });
+  const rowNormalized = normalizeSectionData({
+    layout: {
+      regionFlow: "row",
+      regionColumns: "6" as never,
+    },
+  });
+
+  expect(gridNormalized.layout).toMatchObject({
+    regionFlow: "grid",
+    regionColumns: "8",
+    regionGap: "xl",
+  });
+  expect(rowNormalized.layout).toMatchObject({
+    regionFlow: "row",
+    regionColumns: "1",
+  });
 });
 
 test("section validator accepts expanded model", () => {
@@ -106,10 +361,22 @@ test("section validator accepts expanded model", () => {
       type: "section",
       variant: "contained",
       data: {
+        regions: [
+          { id: "1", label: "Primary hero" },
+          { id: "2", label: "Supporting proof" },
+        ],
         heading: {
           label: "Landing",
           title: "Conversion section",
           description: "Reusable region container",
+          level: "h3",
+          align: "center",
+          labelSize: "sm",
+          titleSize: "3xl",
+          descriptionSize: "lg",
+          labelColor: "#475569",
+          titleColor: "var(--color-primary)",
+          descriptionColor: "#334155",
         },
         semantics: {
           element: "section",
@@ -121,6 +388,15 @@ test("section validator accepts expanded model", () => {
           maxWidth: "7xl",
           paddingBlock: "lg",
           paddingInline: "lg",
+          mobilePaddingBlock: "sm",
+          mobilePaddingInline: "none",
+          desktopPaddingBlock: "xl",
+          desktopPaddingInline: "md",
+          minHeight: "hero",
+          regionFlow: "grid",
+          regionColumns: "4",
+          headingGap: "lg",
+          regionGap: "xl",
         },
         style: {
           backgroundColor: "#ffffff",
@@ -130,8 +406,21 @@ test("section validator accepts expanded model", () => {
           borderColor: "#cbd5e1",
           borderWidth: "1",
           radius: "2xl",
+          shadow: "lg",
+          motion: "fade",
           overlayColor: "#000000",
           overlayOpacity: 16,
+          backgroundMedia: {
+            type: "image",
+            source: "library",
+            assetId: "asset-image",
+            src: "/media/section-background.jpg",
+            fit: "contain",
+            position: "top",
+            opacity: 75,
+            blendMode: "overlay",
+            layerOrder: "overlay-under-media",
+          },
         },
       },
     })
@@ -157,6 +446,218 @@ test("section validator rejects invalid variant", () => {
       data: sectionDefaults,
     })
   ).toThrow("widget_invalid_variant");
+});
+
+test("section renders region flow, min-height, and explicit gap classes", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        heading: {
+          title: "Grid section",
+        },
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          minHeight: "hero",
+          regionFlow: "grid",
+          regionColumns: "4",
+          headingGap: "lg",
+          regionGap: "xl",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-section-min-height="hero"');
+  expect(html).toContain('data-section-region-flow="grid"');
+  expect(html).toContain('data-section-region-columns="4"');
+  expect(html).toContain('data-section-heading-gap="lg"');
+  expect(html).toContain('data-section-region-gap="xl"');
+  expect(html).toContain("min-h-[70vh]");
+  expect(html).toContain("grid grid-cols-1");
+  expect(html).toContain("md:grid-cols-2 xl:grid-cols-4");
+  expect(html).toContain("gap-6");
+  expect(html).toContain("gap-8");
+});
+
+test("section renders row flow without forcing grid classes", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          regionFlow: "row",
+          regionGap: "lg",
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(html).toContain('data-section-region-flow="row"');
+  expect(html).toContain("md:flex-row md:flex-wrap");
+  expect(html).toContain("md:min-w-[16rem] md:flex-1");
+  expect(html).not.toContain("md:grid-cols-2 xl:grid-cols-4");
+});
+
+test("section restores base padding from md upward when only mobile overrides are set", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          paddingBlock: "xl",
+          paddingInline: "lg",
+          mobilePaddingBlock: "sm",
+          mobilePaddingInline: "none",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain("py-4");
+  expect(html).toContain("md:py-10");
+  expect(html).toContain("px-0");
+  expect(html).toContain("md:px-8");
+});
+
+test("section applies desktop padding overrides without widening full bleed wrappers", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        layout: {
+          ...(sectionDefaults.layout ?? {}),
+          containerWidth: "full",
+          paddingBlock: "md",
+          paddingInline: "lg",
+          desktopPaddingBlock: "xl",
+          desktopPaddingInline: "none",
+        },
+      }}
+      variant="bleed"
+    />
+  );
+
+  expect(html).toContain("py-6");
+  expect(html).toContain("md:py-10");
+  expect(html).not.toContain("px-8");
+  expect(html).not.toContain("md:px-0");
+});
+
+test("section renders legacy contained shadow fallback and bounded motion classes", () => {
+  const legacyContainedHtml = renderToString(
+    <SectionBlock data={sectionDefaults} variant="contained" />
+  );
+  const explicitHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          shadow: "xl",
+          motion: "slide-up",
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(legacyContainedHtml).toContain('data-section-shadow="sm"');
+  expect(legacyContainedHtml).toContain('data-section-motion="none"');
+  expect(legacyContainedHtml).toContain("shadow-sm");
+  expect(explicitHtml).toContain('data-section-shadow="xl"');
+  expect(explicitHtml).toContain('data-section-motion="slide-up"');
+  expect(explicitHtml).toContain("shadow-xl");
+  expect(explicitHtml).toContain("motion-safe:slide-in-from-bottom-2");
+});
+
+test("section renders decorative background image layers with bounded blend and ordering", () => {
+  const html = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "image",
+            source: "library",
+            assetId: "asset-image",
+            src: "/media/section-background.jpg",
+            fit: "contain",
+            position: "top",
+            opacity: 40,
+            blendMode: "overlay",
+            layerOrder: "overlay-under-media",
+          },
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-section-background-media="image"');
+  expect(html).toContain('data-section-layer-order="overlay-under-media"');
+  expect(html).toContain("background-image:url(/media/section-background.jpg)");
+  expect(html).toContain("background-size:contain");
+  expect(html).toContain("background-position:top center");
+  expect(html).toContain("mix-blend-mode:overlay");
+  expect(html).toContain("opacity:0.4");
+});
+
+test("section renders muted decorative background videos and fails closed on unsafe URLs", () => {
+  const safeHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "video",
+            source: "external",
+            src: "https://cdn.example.com/section-demo.mp4",
+            posterSource: "external",
+            posterSrc: "/media/section-poster.jpg",
+            opacity: 55,
+            blendMode: "screen",
+          },
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(safeHtml).toContain('data-section-background-media="video"');
+  expect(safeHtml).toContain("<video");
+  expect(safeHtml).toContain('aria-hidden="true"');
+  expect(safeHtml).toContain("playsInline");
+  expect(safeHtml).toContain('poster="/media/section-poster.jpg"');
+  expect(safeHtml).toContain("mix-blend-mode:screen");
+  expect(safeHtml).toContain("opacity:0.55");
+
+  const unsafeHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          backgroundMedia: {
+            type: "video",
+            source: "external",
+            src: "javascript:alert(1)",
+          },
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(unsafeHtml).toContain('data-section-background-media="none"');
+  expect(unsafeHtml).not.toContain("<video");
 });
 
 test("section renders repeatable region slot content", () => {
@@ -277,9 +778,11 @@ test("section editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
+  expect(wizardHtml).toContain("Quick preset");
   expect(wizardHtml).toContain("Section layout");
   expect(wizardHtml).toContain("Section title");
   expect(wizardHtml).toContain("Section setup");
+  expect(wizardHtml).toContain('data-widget-control="section.wizard.preset"');
   expect(wizardHtml).toContain('data-widget-control="section.wizard.variant"');
 
   const visualHtml = renderToString(
@@ -291,9 +794,14 @@ test("section editors render expected sections", () => {
     />
   );
   expect(visualHtml).toContain("Variant and structure");
+  expect(visualHtml).toContain("Quick presets");
   expect(visualHtml).toContain("Semantics and anchor");
   expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");
+  expect(visualHtml).toContain("Mobile vertical padding");
+  expect(visualHtml).toContain("Desktop side padding");
+  expect(visualHtml).toContain("Surface preview");
+  expect(visualHtml).toContain('data-section-surface-preview="true"');
   expect(visualHtml).toContain('data-widget-editor-section="section.semantics-anchor"');
   expect(visualHtml).toContain('data-widget-editor-section="section.width-spacing"');
 
@@ -307,4 +815,6 @@ test("section editors render expected sections", () => {
   );
   expect(advancedHtml).toContain("Technical tokens");
   expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("Gradient angle");
+  expect(advancedHtml).not.toContain("Overlay opacity");
 });

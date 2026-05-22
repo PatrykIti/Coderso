@@ -199,6 +199,58 @@ test("VisualPanel renders repeatable slot move controls with disabled boundaries
   expect(html).toContain("disabled");
 });
 
+test("VisualPanel forwards section region label edits through slot controls", () => {
+  const onLabelChange = vi.fn();
+  const view = mount(
+    <VisualPanel
+      widget={createWidget({ visualOwnsVariantSelection: true })}
+      block={baseBlock}
+      onChange={() => undefined}
+      slotControls={{
+        sectionId: "section.structure",
+        title: "Structure",
+        addActions: [],
+        items: [
+          {
+            id: "section.slot.region-1",
+            label: "Primary hero slot",
+            labelValue: "Primary hero",
+            labelPlaceholder: "Region 1",
+            count: 0,
+            empty: true,
+            canRemove: false,
+            canMoveUp: false,
+            canMoveDown: false,
+            onLabelChange,
+          },
+        ],
+      }}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Region label");
+    const input = view.container.querySelector(
+      'input[placeholder="Region 1"]'
+    ) as HTMLInputElement | null;
+    expect(input?.value).toBe("Primary hero");
+
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    React.act(() => {
+      if (!input) {
+        throw new Error("Missing region label input");
+      }
+      valueSetter?.call(input, "Supporting proof");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(onLabelChange).toHaveBeenCalledWith("Supporting proof");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("VisualPanel uses navigation editor variant controls", () => {
   const widget = createNavigationWidget({
     wizard: NavigationWizardEditor,

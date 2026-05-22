@@ -5,6 +5,39 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { SectionData } from "../../../core/widgets/core/section";
+import type { WidgetBlock, WidgetBlockPatcher } from "../../../core/widgets/types";
+
+const sectionMediaState = vi.hoisted(() => {
+  const createMediaItems = () => [
+    {
+      id: "asset-image",
+      url: "/media/section-background.jpg",
+      title: "Section background",
+      originalName: "section-background.jpg",
+    },
+    {
+      id: "asset-video",
+      url: "https://cdn.example.com/section-demo.mp4",
+      title: "Section demo video",
+      originalName: "section-demo.mp4",
+    },
+    {
+      id: "asset-poster",
+      url: "/media/section-poster.jpg",
+      title: "Section poster",
+      originalName: "section-poster.jpg",
+    },
+  ];
+
+  return {
+    mediaItems: createMediaItems(),
+    mediaError: null as unknown,
+    reset() {
+      this.mediaItems = createMediaItems();
+      this.mediaError = null;
+    },
+  };
+});
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -129,6 +162,52 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/apiClient", () => ({
+  isApiClientError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "ApiClientError",
+}));
+
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => {
+    if (sectionMediaState.mediaError) throw sectionMediaState.mediaError;
+    return sectionMediaState.mediaItems;
+  }),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({
+    value,
+    onChange,
+    accept,
+  }: {
+    value: string | null;
+    onChange: (value: unknown) => void;
+    accept?: string[];
+  }) => (
+    <div data-media-picker={(accept ?? []).join(",") || "all"}>
+      <button
+        type="button"
+        onClick={() => onChange((accept ?? []).includes("video/*") ? "asset-video" : "asset-image")}
+      >
+        {(accept ?? []).includes("video/*") ? "pick-video-asset" : "pick-image-asset"}
+      </button>
+      <button type="button" onClick={() => onChange("asset-poster")}>
+        pick-poster-asset
+      </button>
+      <button type="button" onClick={() => onChange("missing-asset")}>
+        pick-missing-asset
+      </button>
+      <button type="button" onClick={() => onChange(null)}>
+        clear-media-selection
+      </button>
+      <span>{value ?? "none"}</span>
+    </div>
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -200,6 +279,15 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 const clickByText = (container: ParentNode, text: string, index = 0) => {
   const button = Array.from(container.querySelectorAll("button")).filter((candidate) =>
     candidate.textContent?.includes(text)
@@ -259,6 +347,27 @@ const findNumberInputs = (container: ParentNode) =>
     (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
 
+const findSectionSlider = (container: ParentNode, key: string) =>
+  container.querySelector(`[data-section-slider="${key}"]`);
+
+const findSectionRangeValue = (container: ParentNode, key: string) =>
+  container.querySelector(`[data-section-range-value="${key}"]`);
+
+const findSectionStepper = (
+  container: ParentNode,
+  key: string,
+  direction: "increase" | "decrease"
+) => container.querySelector(`[data-section-stepper="${key}-${direction}"]`);
+
+const clickButton = (element: Element | null | undefined) => {
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new Error("Missing button element");
+  }
+  React.act(() => {
+    element.click();
+  });
+};
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -271,6 +380,7 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 
 afterEach(() => {
   document.body.innerHTML = "";
+  sectionMediaState.reset();
   vi.restoreAllMocks();
 });
 
@@ -278,16 +388,19 @@ const renderEditors = async ({
   initialValue,
   initialVariant = "legacy",
   withVariantChange = true,
+  withBlockPatch = false,
 }: {
   initialValue: SectionData;
   initialVariant?: string;
   withVariantChange?: boolean;
+  withBlockPatch?: boolean;
 }) => {
   const { SectionAdvancedEditor, SectionVisualEditor, SectionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SectionEditors");
 
   const onChangeSpy = vi.fn();
   const onVariantChangeSpy = vi.fn();
+  const onBlockPatchSpy = vi.fn();
   let latestValue = initialValue;
   let latestVariant = initialVariant;
 
@@ -309,6 +422,26 @@ const renderEditors = async ({
         }
       : undefined;
 
+    const handleBlockPatch: WidgetBlockPatcher | undefined = withBlockPatch
+      ? (patch) => {
+          const currentBlock: WidgetBlock = {
+            id: "section-test-block",
+            type: "section",
+            variant,
+            data: value,
+          };
+          const nextBlock =
+            typeof patch === "function" ? patch(currentBlock) : { ...currentBlock, ...patch };
+          const nextVariant = nextBlock.variant ?? "default";
+          const nextValue = nextBlock.data as SectionData;
+          latestVariant = nextVariant;
+          latestValue = nextValue;
+          onBlockPatchSpy(nextBlock);
+          setVariant(nextVariant);
+          setValue(nextValue);
+        }
+      : undefined;
+
     return (
       <>
         <SectionWizardEditor
@@ -316,18 +449,21 @@ const renderEditors = async ({
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
         <SectionVisualEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
         <SectionAdvancedEditor
           value={value}
           onChange={handleChange}
           variant={variant}
           onVariantChange={handleVariantChange}
+          onBlockPatch={handleBlockPatch}
         />
       </>
     );
@@ -335,6 +471,7 @@ const renderEditors = async ({
 
   return {
     ...mount(<Harness />),
+    onBlockPatchSpy,
     onChangeSpy,
     onVariantChangeSpy,
     getLatestValue: () => latestValue,
@@ -386,11 +523,18 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, ["default", "contained", "bleed"]);
-    expect(variantSelect.value).toBe("default");
-
-    clickByText(view.container, "Contained");
-    setSelectValue(variantSelect, "contained");
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    expect(wizardSection.textContent).toContain("Quick preset");
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    clickByText(wizardVariantControl, "Contained");
     expect(view.getLatestVariant()).toBe("legacy");
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
@@ -435,8 +579,21 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     expect(findInputByPlaceholder(surfaceSection, "#000000")?.value).toBe("overlay-token");
     expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
 
-    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("2xl");
+    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("0");
+    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("none");
+    expect(
+      findSelectByOptions(surfaceSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
+    expect(findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]).value).toBe("none");
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("none");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("none");
+
+    expect(findSectionSlider(surfaceSection, "gradient-angle")).not.toBeNull();
+    expect(findSectionSlider(surfaceSection, "overlay-opacity")).not.toBeNull();
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("360°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("100%");
 
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
     expect(angleInput?.value).toBe("360");
@@ -464,11 +621,23 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, ["default", "contained", "bleed"]);
-    expect(variantSelect.value).toBe("default");
-    setSelectValue(variantSelect, "contained");
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    clickByText(wizardVariantControl, "Contained");
     expect(view.getLatestVariant()).toBe("contained");
 
+    setInputValue(
+      findInputByPlaceholder(view.container, "Section label (optional)"),
+      "Platform label"
+    );
     setInputValue(findInputByPlaceholder(view.container, "Section title"), "Platform section");
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Short context for the section"),
@@ -478,12 +647,17 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setInputValue(wizardColor, "#f8fafc");
 
     expect(view.getLatestValue().heading).toMatchObject({
+      label: "Platform label",
       title: "Platform section",
       description: "Reusable wrapper for grouped content.",
     });
     expect(view.getLatestValue().style?.backgroundColor).toBe("#f8fafc");
 
-    clickByText(view.container, "Bleed");
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    clickByText(variantSection, "Bleed");
     expect(view.getLatestVariant()).toBe("bleed");
 
     setInputValue(findInputsByPlaceholder(view.container, "Section title")[1], "Overview section");
@@ -494,6 +668,21 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setInputValue(findInputByPlaceholder(view.container, "Section label"), "Overview");
     setInputValue(findInputByPlaceholder(view.container, "pricing-section"), "overview");
     setInputValue(findInputByPlaceholder(view.container, "Pricing section"), "Overview section");
+
+    const headingSection = findSectionByTitle(view.container, "Heading and intro");
+    if (!(headingSection instanceof HTMLElement)) {
+      throw new Error("Missing heading section");
+    }
+    expect(headingSection.textContent).toContain("Section titles default to `h2`.");
+    setSelectValue(findSelectByOptions(headingSection, ["h1", "h2", "h3", "h4", "h5", "h6"]), "h4");
+    setSelectValue(findSelectByOptions(headingSection, ["left", "center", "right"]), "center");
+    setSelectValue(findSelectByOptions(headingSection, ["xs", "sm", "md"]), "md");
+    setSelectValue(findSelectByOptions(headingSection, ["xl", "2xl", "3xl"]), "3xl");
+    setSelectValue(findSelectByOptions(headingSection, ["sm", "base", "lg"]), "lg");
+    const headingColorInputs = findInputsByPlaceholder(headingSection, "var(--color-text)");
+    setInputValue(headingColorInputs[0], "#475569");
+    setInputValue(headingColorInputs[1], "var(--color-primary)");
+    setInputValue(headingColorInputs[2], "#334155");
 
     const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
     if (!(semanticsSection instanceof HTMLElement)) {
@@ -512,20 +701,71 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     }
     const borderWidthSelect = findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]);
     const radiusSelect = findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]);
+    const shadowSelect = findSelectByOptions(surfaceSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const motionSelect = findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]);
     const spacingSelects = findSelectsByOptions(spacingSection, ["content", "wide", "full"]);
     setSelectValue(spacingSelects[0], "wide");
     setSelectValue(
       findSelectByOptions(spacingSection, ["none", "4xl", "5xl", "6xl", "7xl"]),
       "7xl"
     );
+    setSelectValue(
+      findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]),
+      "hero"
+    );
+    setSelectValue(findSelectByOptions(spacingSection, ["stack", "row", "grid"]), "grid");
+    const regionColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(regionColumnsSelect.disabled).toBe(false);
+    setSelectValue(regionColumnsSelect, "4");
     setSelectValue(findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg"]), "lg");
+    const responsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const responsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    setSelectValue(responsiveBlockSelects[0], "sm");
+    setSelectValue(responsiveInlineSelects[0], "none");
+    setSelectValue(responsiveBlockSelects[1], "xl");
+    setSelectValue(responsiveInlineSelects[1], "lg");
+    setSelectValue(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]), "lg");
+    setSelectValue(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"]),
+      "xl"
+    );
     setInputValue(findColorInputForPlaceholder(surfaceSection, "transparent"), "#ecfeff");
     setInputValue(findInputByPlaceholder(surfaceSection, "#ffffff"), "#1d4ed8");
     setInputValue(findInputByPlaceholder(surfaceSection, "#f1f5f9"), "#222222");
     setInputValue(findInputByPlaceholder(surfaceSection, "var(--color-border)"), "#0f172a");
     setSelectValue(borderWidthSelect, "2");
     setSelectValue(radiusSelect, "xl");
+    setSelectValue(shadowSelect, "lg");
+    setSelectValue(motionSelect, "slide-up");
 
     setInputValue(findInputByPlaceholder(surfaceSection, "#000000"), "#333333");
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
@@ -537,12 +777,29 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       label: "Overview",
       title: "Overview section",
       description: "Supporting copy from visual editor.",
+      level: "h4",
+      align: "center",
+      labelSize: "md",
+      titleSize: "3xl",
+      descriptionSize: "lg",
+      labelColor: "#475569",
+      titleColor: "var(--color-primary)",
+      descriptionColor: "#334155",
     });
     expect(view.getLatestValue().layout).toMatchObject({
       containerWidth: "wide",
       maxWidth: "7xl",
+      minHeight: "hero",
+      regionFlow: "grid",
+      regionColumns: "4",
       paddingBlock: "xl",
       paddingInline: "lg",
+      mobilePaddingBlock: "sm",
+      mobilePaddingInline: "none",
+      desktopPaddingBlock: "xl",
+      desktopPaddingInline: "lg",
+      headingGap: "lg",
+      regionGap: "xl",
     });
     expect(view.getLatestValue().semantics).toMatchObject({
       element: "div",
@@ -557,11 +814,22 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       gradientAngle: 270,
       borderWidth: "2",
       radius: "xl",
+      shadow: "lg",
+      motion: "slide-up",
       overlayColor: "#333333",
       overlayOpacity: 35,
     });
 
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("lg");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("slide-up");
+    expect(preview?.className).toContain("shadow-lg");
+    expect(
+      surfaceSection.querySelector('[data-section-surface-preview-overlay="true"]')
+    ).not.toBeNull();
+
     const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"level": "h4"');
     expect(snapshot?.textContent).toContain('"anchorId": "overview"');
     expect(snapshot?.textContent).toContain('"gradientAngle": 270');
     expect(snapshot?.textContent).toContain('"overlayOpacity": 35');
@@ -570,7 +838,426 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
   }
 });
 
-test("Section advanced editor clamps non-finite and out-of-range technical token values", async () => {
+test("Section presets and variant cards use atomic block patches when available", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      heading: {
+        title: "Atomic section",
+      },
+    },
+    initialVariant: "default",
+    withVariantChange: false,
+    withBlockPatch: true,
+  });
+
+  try {
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    clickByText(wizardSection, "Hero band");
+    expect(view.onBlockPatchSpy).toHaveBeenCalled();
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.getLatestVariant()).toBe("bleed");
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "full",
+      maxWidth: "none",
+      minHeight: "hero",
+    });
+
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    clickByText(variantSection, "Contained");
+    expect(view.getLatestVariant()).toBe("contained");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section shadow fallback stays match-variant until explicitly overridden", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "contained",
+  });
+
+  try {
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const shadowSelect = findSelectByOptions(surfaceSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const motionSelect = findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]);
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+
+    expect(shadowSelect.value).toBe("__match_variant__");
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("sm");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("none");
+
+    setSelectValue(shadowSelect, "none");
+    expect(view.getLatestValue().style?.shadow).toBe("none");
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("none");
+
+    setSelectValue(shadowSelect, "__match_variant__");
+    expect(view.getLatestValue().style?.shadow).toBeUndefined();
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("sm");
+
+    setSelectValue(motionSelect, "fade");
+    expect(view.getLatestValue().style?.motion).toBe("fade");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("fade");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section editor presets preserve heading copy and expose friendly width and gradient guidance", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      heading: {
+        label: "Overview",
+        title: "Pricing plans",
+        description: "Supportive copy stays intact.",
+      },
+    },
+    initialVariant: "default",
+  });
+
+  try {
+    const wizardSection = findSectionByTitle(view.container, "Section setup");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing section setup");
+    }
+    expect(wizardSection.textContent).toContain("Quick preset");
+    clickByText(wizardSection, "Hero band");
+    expect(view.getLatestVariant()).toBe("bleed");
+    expect(view.getLatestValue().heading).toMatchObject({
+      label: "Overview",
+      title: "Pricing plans",
+      description: "Supportive copy stays intact.",
+      align: "center",
+    });
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "full",
+      maxWidth: "none",
+      minHeight: "hero",
+      paddingBlock: "xl",
+      paddingInline: "lg",
+      headingGap: "xl",
+    });
+
+    const variantSection = findSectionByTitle(view.container, "Variant and structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant and structure section");
+    }
+    expect(variantSection.textContent).toContain("Quick presets");
+    clickByText(variantSection, "Two-column region group");
+    expect(view.getLatestVariant()).toBe("default");
+    expect(view.getLatestValue().heading).toMatchObject({
+      label: "Overview",
+      title: "Pricing plans",
+      description: "Supportive copy stays intact.",
+      align: "left",
+    });
+    expect(view.getLatestValue().layout).toMatchObject({
+      containerWidth: "content",
+      maxWidth: "7xl",
+      regionFlow: "grid",
+      regionColumns: "2",
+      headingGap: "lg",
+      regionGap: "lg",
+    });
+
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+    expect(spacingSection.textContent).toContain(
+      "`Wide alias` keeps the same wrapper classes as `Content`"
+    );
+    expect(spacingSection.textContent).toContain("Full-width wrapper");
+    const maxWidthSelect = findSelectByOptions(spacingSection, [
+      "none",
+      "4xl",
+      "5xl",
+      "6xl",
+      "7xl",
+    ]);
+    expect(Array.from(maxWidthSelect.options).map((option) => option.textContent)).toContain(
+      "7XL (80rem / 1280px)"
+    );
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+    expect(surfaceSection.textContent).toContain("gradient becomes the visible surface");
+    expect(
+      surfaceSection.querySelector('[data-widget-control="section.style.gradientFrom"]')
+        ?.textContent
+    ).toContain("Clear");
+    expect(
+      surfaceSection.querySelector('[data-widget-control="section.style.gradientTo"]')?.textContent
+    ).toContain("Clear");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor keeps grid columns disabled until grid flow is selected and restores match-variant spacing", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+
+    const regionFlowSelect = findSelectByOptions(spacingSection, ["stack", "row", "grid"]);
+    const regionColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    const regionGapSelect = findSelectByOptions(spacingSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+
+    expect(spacingSection.textContent).toContain(
+      "Grid columns stay inactive until Region flow is set to Grid."
+    );
+    expect(regionColumnsSelect.disabled).toBe(true);
+    expect(regionColumnsSelect.value).toBe("1");
+    expect(regionGapSelect.value).toBe("__match_variant__");
+
+    setSelectValue(regionFlowSelect, "grid");
+    expect(view.getLatestValue().layout?.regionFlow).toBe("grid");
+    expect(regionColumnsSelect.disabled).toBe(false);
+
+    setSelectValue(regionColumnsSelect, "5");
+    expect(view.getLatestValue().layout?.regionColumns).toBe("5");
+
+    setSelectValue(regionGapSelect, "lg");
+    expect(view.getLatestValue().layout?.regionGap).toBe("lg");
+
+    setSelectValue(regionGapSelect, "__match_variant__");
+    expect(view.getLatestValue().layout?.regionGap).toBeUndefined();
+
+    setSelectValue(regionFlowSelect, "row");
+    expect(view.getLatestValue().layout).toMatchObject({
+      regionFlow: "row",
+      regionColumns: "1",
+    });
+    expect(regionColumnsSelect.disabled).toBe(true);
+    expect(regionColumnsSelect.value).toBe("1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor clears responsive padding overrides back to match base", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      layout: {
+        mobilePaddingBlock: "sm",
+        mobilePaddingInline: "none",
+        desktopPaddingBlock: "xl",
+        desktopPaddingInline: "lg",
+      },
+    },
+    initialVariant: "default",
+  });
+
+  try {
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+
+    expect(spacingSection.textContent).toContain(
+      "Responsive padding stays on the same bounded tokens."
+    );
+
+    const responsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const responsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+
+    expect(responsiveBlockSelects).toHaveLength(2);
+    expect(responsiveInlineSelects).toHaveLength(2);
+    expect(responsiveBlockSelects[0]?.value).toBe("sm");
+    expect(responsiveInlineSelects[0]?.value).toBe("none");
+    expect(responsiveBlockSelects[1]?.value).toBe("xl");
+    expect(responsiveInlineSelects[1]?.value).toBe("lg");
+
+    setSelectValue(responsiveBlockSelects[0], "__match_base__");
+    setSelectValue(responsiveInlineSelects[0], "__match_base__");
+    setSelectValue(responsiveBlockSelects[1], "__match_base__");
+    setSelectValue(responsiveInlineSelects[1], "__match_base__");
+
+    expect(view.getLatestValue().layout?.mobilePaddingBlock).toBeUndefined();
+    expect(view.getLatestValue().layout?.mobilePaddingInline).toBeUndefined();
+    expect(view.getLatestValue().layout?.desktopPaddingBlock).toBeUndefined();
+    expect(view.getLatestValue().layout?.desktopPaddingInline).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor resolves decorative background image assets and bounded layer controls", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const backgroundSection = findSectionByTitle(view.container, "Background media and layers");
+    if (!(backgroundSection instanceof HTMLElement)) {
+      throw new Error("Missing background media section");
+    }
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "image");
+    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
+    clickByText(backgroundSection, "pick-image-asset");
+    await flush();
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["cover", "contain"]), "contain");
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["center", "top", "bottom", "left", "right"]),
+      "top"
+    );
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["normal", "multiply", "screen", "overlay"]),
+      "overlay"
+    );
+    setSelectValue(
+      findSelectByOptions(backgroundSection, ["media-under-overlay", "overlay-under-media"]),
+      "overlay-under-media"
+    );
+    setInputValue(findNumberInputs(backgroundSection)[0], "45");
+
+    expect(view.getLatestValue().style?.backgroundMedia).toMatchObject({
+      type: "image",
+      source: "library",
+      assetId: "asset-image",
+      src: "/media/section-background.jpg",
+      fit: "contain",
+      position: "top",
+      opacity: 45,
+      blendMode: "overlay",
+      layerOrder: "overlay-under-media",
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"backgroundMedia"');
+    expect(snapshot?.textContent).toContain('"assetId": "asset-image"');
+    expect(snapshot?.textContent).toContain('"blendMode": "overlay"');
+    expect(snapshot?.textContent).toContain('"layerOrder": "overlay-under-media"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section visual editor resolves decorative background video and poster assets", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "default",
+  });
+
+  try {
+    const backgroundSection = findSectionByTitle(view.container, "Background media and layers");
+    if (!(backgroundSection instanceof HTMLElement)) {
+      throw new Error("Missing background media section");
+    }
+
+    setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "video");
+    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
+    clickByText(backgroundSection, "pick-video-asset");
+    await flush();
+
+    setInputValue(
+      findInputByPlaceholder(backgroundSection, "Ambient background video"),
+      "Ambient loop"
+    );
+    setTextareaValue(
+      findTextareaByPlaceholder(backgroundSection, "Optional notes for this decorative video"),
+      "Muted decorative video loop."
+    );
+    const backgroundSourceSelects = findSelectsByOptions(backgroundSection, [
+      "library",
+      "external",
+    ]);
+    const posterSourceSelect = backgroundSourceSelects[1];
+    if (!(posterSourceSelect instanceof HTMLSelectElement)) {
+      throw new Error("Missing poster source select");
+    }
+    setSelectValue(posterSourceSelect, "library");
+    await flush();
+
+    const posterPicker = Array.from(backgroundSection.querySelectorAll("[data-media-picker]")).find(
+      (node) => node.getAttribute("data-media-picker") === "image/*"
+    );
+    if (!(posterPicker instanceof HTMLElement)) {
+      throw new Error("Missing poster media picker");
+    }
+    clickByText(posterPicker, "pick-poster-asset");
+    await flush();
+    setInputValue(findNumberInputs(backgroundSection)[0], "55");
+
+    expect(view.getLatestValue().style?.backgroundMedia).toMatchObject({
+      type: "video",
+      source: "library",
+      assetId: "asset-video",
+      src: "https://cdn.example.com/section-demo.mp4",
+      title: "Ambient loop",
+      description: "Muted decorative video loop.",
+      posterSource: "library",
+      posterAssetId: "asset-poster",
+      posterSrc: "/media/section-poster.jpg",
+      opacity: 55,
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"assetId": "asset-video"');
+    expect(snapshot?.textContent).toContain('"posterAssetId": "asset-poster"');
+    expect(snapshot?.textContent).toContain('"title": "Ambient loop"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section advanced editor keeps semantics fields while surface controls own angle and opacity normalization", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
@@ -586,9 +1273,7 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
       throw new Error("Missing technical tokens section");
     }
 
-    const [angleInput, opacityInput] = findNumberInputs(technicalTokensSection);
-    expect(angleInput?.value).toBe("180");
-    expect(opacityInput?.value).toBe("0");
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     setInputValue(
       findInputByPlaceholder(technicalTokensSection, "section-anchor"),
@@ -598,6 +1283,15 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
       findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
       "Team overview section"
     );
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
+    expect(angleInput?.value).toBe("180");
+    expect(opacityInput?.value).toBe("0");
     setInputValue(angleInput, "-12");
     setInputValue(opacityInput, "125");
 
@@ -718,9 +1412,7 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
       throw new Error("Missing technical tokens section");
     }
 
-    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
-    expect(advancedAngleInput?.value).toBe("180");
-    expect(advancedOpacityInput?.value).toBe("0");
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"gradientAngle": 180');
@@ -730,7 +1422,7 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
   }
 });
 
-test("Section advanced technical tokens round decimals, clamp boundaries, and stay synchronized with surface controls", async () => {
+test("Section surface slider and exact controls round decimals, clamp boundaries, and stay visible in the advanced snapshot", async () => {
   const view = await renderEditors({
     initialValue: {
       semantics: {
@@ -750,22 +1442,16 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
       throw new Error("Missing technical tokens section");
     }
 
-    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
     setInputValue(findInputByPlaceholder(technicalTokensSection, "section-anchor"), "wave-layout");
     setInputValue(
       findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
       "Wave layout section"
     );
-    setInputValue(advancedAngleInput, "44.6");
-    setInputValue(advancedOpacityInput, "15.5");
 
     expect(view.getLatestValue().semantics).toMatchObject({
       anchorId: "wave-layout",
       ariaLabel: "Wave layout section",
-    });
-    expect(view.getLatestValue().style).toMatchObject({
-      gradientAngle: 45,
-      overlayOpacity: 16,
     });
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
@@ -773,9 +1459,31 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
       throw new Error("Missing surface section");
     }
 
+    expect(findSectionSlider(surfaceSection, "gradient-angle")).not.toBeNull();
+    expect(findSectionSlider(surfaceSection, "overlay-opacity")).not.toBeNull();
+
+    clickButton(findSectionStepper(surfaceSection, "gradient-angle", "increase"));
+    clickButton(findSectionStepper(surfaceSection, "overlay-opacity", "decrease"));
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 27,
+      overlayOpacity: 3,
+    });
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("27°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("3%");
+
     const [surfaceAngleInput, surfaceOpacityInput] = findNumberInputs(surfaceSection);
+    setInputValue(surfaceAngleInput, "44.6");
+    setInputValue(surfaceOpacityInput, "15.5");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 45,
+      overlayOpacity: 16,
+    });
     expect(surfaceAngleInput?.value).toBe("45");
     expect(surfaceOpacityInput?.value).toBe("16");
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("45°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("16%");
 
     setInputValue(surfaceAngleInput, "359.6");
     setInputValue(surfaceOpacityInput, "-0.6");
@@ -784,8 +1492,10 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
       gradientAngle: 360,
       overlayOpacity: 0,
     });
-    expect(advancedAngleInput?.value).toBe("360");
-    expect(advancedOpacityInput?.value).toBe("0");
+    expect(surfaceAngleInput?.value).toBe("360");
+    expect(surfaceOpacityInput?.value).toBe("0");
+    expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("360°");
+    expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("0%");
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"anchorId": "wave-layout"');
@@ -854,7 +1564,12 @@ test("Section editors fall back to sparse normalized token fields and contract d
     if (!(semanticsSection instanceof HTMLElement)) {
       throw new Error("Missing semantics section");
     }
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
 
+    expect(findInputByPlaceholder(view.container, "Section label (optional)")?.value).toBe("");
     expect(findInputByPlaceholder(view.container, "Section label")?.value).toBe("");
     expect(findInputsByPlaceholder(view.container, "Section title")[1]?.value).toBe("");
     expect(
@@ -863,6 +1578,47 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("div");
     expect(findInputByPlaceholder(semanticsSection, "pricing-section")?.value).toBe("");
     expect(findInputByPlaceholder(semanticsSection, "Pricing section")?.value).toBe("");
+    expect(findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]).value).toBe(
+      "none"
+    );
+    expect(findSelectByOptions(spacingSection, ["stack", "row", "grid"]).value).toBe("stack");
+    const sparseColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(sparseColumnsSelect.value).toBe("1");
+    expect(sparseColumnsSelect.disabled).toBe(true);
+    expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    const sparseResponsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const sparseResponsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    expect(sparseResponsiveBlockSelects).toHaveLength(2);
+    expect(sparseResponsiveInlineSelects).toHaveLength(2);
+    expect(sparseResponsiveBlockSelects[0]?.value).toBe("__match_base__");
+    expect(sparseResponsiveBlockSelects[1]?.value).toBe("__match_base__");
+    expect(sparseResponsiveInlineSelects[0]?.value).toBe("__match_base__");
+    expect(sparseResponsiveInlineSelects[1]?.value).toBe("__match_base__");
+    expect(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {
@@ -891,6 +1647,7 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value).toBe(
       ""
     );
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"gradientAngle": 180');
@@ -965,6 +1722,52 @@ test("Section editors use hardcoded select fallbacks when sparse defaults omit s
       throw new Error("Missing semantics section");
     }
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
+
+    const spacingSection = findSectionByTitle(view.container, "Width and spacing");
+    if (!(spacingSection instanceof HTMLElement)) {
+      throw new Error("Missing width and spacing section");
+    }
+    expect(findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]).value).toBe(
+      "none"
+    );
+    expect(findSelectByOptions(spacingSection, ["stack", "row", "grid"]).value).toBe("stack");
+    const hardcodedColumnsSelect = findSelectByOptions(spacingSection, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(hardcodedColumnsSelect.value).toBe("1");
+    expect(hardcodedColumnsSelect.disabled).toBe(true);
+    expect(findSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]).value).toBe("md");
+    const hardcodedResponsiveBlockSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const hardcodedResponsiveInlineSelects = findSelectsByOptions(spacingSection, [
+      "__match_base__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+    ]);
+    expect(hardcodedResponsiveBlockSelects).toHaveLength(2);
+    expect(hardcodedResponsiveInlineSelects).toHaveLength(2);
+    expect(hardcodedResponsiveBlockSelects[0]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveBlockSelects[1]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveInlineSelects[0]?.value).toBe("__match_base__");
+    expect(hardcodedResponsiveInlineSelects[1]?.value).toBe("__match_base__");
+    expect(
+      findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {

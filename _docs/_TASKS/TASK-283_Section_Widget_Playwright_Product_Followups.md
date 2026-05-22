@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Section + Layout + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-252, TASK-256, TASK-256-02, TASK-256-03, TASK-256-05-01, TASK-256-08, TASK-326, TASK-327
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -16,8 +16,11 @@ Create the Section-only follow-up family for
 `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md`.
 
 This family owns product, editor, and runtime improvements that apply only to
-the `section` layout widget. Shared widget-contract repairs stay in TASK-256,
-especially the structural repair leaf `TASK-256-05-01`.
+the `section` layout widget. Shared widget-contract repairs stay in the
+truthful shared owners (`TASK-256`, `TASK-326`, `TASK-327`) rather than being
+buried inside widget-local follow-up leaves. `TASK-256-05-01` remains the
+landed baseline prerequisite for placeholder, anchor, and default heading
+semantics.
 
 Do not use TASK-283 to duplicate shared fixes for clear/none token semantics,
 editor-only placeholder leakage, baseline anchor safety, duplicated Advanced
@@ -41,24 +44,22 @@ Live owners inspected while drafting:
 - `_docs/WIDGETS.md`
 - `_docs/_TASKS/TASK-256-05-01_Section_and_Grid_Columns_Structural_Findings.md`
 
-## TASK-256 Exclusion Matrix
+## Shared Exclusion Matrix
 
 The following report findings are intentionally excluded from TASK-283 because
-TASK-256 already owns them as shared widget-contract drift or structural
-baseline repair.
+truthful shared owners (`TASK-256`, `TASK-326`, `TASK-327`) already own the
+cross-widget contract drift or structural baseline repair.
 
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
 | Public `Empty region.` placeholder leakage and U8 public empty-region behavior | `REPORT_SECTION_WIDGET.md:43,98,288,300,325,332,384` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. If product later wants a user-facing empty-region message, that must be a separate Section product task after the placeholder leak is fixed. |
 | Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,133,213,379` | TASK-256-05-01 | Baseline safe DOM ID validation. |
-| Gradient start/end lack Clear buttons | `REPORT_SECTION_WIDGET.md:73,140,348,380` | TASK-256-02, TASK-256-05-01 | Shared clear-control and token behavior. |
-| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
-| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
-| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-256-05-01 | Current editor ownership cleanup, not new product expansion. |
-| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-256-05-01 | Existing control truthfulness must be repaired before new width presets. |
-| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-256-05-01 | Existing variant promise must be made truthful before TASK-283 adds guided presets. |
-| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already classified in the shared structural leaf. TASK-283 may add richer heading product controls after that baseline lands. |
-| Current color/text field format validation | `REPORT_SECTION_WIDGET.md:97` | TASK-256-02, TASK-256-05-01 | Shared color/token validation and current text-field validation belong with baseline control safety. |
+| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-327 | Reopened shared color-control drift in `SharedColorFieldInputs`; keep it out of widget-local TASK-283 leaves. |
+| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-326 | Closed shared truthfulness cleanup on 2026-05-22; keep the historical finding out of widget-local TASK-283 leaves. |
+| Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-326 | Closed shared mode-ownership cleanup on 2026-05-22; TASK-283 continues only with Visual-owned slider UX. |
+| `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-326 | Closed as a truthfulness issue on 2026-05-22 by relabeling `wide` as an explicit alias and documenting the current runtime behavior. |
+| Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-326 | Closed shared baseline on 2026-05-22 with explicit edge-to-edge guidance instead of a hidden runtime semantic change. |
+| Hardcoded heading hierarchy baseline | `REPORT_SECTION_WIDGET.md:58,197,211,289,346,382` | TASK-256-05-01 | Baseline semantic repair is already closed in the shared structural leaf. TASK-283 owns only bounded heading-level product controls on top of the safe default `h2` path. |
 
 If a TASK-283 implementation leaf discovers that a desired Section feature
 requires a shared helper, generic editor control, or cross-widget runtime
@@ -74,21 +75,22 @@ this family.
 | W7 heading-to-regions gap | TASK-283-01 | Section layout spacing around owned heading/region wrapper. |
 | W8 region gap controls | TASK-283-01 | Section-owned gap tokens for repeated regions. |
 | C2 image/video background support | TASK-283-02 | Section-owned media background model using existing safe media patterns. |
-| Future background media source/URL validation from U7 | TASK-283-02 | Applies only if TASK-283-02 adds library or external media sources; current Section data has no URL field. |
+| Media URL validation from U7 | TASK-283-02 | Closed by the landed Section background media model; compatible media sources now fail closed without adding a new widget-local leaf. |
 | W11 layer z-index controls | TASK-283-02 | Bounded overlay/content layering only for Section surface layers. |
-| C3 heading text color and size controls | TASK-283-03 | Product typography controls after TASK-256 resolves heading semantic baseline. |
+| C3 heading text color and size controls | TASK-283-03 | Product typography controls on top of the already-landed safe default heading baseline. |
+| C4 heading level control | TASK-283-03 | Add bounded `h1`-`h6` product control without re-opening the already-fixed hardcoded baseline defect. |
 | W5 heading alignment | TASK-283-03 | Section heading layout/typography. |
 | U1 Wizard missing label | TASK-283-03 | Section Wizard completeness. |
 | W1 section presets | TASK-283-04 | Section-only preset workflow. |
 | U3 friendly max-width names | TASK-283-04 | Section editor copy/labels around width tokens. |
 | U4 gradient override guidance | TASK-283-04 | Section-local guidance after TASK-256 clear/token behavior lands. |
 | U6 Wizard/Visual variant UI mismatch | TASK-283-04 | Section editor onboarding consistency. |
-| W2 box-shadow controls | TASK-283-05 | Section surface styling expansion beyond current `contained` shadow. |
-| W3 animation/scroll effects | TASK-283-05 | Bounded, reduced-motion-safe Section effects. |
-| U2 slider/visual controls for angle and opacity | TASK-283-05 | Section-local control UX after duplicate Advanced ownership is removed. |
-| U5 gradient/overlay preview | TASK-283-05 | Section surface preview. |
+| W2 box-shadow controls | TASK-283-05-01 | Section surface styling expansion beyond current `contained` shadow with explicit match-variant fallback. |
+| W3 animation/scroll effects | TASK-283-05-01 | Bounded, reduced-motion-safe CSS-only Section reveals; scroll observers and parallax stay out of contract. |
+| U2 slider/visual controls for angle and opacity | TASK-283-05-02 | Final Section-local slider UX now that `TASK-326` closed the duplicate Advanced owner and left Visual as the single truthful surface. |
+| U5 gradient/overlay preview | TASK-283-05-01 | Derived Section surface preview without preview-only persisted state. |
 | W6 responsive padding variants | TASK-283-06 | Section-owned mobile/desktop padding tokens. |
-| W4 custom region names | TASK-283-07 | Section structure labels for editor and optional safe runtime markers. |
+| W4 custom region names | TASK-283-07 | Section editor-only structure labels across Visual, canvas slot headers, and insert-target selectors without changing `region:<id>` storage. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-283-08 | Final evidence and synchronization. |
 
 ## No-Action Or Deferred Report Findings
@@ -96,40 +98,46 @@ this family.
 | Report finding | Decision | Reason |
 |---|---|---|
 | Existing section/div element switch | No TASK-283 task | The report confirms it works. Keep covered by existing Section tests unless future leaves change semantics. |
+| Closed shared current-control truthfulness cleanup (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | Closed on 2026-05-22; TASK-283 no longer owns any remaining work in this shared boundary. |
+| Reopened shared color-swatch token overwrite drift (`borderColor` swatch replaces CSS-variable/custom token text) | Shared TASK-327 | `SharedColorFieldInputs` still routes swatch writes through generic `onChange`; keep the fix in the shared helper, not in Section-only editor code. |
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
-| Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the picker overwrite issue remains TASK-256. |
-| Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
+| Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the separate swatch-overwrite bug is now tracked by shared `TASK-327`. |
+| Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; the media URL part of U7 is already closed by TASK-283-02. |
+| Media URL validation part of U7 | Closed by TASK-283-02 | Section background media now validates compatible sources and fails closed for unsupported URLs, so no widget-local TASK-283 leaf remains for this part of U7. |
+| Stale gradient Clear report row (W9) | No standalone TASK-283 leaf after report sync | Current Section editors already expose shared Clear actions for `gradientFrom` and `gradientTo`; TASK-283-04 adds focused evidence and corrects the stale report wording instead of restaging a shared fix. |
 | Confirmed basic render, section/div switch, max-width, padding, border, overlay, gradient, and mobile no-overflow behavior | No TASK-283 task | The report marks these as working; keep existing tests unless a future TASK-283 leaf changes the related contract. |
 | Prior 401 session-limit note | No TASK-283 task | `REPORT_SECTION_WIDGET.md:227,389` records a Playwright environment/session-limit setup issue that was resolved by raising the active-session limit; the current Section widget session completed and no widget implementation task is required. |
 
 ## Sub-Tasks
 
-- [ ] TASK-283-01: Section Layout Height and Region Flow Controls
-- [ ] TASK-283-02: Section Background Media and Layering Model
-- [ ] TASK-283-03: Section Heading Typography Alignment and Wizard UX
-- [ ] TASK-283-04: Section Presets Variant Guidance and Width Copy
-- [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls
-- [ ] TASK-283-06: Section Responsive Spacing and Mobile Density
-- [ ] TASK-283-07: Section Custom Region Labels and Structure UX
-- [ ] TASK-283-08: Section Report Docs Changelog and Closure
+- [x] TASK-283-01: Section Layout Height and Region Flow Controls
+- [x] TASK-283-02: Section Background Media and Layering Model
+- [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
+- [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
+- [x] TASK-283-05: Section Surface Shadow Motion and Preview Controls (closed across `TASK-283-05-01` and `TASK-283-05-02`)
+- [x] TASK-283-06: Section Responsive Spacing and Mobile Density
+- [x] TASK-283-07: Section Custom Region Labels and Structure UX
+- [x] TASK-283-08: Section Report Docs Changelog and Closure
 
 ## Implementation Order
 
-1. Rebase over TASK-256-05-01 first. TASK-283 leaves must build on the final
-   placeholder, anchor, fallback, Advanced-ownership, heading-baseline, and
-   width-truthfulness repairs instead of duplicating them.
+1. Build on the already-landed TASK-256-05-01 baseline. TASK-283 leaves must
+   consume the final placeholder, anchor, fallback, Advanced-ownership,
+   heading-baseline, and width-truthfulness repairs instead of duplicating
+   them.
 2. Complete TASK-283-01 first because height, region flow, and gap tokens define
    the layout model used by responsive and structure leaves.
 3. Complete TASK-283-02 after the layout surface is stable, using existing media
    safety patterns and avoiding raw CSS or arbitrary z-index payloads.
-4. Complete TASK-283-03 after TASK-256 resolves the heading semantic baseline so
-   typography controls do not mask an accessibility defect.
+4. Complete TASK-283-03 after TASK-283-01/02 settle the core layout/surface
+   model, then extend the already-landed safe default heading baseline with
+   product-owned level and typography controls.
 5. Complete TASK-283-04 after width truthfulness and heading basics are stable,
    then add safer presets and variant guidance.
-6. Complete TASK-283-05 after surface/background fields settle so preview,
-   shadow, and motion controls do not fork the style model.
+6. `TASK-283-05` is now complete through `TASK-283-05-02`, keeping the final
+   angle/opacity UX on the single-owner Visual model after shared `TASK-326`.
 7. Complete TASK-283-06 after base spacing tokens exist, then add responsive
    overrides with deterministic fallback behavior.
 8. Complete TASK-283-07 after region flow is stable, because custom labels must
@@ -212,9 +220,9 @@ Implementation leaves:
 
 ## Acceptance Criteria
 
-- Every Section report finding is either owned by TASK-256, covered by a
-  TASK-283 physical leaf, explicitly marked no-action, or explicitly deferred
-  by TASK-283-08 with a reason.
+- Every Section report finding is either owned by a shared task (`TASK-256`,
+  `TASK-326`, `TASK-327`), covered by a TASK-283 physical leaf, explicitly
+  marked no-action, or explicitly deferred by TASK-283-08 with a reason.
 - TASK-283 task docs do not duplicate TASK-256 shared-contract implementation
   scope.
 - Each implementation leaf names concrete files, data flow, error handling,
@@ -223,3 +231,10 @@ Implementation leaves:
   payloads unless the leaf documents and tests a normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Final Validation Notes
+
+- Shared prerequisite `TASK-326` was integrated into this worktree as commit `491f048f`.
+- `TASK-283-05-02` landed as commit `cbe4ffa6` on the dedicated Section branch/worktree.
+- Final TASK-283 closure keeps the remaining shared color-swatch overwrite drift mapped to `TASK-327` only.
+- Final validation commands and outcomes are recorded in `TASK-283-08`.

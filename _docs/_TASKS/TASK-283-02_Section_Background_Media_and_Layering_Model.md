@@ -6,14 +6,14 @@
 **Category:** Widgets + Section + Media + Runtime Render + Admin UI
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-01
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
 ## Overview
 
-Add a Section-owned background media model for images and video-like decorative
-backgrounds, plus bounded layering controls for overlay and content.
+Add a Section-owned background media model for decorative images and muted
+looping videos, plus bounded layering controls for media, overlay, and content.
 
 This leaf covers report findings C2 and W11. It does not own generic media
 library contracts, shared image-alt policy, token-aware color pickers, or
@@ -23,23 +23,27 @@ gradient Clear controls.
 
 In scope:
 
-- Section `style.backgroundMedia` data for decorative images and optional muted
-  looping video backgrounds when the existing media/runtime safety patterns can
-  be reused;
-- asset-backed media selection that stores `source`, `assetId`, and resolved
-  `src` consistently with the existing Hero media flow;
+- Section `style.backgroundMedia` data that mirrors the existing Hero
+  background-media contract with bounded `type`, `source`, `assetId`, `src`,
+  and video poster/title/description fields where required;
+- asset-backed media selection and Hero-compatible external URL validation that
+  store `source`, `assetId`, and resolved `src` consistently with the existing
+  Hero media flow;
 - bounded `mediaFit`, `mediaPosition`, `mediaOpacity`, and `mediaBlendMode`
   tokens;
 - bounded overlay/content layer order only inside the Section surface;
 - editor controls that reuse `MediaPicker` for asset-backed sources and make
   decorative media behavior explicit without promising content images;
-- SSR-safe output with no autoplay surprises when video support is deferred.
+- SSR-safe decorative video output with forced `muted`, `loop`, `playsInline`,
+  `autoPlay`, and `aria-hidden`.
 
 Out of scope:
 
 - raw HTML, iframe embeds, arbitrary remote scripts, or unbounded CSS;
 - global Media Library redesign or upload API changes;
 - generic responsive image/LCP policy outside the Section background surface;
+- inventing Section-only media-source rules when the existing Hero
+  image/video URL allowlist is sufficient;
 - TASK-256 clear/token/color-picker fixes.
 
 ## Source Findings
@@ -52,25 +56,23 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Define a bounded `SectionBackgroundMedia` shape under `SectionData.style`
-  or a dedicated `SectionData.background` owner without breaking legacy style
-  payloads.
-- [ ] Add normalizer helpers that accept legacy blocks with no media and reject
-  or strip unsafe media payloads through schema validation.
-- [ ] Render image backgrounds as decorative CSS/background layers or safe
-  absolutely positioned media elements with `aria-hidden` when appropriate.
-- [ ] Decide whether video background support lands in this leaf or is deferred
-  to TASK-283-08 with exact owner/reason if the current media stack lacks a safe
-  primitive.
-- [ ] Reuse `core/admin/ui/media/MediaPicker.tsx` for asset selection with
+- [x] Define a bounded `SectionBackgroundMedia` shape under `SectionData.style`
+  without breaking legacy style payloads.
+- [x] Add normalizer helpers that accept legacy blocks with no media, reuse the
+  Hero image/video external URL compatibility rules, and strip unsafe media
+  payloads through schema validation.
+- [x] Render image backgrounds as decorative CSS/background layers and video
+  backgrounds as absolutely positioned muted looping media with `aria-hidden`.
+- [x] Reuse `core/admin/ui/media/MediaPicker.tsx` for asset selection with
   image/video accept filters, and keep the selected value compatible with
   existing media client/cache behavior.
-- [ ] Resolve selected `assetId` through `listMediaCached({ force: true })`
+- [x] Resolve selected `assetId` through `listMediaCached({ force: true })`
   with stale-request protection and inline error state, matching the Hero media
   editor flow instead of persisting picker-only state.
-- [ ] Add Visual controls for media source, fit, position, opacity, blend, and
-  layer priority.
-- [ ] Keep overlay color/opacity controls compatible with existing data and with
+- [x] Add Visual controls for media source, fit, position, opacity, blend, and
+  layer priority, including the Hero-compatible video poster metadata when
+  `type="video"`.
+- [x] Keep overlay color/opacity controls compatible with existing data and with
   TASK-256 duplicate-control cleanup.
 
 ## Files to Change
@@ -92,15 +94,20 @@ Schema shape:
 
 ```ts
 type SectionBackgroundMedia = {
-  kind?: "none" | "image" | "video";
+  type?: "none" | "image" | "video";
   source?: "library" | "external";
   assetId?: string;
   src?: string;
-  alt?: "";
+  posterSource?: "library" | "external";
+  posterAssetId?: string;
+  posterSrc?: string;
+  title?: string;
+  description?: string;
   fit?: "cover" | "contain";
   position?: "center" | "top" | "bottom" | "left" | "right";
   opacity?: number;
   blendMode?: "normal" | "multiply" | "screen" | "overlay";
+  layerOrder?: "media-under-overlay" | "overlay-under-media";
 };
 ```
 
@@ -108,19 +115,24 @@ Normalizer flow:
 
 ```ts
 function normalizeSectionBackgroundMedia(media: unknown): SectionBackgroundMedia {
-  const kind = resolveMediaKind(media?.kind);
-  if (kind === "none") return { kind: "none" };
+  const type = resolveSectionMediaType(media?.type);
+  if (type === "none") return { type: "none" };
   const source = resolveMediaSource(media?.source);
   return {
-    kind,
+    type,
     source,
     assetId: source === "library" ? normalizeAssetId(media?.assetId) : undefined,
-    src: sanitizeMediaSource(media?.src),
-    alt: "",
+    src: sanitizeSectionMediaSource(media?.src, type),
+    posterSource: type === "video" ? resolveMediaSource(media?.posterSource ?? source) : undefined,
+    posterAssetId: type === "video" ? normalizeAssetId(media?.posterAssetId) : undefined,
+    posterSrc: type === "video" ? sanitizeSectionMediaSource(media?.posterSrc, "image") : undefined,
+    title: type === "video" ? trimOptionalString(media?.title) : undefined,
+    description: type === "video" ? trimOptionalString(media?.description) : undefined,
     fit: resolveMediaFit(media?.fit),
     position: resolveMediaPosition(media?.position),
     opacity: clampPercent(media?.opacity, 100),
     blendMode: resolveBlendMode(media?.blendMode),
+    layerOrder: resolveSectionLayerOrder(media?.layerOrder),
   };
 }
 ```
@@ -157,7 +169,7 @@ async function handleSectionBackgroundAssetChange(assetId: string | null) {
 Renderer flow:
 
 ```tsx
-{backgroundMedia.kind === "image" && isSafeSectionMediaSource(backgroundMedia.src) ? (
+{backgroundMedia.type === "image" && isSafeSectionMediaSource(backgroundMedia.src, "image") ? (
   <div
     aria-hidden="true"
     className={joinClasses("pointer-events-none absolute inset-0 z-[0]", mediaFitClass)}
@@ -169,18 +181,32 @@ Renderer flow:
     })}
   />
 ) : null}
+{backgroundMedia.type === "video" && isSafeSectionMediaSource(backgroundMedia.src, "video") ? (
+  <video
+    aria-hidden="true"
+    autoPlay
+    muted
+    loop
+    playsInline
+    className={joinClasses("pointer-events-none absolute inset-0 h-full w-full", mediaFitClass)}
+    poster={backgroundMedia.posterSrc}
+  >
+    <source src={backgroundMedia.src} />
+  </video>
+) : null}
 ```
 
 Error handling:
 
-- Unsafe or empty media sources normalize to `kind: "none"` or are rejected by
-  schema/tests according to the existing widget validator pattern.
+- Unsafe or empty external media sources normalize through the same Hero
+  image/video extension allowlist; media without a safe resolved `src` must fail
+  closed in runtime output.
 - Asset IDs selected through `MediaPicker` must resolve through existing media
   client/cache seams; do not persist privileged media URLs or picker-only state.
 - Stale media lookup responses must be ignored so a slow asset resolution cannot
   overwrite a newer selection.
-- Video support must be deferred rather than shipped if the current runtime does
-  not have a safe reusable decorative-video primitive.
+- Decorative videos must always remain muted, looping, `playsInline`,
+  no-controls, and `aria-hidden`; do not widen into interactive media here.
 - Layer controls cannot place content below a non-interactive overlay in a way
   that hides focus or pointer affordances.
 
@@ -220,8 +246,8 @@ No API routes are added.
 
 ## Acceptance Criteria
 
-- Section supports safe decorative background media or records an explicit
-  deferral for video support with owner and reason.
+- Section supports safe decorative background image/video through library or
+  Hero-compatible external sources.
 - Overlay/media/content layers remain bounded, accessible, and deterministic.
 - Existing Section blocks with color/gradient-only backgrounds remain backward
   compatible.

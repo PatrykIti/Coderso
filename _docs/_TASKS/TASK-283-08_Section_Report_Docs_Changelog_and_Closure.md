@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Section + Documentation + QA
 **Estimated Effort:** Medium
-**Dependencies:** TASK-283, TASK-283-01, TASK-283-02, TASK-283-03, TASK-283-04, TASK-283-05, TASK-283-06, TASK-283-07, TASK-256-08
-**Status:** To Do
+**Dependencies:** TASK-283, TASK-283-01, TASK-283-02, TASK-283-03, TASK-283-04, TASK-283-05, TASK-283-06, TASK-283-07, TASK-256-08, TASK-326, TASK-327
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -16,9 +16,9 @@ Close the Section widget-specific Playwright follow-up family after all
 implementation leaves are complete or explicitly deferred.
 
 This leaf owns the final report evidence, widget docs, task-board state,
-changelog entry, and validation matrix for TASK-283. It must not mark TASK-256
-shared findings fixed unless the TASK-256 implementation and evidence have
-landed.
+changelog entry, and validation matrix for TASK-283. It must not mark shared
+findings fixed unless the owning shared task evidence (`TASK-256`, `TASK-326`,
+or `TASK-327`) has actually landed.
 
 ## Source Findings
 
@@ -37,7 +37,7 @@ landed.
 
 | File | Required change |
 |---|---|
-| `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` | Add final textual status for each TASK-283-owned finding: fixed, deferred, no-action, or moved to TASK-256. Do not commit PNG files. |
+| `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` | Add final textual status for each Section finding: fixed, deferred, no-action, or routed to the truthful shared owner task. Do not commit PNG files. |
 | `_docs/_WIDGETS/SECTION.md` | Synchronize final schema/editor/runtime behavior. |
 | `_docs/WIDGETS.md` | Update only if global widget inventory or contract text changed. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if pack readiness/completeness changed. |
@@ -55,15 +55,17 @@ landed.
 |---|---|---|
 | C1 | Fixed by TASK-283-01 | tests + commit |
 | W10 | TASK-256 | shared structural evidence |
+| B5 | Shared TASK-327 | shared color-control evidence |
 | Existing section/div switch | No action | report marked current behavior OK |
-| C2 video background | Deferred by TASK-283-02 | owner/reason if safe primitive unavailable |
+| C2 background media | Fixed by TASK-283-02 | tests + report note |
 ```
 
 Data flow:
 
 - Read the final TASK-283 scope matrix and each implementation leaf status.
 - Update the source report with one textual status row per finding:
-  TASK-256 exclusion, TASK-283 fixed evidence, TASK-283 deferral, or no action.
+  shared-owner evidence (`TASK-256`, `TASK-326`, `TASK-327`), TASK-283 fixed
+  evidence, TASK-283 deferral, or no action.
 - Synchronize Section docs, changelog entry, and task-board rows after report
   evidence is complete.
 - Record exact validation commands and commit SHAs in the closure leaf.
@@ -73,8 +75,9 @@ Error handling:
 - If a TASK-283 leaf remains intentionally deferred, keep the umbrella open or
   mark only that leaf To Do with an explicit reason. Do not move the umbrella to
   Done while unresolved owned findings remain.
-- If a TASK-256 shared finding is still open, keep it classified as TASK-256 and
-  do not claim it in the Section closure report.
+- If a shared finding is still open, keep it classified under the active
+  shared owner task (`TASK-256`, `TASK-326`, or `TASK-327`) and do not claim it
+  in the Section closure report.
 - If broad validation fails for unrelated legacy reasons, record exact command
   output and run the targeted Section suites before deciding closure.
 
@@ -124,12 +127,31 @@ Docs-only closure validation:
 - `_docs/_CHANGELOG/README.md`
 - New changelog entry under `_docs/_CHANGELOG/`
 
+## Current Audit Notes (2026-05-22)
+
+- `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync remains present in the current checkout.
+- `TASK-326` was integrated into the Section follow-up branch as commit `491f048f`, preserving the truthful shared owner split before the final widget-local U2 closure.
+- `TASK-283-05-02` landed as commit `cbe4ffa6`, closing U2 with slider, stepper, and exact-value controls on the single-owner Visual surface. The only remaining open report item after TASK-283 closure is shared `TASK-327`.
+
 ## Acceptance Criteria
 
-- Every report finding is mapped to fixed evidence, a TASK-256 exclusion,
-  a no-action decision, or a documented TASK-283 deferral with owner and reason.
+- Every report finding is mapped to fixed evidence, a truthful shared-task
+  exclusion, a no-action decision, or a documented TASK-283 deferral with owner
+  and reason.
 - TASK-283 task statuses, board rows/statistics, docs, report, and changelog are
   synchronized.
 - Validation output proves the changed Section contracts, not just generic
   repository health.
 - No screenshots or generated binary Playwright artifacts are committed.
+
+## Validation Notes
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso` (the dedicated worktree used a temporary local `.env` symlink because the gate wrapper sources `.env` from the current working tree)
+- `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit` ran inside the command.
+- `bun run precommit`
+- `git diff --check`

@@ -6,37 +6,37 @@
 **Category:** Widgets + Section + Typography + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283
-**Status:** To Do
+**Status:** Done (2026-05-21)
 
 ---
 
 ## Overview
 
-Add Section-owned heading typography, alignment, and Wizard completeness after
-TASK-256 resolves the current heading semantic baseline.
+Add Section-owned heading level, typography, alignment, and Wizard
+completeness on top of the safe default heading baseline already landed in
+TASK-256-05-01.
 
-This leaf covers report findings C3, W5, and U1. It intentionally does not own
-the baseline hardcoded `h3` accessibility repair while TASK-256-05-01 already
-tracks that structural defect.
+This leaf covers report findings C3, C4, W5, and U1. It does not re-open the
+baseline hardcoded `h3` accessibility repair because TASK-256-05-01 already
+closed that shared defect by moving the default section heading path to a safe
+`h2`.
 
 ## Scope Boundary
 
 In scope:
 
 - bounded heading text-size tokens for label, title, and description;
+- bounded heading level values `h1` through `h6` with `h2` as the default;
 - bounded heading alignment values `left`, `center`, and `right`;
 - safe clearable text-color fields for label/title/description after the shared
   TASK-256 token/color-picker contract is available;
 - Wizard `Label` input so the quick setup can produce the same heading model as
-  Visual;
-- product-level heading-level selection only if TASK-256 explicitly delegates
-  the hardcoded `<h3>` semantic repair to this leaf in a prior committed update.
+  Visual.
 
 Out of scope:
 
 - generic color-picker/token semantics, owned by TASK-256-02;
-- fixing current hardcoded invalid heading hierarchy before TASK-256-05-01 is
-  resolved;
+- changing heading content from plain text into rich text or Markdown;
 - rich text, Markdown, arbitrary classes, or raw HTML in headings.
 
 ## Source Findings
@@ -50,26 +50,25 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.heading` with bounded typography/alignment fields
-  without changing persisted label/title/description strings.
-- [ ] Add resolver helpers and class maps for heading alignment, label size,
-  title size, and description size.
-- [ ] Do not add heading-level fields in this leaf unless TASK-256-05-01 is
-  updated first to delegate C4 with schema, render, and test ownership.
-- [ ] Add safe inline color output only through existing clearable/token
+- [x] Extend `SectionData.heading` with bounded typography/alignment fields
+  and a bounded heading-level field without changing persisted
+  label/title/description strings.
+- [x] Add resolver helpers and class maps for heading alignment, label size,
+  title size, description size, and heading level.
+- [x] Add safe inline color output only through existing clearable/token
   helpers after TASK-256 establishes the final color-field behavior.
-- [ ] Add a Wizard `Label` control and keep Wizard/Visual updates atomic through
+- [x] Add a Wizard `Label` control and keep Wizard/Visual updates atomic through
   `normalizeSectionData`.
-- [ ] Add editor guidance that explains heading-level behavior only after the
-  baseline semantic contract is settled.
-- [ ] Add tests for legacy defaults, typography tokens, Wizard label update, and
+- [x] Add editor guidance that explains the default `h2` path and when authors
+  should intentionally choose a different bounded heading level.
+- [x] Add tests for legacy defaults, typography tokens, Wizard label update, and
   heading output.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/section.tsx` | Extend heading schema/types/defaults/normalizer and render bounded alignment and typography classes. Do not add heading-level fields/classes unless TASK-256-05-01 delegates C4 in a committed update. |
+| `core/widgets/core/section.tsx` | Extend heading schema/types/defaults/normalizer and render bounded heading level, alignment, and typography classes. |
 | `core/admin/ui/widgets/editors/SectionEditors.tsx` | Add Wizard label and Visual typography/alignment controls without duplicating shared color-picker fixes. |
 | `tests/vitest/widgets/section.test.tsx` | Add render/normalization coverage for heading typography/alignment and legacy defaults. |
 | `tests/vitest/ui/section-editor-wave.test.tsx` | Add Wizard label and Visual heading-control interaction coverage. |
@@ -81,18 +80,23 @@ Heading model:
 
 ```ts
 type SectionHeadingAlign = "left" | "center" | "right";
-type SectionHeadingSize = "sm" | "md" | "lg" | "xl";
+type SectionHeadingLevel = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+type SectionLabelSize = "xs" | "sm" | "md";
+type SectionTitleSize = "xl" | "2xl" | "3xl";
+type SectionDescriptionSize = "sm" | "base" | "lg";
 
 type SectionHeadingData = {
   label?: string;
   title?: string;
   description?: string;
+  level?: SectionHeadingLevel;
   align?: SectionHeadingAlign;
-  titleSize?: SectionHeadingSize;
+  labelSize?: SectionLabelSize;
+  titleSize?: SectionTitleSize;
+  descriptionSize?: SectionDescriptionSize;
   labelColor?: string;
   titleColor?: string;
   descriptionColor?: string;
-  // headingLevel intentionally stays out of this leaf unless TASK-256 delegates C4.
 };
 ```
 
@@ -104,8 +108,11 @@ function normalizeSectionHeading(heading: SectionData["heading"]) {
     label: heading?.label ?? "",
     title: heading?.title ?? "",
     description: heading?.description ?? "",
+    level: resolveHeadingLevel(heading?.level),
     align: resolveHeadingAlign(heading?.align),
+    labelSize: resolveLabelSize(heading?.labelSize),
     titleSize: resolveHeadingSize(heading?.titleSize),
+    descriptionSize: resolveDescriptionSize(heading?.descriptionSize),
     labelColor: resolveClearableStyleValue(heading?.labelColor),
     titleColor: resolveClearableStyleValue(heading?.titleColor),
     descriptionColor: resolveClearableStyleValue(heading?.descriptionColor),
@@ -116,21 +123,21 @@ function normalizeSectionHeading(heading: SectionData["heading"]) {
 Renderer flow:
 
 ```tsx
+const HeadingTag = heading.level ?? "h2";
+
 <header className={joinClasses("space-y-2", headingAlignClassMap[heading.align])}>
-  <h3 className={joinClasses("font-semibold", titleSizeClassMap[heading.titleSize])}>
+  <HeadingTag className={joinClasses("font-semibold", titleSizeClassMap[heading.titleSize])}>
     {heading.title}
-  </h3>
+  </HeadingTag>
 </header>
 ```
 
 Error handling:
 
+- Unknown heading levels normalize to the current safe `h2` baseline.
 - Unknown typography/alignment tokens normalize to the current left-aligned
-  `text-2xl` behavior.
+  `text-xs` / `text-2xl` / `text-sm` behavior.
 - Empty color values are omitted instead of serialized as unsafe sentinels.
-- Heading-level work is blocked unless TASK-256-05-01 is first changed to
-  delegate C4. If delegated, add explicit `headingLevel` schema, renderer, and
-  accessibility tests before implementation.
 
 ## Security Contract
 
@@ -156,16 +163,18 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/SECTION.md` with heading typography/alignment fields.
-- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows C3, W5, and U1 after
-  validation. Reference TASK-256 for C4 baseline heading-level repair unless
-  that work is explicitly delegated here before implementation.
+- Update `_docs/_WIDGETS/SECTION.md` with heading level, typography, and
+  alignment fields.
+- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows C3, C4, W5, and U1
+  after validation.
 
 ## Acceptance Criteria
 
 - Wizard can edit the Section label without forcing users into Visual.
+- Section exposes a bounded `h1`-`h6` heading-level control while preserving
+  the current safe default `h2` path for legacy blocks.
 - Section heading typography and alignment are bounded, schema-owned, and
   backward compatible.
-- Heading output remains plain text and accessible after TASK-256 baseline
-  repairs land.
+- Heading output remains plain text and accessible on top of the already-landed
+  baseline repairs.
 - Focused tests cover normalization, renderer output, and editor interactions.

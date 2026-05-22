@@ -25,6 +25,16 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 913 | 2026-05-22 | TASK-283 section widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 912 | 2026-05-22 | TASK-283-05-02 section angle and overlay slider controls | CMS Widgets/Admin UI/QA/Docs |
+| 911 | 2026-05-22 | TASK-326 section shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 910 | 2026-05-22 | TASK-283-07 section region labels and structure UX | CMS Widgets/Admin UI/Builder/QA/Docs |
+| 909 | 2026-05-22 | TASK-283-06 section responsive spacing | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 908 | 2026-05-21 | TASK-283-05-01 section shadow motion and surface preview | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 907 | 2026-05-21 | TASK-283-04 section presets and width guidance | CMS Widgets/Admin UI/QA/Docs |
+| 906 | 2026-05-21 | TASK-283-03 section heading typography alignment and Wizard UX | CMS Widgets/Admin UI/Runtime/QA |
+| 905 | 2026-05-21 | TASK-283-02 section background media and layering model | CMS Widgets/Admin UI/Runtime/QA |
+| 904 | 2026-05-21 | TASK-283-01 section layout height and region flow controls | CMS Widgets/Admin UI/Runtime/QA |
 | 903 | 2026-05-22 | TASK-281 product table widget closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 902 | 2026-05-22 | TASK-281-09 product table export and currency | CMS Widgets/Admin UI/Runtime/QA |
 | 901 | 2026-05-22 | TASK-281-08 product table layout variants and sticky header | CMS Widgets/Admin UI/Runtime/QA |

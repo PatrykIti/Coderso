@@ -24,6 +24,7 @@ import {
   updateBlockById,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
+import { createSectionWidget } from "../../../core/widgets/core/section";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
@@ -406,6 +407,60 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
       parentId: "slot-parent",
       slotId: "main",
       slotLabel: "Main",
+      allowedTypes: undefined,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockList applies section region labels to slot headers and insert payloads", () => {
+  registerWidget(
+    createSectionWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    }) as unknown as WidgetDefinition<{ headline: string }>
+  );
+
+  const onOpenSlotInsert = vi.fn();
+  const parent: Block = {
+    ...createBlock("section"),
+    id: "section-parent",
+    data: {
+      regions: [{ id: "2", label: "Supporting proof" }],
+    },
+    slots: {
+      "region:1": [],
+      "region:2": [],
+    },
+  };
+  const view = mount(
+    <BlockList
+      blocks={[parent]}
+      selectedId={null}
+      onSelect={() => {}}
+      onMove={() => {}}
+      onDuplicate={() => {}}
+      onDelete={() => {}}
+      onOpenSlotInsert={onOpenSlotInsert}
+    />
+  );
+
+  try {
+    const slotContainer = getSlotContainer(view.container, "Supporting proof");
+    expect(slotContainer).not.toBeNull();
+    expect(normalizeText(slotContainer)).toContain("Add widget to Supporting proof");
+
+    React.act(() => {
+      Array.from(slotContainer!.querySelectorAll("button"))
+        .find((button) => normalizeText(button).includes("Add widget to Supporting proof"))
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onOpenSlotInsert).toHaveBeenCalledWith({
+      parentId: "section-parent",
+      slotId: "region:2",
+      slotLabel: "Supporting proof",
       allowedTypes: undefined,
     });
   } finally {
