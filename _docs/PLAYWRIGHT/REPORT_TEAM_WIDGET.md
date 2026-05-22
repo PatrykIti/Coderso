@@ -436,20 +436,66 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po TASK-256 i TASK-289 (audit 2026-05-22)
 
-- `TASK-256-06-04`: current Team editor/runtime lanes are green on
-  `tests/vitest/ui/team-editor-wave.test.tsx` and
-  `tests/vitest/widgets/team.test.tsx`.
-- Follow-up shared-contract repairs after the first closure commit now keep
-  social links behind the shared safe-href owner, seed new links with empty
-  URLs instead of `#`, warn before destructive member-count reduction, make
-  spotlight supporting columns truthful across 1-4 options, and lazy-load valid
-  member photos while invalid values fall back to initials.
-- Widget-specific product expansion (for example richer photo authoring and
-  broader team presentation scope) remains routed to the `TASK-289` family; the
-  shared TASK-256 closure only claims the current shared-contract baselines.
+- `TASK-256-06-04`: shared Team baseline now owns the historical section label,
+  heading semantics, safe-link output, spotlight columns/count truthfulness,
+  member-count confirmation, lazy avatar loading, and basic invalid-photo
+  fallback behavior.
+- `TASK-289`: Team-specific product and editor scope is now closed through the
+  member IA, spotlight lead, photo authoring, section presentation, and compact
+  mobile density leaves below.
 
----
+### Finalny status historycznych findingow
 
-*Raport wygenerowany na podstawie analizy kodu (`team.tsx`, `TeamEditors.tsx`) i testów Playwright (sesja `team-audit`, strona `/test-team-0516`) — 2026-05-16.*
+| Finding | Final status | Evidence |
+|---------|--------------|----------|
+| BUG-01 | Zamkniete przez `TASK-256-06-04` | resolvery `columns/gap/radius` sa teraz truthy i jawnie akceptuja wartosci domyslne |
+| BUG-02 | Zamkniete przez `TASK-256-06-04` | nowy member nie serializuje juz `photo: ""`; Team-local picker nadal czyści do braku pola |
+| BUG-03 / UX-04 | Zamkniete przez `TASK-256-06-04` | Spotlight supporting grid respektuje `1..4` kolumny truthfully; `TASK-289-02` nie przejal shared columns ownera |
+| BUG-04 / A1 | Zamkniete przez `TASK-256-06-04` | runtime `<section>` ma teraz etykiete dostepnosciowa |
+| BUG-05 / BF-03 / A2 | Zamkniete przez `TASK-256-06-04` | Team header wyszedl z hardcoded `<h3>` na shared bounded heading baseline; `TASK-289-04` dodaje tylko align/title-size |
+| BUG-06 / BF-06 / A4 | Zamkniete przez `TASK-256-06-04` | social links i Team CTA ida przez shared safe-link attrs z `_blank` + `rel` |
+| BUG-07 / A3 / A6 / A8 | Zamkniete przez `TASK-256-06-04` | invalid/missing avatar source fail-closed do inicjalu, a member cards zachowuja sensowna tozsamosc tekstowa |
+| BUG-08 | Zamkniete przez `TASK-256-06-04` | runtime nie wykonuje juz zbędnej podwojnej normalizacji memberow |
+| UX-01 | Zamkniete przez `TASK-289-01` | usuniecie membera wymaga teraz jawnego potwierdzenia w panelu membera |
+| UX-02 | Zamkniete przez `TASK-289-01` | social links zostaly przeniesione do panelu konkretnego membera |
+| UX-03 | Zamkniete przez `TASK-289-02` | Spotlight ma badge aktywnego leadu oraz akcje `Set as spotlight lead` |
+| UX-05 | Zamkniete przez `TASK-256-06-04` | Wizard pokazuje juz quick-setup dla imienia i roli pierwszych trzech osob |
+| UX-06 | Zamkniete przez `TASK-256-06-04` | zmiana na `spotlight` z wiekszych konfiguracji normalizuje count do `3` |
+| UX-07 | Zamkniete przez `TASK-256-06-04` + `TASK-289-03` | runtime fail-closed dla niepoprawnych URL-i pozostaje shared, a Visual dodaje picker, preview, direct URL feedback, i clear-photo recovery |
+| UX-08 | Zamkniete przez `TASK-289-01` | usuniecie social linku wymaga teraz potwierdzenia |
+| UX-09 | Zamkniete przez `TASK-289-01` | `Add member` jest dostepny na gorze i dole listy |
+| UX-10 | Zamkniete przez `TASK-256-06-04` | nowe social links startuja z pustym URL i `TASK-289-01/03` zachowuje ten baseline |
+| UX-11 | Zamkniete przez `TASK-256-06-04` | redukcja member count potwierdza destrukcyjne obciecie wypelnionych profili |
+| BF-01 | Zamkniete przez `TASK-289-04` | Team ma bounded `sectionBackground` w schema/editor/runtime |
+| BF-02 / A5 | Zamkniete przez `TASK-256-06-04` | avatar `<img>` renderuje `loading="lazy"` |
+| BF-04 | Zamkniete przez `TASK-289-02` | `spotlightLeadId` pozwala wybrac lead bez re-order jako workaround |
+| BF-05 | Zamkniete przez `TASK-289-04` | Team header ma bounded `align` i `titleSize` |
+| BF-07 / A7 | Zamkniete przez `TASK-289-04` | Visual pokazuje lokalne contrast advisories dla Team surface/card kolorow |
+| BF-08 | Zamkniete przez `TASK-289-04` | header dostal pole `eyebrow` |
+| BF-09 | Zamkniete przez `TASK-289-04` | Team renderuje opcjonalne CTA z shared safe-link behavior |
+| BF-10 | Zamkniete przez `TASK-289-04` | Team cards maja bounded `cardBorderWidth` token |
+| BF-11 | Zamkniete decyzja produktowa przez `TASK-289-05` | Team zachowuje explicit max-12 contract; editor/docs kieruja wieksze katalogi do wielu sekcji Team lub innej listing surface |
+| BF-12 | Brak osobnego TASK-289 dzialania | preferencja `Photo of ...` pozostaje shared accessibility detail i nie rozszerza widget-local scope |
+| BF-13 | Zamkniete przez `TASK-289-05` | `compactMobileBio` pozwala ukryc bio wizualnie na mobile w `compact-list` |
+| Admin/public parity oraz obecne bounds (`min 1`, `max 12`, `max 5 social`) | No action | raport potwierdzil dzialanie; pozostaje pokryte testami regresji |
+
+### Targeted evidence for the 2026-05-22 closure audit
+
+- `bun test tests/unit/widgets/validator.test.ts` passed after adding Team schema
+  coverage for `spotlightLeadId`, header presentation fields, CTA, section
+  background, border width, and `compactMobileBio`.
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`,
+  `bun run test:vitest -- tests/vitest/widgets/team.test.tsx`,
+  `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`, and
+  `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+  passed on the finalized TASK-289 worktree state.
+- `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `set -a && source .env && set +a && bun run gates:coderso` passed in the
+  dedicated Team worktree.
+- `bun run scan:security:strict` still exits non-zero only because local
+  `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit`
+  ran successfully inside the command.
+
+*Raport wygenerowany na podstawie analizy kodu (`team.tsx`, `TeamEditors.tsx`) i testow Playwright (sesja `team-audit`, strona `/test-team-0516`) — 2026-05-16. Zaktualizowany o finalny status TASK-256/TASK-289 podczas closure auditu 2026-05-22.*

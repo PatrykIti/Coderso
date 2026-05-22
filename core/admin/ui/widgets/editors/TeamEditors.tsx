@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 import { cn } from "@/lib/utils";
 
 import {
@@ -18,13 +20,18 @@ import {
   normalizeTeamMemberCount,
   normalizeTeamMembers,
   normalizeTeamSocialLinks,
+  resolveTeamCompactMobileBio,
   resolveTeamVariant,
   teamDefaults,
   teamMemberMax,
   teamSocialLinksMax,
+  type TeamBorderWidth,
   type TeamColumns,
+  type TeamCompactMobileBio,
   type TeamData,
   type TeamGap,
+  type TeamHeaderAlign,
+  type TeamHeaderTitleSize,
   type TeamMember,
   type TeamRadius,
   type TeamSocialLink,
@@ -32,7 +39,7 @@ import {
 } from "../../../../widgets/core/team";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import { ClearableFieldHeader, resolveColorContrastAdvisory } from "./ClearableFields";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -79,10 +86,40 @@ const radiusOptions: Array<{ id: TeamRadius; label: string }> = [
   { id: "xl", label: "Extra large" },
 ];
 
+const headerAlignOptions: Array<{ id: TeamHeaderAlign; label: string }> = [
+  { id: "left", label: "Left" },
+  { id: "center", label: "Center" },
+  { id: "right", label: "Right" },
+];
+
+const titleSizeOptions: Array<{ id: TeamHeaderTitleSize; label: string }> = [
+  { id: "xl", label: "XL" },
+  { id: "2xl", label: "2XL" },
+  { id: "3xl", label: "3XL" },
+];
+
+const borderWidthOptions: Array<{ id: TeamBorderWidth; label: string }> = [
+  { id: "0", label: "0px" },
+  { id: "1", label: "1px" },
+  { id: "2", label: "2px" },
+  { id: "3", label: "3px" },
+];
+
+const compactMobileBioOptions: Array<{ id: TeamCompactMobileBio; label: string }> = [
+  { id: "show", label: "Show on mobile" },
+  { id: "hide", label: "Hide visually on mobile" },
+];
+
 const memberCountOptions = Array.from({ length: teamMemberMax }, (_, index) => String(index + 1));
+const estimatedTeamTextColor = "#111827";
 
 type HeaderData = NonNullable<TeamData["header"]>;
 type StyleData = NonNullable<TeamData["style"]>;
+type CtaData = NonNullable<TeamData["cta"]>;
+
+type PendingRemoval =
+  | { type: "member"; memberId: string }
+  | { type: "social"; memberId: string; socialId: string };
 
 function normalizeValue(value: TeamData): TeamData {
   return normalizeTeamData(value);
@@ -206,6 +243,17 @@ function updateStyle(
   }));
 }
 
+function updateCta(value: TeamData, onChange: (next: TeamData) => void, patch: Partial<CtaData>) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    cta: {
+      label: current.cta?.label ?? "",
+      url: current.cta?.url ?? "",
+      ...patch,
+    },
+  }));
+}
+
 function clearStyleField(
   value: TeamData,
   onChange: (next: TeamData) => void,
@@ -218,6 +266,10 @@ function clearStyleField(
       style,
     };
   });
+}
+
+function findMemberIndexById(members: TeamMember[], memberId: string) {
+  return members.findIndex((member) => member.id === memberId);
 }
 
 function updateMember(
@@ -277,6 +329,13 @@ function updateMemberSocialLink(
   });
 }
 
+function setSpotlightLead(value: TeamData, onChange: (next: TeamData) => void, memberId: string) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    spotlightLeadId: memberId,
+  }));
+}
+
 function hasConfiguredTeamMember(member: TeamMember | undefined) {
   if (!member) return false;
   if ((member.name ?? "").trim().length > 0) return true;
@@ -319,20 +378,22 @@ function addMemberSocialLink(
   });
 }
 
-function removeMemberSocialLink(
+function removeMemberSocialLinkById(
   value: TeamData,
   onChange: (next: TeamData) => void,
-  memberIndex: number,
-  socialIndex: number
+  memberId: string,
+  socialId: string
 ) {
   updateValue(value, onChange, (current) => {
     const members = normalizeTeamMembers(current.members);
-    const member = members[memberIndex];
+    const memberIndex = findMemberIndexById(members, memberId);
+    const member = memberIndex >= 0 ? members[memberIndex] : undefined;
     if (!member) return current;
 
     const links = normalizeTeamSocialLinks(member.socialLinks);
-    const nextLinks = links.filter((_, index) => index !== socialIndex);
+    if (!links.some((link) => link.id === socialId)) return current;
 
+    const nextLinks = links.filter((link) => link.id !== socialId);
     const nextMembers = [...members];
     nextMembers[memberIndex] = {
       ...member,
@@ -403,12 +464,14 @@ function addMember(value: TeamData, onChange: (next: TeamData) => void) {
   });
 }
 
-function removeMember(value: TeamData, onChange: (next: TeamData) => void, memberIndex: number) {
+function removeMemberById(value: TeamData, onChange: (next: TeamData) => void, memberId: string) {
   updateValue(value, onChange, (current) => {
     const members = normalizeTeamMembers(current.members);
     if (members.length <= 1) return current;
+    const memberIndex = findMemberIndexById(members, memberId);
+    if (memberIndex < 0) return current;
 
-    const nextMembers = members.filter((_, index) => index !== memberIndex);
+    const nextMembers = members.filter((member) => member.id !== memberId);
 
     return {
       ...current,
@@ -445,6 +508,119 @@ function DiagnosticsSnapshot({ value }: { value: TeamData }) {
       {JSON.stringify(value, null, 2)}
     </pre>
   );
+}
+
+function resolveTeamPhotoState(
+  member: TeamMember,
+  selectedMediaId: string | null | undefined
+): {
+  kind: "empty" | "invalid" | "url" | "picked";
+  previewUrl?: string;
+  message: string;
+} {
+  const rawPhoto = (member.photo ?? "").trim();
+  const safePhoto = normalizeWidgetSafeHref(rawPhoto, {
+    allowRelative: true,
+    allowHttp: true,
+  });
+
+  if (safePhoto) {
+    return {
+      kind: selectedMediaId ? "picked" : "url",
+      previewUrl: safePhoto,
+      message: selectedMediaId
+        ? "Using the selected media-library image for this member."
+        : "Using a direct photo URL for this member.",
+    };
+  }
+
+  if (rawPhoto.length > 0) {
+    return {
+      kind: "invalid",
+      message:
+        "Use a relative path or http/https image URL. Invalid values fall back to initials in runtime.",
+    };
+  }
+
+  return {
+    kind: "empty",
+    message: "No photo selected. Team preview and runtime fall back to initials.",
+  };
+}
+
+function TeamPhotoPreview({
+  member,
+  selectedMediaId,
+}: {
+  member: TeamMember;
+  selectedMediaId: string | null | undefined;
+}) {
+  const state = resolveTeamPhotoState(member, selectedMediaId);
+  const name = (member.name ?? "Team Member").trim() || "Team Member";
+
+  return (
+    <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+      <div className="flex items-center gap-3">
+        {state.previewUrl ? (
+          <img
+            src={state.previewUrl}
+            alt={name}
+            className="h-14 w-14 rounded-lg border object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-lg border bg-background text-lg font-semibold text-foreground">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Photo preview</p>
+          <p className="text-xs text-muted-foreground">{state.message}</p>
+        </div>
+      </div>
+      {state.kind === "invalid" ? <p className="text-xs text-amber-700">{state.message}</p> : null}
+    </div>
+  );
+}
+
+function contrastTextClass(status: "ok" | "warning" | "unknown") {
+  if (status === "warning") return "text-amber-700";
+  if (status === "ok") return "text-emerald-700";
+  return "text-muted-foreground";
+}
+
+function ContrastAdvisoryNote({
+  label,
+  background,
+  fallbackBackground,
+}: {
+  label: string;
+  background?: string;
+  fallbackBackground?: string;
+}) {
+  const advisory = resolveColorContrastAdvisory({
+    foreground: estimatedTeamTextColor,
+    background,
+    fallbackBackground,
+  });
+
+  return (
+    <p className={cn("text-xs", contrastTextClass(advisory.status))}>
+      {label}: {advisory.message} Contrast is estimated against the default theme text color.
+    </p>
+  );
+}
+
+function resolveActivePendingRemoval(
+  members: TeamMember[],
+  pendingRemoval: PendingRemoval | null
+): PendingRemoval | null {
+  if (!pendingRemoval) return null;
+  const member = members.find((candidate) => candidate.id === pendingRemoval.memberId);
+  if (!member) return null;
+  if (pendingRemoval.type === "member") return pendingRemoval;
+  const links = normalizeTeamSocialLinks(member.socialLinks);
+  return links.some((link) => link.id === pendingRemoval.socialId) ? pendingRemoval : null;
 }
 
 export function TeamWizardEditor({
@@ -513,6 +689,10 @@ export function TeamWizardEditor({
             ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground">
+          Team intentionally supports up to 12 members. Use multiple Team sections for larger
+          directories.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -550,7 +730,97 @@ export function TeamVisualEditor({
   const header = normalized.header ?? teamDefaults.header!;
   const style = normalized.style ?? teamDefaults.style!;
   const members = normalizeTeamMembers(normalized.members);
+  const cta = normalized.cta ?? { label: "", url: "" };
   const resolvedVariant = resolveTeamVariant(variant);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
+  const [selectedPhotoMediaIds, setSelectedPhotoMediaIds] = useState<Record<string, string | null>>(
+    {}
+  );
+  const [photoPickerErrors, setPhotoPickerErrors] = useState<Record<string, string>>({});
+
+  const activePendingRemoval = resolveActivePendingRemoval(members, pendingRemoval);
+  const spotlightLeadId =
+    normalized.spotlightLeadId && members.some((member) => member.id === normalized.spotlightLeadId)
+      ? normalized.spotlightLeadId
+      : members[0]?.id;
+  const ctaHref = normalizeWidgetSafeHref(cta.url, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+  });
+  const showCtaGuidance = (cta.label ?? "").trim().length > 0 || (cta.url ?? "").trim().length > 0;
+
+  const clearPhotoPickerError = (memberId: string) => {
+    setPhotoPickerErrors((current) => {
+      if (!current[memberId]) return current;
+      const { [memberId]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
+
+  const clearSelectedPhotoMedia = (memberId: string) => {
+    setSelectedPhotoMediaIds((current) => {
+      if (!(memberId in current)) return current;
+      const { [memberId]: _removed, ...rest } = current;
+      return rest;
+    });
+  };
+
+  const handleTeamPhotoMediaSelection = async (
+    memberId: string,
+    memberIndex: number,
+    nextValue: unknown
+  ) => {
+    const mediaId = typeof nextValue === "string" ? nextValue : null;
+    setSelectedPhotoMediaIds((current) => ({ ...current, [memberId]: mediaId }));
+    clearPhotoPickerError(memberId);
+
+    if (!mediaId) {
+      updateMember(value, onChange, memberIndex, { photo: undefined });
+      return;
+    }
+
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((item) => item.id === mediaId);
+      if (!media?.url) throw new Error("missing_media_url");
+      updateMember(value, onChange, memberIndex, { photo: media.url });
+    } catch {
+      setPhotoPickerErrors((current) => ({
+        ...current,
+        [memberId]: "Failed to resolve selected media.",
+      }));
+    }
+  };
+
+  const handlePhotoInputChange = (memberId: string, memberIndex: number, nextValue: string) => {
+    clearSelectedPhotoMedia(memberId);
+    clearPhotoPickerError(memberId);
+    updateMember(value, onChange, memberIndex, { photo: nextValue });
+  };
+
+  const handleClearPhoto = (memberId: string, memberIndex: number) => {
+    clearSelectedPhotoMedia(memberId);
+    clearPhotoPickerError(memberId);
+    updateMember(value, onChange, memberIndex, { photo: undefined });
+  };
+
+  const confirmPendingRemoval = () => {
+    if (!activePendingRemoval) return;
+    if (activePendingRemoval.type === "member") {
+      clearSelectedPhotoMedia(activePendingRemoval.memberId);
+      clearPhotoPickerError(activePendingRemoval.memberId);
+      removeMemberById(value, onChange, activePendingRemoval.memberId);
+    } else {
+      removeMemberSocialLinkById(
+        value,
+        onChange,
+        activePendingRemoval.memberId,
+        activePendingRemoval.socialId
+      );
+    }
+    setPendingRemoval(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -577,13 +847,31 @@ export function TeamVisualEditor({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Team intentionally supports up to 12 members. Use multiple Team sections for larger
+            directories.
+          </p>
+          {resolvedVariant === "spotlight" ? (
+            <p className="text-xs text-muted-foreground">
+              Spotlight uses the selected lead member below and still honors the supporting-columns
+              control in Section and card style.
+            </p>
+          ) : null}
         </div>
       </EditorSection>
 
       <EditorSection
-        title="Header copy"
-        description="Edit section title and supporting description."
+        title="Header copy and CTA"
+        description="Edit section eyebrow, copy, presentation, and the optional Team CTA."
       >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Eyebrow</p>
+          <Input
+            value={header.eyebrow ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { eyebrow: event.target.value })}
+            placeholder="Our team"
+          />
+        </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
@@ -600,99 +888,356 @@ export function TeamVisualEditor({
             placeholder="Introduce key people behind delivery, support, and strategy."
           />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Header alignment</p>
+            <Select
+              value={header.align ?? "center"}
+              onValueChange={(next) =>
+                updateHeader(value, onChange, { align: next as TeamHeaderAlign })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {headerAlignOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Title size</p>
+            <Select
+              value={header.titleSize ?? "2xl"}
+              onValueChange={(next) =>
+                updateHeader(value, onChange, { titleSize: next as TeamHeaderTitleSize })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select title size" />
+              </SelectTrigger>
+              <SelectContent>
+                {titleSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">CTA label</p>
+            <Input
+              value={cta.label ?? ""}
+              onChange={(event) => updateCta(value, onChange, { label: event.target.value })}
+              placeholder="See all positions"
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">CTA URL</p>
+            <Input
+              value={cta.url ?? ""}
+              onChange={(event) => updateCta(value, onChange, { url: event.target.value })}
+              placeholder="/careers"
+            />
+          </div>
+        </div>
+        {showCtaGuidance && !(cta.label ?? "").trim().length ? (
+          <p className="text-xs text-muted-foreground">CTA requires both a label and a safe URL.</p>
+        ) : null}
+        {showCtaGuidance && !(cta.url ?? "").trim().length ? (
+          <p className="text-xs text-muted-foreground">CTA requires both a label and a safe URL.</p>
+        ) : null}
+        {(cta.url ?? "").trim().length > 0 && !ctaHref ? (
+          <p className="text-xs text-destructive">Use a relative path, `#`, or full URL.</p>
+        ) : null}
       </EditorSection>
 
       <EditorSection
         title="Members content and order"
-        description="Manage names, roles, bios, photos, and member order."
+        description="Manage names, roles, bios, photos, social links, spotlight lead, and member order."
       >
-        {members.map((member, memberIndex) => (
-          <div key={member.id} className="space-y-3 rounded-lg border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Member {memberIndex + 1}</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveMember(value, onChange, memberIndex, memberIndex - 1)}
-                  disabled={memberIndex === 0}
-                >
-                  Move up
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => moveMember(value, onChange, memberIndex, memberIndex + 1)}
-                  disabled={memberIndex === members.length - 1}
-                >
-                  Move down
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeMember(value, onChange, memberIndex)}
-                  disabled={members.length <= 1}
-                >
-                  Remove
-                </Button>
-              </div>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 p-3">
+          <p className="text-xs text-muted-foreground">
+            Add members from the top when the list gets long. The secondary action stays at the
+            bottom for parity with existing flows.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addMember(value, onChange)}
+            disabled={members.length >= teamMemberMax}
+          >
+            Add member
+          </Button>
+        </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Name</p>
-              <Input
-                value={member.name}
-                onChange={(event) =>
-                  updateMember(value, onChange, memberIndex, { name: event.target.value })
-                }
-                placeholder="Anna Kowalska"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Role</p>
-              <Input
-                value={member.role}
-                onChange={(event) =>
-                  updateMember(value, onChange, memberIndex, { role: event.target.value })
-                }
-                placeholder="Head of Product"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Bio</p>
-              <Textarea
-                value={member.bio}
-                onChange={(event) =>
-                  updateMember(value, onChange, memberIndex, { bio: event.target.value })
-                }
-                placeholder="Short bio describing responsibilities and value."
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Photo URL</p>
-              <Input
-                value={member.photo ?? ""}
-                onChange={(event) =>
-                  updateMember(value, onChange, memberIndex, { photo: event.target.value })
-                }
-                placeholder="https://images.unsplash.com/..."
-              />
-              {(member.photo ?? "").trim().length > 0 &&
-              !normalizeWidgetSafeHref(member.photo, {
-                allowRelative: true,
-                allowHttp: true,
-              }) ? (
-                <p className="text-xs text-amber-700">
-                  Use a relative path or http/https image URL. Invalid values fall back to initials
-                  in runtime.
+        {members.map((member, memberIndex) => {
+          const socialLinks = normalizeTeamSocialLinks(member.socialLinks);
+          const memberName = (member.name ?? "").trim() || `Member ${memberIndex + 1}`;
+          const memberId = member.id ?? `member-${memberIndex + 1}`;
+          const isLead = spotlightLeadId === memberId;
+          const pendingMemberRemoval =
+            activePendingRemoval?.type === "member" && activePendingRemoval.memberId === memberId;
+
+          return (
+            <div key={memberId} className="space-y-4 rounded-lg border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold">{memberName}</p>
+                  {resolvedVariant === "spotlight" && isLead ? (
+                    <Badge variant="outline">Spotlight Lead</Badge>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {resolvedVariant === "spotlight" && !isLead ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSpotlightLead(value, onChange, memberId)}
+                    >
+                      Set as spotlight lead
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveMember(value, onChange, memberIndex, memberIndex - 1)}
+                    disabled={memberIndex === 0}
+                  >
+                    Move up
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => moveMember(value, onChange, memberIndex, memberIndex + 1)}
+                    disabled={memberIndex === members.length - 1}
+                  >
+                    Move down
+                  </Button>
+                  {pendingMemberRemoval ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={confirmPendingRemoval}
+                      >
+                        Confirm remove
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPendingRemoval(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPendingRemoval({ type: "member", memberId })}
+                      disabled={members.length <= 1}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {pendingMemberRemoval ? (
+                <p className="text-xs text-muted-foreground">
+                  Remove this member profile and all of its photo, bio, and social-link content?
                 </p>
               ) : null}
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Name</p>
+                <Input
+                  value={member.name}
+                  onChange={(event) =>
+                    updateMember(value, onChange, memberIndex, { name: event.target.value })
+                  }
+                  placeholder="Anna Kowalska"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Role</p>
+                <Input
+                  value={member.role}
+                  onChange={(event) =>
+                    updateMember(value, onChange, memberIndex, { role: event.target.value })
+                  }
+                  placeholder="Head of Product"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Bio</p>
+                <Textarea
+                  value={member.bio ?? ""}
+                  onChange={(event) =>
+                    updateMember(value, onChange, memberIndex, { bio: event.target.value })
+                  }
+                  placeholder="Short bio describing responsibilities and value."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Clear the bio if you want the runtime card to omit it.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Photo</p>
+                <TeamPhotoPreview
+                  member={member}
+                  selectedMediaId={selectedPhotoMediaIds[memberId] ?? null}
+                />
+                <Input
+                  value={member.photo ?? ""}
+                  onChange={(event) =>
+                    handlePhotoInputChange(memberId, memberIndex, event.target.value)
+                  }
+                  placeholder="https://images.unsplash.com/..."
+                />
+                <div className="flex flex-wrap gap-2">
+                  <MediaPicker
+                    value={selectedPhotoMediaIds[memberId] ?? null}
+                    onChange={(next) => {
+                      void handleTeamPhotoMediaSelection(memberId, memberIndex, next);
+                    }}
+                    multiple={false}
+                    accept={["image/*"]}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleClearPhoto(memberId, memberIndex)}
+                    disabled={!member.photo && !(selectedPhotoMediaIds[memberId] ?? null)}
+                  >
+                    Clear photo
+                  </Button>
+                </div>
+                {photoPickerErrors[memberId] ? (
+                  <p className="text-xs text-destructive">{photoPickerErrors[memberId]}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-3 rounded-md border bg-muted/10 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Social links</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addMemberSocialLink(value, onChange, memberIndex)}
+                    disabled={socialLinks.length >= teamSocialLinksMax}
+                  >
+                    Add link
+                  </Button>
+                </div>
+
+                {socialLinks.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No social links configured.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {socialLinks.map((link, socialIndex) => {
+                      const socialId = link.id ?? `social-${socialIndex + 1}`;
+                      const pendingSocialRemoval =
+                        activePendingRemoval?.type === "social" &&
+                        activePendingRemoval.memberId === memberId &&
+                        activePendingRemoval.socialId === socialId;
+
+                      return (
+                        <div
+                          key={socialId}
+                          className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-[1fr_1fr_auto]"
+                        >
+                          <Input
+                            value={link.label}
+                            onChange={(event) =>
+                              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+                                label: event.target.value,
+                              })
+                            }
+                            placeholder="LinkedIn"
+                          />
+                          <Input
+                            value={link.url ?? ""}
+                            onChange={(event) =>
+                              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+                                url: event.target.value,
+                              })
+                            }
+                            placeholder="https://..."
+                          />
+                          {pendingSocialRemoval ? (
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={confirmPendingRemoval}
+                              >
+                                Confirm remove
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPendingRemoval(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setPendingRemoval({ type: "social", memberId, socialId })
+                              }
+                            >
+                              Remove
+                            </Button>
+                          )}
+                          {(link.url ?? "").trim().length > 0 &&
+                          !normalizeWidgetSafeHref(link.url, {
+                            allowRelative: true,
+                            allowHash: true,
+                            allowHttp: true,
+                          }) ? (
+                            <p className="text-xs text-amber-700 sm:col-span-2">
+                              Use a relative path, `#`, or http/https URL. Unsafe links are not
+                              rendered publicly.
+                            </p>
+                          ) : null}
+                          {pendingSocialRemoval ? (
+                            <p className="text-xs text-muted-foreground sm:col-span-2">
+                              Remove this social link from {memberName}?
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <Button
           type="button"
@@ -705,91 +1250,24 @@ export function TeamVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="Social links"
-        description="Manage social links for each member profile."
+        title="Section and card style"
+        description="Tune section background, card presentation, and compact-list mobile density."
       >
-        {members.map((member, memberIndex) => {
-          const socialLinks = normalizeTeamSocialLinks(member.socialLinks);
-          return (
-            <div key={`social-links-${member.id}`} className="space-y-3 rounded-lg border p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">
-                  {member.name && member.name.trim().length > 0
-                    ? member.name
-                    : `Member ${memberIndex + 1}`}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addMemberSocialLink(value, onChange, memberIndex)}
-                  disabled={socialLinks.length >= teamSocialLinksMax}
-                >
-                  Add link
-                </Button>
-              </div>
+        <ColorField
+          label="Section background"
+          value={style.sectionBackground}
+          onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
+          onClear={() => clearStyleField(value, onChange, "sectionBackground")}
+          placeholder="var(--color-bg)"
+          pickerFallback="#ffffff"
+        />
+        {(style.sectionBackground ?? "").trim().length > 0 ? (
+          <ContrastAdvisoryNote
+            label="Section background contrast"
+            background={style.sectionBackground}
+          />
+        ) : null}
 
-              {socialLinks.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No social links configured.</p>
-              ) : (
-                <div className="space-y-2">
-                  {socialLinks.map((link, socialIndex) => (
-                    <div
-                      key={link.id}
-                      className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-[1fr_1fr_auto]"
-                    >
-                      <Input
-                        value={link.label}
-                        onChange={(event) =>
-                          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
-                            label: event.target.value,
-                          })
-                        }
-                        placeholder="LinkedIn"
-                      />
-                      <Input
-                        value={link.url ?? ""}
-                        onChange={(event) =>
-                          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
-                            url: event.target.value,
-                          })
-                        }
-                        placeholder="https://..."
-                      />
-                      {(link.url ?? "").trim().length > 0 &&
-                      !normalizeWidgetSafeHref(link.url, {
-                        allowRelative: true,
-                        allowHash: true,
-                        allowHttp: true,
-                      }) ? (
-                        <p className="text-xs text-amber-700 sm:col-span-2">
-                          Use a relative path, hash, or http/https URL. Unsafe links are not
-                          rendered publicly.
-                        </p>
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          removeMemberSocialLink(value, onChange, memberIndex, socialIndex)
-                        }
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </EditorSection>
-
-      <EditorSection
-        title="Card and layout style"
-        description="Tune columns, spacing, radius, and card colors."
-      >
         <div className="space-y-2">
           <p className="text-sm font-medium">Columns</p>
           <Select
@@ -814,41 +1292,43 @@ export function TeamVisualEditor({
             </p>
           ) : null}
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap</p>
-          <Select
-            value={style.gap}
-            onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Card radius</p>
-          <Select
-            value={style.radius}
-            onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select radius" />
-            </SelectTrigger>
-            <SelectContent>
-              {radiusOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Gap</p>
+            <Select
+              value={style.gap}
+              onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gap" />
+              </SelectTrigger>
+              <SelectContent>
+                {gapOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card radius</p>
+            <Select
+              value={style.radius}
+              onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <ColorField
           label="Card background"
@@ -866,6 +1346,59 @@ export function TeamVisualEditor({
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
+        {(style.cardSurface ?? "").trim().length > 0 ? (
+          <ContrastAdvisoryNote
+            label="Card background contrast"
+            background={style.cardSurface}
+            fallbackBackground={style.sectionBackground}
+          />
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Card border width</p>
+            <Select
+              value={style.cardBorderWidth ?? "1"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { cardBorderWidth: next as TeamBorderWidth })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Border width" />
+              </SelectTrigger>
+              <SelectContent>
+                {borderWidthOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Compact-list mobile bio</p>
+            <Select
+              value={resolveTeamCompactMobileBio(style.compactMobileBio)}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { compactMobileBio: next as TeamCompactMobileBio })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Mobile bio behavior" />
+              </SelectTrigger>
+              <SelectContent>
+                {compactMobileBioOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Compact-list mobile bio affects only the Compact List variant. Hiding keeps the bio
+          available to assistive technology on small screens.
+        </p>
       </EditorSection>
     </div>
   );
@@ -879,7 +1412,7 @@ export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamDa
     <div className="space-y-4">
       <EditorSection
         title="Technical layout tokens"
-        description="Low-level layout and style token controls."
+        description="Low-level layout and style token controls. Visual owns the member and CTA experience."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Columns token</p>
@@ -934,6 +1467,61 @@ export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamDa
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Border width token</p>
+          <Select
+            value={style.cardBorderWidth ?? "1"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { cardBorderWidth: next as TeamBorderWidth })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select border width token" />
+            </SelectTrigger>
+            <SelectContent>
+              {borderWidthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Compact-list mobile bio token</p>
+          <Select
+            value={resolveTeamCompactMobileBio(style.compactMobileBio)}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { compactMobileBio: next as TeamCompactMobileBio })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select compact mobile bio token" />
+            </SelectTrigger>
+            <SelectContent>
+              {compactMobileBioOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <ClearableFieldHeader
+            label="Section background token"
+            value={style.sectionBackground}
+            onClear={() => clearStyleField(value, onChange, "sectionBackground")}
+            onRestoreValue={(next) => updateStyle(value, onChange, { sectionBackground: next })}
+          />
+          <Input
+            value={style.sectionBackground ?? ""}
+            onChange={(event) =>
+              updateStyle(value, onChange, { sectionBackground: event.target.value })
+            }
+            placeholder="var(--color-bg)"
+          />
         </div>
         <div className="space-y-2">
           <ClearableFieldHeader

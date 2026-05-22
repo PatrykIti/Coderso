@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Widgets + Team + Admin UI + Media
 **Estimated Effort:** Large
-**Dependencies:** TASK-289, TASK-256-04, TASK-256-06-04
-**Status:** To Do
+**Dependencies:** TASK-289, TASK-289-01, TASK-256-04, TASK-256-06-04
+**Status:** Done (2026-05-22)
 
 ---
 

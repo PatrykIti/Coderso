@@ -6,7 +6,7 @@
 **Category:** Widgets + Team + Documentation + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-289, TASK-289-01, TASK-289-02, TASK-289-03, TASK-289-04, TASK-289-05, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -135,6 +135,36 @@ Docs-only closure validation:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - New changelog entry under `_docs/_CHANGELOG/`
+
+## Current Audit Notes (2026-05-22)
+
+- `TASK-289` planning/doc readiness landed as commit `bbd72115` in the
+  isolated Team worktree before widget-local implementation and closure work
+  began.
+- Shared `TASK-256-06-04` remains the truthful owner for section labels,
+  heading baseline, safe-link output, spotlight count/columns truthfulness,
+  destructive count-reduction confirmation, and lazy avatar loading; this
+  closure only layers Team-owned product and editor behavior on top of that
+  baseline.
+- The only remaining local security-scan limitation is tool availability:
+  `semgrep`, `trivy`, and `gitleaks` are not installed in `$PATH`, while the
+  strict scan still executed `bun audit` successfully.
+
+## Validation Notes
+
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/team.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/widgetSafeHref.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run scan:security:strict` currently exits non-zero only because local
+  `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit`
+  ran inside the command.
+- `bun run precommit`
+- `git diff --check`
 
 ## Acceptance Criteria
 

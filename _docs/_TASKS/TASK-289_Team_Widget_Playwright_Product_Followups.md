@@ -6,7 +6,7 @@
 **Category:** Widgets + Team + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-04, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -100,12 +100,12 @@ fields, editor IA, and widget-specific presentation.
 
 ## Sub-Tasks
 
-- [ ] TASK-289-01: Team Member Editor IA and Destructive Edit UX
-- [ ] TASK-289-02: Team Spotlight Lead and Variant Guidance
-- [ ] TASK-289-03: Team Photo Authoring and Media Picker
-- [ ] TASK-289-04: Team Header Surface Typography and CTA Controls
-- [ ] TASK-289-05: Team Large Team and Compact Mobile Presentation
-- [ ] TASK-289-06: Team Report Docs Changelog and Closure
+- [x] TASK-289-01: Team Member Editor IA and Destructive Edit UX
+- [x] TASK-289-02: Team Spotlight Lead and Variant Guidance
+- [x] TASK-289-03: Team Photo Authoring and Media Picker
+- [x] TASK-289-04: Team Header Surface Typography and CTA Controls
+- [x] TASK-289-05: Team Large Team and Compact Mobile Presentation
+- [x] TASK-289-06: Team Report Docs Changelog and Closure
 
 ## Implementation Order
 

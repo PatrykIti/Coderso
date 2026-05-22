@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 133 tasks
+- **To Do:** 126 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1880 tasks
+- **Done:** 1887 tasks
 
 ---
 
@@ -67,13 +67,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Add a safe CTA and bounded rich quote formatting for Testimonials sections |
 | TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Decide large-set policy and add safe local import/export or pagination without external provider connectors |
 | TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Refresh Testimonials report/docs/changelog/board and final validation evidence |
-| TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Team-only follow-up family for `REPORT_TEAM_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-289-01 | Team Member Editor IA and Destructive Edit UX | High | Large | Colocate member social links, add recoverable/confirmed removals, and add efficient top member actions after TASK-256 safety |
-| TASK-289-02 | Team Spotlight Lead and Variant Guidance | Medium | Large | Add stable spotlight lead selection after TASK-256 resolves spotlight count/columns truthfulness |
-| TASK-289-03 | Team Photo Authoring and Media Picker | High | Large | Add Team photo picker, preview, and clear behavior while keeping URL validation/media safety in TASK-256 |
-| TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Add Team section background, eyebrow, typography, CTA, border-width, and contrast feedback after TASK-256 baselines |
-| TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Decide and implement or explicitly defer bounded large-team and compact-mobile presentation behavior |
-| TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Refresh Team report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -179,13 +172,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stats KPI follow-up family is closed with schema/editor/runtime/docs/changelog sync; the only remaining non-local residual is shared `TASK-331`, and count-up animation stays intentionally rejected |
-| TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): report/docs/board/changelog now reflect the final Stats KPI closure matrix, focused validation evidence, and the current local scanner-tool limitation |
-| TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Done (2026-05-22): Visual now has drag-friendly reorder, confirmed removal, keyboard move fallback, and clearer metrics/text/surface/layout grouping |
-| TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Done (2026-05-22): metrics can now render safe internal/external links through the shared safe-href helper without turning Stats KPI into an action surface |
-| TASK-287-03 | Stats KPI Wizard Variant Cards and Guidance | High | Medium | Done (2026-05-22): Wizard now ships variant cards, header fields, visible metric content parity, clear-header affordance, and icon/spacing guidance |
-| TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Done (2026-05-22): Stats KPI now owns bounded section background/width/padding/min-height plus icon surface, size, border, and divider-intensity controls |
-| TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Done (2026-05-22): Stats KPI now supports value-size, description color, prefix/suffix, per-metric accent, and static trend semantics with validator coverage |
+| TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Team follow-up family is fully closed with member-panel IA improvements, explicit spotlight lead selection, media-library photo authoring, section presentation controls, the bounded max-12/mobile-density decision, and synchronized report/docs/board/changelog evidence |
+| TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the final Team report matrix, widget docs, board rows, changelog, and validation notes now match the closed TASK-289 family |
+| TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Done (2026-05-22): Team keeps the explicit max-12 contract, adds larger-directory guidance, and ships the bounded `compactMobileBio` mobile-density control for `compact-list` |
+| TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Done (2026-05-22): Team now supports section background, eyebrow, header align/title-size, safe CTA, card border-width, and local contrast advisories across schema, editor, runtime, and tests |
+| TASK-289-03 | Team Photo Authoring and Media Picker | High | Large | Done (2026-05-22): Team member panels now support media-library image picking, inline preview state, direct URL authoring, invalid-photo feedback, and clear-photo recovery without widening shared runtime safety scope |
+| TASK-289-02 | Team Spotlight Lead and Variant Guidance | Medium | Large | Done (2026-05-22): Spotlight now supports stable `spotlightLeadId` selection plus explicit editor badges/actions while keeping shared count/columns truthfulness outside widget-local scope |
+| TASK-289-01 | Team Member Editor IA and Destructive Edit UX | High | Large | Done (2026-05-22): Team member panels now colocate social links, confirm destructive member/social removals, and expose add-member affordances at both the top and bottom of long lists |
 | TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Tabs-specific follow-up leaves are closed, widget docs/report/board/changelog are synchronized, and the only remaining open residue lives in shared `TASK-330` and `TASK-329` |
 | TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Done (2026-05-22): final Tabs report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-288 family |
 | TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Done (2026-05-22): Tabs now ships visual variant previews plus bounded `none` / `fade` / `slide` motion with reduced-motion-safe panel classes and regression coverage |
@@ -194,6 +187,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Done (2026-05-22): Tabs preview switches panels through React-local state, public runtime remains root-scoped and custom-id-safe, and the still-shared inline-script dedupe residue was split to `TASK-329` |
 | TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Done (2026-05-22): Wizard now exposes layout shortcuts, default badges, panel-intro copy, slot guidance, and destructive count-reduction confirmation |
 | TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Done (2026-05-22): Visual/Advanced now split structure, layout, trigger-style, and color surfaces while exposing inactive trigger color and local contrast guidance |
+| TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stats KPI follow-up family is closed with schema/editor/runtime/docs/changelog sync; the only remaining non-local residual is shared `TASK-331`, and count-up animation stays intentionally rejected |
+| TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): report/docs/board/changelog now reflect the final Stats KPI closure matrix, focused validation evidence, and the current local scanner-tool limitation |
+| TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Done (2026-05-22): Visual now has drag-friendly reorder, confirmed removal, keyboard move fallback, and clearer metrics/text/surface/layout grouping |
+| TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Done (2026-05-22): metrics can now render safe internal/external links through the shared safe-href helper without turning Stats KPI into an action surface |
+| TASK-287-03 | Stats KPI Wizard Variant Cards and Guidance | High | Medium | Done (2026-05-22): Wizard now ships variant cards, header fields, visible metric content parity, clear-header affordance, and icon/spacing guidance |
+| TASK-287-02 | Stats KPI Section Surface Layout and Icon Styling | Medium | Large | Done (2026-05-22): Stats KPI now owns bounded section background/width/padding/min-height plus icon surface, size, border, and divider-intensity controls |
+| TASK-287-01 | Stats KPI Value Typography and Metric Semantics | High | Large | Done (2026-05-22): Stats KPI now supports value-size, description color, prefix/suffix, per-metric accent, and static trend semantics with validator coverage |
 | TASK-286 | Stack Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stack family is fully closed with responsive axis/wrap, Wizard guidance, variant miniatures, and synchronized report/docs/board/changelog evidence; only shared TASK-256 residuals remain |
 | TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final Stack report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-286 family |
 | TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Done (2026-05-22): Stack variant cards now render deterministic miniatures and editor-side `content` slot guidance while public runtime remains neutral |

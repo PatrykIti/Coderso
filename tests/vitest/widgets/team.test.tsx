@@ -31,17 +31,21 @@ test("team renders defaults", () => {
   expect(html).toContain(teamDefaults.header?.title ?? "");
   expect(html).toContain('data-team-variant="cards"');
   expect(html).toContain('data-team-count="3"');
+  expect(html).toContain('data-team-header-align="center"');
+  expect(html).toContain('data-team-title-size="2xl"');
+  expect(html).toContain('data-team-border-width="1"');
+  expect(html).toContain('data-team-compact-mobile-bio="show"');
   expect(html).toContain('aria-label="Meet the team"');
 });
 
-test("team normalization keeps deterministic ids and bounds", () => {
+test("team normalization keeps deterministic ids, bounds, and allows cleared bios", () => {
   const members = normalizeTeamMembers(
     [
       {
         id: "same",
         name: "A",
         role: "R",
-        bio: "B",
+        bio: "   ",
         socialLinks: [
           { id: "same-social", label: "LinkedIn", url: "https://example.com/profile" },
           { id: "same-social", label: "", url: "" },
@@ -54,6 +58,7 @@ test("team normalization keeps deterministic ids and bounds", () => {
 
   expect(members).toHaveLength(2);
   expect(members[0]?.id).toBe("same");
+  expect(members[0]?.bio).toBeUndefined();
   expect(members[1]?.id).toBe("member-2");
   expect(members[1]?.name).toBeTruthy();
   expect(members[1]?.role).toBeTruthy();
@@ -70,6 +75,7 @@ test("team normalization keeps deterministic ids and bounds", () => {
   const normalized = normalizeTeamData({ members: [] });
   expect(normalized.members).toHaveLength(3);
   expect(normalized.style?.columns).toBe("3");
+  expect(normalized.style?.compactMobileBio).toBe("show");
 });
 
 test("team validator accepts expanded model", () => {
@@ -88,8 +94,16 @@ test("team validator accepts expanded model", () => {
       variant: "spotlight",
       data: {
         header: {
+          eyebrow: "Leadership",
           title: "Our team",
           description: "People behind product and delivery.",
+          align: "left",
+          titleSize: "3xl",
+        },
+        spotlightLeadId: "member-2",
+        cta: {
+          label: "See all roles",
+          url: "/careers",
         },
         members: [
           {
@@ -112,9 +126,12 @@ test("team validator accepts expanded model", () => {
         style: {
           columns: "2",
           gap: "lg",
+          sectionBackground: "#faf5ff",
           cardSurface: "#ffffff",
           cardBorder: "#e2e8f0",
+          cardBorderWidth: "2",
           radius: "xl",
+          compactMobileBio: "hide",
         },
       },
     })
@@ -123,18 +140,94 @@ test("team validator accepts expanded model", () => {
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
-test("team cleared card surfaces omit card background and border color styles", () => {
-  const normalized = normalizeTeamData({
-    ...teamDefaults,
-    style: {},
-  });
-  const html = renderToString(<TeamBlock data={normalized} variant="cards" />);
+test("team renderer covers spotlight lead, CTA, and style controls", () => {
+  const html = renderToString(
+    <TeamBlock
+      data={{
+        header: {
+          eyebrow: "Leadership",
+          title: "Meet the leadership",
+          description: "Senior owners across product and engineering.",
+          align: "left",
+          titleSize: "3xl",
+        },
+        spotlightLeadId: "member-2",
+        cta: {
+          label: "See all roles",
+          url: "/careers",
+        },
+        members: [
+          {
+            id: "member-1",
+            name: "Anna",
+            role: "Head of Product",
+            bio: "Leads roadmap.",
+            socialLinks: [{ label: "LinkedIn", url: "https://example.com/anna" }],
+          },
+          {
+            id: "member-2",
+            name: "Marek",
+            role: "Engineering Lead",
+            bio: "Owns delivery.",
+            socialLinks: [{ label: "X", url: "https://example.com/marek" }],
+          },
+          {
+            id: "member-3",
+            name: "Ewa",
+            role: "Content Operations",
+            bio: "Owns messaging.",
+            socialLinks: [{ label: "Website", url: "https://example.com/ewa" }],
+          },
+        ],
+        style: {
+          columns: "3",
+          gap: "lg",
+          sectionBackground: "#f8fafc",
+          cardSurface: "#ffffff",
+          cardBorder: "#cbd5e1",
+          cardBorderWidth: "2",
+          radius: "xl",
+          compactMobileBio: "hide",
+        },
+      }}
+      variant="spotlight"
+    />
+  );
 
-  expect(normalized.style?.cardSurface).toBeUndefined();
-  expect(normalized.style?.cardBorder).toBeUndefined();
-  expect(html).toContain('data-team-variant="cards"');
-  expect(html).not.toContain("background-color:");
-  expect(html).not.toContain("border-color:");
+  expect(html).toContain('data-team-header-align="left"');
+  expect(html).toContain('data-team-title-size="3xl"');
+  expect(html).toContain('data-team-border-width="2"');
+  expect(html).toContain('data-team-compact-mobile-bio="hide"');
+  expect(html).toContain('data-team-cta="true"');
+  expect(html).toContain('href="/careers"');
+  expect(html).toContain("border-width:2px");
+  expect(html).toContain("background-color:#f8fafc");
+  expect(html.indexOf("Marek")).toBeLessThan(html.indexOf("Anna"));
+  expect(html.match(/data-team-spotlight-lead="true"/g)).toHaveLength(1);
+});
+
+test("team compact-list can hide bios visually on mobile", () => {
+  const html = renderToString(
+    <TeamBlock
+      data={{
+        header: { title: "Meet the team" },
+        members: [
+          {
+            name: "Ada",
+            role: "CTO",
+            bio: "Builds release systems.",
+            socialLinks: [],
+          },
+        ],
+        style: {
+          compactMobileBio: "hide",
+        },
+      }}
+      variant="compact-list"
+    />
+  );
+
+  expect(html).toContain("sr-only sm:not-sr-only sm:block");
 });
 
 test("team social links stay safe and member photos lazy-load", () => {
@@ -153,6 +246,10 @@ test("team social links stay safe and member photos lazy-load", () => {
             ],
           },
         ],
+        cta: {
+          label: "Broken",
+          url: "javascript:alert(1)",
+        },
       }}
       variant="spotlight"
     />
@@ -162,6 +259,7 @@ test("team social links stay safe and member photos lazy-load", () => {
   expect(html).toContain('target="_blank"');
   expect(html).toContain('rel="noopener noreferrer"');
   expect(html).not.toContain("javascript:");
+  expect(html).not.toContain('data-team-cta="true"');
 });
 
 test("team validator rejects invalid variant", () => {
@@ -210,10 +308,10 @@ test("team visual renders section-based IA", () => {
   );
 
   expect(html).toContain("Variant and member structure");
-  expect(html).toContain("Header copy");
+  expect(html).toContain("Header copy and CTA");
   expect(html).toContain("Members content and order");
+  expect(html).toContain("Section and card style");
   expect(html).toContain("Social links");
-  expect(html).toContain("Card and layout style");
 });
 
 test("team advanced keeps technical-only scope", () => {
@@ -227,6 +325,8 @@ test("team advanced keeps technical-only scope", () => {
   );
 
   expect(html).toContain("Technical layout tokens");
+  expect(html).toContain("Border width token");
+  expect(html).toContain("Compact-list mobile bio token");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
   expect(html).not.toContain("Members content and order");

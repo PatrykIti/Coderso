@@ -44,6 +44,7 @@ import {
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
 import { createStackWidget, type StackData } from "../../../core/widgets/core/stack";
+import { createTeamWidget, teamDefaults } from "../../../core/widgets/core/team";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -1673,3 +1674,56 @@ testTask287StatsKpi(
     ).toThrow("widget_schema_invalid");
   }
 );
+
+test("normalizeWidgetBlock accepts and rejects task-289 Team schema fields", () => {
+  registerWidget(
+    createTeamWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "team-followups",
+      type: "team",
+      variant: "spotlight",
+      data: {
+        ...teamDefaults,
+        header: {
+          ...teamDefaults.header,
+          eyebrow: "Leadership",
+          align: "left",
+          titleSize: "3xl",
+        },
+        spotlightLeadId: "member-2",
+        cta: {
+          label: "See all roles",
+          url: "/careers",
+        },
+        style: {
+          ...teamDefaults.style,
+          sectionBackground: "#f8fafc",
+          cardBorderWidth: "2",
+          compactMobileBio: "hide",
+        },
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "team-invalid-followups",
+      type: "team",
+      variant: "spotlight",
+      data: {
+        ...teamDefaults,
+        style: {
+          ...teamDefaults.style,
+          compactMobileBio: "auto",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
