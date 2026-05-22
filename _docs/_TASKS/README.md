@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 159 tasks
+- **To Do:** 154 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1851 tasks
+- **Done:** 1857 tasks
 
 ---
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
@@ -91,12 +92,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-286-03 | Stack Wizard Gap Scale and Layout Guidance | Medium | Medium | Improve Wizard layout controls, all-breakpoint gap copy, and gap scale context after TASK-256 token cleanup |
 | TASK-286-04 | Stack Variant Miniatures and Empty Slot Guidance | Low | Medium | Add variant miniatures and admin-safe empty-slot guidance without leaking public admin CTAs |
 | TASK-286-05 | Stack Report Docs Changelog and Closure | Medium | Medium | Refresh Stack report/docs/changelog/board and final validation evidence |
-| TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Spacer-only follow-up family for `REPORT_SPACER_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-284-01 | Spacer Editor Guidance and Input Accessibility | High | Medium | Add fixed-mode guidance, breakpoint copy, custom numeric input help, and explicit height-field accessibility after TASK-256 token work |
-| TASK-284-02 | Spacer Viewport and Fluid Length Units | Medium | Large | Add bounded viewport and fluid length grammar without arbitrary CSS passthrough |
-| TASK-284-03 | Spacer Named Rhythm Presets | Medium | Medium | Add named vertical rhythm presets that map to safe height values without global style-manager scope |
-| TASK-284-04 | Spacer Horizontal Orientation Contract | Low | Large | Decide and implement or explicitly defer horizontal Spacer behavior without flex-filler or page-builder rewrite scope |
-| TASK-284-05 | Spacer Report Docs Changelog and Closure | Medium | Medium | Refresh Spacer report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -214,6 +209,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-283-03 | Section Heading Typography Alignment and Wizard UX | High | Large | Done (2026-05-21): Section now owns bounded h1-h6 heading levels, alignment/size tokens, clearable heading text colors, and Wizard label completeness on top of the safe default h2 baseline |
 | TASK-283-02 | Section Background Media and Layering Model | High | Very Large | Done (2026-05-21): Section now owns safe decorative background image/video data, asset-backed or Hero-compatible external source resolution, bounded fit/blend/layer controls, and muted fail-closed video rendering with synchronized Visual editor coverage |
 | TASK-283-01 | Section Layout Height and Region Flow Controls | High | Very Large | Done (2026-05-21): Section now owns bounded min-height, row/grid region flow, responsive-safe grid columns, and explicit heading/region gap controls while legacy variant spacing stays stable until changed |
+| TASK-284 | Spacer Widget Playwright Product Followups | High | Very Large | Done (2026-05-21): the Spacer family is fully closed with final report/docs/changelog/board sync, validation evidence, and explicit `no-action`/deferred classifications for every historical finding |
+| TASK-284-05 | Spacer Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-21): final Spacer report classifications, widget docs, board/changelog sync, and closure validation evidence are complete |
+| TASK-284-04 | Spacer Horizontal Orientation Contract | Low | Large | Done (2026-05-21): BF-05 is explicitly deferred because horizontal Spacer needs shared nested row-flow rendering truthfulness, now tracked by `TASK-328` |
+| TASK-284-03 | Spacer Named Rhythm Presets | Medium | Medium | Done (2026-05-21): Spacer now ships transient `Card gap`, `Section gap`, and `Hero gap` presets without adding new persisted schema fields |
+| TASK-284-02 | Spacer Viewport and Fluid Length Units | Medium | Large | Done (2026-05-21): Spacer now accepts bounded viewport units and canonical fluid `clamp()` heights while rejecting arbitrary CSS passthrough |
+| TASK-284-01 | Spacer Editor Guidance and Input Accessibility | High | Medium | Done (2026-05-21): Wizard fixed-mode guidance, breakpoint copy, `48 -> 48px` help, and explicit height-field accessibility labels/descriptions are shipped |
 | TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Product Table family is fully closed with final report/docs/changelog/board sync, validation evidence, and closure-matrix coverage for every historical finding and no-action row |
 | TASK-281-10 | Product Table Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the closure leaf synced the final report matrix, widget docs, board/changelog state, and added the final normalization/public-control regression coverage before the family rerun |
 | TASK-281-09 | Product Table Export Currency and Advanced Diagnostics | Medium | Large | Done (2026-05-22): Product Table now formats money through widget-owned locale/display settings and can export the current visible rows as hardened SSR CSV without regressing read-only diagnostics |

@@ -25,6 +25,11 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 918 | 2026-05-21 | TASK-284 spacer widget Playwright product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 917 | 2026-05-21 | TASK-284-04 spacer horizontal orientation decision | CMS Widgets/Layout/Runtime/QA/Docs |
+| 916 | 2026-05-21 | TASK-284-03 spacer named rhythm presets | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 915 | 2026-05-21 | TASK-284-02 spacer viewport and fluid lengths | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 914 | 2026-05-21 | TASK-284-01 spacer editor guidance and accessibility | CMS Widgets/Admin UI/Accessibility/QA/Docs |
 | 913 | 2026-05-22 | TASK-283 section widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 912 | 2026-05-22 | TASK-283-05-02 section angle and overlay slider controls | CMS Widgets/Admin UI/QA/Docs |
 | 911 | 2026-05-22 | TASK-326 section shared structural truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
