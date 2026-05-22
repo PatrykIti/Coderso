@@ -52,8 +52,8 @@ baseline repair.
 |---|---|---|---|
 | Public `Empty region.` placeholder leakage and U8 public empty-region behavior | `REPORT_SECTION_WIDGET.md:43,98,288,300,325,332,384` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. If product later wants a user-facing empty-region message, that must be a separate Section product task after the placeholder leak is fixed. |
 | Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,133,213,379` | TASK-256-05-01 | Baseline safe DOM ID validation. |
-| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-256-02, TASK-256-05-01 | Shared token-aware picker contract. |
-| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-256-05-01 | Structural normalizer/default repair for current fields. |
+| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-327 | Reopened shared color-control drift in `SharedColorFieldInputs`; keep it out of widget-local TASK-283 leaves. |
+| `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-326 | Reopened shared truthfulness drift for current Section fallback behavior; keep it out of widget-local TASK-283 leaves. |
 | Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-326 | Reopened shared mode-ownership drift. Keep it out of widget-local TASK-283 leaves. |
 | `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-326 | Reopened shared truthfulness drift for the current control semantics before TASK-283 adds widget-local presets or copy. |
 | Bleed variant copy/truthfulness baseline | `REPORT_SECTION_WIDGET.md:171-174,334,350,378` | TASK-326 | Reopened shared truthfulness drift for the current control promise before TASK-283 adds guided presets. |
@@ -97,10 +97,11 @@ this family.
 |---|---|---|
 | Existing section/div element switch | No TASK-283 task | The report confirms it works. Keep covered by existing Section tests unless future leaves change semantics. |
 | Reopened current-control truthfulness drift (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | This is no longer treated as already-fixed TASK-256 work and must not be buried inside widget-local TASK-283 leaves. |
+| Reopened shared color-swatch token overwrite drift (`borderColor` swatch replaces CSS-variable/custom token text) | Shared TASK-327 | `SharedColorFieldInputs` still routes swatch writes through generic `onChange`; keep the fix in the shared helper, not in Section-only editor code. |
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
-| Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the picker overwrite issue remains TASK-256. |
+| Expected admin/frontend theme variable differences | No TASK-283 task | `REPORT_SECTION_WIDGET.md:326-333` confirms CSS variables resolve differently in admin and public themes as expected; the separate swatch-overwrite bug is now tracked by shared `TASK-327`. |
 | Current freeform color/token text input validation from U7 | No TASK-283 task | Section text inputs intentionally accept design tokens and CSS variables through the shared clearable-field contract. Do not add stricter format validation that would reject valid token strings; only future media URL validation belongs to TASK-283-02 when new source fields exist. |
 | Current URL validation part of U7 | No TASK-283 task until TASK-283-02 | Current `SectionData` has no URL field. TASK-283-02 must add media source validation if it introduces media URLs or asset references. |
 | Stale gradient Clear report row (W9) | No standalone TASK-283 leaf after report sync | Current Section editors already expose shared Clear actions for `gradientFrom` and `gradientTo`; TASK-283-04 adds focused evidence and corrects the stale report wording instead of restaging a shared fix. |
@@ -218,9 +219,9 @@ Implementation leaves:
 
 ## Acceptance Criteria
 
-- Every Section report finding is either owned by TASK-256, covered by a
-  TASK-283 physical leaf, explicitly marked no-action, or explicitly deferred
-  by TASK-283-08 with a reason.
+- Every Section report finding is either owned by a shared task (`TASK-256`,
+  `TASK-326`, `TASK-327`), covered by a TASK-283 physical leaf, explicitly
+  marked no-action, or explicitly deferred by TASK-283-08 with a reason.
 - TASK-283 task docs do not duplicate TASK-256 shared-contract implementation
   scope.
 - Each implementation leaf names concrete files, data flow, error handling,

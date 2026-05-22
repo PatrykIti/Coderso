@@ -82,7 +82,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | B2 | `resolveSectionRadius`: wartość niestandardowa daje `"2xl"` zamiast `"none"` (brak spójności z defaults) | `section.tsx:520` |
 | B3 | `containerWidth: "content"` i `"wide"` generują identyczne klasy CSS (`mx-auto w-full`) — różnica tylko w intencji, brak wizualnego efektu | `section.tsx:254` |
 | B4 | `gradientAngle` i `overlayOpacity` są zduplikowane w Visual i Advanced edytorze — podwójne pola dla tej samej wartości | `SectionEditors.tsx:1473,1564,1868,1887` |
-| B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`) ale color picker nadpisuje je hexem — utrata zmiennych | `SectionEditors.tsx:1493` |
+| B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`), ale shared color swatch nadal nadpisuje je hexem przy zmianie pickera — reopened owner `TASK-327` | `SectionEditors.tsx:1493` |
 
 ### 3.4 Ulepszenia UX edytora
 
@@ -346,6 +346,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 |-----------|---------|--------|-------|
 | **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
 | **P1** | TASK-283-05-02 — po `TASK-326` zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX bez dublowania ownera | Średni | UX edytora / Truthfulness |
+| **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
 | **P2** | TASK-283-06 — dodać responsywne padding tokens i ewentualne bounded density presets | Wysoki | Responsywność |
 | **P2** | TASK-283-07 — dodać custom region labels bez naruszania `region:<id>` slot storage | Średni | UX struktury |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
@@ -371,6 +372,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 - **Bleed variant**: rzeczywisty edge-to-edge nadal wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma domknąć bazową semantykę kontrolek.
 - **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults, zdublowane `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed`; to zostało wycięte do `TASK-326` zamiast lokalnej łaty w `TASK-283`.
+- **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
 - **Angle/opacity UX**: finalne slider/stepper controls czekają na `TASK-283-05-02` po domknięciu shared owner drift w `TASK-326`.
 - **Responsive spacing / custom region labels**: te widget-local owners pozostają otwarte w `TASK-283-06` i `TASK-283-07`.
 - **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.

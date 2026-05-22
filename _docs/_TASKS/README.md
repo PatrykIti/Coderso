@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 180 tasks
+- **To Do:** 181 tasks
 - **In Progress:** 6 tasks
 - **Done:** 1818 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
 | TASK-326 | Section Shared Structural Truthfulness Follow-up | High | Large | Reopened shared Section truthfulness drift for fallback defaults, duplicated Visual/Advanced controls, and `content`/`wide`/`bleed` semantics discovered during TASK-283 audit; keep it out of widget-local follow-up leaves |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
