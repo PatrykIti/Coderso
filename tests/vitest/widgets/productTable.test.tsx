@@ -182,6 +182,92 @@ test("product table renders section header, media and excerpt columns, and safe 
   expect(html).not.toContain('src=""');
 });
 
+test("product table resolves compact variant presets and bounded layout style overrides", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="compact"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        header: {
+          title: "Catalog matrix",
+        },
+        fields: {
+          showImage: false,
+          showTitle: true,
+          showExcerpt: false,
+          showSlug: true,
+          showPrice: true,
+          showStatus: false,
+          showStock: false,
+          showCompareAt: false,
+          showCollectionCount: false,
+        },
+        links: {
+          linkedColumn: "title",
+          showAction: true,
+          actionLabel: "View",
+          openInNewTab: false,
+        },
+        style: {
+          rowTreatment: "striped",
+          hoverRows: true,
+          stickyHeader: true,
+          maxWidth: "wide",
+          align: "center",
+          typography: "prominent",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-compact-1",
+              title: "Atlas Home",
+              slug: "atlas-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: "/products/atlas-home",
+            },
+            {
+              id: "product-compact-2",
+              title: "Beacon Home",
+              slug: "beacon-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 130000, currency: "USD", compareAtAmount: null },
+              stock: { state: "backorder", quantity: 2, inStock: false },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+              productHref: "/products/beacon-home",
+            },
+          ],
+          total: 2,
+          resolvedAt: "2026-05-22T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-product-table-variant="compact"');
+  expect(html).toContain('data-product-table-density="compact"');
+  expect(html).toContain('data-product-table-row-treatment="striped"');
+  expect(html).toContain('data-product-table-typography="prominent"');
+  expect(html).toContain('data-product-table-max-width="wide"');
+  expect(html).toContain('data-product-table-align="center"');
+  expect(html).toContain('data-product-table-hover="true"');
+  expect(html).toContain('data-product-table-sticky="true"');
+  expect(html).toContain("sticky top-0 z-10");
+  expect(html).toContain("bg-slate-50/40");
+  expect(html).toContain("mx-auto");
+  expect(html).toContain("max-w-7xl");
+  expect(html).toContain("text-3xl");
+  expect(html).toContain("hover:bg-slate-50/60");
+});
+
 test("product table renders public controls, sortable headers, and paged navigation", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -644,6 +730,17 @@ test("product table normalizes source, header, media, labels, and guarded fields
       stock: " ",
       collections: " ",
     },
+    style: {
+      density: "bad" as never,
+      rowTreatment: "striped",
+      hoverRows: true,
+      stickyHeader: true,
+      maxWidth: "content",
+      align: "center",
+      typography: "prominent",
+      tableBackground: " ",
+      headerBackground: " var(--color-bg) ",
+    },
     resolved: {
       items: [
         {
@@ -695,6 +792,16 @@ test("product table normalizes source, header, media, labels, and guarded fields
     stock: "Stock",
     collections: "Collections",
   });
+  expect(normalized.style).toMatchObject({
+    rowTreatment: "striped",
+    hoverRows: true,
+    stickyHeader: true,
+    maxWidth: "content",
+    align: "center",
+    typography: "prominent",
+    headerBackground: "var(--color-bg)",
+  });
+  expect(normalized.style?.density).toBeUndefined();
   expect(normalized.resolved?.items?.[0]).toMatchObject({
     id: "product-1",
     title: "Starter Home",

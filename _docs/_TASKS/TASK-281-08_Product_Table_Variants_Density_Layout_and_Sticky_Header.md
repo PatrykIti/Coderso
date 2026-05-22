@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Commerce + Runtime Render + Admin UI
 **Estimated Effort:** Large
-**Dependencies:** TASK-281, TASK-281-02, TASK-281-05, TASK-256-02
-**Status:** To Do
+**Dependencies:** TASK-281, TASK-281-02, TASK-281-05, TASK-281-07
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -17,15 +17,18 @@ cases. This leaf covers `UX-01`, `BF-05`, `BF-06`, `BF-08`, `BF-09`, `BF-10`,
 `BF-12`, and the report-summary `UX-10` alias for row hover from
 `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md`.
 
-Current state: Product Table has only the `default` variant, hardcoded cell
-padding/typography, no zebra striping, no hover treatment, no sticky header, and
-no Product Table-local width controls.
+Current state: Product Table still has only the `default` variant, hardcoded
+cell padding/typography, no zebra striping controls, no general row-hover
+controls, no sticky header, and no Product Table-local width/alignment
+controls. The widget already has a bounded interactive hover cue when a real
+safe product link is active; this leaf must extend presentation options without
+regressing that `TASK-281-04` behavior.
 
 ## Scope Boundary
 
 In scope:
 
-- bounded variants such as `default`, `compact`, and `striped`;
+- bounded variants such as `default` and `compact`;
 - row density tokens such as `compact`, `comfortable`, and `spacious`;
 - zebra/hover/sticky-header toggles or presets;
 - Product Table max-width/alignment controls if global page container is not
@@ -41,12 +44,12 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add bounded Product Table variant/density/style token enums.
-- [ ] Render density, zebra, hover, width, typography, and sticky-header options
+- [x] Add bounded Product Table variant and style token enums with non-overlapping ownership.
+- [x] Render density, zebra, hover, width, typography, and sticky-header options
   through fixed maps.
-- [ ] Add editor controls for the new bounded layout/style fields.
-- [ ] Preserve the current default and mobile horizontal-scroll behavior.
-- [ ] Add renderer/editor/registry tests for variants and style tokens.
+- [x] Add editor controls for the new bounded layout/style fields.
+- [x] Preserve the current default and mobile horizontal-scroll behavior.
+- [x] Add renderer/editor/registry tests for variants and style tokens.
 
 ## Files to Change
 
@@ -65,8 +68,12 @@ Out of scope:
 Token maps:
 
 ```ts
+type ProductTableVariantId = "default" | "compact";
 type ProductTableDensity = "compact" | "comfortable" | "spacious";
-type ProductTableVisualVariant = "default" | "compact" | "striped";
+type ProductTableRowTreatment = "plain" | "striped";
+type ProductTableTypography = "compact" | "balanced" | "prominent";
+type ProductTableMaxWidth = "full" | "content" | "wide";
+type ProductTableAlign = "left" | "center";
 
 const densityCellClassMap: Record<ProductTableDensity, string> = {
   compact: "px-2 py-1.5 text-xs",
@@ -74,11 +81,16 @@ const densityCellClassMap: Record<ProductTableDensity, string> = {
   spacious: "px-4 py-3 text-sm",
 };
 
-const tableWidthClassMap = {
-  full: "w-full",
-  readable: "mx-auto max-w-5xl",
-  wide: "mx-auto max-w-7xl",
-} as const;
+const tableWidthClassMap: Record<ProductTableMaxWidth, string> = {
+  full: "max-w-none",
+  content: "max-w-5xl",
+  wide: "max-w-7xl",
+};
+
+const tableAlignClassMap: Record<ProductTableAlign, string> = {
+  left: "mr-auto",
+  center: "mx-auto",
+};
 ```
 
 Normalizer flow:
@@ -88,8 +100,12 @@ function normalizeProductTableStyle(style: ProductTableData["style"]) {
   return {
     ...normalizeExistingSurfaceStyle(style),
     density: oneOf(style?.density, ["compact", "comfortable", "spacious"], "comfortable"),
-    rowTreatment: oneOf(style?.rowTreatment, ["plain", "striped", "hover"], "plain"),
+    rowTreatment: oneOf(style?.rowTreatment, ["plain", "striped"], "plain"),
+    hoverRows: style?.hoverRows === true,
     stickyHeader: style?.stickyHeader === true,
+    maxWidth: oneOf(style?.maxWidth, ["full", "content", "wide"], "full"),
+    align: oneOf(style?.align, ["left", "center"], "left"),
+    typography: oneOf(style?.typography, ["compact", "balanced", "prominent"], "balanced"),
   };
 }
 ```
@@ -100,6 +116,9 @@ Error handling:
 - Sticky header must remain optional because nested scroll containers can create
   layout traps.
 - Hover states must not be the only indicator for interactive rows.
+- Widget variant stays a preset axis. Zebra and hover stay independent style
+  fields so hover, density, and striping can compose instead of clobbering one
+  another.
 
 ## Security Contract
 
@@ -122,8 +141,9 @@ No API routes are added.
 
 ## Documentation Updates Required
 
-- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with variants, density, width, and
-  sticky header behavior.
+- Update `_docs/_WIDGETS/PRODUCT_TABLE.md` with the final variant list, density,
+  zebra, hover, typography, width/alignment, sticky-header behavior, and the
+  normalized style contract.
 - Update `_docs/WIDGET_PACK_MATRIX.md` only if pack readiness changes.
 - Update `_docs/PLAYWRIGHT/REPORT_PRODUCT_TABLE_WIDGET.md` relevant UX/BF rows
   after implementation.

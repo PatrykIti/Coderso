@@ -224,13 +224,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): seven Product Table leaves are landed, and the family remains open for layout variants, diagnostics, and final closure sync |
+| TASK-281 | Product Table Widget Playwright Product Followups | High | Very Large | In progress (2026-05-22): eight Product Table leaves are landed, and the family remains open for export/diagnostics plus final closure sync |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-281-08 | Product Table Variants Density Layout and Sticky Header | Medium | Large | Done (2026-05-22): Product Table now ships a compact preset plus bounded density, zebra, hover, width/alignment, typography, and sticky-header controls without regressing links, preview, or clearable surfaces |
 | TASK-281-07 | Product Table Pagination Search Filter and Sorting UX | High | Very Large | Done (2026-05-22): Product Table now exposes SSR page-query public controls with bounded search, collection filters, sortable headers, published-safe runtime state, and paged/load-more navigation without introducing a second public refresh route |
 | TASK-281-06 | Product Table Media Excerpt and Section Header Context | High | Large | Done (2026-05-22): Product Table now renders optional section header copy, public-safe lazy thumbnails, clamped excerpts, and registry-backed Image/Excerpt controls without regressing preview, links, row states, or accessibility |
 | TASK-281-05 | Product Table Accessibility and Runtime Semantics | High | Medium | Done (2026-05-21): Product Table now renders a hidden caption, scoped headers, local alert/status semantics, and deterministic section/table labels while keeping A3 owned by `TASK-281-03` |

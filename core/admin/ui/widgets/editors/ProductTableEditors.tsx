@@ -13,13 +13,26 @@ import {
   buildProductTableQueryInput,
   normalizeProductTableControls,
   normalizeProductTableData,
+  productTableAlignValues,
   productTableColumns,
   productTableDefaults,
+  productTableDensityValues,
+  productTableMaxWidthValues,
+  productTableRowTreatmentValues,
+  productTableTypographyValues,
   resolveProductTableAuthoredPageSize,
+  resolveProductTablePresentationStyle,
+  resolveProductTableVariant,
+  type ProductTableAlign,
   type ProductTableData,
+  type ProductTableDensity,
   type ProductTableLinkColumn,
+  type ProductTableMaxWidth,
   type ProductTablePaginationMode,
+  type ProductTableRowTreatment,
   type ProductTableSortingMode,
+  type ProductTableTypography,
+  type ProductTableVariantId,
 } from "../../../../widgets/core/productTable";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
@@ -175,6 +188,54 @@ const productTablePaginationModeOptions: Array<{
   { value: "paged", label: "Previous and next" },
   { value: "load-more", label: "Load more link" },
 ];
+
+const productTableVariantOptions: Array<{
+  value: ProductTableVariantId;
+  label: string;
+}> = [
+  { value: "default", label: "Default" },
+  { value: "compact", label: "Compact" },
+];
+
+const productTableDensityOptions: Array<{
+  value: ProductTableDensity;
+  label: string;
+}> = productTableDensityValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const productTableRowTreatmentOptions: Array<{
+  value: ProductTableRowTreatment;
+  label: string;
+}> = productTableRowTreatmentValues.map((value) => ({
+  value,
+  label: value === "plain" ? "Plain rows" : "Striped rows",
+}));
+
+const productTableMaxWidthOptions: Array<{
+  value: ProductTableMaxWidth;
+  label: string;
+}> = productTableMaxWidthValues.map((value) => ({
+  value,
+  label: value === "full" ? "Full width" : value === "content" ? "Content width" : "Wide",
+}));
+
+const productTableAlignOptions: Array<{
+  value: ProductTableAlign;
+  label: string;
+}> = productTableAlignValues.map((value) => ({
+  value,
+  label: value === "left" ? "Left aligned" : "Centered",
+}));
+
+const productTableTypographyOptions: Array<{
+  value: ProductTableTypography;
+  label: string;
+}> = productTableTypographyValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
 
 const resolvePreviewErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -462,6 +523,86 @@ function PublicControlsFields({
   );
 }
 
+function LayoutStyleFields({
+  value,
+  variant,
+  onVariantChange,
+  onChange,
+}: {
+  value: ProductTableData;
+  variant: string;
+  onVariantChange?: (next: string) => void;
+  onChange: (next: ProductTableData) => void;
+}) {
+  const normalized = normalizeProductTableData(value);
+  const resolvedVariant = resolveProductTableVariant(variant);
+  const style = resolveProductTablePresentationStyle(resolvedVariant, normalized.style);
+
+  return (
+    <CommerceEditorSection
+      title="Layout and style"
+      description="Variant is a preset axis. Density, striping, hover, sticky header, width, alignment, and typography stay bounded Product Table controls."
+    >
+      <ProductTableSelectField
+        label="Table variant"
+        value={resolvedVariant}
+        options={productTableVariantOptions}
+        onChange={(next) => onVariantChange?.(next as ProductTableVariantId)}
+      />
+      <ProductTableSelectField
+        label="Row density"
+        value={style.density}
+        options={productTableDensityOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { density: next as ProductTableDensity })
+        }
+      />
+      <ProductTableSelectField
+        label="Row treatment"
+        value={style.rowTreatment}
+        options={productTableRowTreatmentOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { rowTreatment: next as ProductTableRowTreatment })
+        }
+      />
+      <CommerceToggleField
+        label="Show row hover"
+        description="Adds a gentle table-wide hover treatment. Linked rows still keep their stronger interaction cue."
+        checked={style.hoverRows}
+        onChange={(next) => updateStyle(normalized, onChange, { hoverRows: next })}
+      />
+      <CommerceToggleField
+        label="Use sticky header"
+        description="Keeps Product Table headers visible while long tables scroll vertically inside the page."
+        checked={style.stickyHeader}
+        onChange={(next) => updateStyle(normalized, onChange, { stickyHeader: next })}
+      />
+      <ProductTableSelectField
+        label="Table max width"
+        value={style.maxWidth}
+        options={productTableMaxWidthOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { maxWidth: next as ProductTableMaxWidth })
+        }
+      />
+      <ProductTableSelectField
+        label="Table alignment"
+        value={style.align}
+        options={productTableAlignOptions}
+        onChange={(next) => updateStyle(normalized, onChange, { align: next as ProductTableAlign })}
+      />
+      <ProductTableSelectField
+        label="Typography"
+        value={style.typography}
+        options={productTableTypographyOptions}
+        onChange={(next) =>
+          updateStyle(normalized, onChange, { typography: next as ProductTableTypography })
+        }
+      />
+    </CommerceEditorSection>
+  );
+}
+
 function SurfaceFields({
   value,
   onChange,
@@ -556,6 +697,8 @@ export function ProductTableWizardEditor({
 export function ProductTableVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
   context,
 }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
@@ -574,6 +717,13 @@ export function ProductTableVisualEditor({
         context={context}
         onRefresh={context?.setPreviewState ? preview.refresh : undefined}
         disabled={preview.isLoading}
+      />
+
+      <LayoutStyleFields
+        value={normalized}
+        variant={variant}
+        onVariantChange={onVariantChange}
+        onChange={onChange}
       />
 
       <CommerceEditorSection

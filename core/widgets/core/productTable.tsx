@@ -18,7 +18,48 @@ import {
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
-export type ProductTableVariantId = "default";
+export const productTableVariantValues = ["default", "compact"] as const;
+export type ProductTableVariantId = (typeof productTableVariantValues)[number];
+export const productTableDensityValues = ["compact", "comfortable", "spacious"] as const;
+export type ProductTableDensity = (typeof productTableDensityValues)[number];
+export const productTableRowTreatmentValues = ["plain", "striped"] as const;
+export type ProductTableRowTreatment = (typeof productTableRowTreatmentValues)[number];
+export const productTableTypographyValues = ["compact", "balanced", "prominent"] as const;
+export type ProductTableTypography = (typeof productTableTypographyValues)[number];
+export const productTableMaxWidthValues = ["full", "content", "wide"] as const;
+export type ProductTableMaxWidth = (typeof productTableMaxWidthValues)[number];
+export const productTableAlignValues = ["left", "center"] as const;
+export type ProductTableAlign = (typeof productTableAlignValues)[number];
+
+export type ProductTableStyle = {
+  density?: ProductTableDensity;
+  rowTreatment?: ProductTableRowTreatment;
+  hoverRows?: boolean;
+  stickyHeader?: boolean;
+  maxWidth?: ProductTableMaxWidth;
+  align?: ProductTableAlign;
+  typography?: ProductTableTypography;
+  tableBackground?: string;
+  tableBorderColor?: string;
+  headerBackground?: string;
+  emptyBackground?: string;
+  emptyBorderColor?: string;
+};
+
+type ProductTableResolvedStyle = {
+  density: ProductTableDensity;
+  rowTreatment: ProductTableRowTreatment;
+  hoverRows: boolean;
+  stickyHeader: boolean;
+  maxWidth: ProductTableMaxWidth;
+  align: ProductTableAlign;
+  typography: ProductTableTypography;
+  tableBackground?: string;
+  tableBorderColor?: string;
+  headerBackground?: string;
+  emptyBackground?: string;
+  emptyBorderColor?: string;
+};
 
 export type ProductTableResolvedMedia = {
   url: string;
@@ -160,13 +201,7 @@ export type ProductTableData = {
     title?: string;
     description?: string;
   };
-  style?: {
-    tableBackground?: string;
-    tableBorderColor?: string;
-    headerBackground?: string;
-    emptyBackground?: string;
-    emptyBorderColor?: string;
-  };
+  style?: ProductTableStyle;
   resolved?: {
     items?: ProductTableRuntimeItem[];
     total?: number;
@@ -222,6 +257,35 @@ const productTableLinkDefaults: Required<ProductTableLinks> = {
   openInNewTab: false,
 };
 
+const productTableStyleDefaults: Pick<
+  ProductTableResolvedStyle,
+  "density" | "rowTreatment" | "hoverRows" | "stickyHeader" | "maxWidth" | "align" | "typography"
+> = {
+  density: "comfortable",
+  rowTreatment: "plain",
+  hoverRows: false,
+  stickyHeader: false,
+  maxWidth: "full",
+  align: "left",
+  typography: "balanced",
+};
+
+const productTableVariantStylePresetMap: Record<
+  ProductTableVariantId,
+  Pick<
+    ProductTableResolvedStyle,
+    "density" | "rowTreatment" | "hoverRows" | "stickyHeader" | "maxWidth" | "align" | "typography"
+  >
+> = {
+  default: productTableStyleDefaults,
+  compact: {
+    ...productTableStyleDefaults,
+    density: "compact",
+    maxWidth: "content",
+    typography: "compact",
+  },
+};
+
 const productTableStatusLabelMap: Record<CommerceWidgetRuntimeCard["status"], string> = {
   published: "Published",
   draft: "Draft",
@@ -241,7 +305,118 @@ const productTableRowToneClassMap: Record<CommerceWidgetRuntimeCard["status"], s
 };
 
 const productTableStatusBadgeBaseClass =
-  "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium leading-5";
+  "inline-flex items-center rounded-full border px-2 py-0.5 font-medium leading-5";
+
+const joinClasses = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(" ");
+
+const productTableDensityClassMap: Record<
+  ProductTableDensity,
+  {
+    table: string;
+    header: string;
+    cell: string;
+    action: string;
+    imageCell: string;
+    image: string;
+    imageWrapper: string;
+  }
+> = {
+  compact: {
+    table: "text-xs",
+    header: "px-2 py-2",
+    cell: "px-2 py-1.5",
+    action: "px-2 py-1.5",
+    imageCell: "w-20",
+    image: "h-10 w-10",
+    imageWrapper: "min-h-10",
+  },
+  comfortable: {
+    table: "text-sm",
+    header: "px-3 py-2.5",
+    cell: "px-3 py-2",
+    action: "px-3 py-2",
+    imageCell: "w-24",
+    image: "h-14 w-14",
+    imageWrapper: "min-h-14",
+  },
+  spacious: {
+    table: "text-sm",
+    header: "px-4 py-3",
+    cell: "px-4 py-3",
+    action: "px-4 py-3",
+    imageCell: "w-28",
+    image: "h-16 w-16",
+    imageWrapper: "min-h-16",
+  },
+};
+
+const productTableTypographyClassMap: Record<
+  ProductTableTypography,
+  {
+    sectionEyebrow: string;
+    sectionTitle: string;
+    sectionDescription: string;
+    header: string;
+    title: string;
+    body: string;
+    support: string;
+    excerpt: string;
+    badge: string;
+    action: string;
+  }
+> = {
+  compact: {
+    sectionEyebrow: "text-[11px]",
+    sectionTitle: "text-xl",
+    sectionDescription: "text-sm",
+    header: "text-[11px]",
+    title: "text-sm",
+    body: "text-xs",
+    support: "text-[11px]",
+    excerpt: "text-xs leading-5",
+    badge: "text-[10px]",
+    action: "text-[11px]",
+  },
+  balanced: {
+    sectionEyebrow: "text-xs",
+    sectionTitle: "text-2xl",
+    sectionDescription: "text-sm",
+    header: "text-xs",
+    title: "text-sm",
+    body: "text-sm",
+    support: "text-xs",
+    excerpt: "text-sm leading-6",
+    badge: "text-[11px]",
+    action: "text-xs",
+  },
+  prominent: {
+    sectionEyebrow: "text-sm",
+    sectionTitle: "text-3xl",
+    sectionDescription: "text-base",
+    header: "text-sm",
+    title: "text-base",
+    body: "text-sm",
+    support: "text-sm",
+    excerpt: "text-sm leading-6",
+    badge: "text-xs",
+    action: "text-sm",
+  },
+};
+
+const productTableMaxWidthClassMap: Record<ProductTableMaxWidth, string> = {
+  full: "max-w-none",
+  content: "max-w-5xl",
+  wide: "max-w-7xl",
+};
+
+const productTableAlignClassMap: Record<ProductTableAlign, string> = {
+  left: "mr-auto",
+  center: "mx-auto",
+};
+
+const productTableHoverRowClassName = "hover:bg-slate-50/40";
+const productTableStripedRowClassName = "bg-slate-50/40";
 
 const productTableColumnSortFieldMap: Partial<
   Record<ProductTableColumnKey, CommerceWidgetSortField>
@@ -787,6 +962,84 @@ export const normalizeProductTableLinks = (
   openInNewTab: value?.openInNewTab === true,
 });
 
+export const resolveProductTableVariant = (value: string): ProductTableVariantId =>
+  productTableVariantValues.includes(value as ProductTableVariantId)
+    ? (value as ProductTableVariantId)
+    : "default";
+
+export const normalizeProductTableStyle = (
+  value: ProductTableStyle | undefined
+): ProductTableStyle | undefined => {
+  if (value === undefined) return undefined;
+
+  const preserveClearedSurfaces = Object.keys(value).length === 0;
+  const next: ProductTableStyle = {};
+
+  if (productTableDensityValues.includes(value.density as ProductTableDensity)) {
+    next.density = value.density as ProductTableDensity;
+  }
+  if (productTableRowTreatmentValues.includes(value.rowTreatment as ProductTableRowTreatment)) {
+    next.rowTreatment = value.rowTreatment as ProductTableRowTreatment;
+  }
+  if (value.hoverRows === true) {
+    next.hoverRows = true;
+  }
+  if (value.stickyHeader === true) {
+    next.stickyHeader = true;
+  }
+  if (productTableMaxWidthValues.includes(value.maxWidth as ProductTableMaxWidth)) {
+    next.maxWidth = value.maxWidth as ProductTableMaxWidth;
+  }
+  if (productTableAlignValues.includes(value.align as ProductTableAlign)) {
+    next.align = value.align as ProductTableAlign;
+  }
+  if (productTableTypographyValues.includes(value.typography as ProductTableTypography)) {
+    next.typography = value.typography as ProductTableTypography;
+  }
+
+  const surfaceFields = [
+    "tableBackground",
+    "tableBorderColor",
+    "headerBackground",
+    "emptyBackground",
+    "emptyBorderColor",
+  ] as const;
+
+  for (const field of surfaceFields) {
+    const rawValue = value[field];
+    if (typeof rawValue === "string") {
+      next[field] = resolveClearableStyleValue(rawValue) ?? "";
+    } else if (preserveClearedSurfaces) {
+      next[field] = "";
+    }
+  }
+
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
+export const resolveProductTablePresentationStyle = (
+  variant: string,
+  value: ProductTableStyle | undefined
+): ProductTableResolvedStyle => {
+  const normalized = normalizeProductTableStyle(value) ?? {};
+  const preset = productTableVariantStylePresetMap[resolveProductTableVariant(variant)];
+
+  return {
+    density: normalized.density ?? preset.density,
+    rowTreatment: normalized.rowTreatment ?? preset.rowTreatment,
+    hoverRows: normalized.hoverRows === true ? true : preset.hoverRows,
+    stickyHeader: normalized.stickyHeader === true ? true : preset.stickyHeader,
+    maxWidth: normalized.maxWidth ?? preset.maxWidth,
+    align: normalized.align ?? preset.align,
+    typography: normalized.typography ?? preset.typography,
+    tableBackground: normalized.tableBackground,
+    tableBorderColor: normalized.tableBorderColor,
+    headerBackground: normalized.headerBackground,
+    emptyBackground: normalized.emptyBackground,
+    emptyBorderColor: normalized.emptyBorderColor,
+  };
+};
+
 export const resolveVisibleProductTableColumns = (fields: Required<ProductTableFields>) =>
   productTableColumns.filter((column) => fields[column.visibilityKey]);
 
@@ -903,6 +1156,13 @@ export const productTableSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        density: { enum: [...productTableDensityValues] },
+        rowTreatment: { enum: [...productTableRowTreatmentValues] },
+        hoverRows: { type: "boolean" },
+        stickyHeader: { type: "boolean" },
+        maxWidth: { enum: [...productTableMaxWidthValues] },
+        align: { enum: [...productTableAlignValues] },
+        typography: { enum: [...productTableTypographyValues] },
         tableBackground: { type: "string" },
         tableBorderColor: { type: "string" },
         headerBackground: { type: "string" },
@@ -1045,16 +1305,8 @@ export const normalizeProductTableData = (value: ProductTableData): ProductTable
   const labels = normalizeProductTableLabels(value.labels);
   const links = normalizeProductTableLinks(value.links);
   const resolvedMeta = normalizeResolvedMeta(value.resolved);
-  const hasStyleObject = value.style !== undefined;
-  const style = hasStyleObject
-    ? (compactObject({
-        tableBackground: resolveClearableStyleValue(value.style?.tableBackground),
-        tableBorderColor: resolveClearableStyleValue(value.style?.tableBorderColor),
-        headerBackground: resolveClearableStyleValue(value.style?.headerBackground),
-        emptyBackground: resolveClearableStyleValue(value.style?.emptyBackground),
-        emptyBorderColor: resolveClearableStyleValue(value.style?.emptyBorderColor),
-      }) ?? {})
-    : undefined;
+  const style = normalizeProductTableStyle(value.style);
+  const hasStyleObject = style !== undefined;
 
   return {
     source,
@@ -1111,23 +1363,45 @@ const clampProductTableExcerpt = (value: string | null) => {
   return `${excerpt.slice(0, productTableExcerptMaxLength - 3).trimEnd()}...`;
 };
 
-const renderProductTableHeader = (header: ProductTableHeader | undefined) => {
+const renderProductTableHeader = (
+  header: ProductTableHeader | undefined,
+  typography: ProductTableTypography
+) => {
   if (!header?.eyebrow && !header?.title && !header?.description) {
     return null;
   }
 
+  const typographyClasses = productTableTypographyClassMap[typography];
+
   return (
     <div className="space-y-2">
       {header.eyebrow ? (
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
+        <p
+          className={joinClasses(
+            typographyClasses.sectionEyebrow,
+            "font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60"
+          )}
+        >
           {header.eyebrow}
         </p>
       ) : null}
       {header.title ? (
-        <h2 className="text-2xl font-semibold text-[var(--color-text)]">{header.title}</h2>
+        <h2
+          className={joinClasses(
+            typographyClasses.sectionTitle,
+            "font-semibold text-[var(--color-text)]"
+          )}
+        >
+          {header.title}
+        </h2>
       ) : null}
       {header.description ? (
-        <p className="max-w-3xl text-sm leading-6 text-[var(--color-text)]/70">
+        <p
+          className={joinClasses(
+            typographyClasses.sectionDescription,
+            "max-w-3xl text-[var(--color-text)]/70"
+          )}
+        >
           {header.description}
         </p>
       ) : null}
@@ -1135,7 +1409,9 @@ const renderProductTableHeader = (header: ProductTableHeader | undefined) => {
   );
 };
 
-const renderProductTableImage = (item: ProductTableRuntimeItem) => {
+const renderProductTableImage = (item: ProductTableRuntimeItem, density: ProductTableDensity) => {
+  const densityClasses = productTableDensityClassMap[density];
+
   if (!item.media?.url) {
     return <span className="text-xs text-[var(--color-text)]/45">No image</span>;
   }
@@ -1148,7 +1424,7 @@ const renderProductTableImage = (item: ProductTableRuntimeItem) => {
       decoding="async"
       width={item.media.width ?? undefined}
       height={item.media.height ?? undefined}
-      className="h-14 w-14 rounded-md object-cover"
+      className={joinClasses(densityClasses.image, "rounded-md object-cover")}
     />
   );
 };
@@ -1176,7 +1452,7 @@ const formatProductTableStockValue = (
 const productTableCellLinkClassName =
   "inline-flex rounded-sm font-medium text-[var(--color-text)] transition hover:underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const productTableActionLinkClassName =
-  "inline-flex items-center rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "inline-flex items-center rounded-md border border-[var(--color-border)] px-3 py-1.5 font-medium text-[var(--color-text)] transition hover:bg-[var(--color-bg)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const productTableSortLinkClassName =
   "inline-flex items-center gap-2 rounded-sm text-left transition hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const productTableSortIndicatorClassName =
@@ -1194,18 +1470,27 @@ const resolveProductTableLinkAttrs = (
 const renderProductTableActionCell = (
   item: ProductTableRuntimeItem,
   links: Required<ProductTableLinks>,
-  linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>
-) => (
-  <td className="px-3 py-2 text-right">
-    {links.showAction && linkAttrs ? (
-      <a {...linkAttrs} className={productTableActionLinkClassName}>
-        {links.actionLabel}
-      </a>
-    ) : (
-      <span className="text-[var(--color-text)]/40">-</span>
-    )}
-  </td>
-);
+  linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>,
+  presentation: ProductTableResolvedStyle
+) => {
+  const densityClasses = productTableDensityClassMap[presentation.density];
+  const typographyClasses = productTableTypographyClassMap[presentation.typography];
+
+  return (
+    <td className={joinClasses(densityClasses.action, typographyClasses.body, "text-right")}>
+      {links.showAction && linkAttrs ? (
+        <a
+          {...linkAttrs}
+          className={joinClasses(productTableActionLinkClassName, typographyClasses.action)}
+        >
+          {links.actionLabel}
+        </a>
+      ) : (
+        <span className="text-[var(--color-text)]/40">-</span>
+      )}
+    </td>
+  );
+};
 
 const previewMessage = (renderContext: WidgetRenderContext | undefined) => {
   const message = optionalText(renderContext?.previewState?.message);
@@ -1221,19 +1506,38 @@ const renderProductTableCell = (
     showStockQuantity: boolean;
     links: Required<ProductTableLinks>;
     linkAttrs: ReturnType<typeof resolveWidgetLinkAttrs>;
+    presentation: ProductTableResolvedStyle;
   }
 ) => {
+  const densityClasses = productTableDensityClassMap[options.presentation.density];
+  const typographyClasses = productTableTypographyClassMap[options.presentation.typography];
+
   switch (column.key) {
     case "image":
       return (
-        <td className="w-24 px-3 py-2 text-[var(--color-text)]/65">
-          <div className="flex min-h-14 items-center">{renderProductTableImage(item)}</div>
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            densityClasses.imageCell,
+            typographyClasses.support,
+            "text-[var(--color-text)]/65"
+          )}
+        >
+          <div className={joinClasses("flex items-center", densityClasses.imageWrapper)}>
+            {renderProductTableImage(item, options.presentation.density)}
+          </div>
         </td>
       );
     case "title": {
       const value = productTitleValue(item, options);
       return (
-        <td className="px-3 py-2 font-medium text-[var(--color-text)]/85">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.title,
+            "font-medium text-[var(--color-text)]/85"
+          )}
+        >
           {options.links.linkedColumn === "title" && options.linkAttrs ? (
             <a {...options.linkAttrs} className={productTableCellLinkClassName}>
               {value}
@@ -1246,7 +1550,13 @@ const renderProductTableCell = (
     }
     case "excerpt":
       return (
-        <td className="max-w-md px-3 py-2 text-[var(--color-text)]/70">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.excerpt,
+            "max-w-md text-[var(--color-text)]/70"
+          )}
+        >
           {clampProductTableExcerpt(item.excerpt) ?? (
             <span className="text-[var(--color-text)]/45">-</span>
           )}
@@ -1255,7 +1565,13 @@ const renderProductTableCell = (
     case "slug": {
       const value = `/${item.slug}`;
       return (
-        <td className="px-3 py-2 text-[var(--color-text)]/65">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.support,
+            "text-[var(--color-text)]/65"
+          )}
+        >
           {options.links.linkedColumn === "slug" && options.linkAttrs ? (
             <a {...options.linkAttrs} className={productTableCellLinkClassName}>
               {value}
@@ -1268,13 +1584,25 @@ const renderProductTableCell = (
     }
     case "price":
       return (
-        <td className="px-3 py-2 text-[var(--color-text)]/80">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.body,
+            "text-[var(--color-text)]/80"
+          )}
+        >
           {formatCommerceMoney(item.pricing.amount, item.pricing.currency)}
         </td>
       );
     case "compareAt":
       return (
-        <td className="px-3 py-2 text-[var(--color-text)]/65">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.support,
+            "text-[var(--color-text)]/65"
+          )}
+        >
           {typeof item.pricing.compareAtAmount === "number"
             ? formatCommerceMoney(item.pricing.compareAtAmount, item.pricing.currency)
             : "-"}
@@ -1282,9 +1610,19 @@ const renderProductTableCell = (
       );
     case "status":
       return (
-        <td className="px-3 py-2 text-[var(--color-text)]/80">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.body,
+            "text-[var(--color-text)]/80"
+          )}
+        >
           <span
-            className={`${productTableStatusBadgeBaseClass} ${productTableStatusBadgeToneClassMap[item.status]}`}
+            className={joinClasses(
+              productTableStatusBadgeBaseClass,
+              typographyClasses.badge,
+              productTableStatusBadgeToneClassMap[item.status]
+            )}
             aria-label={`Status: ${productTableStatusLabelMap[item.status]}`}
           >
             {productTableStatusLabelMap[item.status]}
@@ -1293,12 +1631,28 @@ const renderProductTableCell = (
       );
     case "stock":
       return (
-        <td className="px-3 py-2 text-[var(--color-text)]/65">
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.support,
+            "text-[var(--color-text)]/65"
+          )}
+        >
           {formatProductTableStockValue(item.stock, options)}
         </td>
       );
     case "collections":
-      return <td className="px-3 py-2 text-[var(--color-text)]/65">{item.collectionIds.length}</td>;
+      return (
+        <td
+          className={joinClasses(
+            densityClasses.cell,
+            typographyClasses.support,
+            "text-[var(--color-text)]/65"
+          )}
+        >
+          {item.collectionIds.length}
+        </td>
+      );
     default:
       return null;
   }
@@ -1638,6 +1992,7 @@ function ProductTablePaginationActions({
 
 export function ProductTableBlock({
   data,
+  variant,
   renderContext,
   blockId,
 }: {
@@ -1647,6 +2002,10 @@ export function ProductTableBlock({
   renderContext?: WidgetRenderContext;
 }) {
   const normalized = normalizeProductTableData(data);
+  const resolvedVariant = resolveProductTableVariant(variant);
+  const presentation = resolveProductTablePresentationStyle(resolvedVariant, normalized.style);
+  const densityClasses = productTableDensityClassMap[presentation.density];
+  const typographyClasses = productTableTypographyClassMap[presentation.typography];
   const items = normalized.resolved?.items ?? [];
   const fields = normalizeProductTableFields(normalized.fields);
   const controls = normalizeProductTableControls(normalized.controls);
@@ -1671,11 +2030,31 @@ export function ProductTableBlock({
     backgroundColor: resolveClearableStyleValue(normalized.style?.emptyBackground),
     borderColor: resolveClearableStyleValue(normalized.style?.emptyBorderColor),
   });
-  const legacyTableClass =
-    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]" : "";
-  const legacyHeaderClass = normalized.style === undefined ? "bg-[var(--color-bg)]/80" : "";
-  const legacyEmptyClass =
-    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
+  const stickyHeaderStyle: CSSProperties | undefined = presentation.stickyHeader
+    ? {
+        backgroundColor:
+          resolveClearableStyleValue(normalized.style?.headerBackground) ??
+          resolveClearableStyleValue(normalized.style?.tableBackground) ??
+          "var(--color-bg)",
+      }
+    : undefined;
+  const hasExplicitTableSurface =
+    Object.prototype.hasOwnProperty.call(normalized.style ?? {}, "tableBackground") ||
+    Object.prototype.hasOwnProperty.call(normalized.style ?? {}, "tableBorderColor");
+  const hasExplicitHeaderSurface = Object.prototype.hasOwnProperty.call(
+    normalized.style ?? {},
+    "headerBackground"
+  );
+  const hasExplicitEmptySurface =
+    Object.prototype.hasOwnProperty.call(normalized.style ?? {}, "emptyBackground") ||
+    Object.prototype.hasOwnProperty.call(normalized.style ?? {}, "emptyBorderColor");
+  const legacyTableClass = hasExplicitTableSurface
+    ? ""
+    : "border-[var(--color-border)] bg-[var(--color-bg)]";
+  const legacyHeaderClass = hasExplicitHeaderSurface ? "" : "bg-[var(--color-bg)]/80";
+  const legacyEmptyClass = hasExplicitEmptySurface
+    ? ""
+    : "border-[var(--color-border)] bg-[var(--color-bg)]/70";
   const tableCaptionText = normalized.header?.title ?? productTableDefaultCaptionText;
   const tableCaptionId = React.useId();
   const runtime = normalized.resolved?.runtime;
@@ -1686,6 +2065,14 @@ export function ProductTableBlock({
       data-widget="product-table"
       data-product-table-count={String(items.length)}
       data-product-table-page={String(runtime?.page ?? 1)}
+      data-product-table-variant={resolvedVariant}
+      data-product-table-density={presentation.density}
+      data-product-table-row-treatment={presentation.rowTreatment}
+      data-product-table-typography={presentation.typography}
+      data-product-table-max-width={presentation.maxWidth}
+      data-product-table-align={presentation.align}
+      data-product-table-hover={String(presentation.hoverRows)}
+      data-product-table-sticky={String(presentation.stickyHeader)}
       aria-label={tableCaptionText}
     >
       {previewLoading ? (
@@ -1716,152 +2103,202 @@ export function ProductTableBlock({
         </div>
       ) : null}
 
-      {renderProductTableHeader(normalized.header)}
-
-      <ProductTablePublicControls data={normalized} blockId={blockId} />
-
-      {items.length === 0 ? (
+      <div className={joinClasses("w-full", productTableAlignClassMap[presentation.align])}>
         <div
-          className={`rounded-xl border border-dashed px-4 py-6 text-center ${legacyEmptyClass}`}
-          style={emptyStyle}
-          role={isEditorPreview ? "status" : undefined}
-          aria-live={isEditorPreview ? "polite" : undefined}
+          className={joinClasses(
+            "w-full space-y-4",
+            productTableMaxWidthClassMap[presentation.maxWidth]
+          )}
         >
-          <p className="text-sm font-medium text-[var(--color-text)]">
-            {normalized.emptyState?.title}
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-text)]/70">
-            {normalized.emptyState?.description}
-          </p>
-        </div>
-      ) : (
-        <div>
-          <div
-            className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
-            style={tableStyle}
-            tabIndex={0}
-            aria-label={tableCaptionText}
-          >
-            <table className="min-w-full text-sm" aria-labelledby={tableCaptionId}>
-              <caption id={tableCaptionId} className="sr-only">
-                {tableCaptionText}
-              </caption>
-              <thead>
-                <tr
-                  className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
-                  style={headerStyle}
+          {renderProductTableHeader(normalized.header, presentation.typography)}
+
+          <ProductTablePublicControls data={normalized} blockId={blockId} />
+
+          {items.length === 0 ? (
+            <div
+              className={joinClasses(
+                "rounded-xl border border-dashed px-4 py-6 text-center",
+                legacyEmptyClass
+              )}
+              style={emptyStyle}
+              role={isEditorPreview ? "status" : undefined}
+              aria-live={isEditorPreview ? "polite" : undefined}
+            >
+              <p
+                className={joinClasses(
+                  typographyClasses.title,
+                  "font-medium text-[var(--color-text)]"
+                )}
+              >
+                {normalized.emptyState?.title}
+              </p>
+              <p
+                className={joinClasses(typographyClasses.body, "mt-1 text-[var(--color-text)]/70")}
+              >
+                {normalized.emptyState?.description}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div
+                className={joinClasses("overflow-x-auto rounded-xl border", legacyTableClass)}
+                style={tableStyle}
+                tabIndex={0}
+                aria-label={tableCaptionText}
+              >
+                <table
+                  className={joinClasses("w-full min-w-[44rem]", densityClasses.table)}
+                  aria-labelledby={tableCaptionId}
                 >
-                  {visibleColumns.map((column) => {
-                    const sortField = resolveProductTableSortableField(column.key);
-                    const sortActive = sortField !== undefined && runtime?.sortField === sortField;
-                    const interactiveSort =
-                      controls.sorting === "interactive" && sortField !== undefined;
-                    const nextSortDir: CommerceWidgetSortDirection =
-                      sortActive && runtime?.sortDir === "asc" ? "desc" : "asc";
-                    const sortBadge = sortField
-                      ? resolveProductTableSortBadge({
-                          active: sortActive,
-                          dir: runtime?.sortDir ?? "desc",
-                          interactive: interactiveSort,
-                        })
-                      : "";
-                    const ariaSort = sortActive
-                      ? runtime?.sortDir === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : undefined;
-                    const sortHref = interactiveSort
-                      ? resolveProductTableActiveSortHref({
-                          blockId,
-                          runtime,
-                          nextField: sortField,
-                          nextDir: nextSortDir,
-                        })
-                      : undefined;
-
-                    return (
-                      <th
-                        key={column.key}
-                        scope="col"
-                        aria-sort={ariaSort}
-                        className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
-                      >
-                        {interactiveSort && sortHref ? (
-                          <a
-                            href={sortHref}
-                            className={productTableSortLinkClassName}
-                            aria-label={`Sort by ${normalized.labels?.[column.labelKey]} ${nextSortDir === "asc" ? "ascending" : "descending"}`}
-                          >
-                            <span>{normalized.labels?.[column.labelKey]}</span>
-                            {sortBadge ? (
-                              <span
-                                className={productTableSortIndicatorClassName}
-                                aria-hidden="true"
-                              >
-                                {sortBadge}
-                              </span>
-                            ) : null}
-                          </a>
-                        ) : (
-                          <span className="inline-flex items-center gap-2">
-                            <span>{normalized.labels?.[column.labelKey]}</span>
-                            {controls.sorting === "indicator" && sortField && sortBadge ? (
-                              <span
-                                className={productTableSortIndicatorClassName}
-                                aria-hidden="true"
-                              >
-                                {sortBadge}
-                              </span>
-                            ) : null}
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                  {showActionColumn ? (
-                    <th
-                      scope="col"
-                      className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
-                    >
-                      Action
-                    </th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const linkAttrs = resolveProductTableLinkAttrs(item, links);
-                  const rowInteractive =
-                    Boolean(linkAttrs) && (links.linkedColumn !== "none" || links.showAction);
-
-                  return (
+                  <caption id={tableCaptionId} className="sr-only">
+                    {tableCaptionText}
+                  </caption>
+                  <thead>
                     <tr
-                      key={item.id}
-                      className={`border-b border-[var(--color-border)]/70 last:border-b-0 transition-colors ${productTableRowToneClassMap[item.status]} ${rowInteractive ? "hover:bg-slate-50/60" : ""}`}
-                      data-product-status={item.status}
+                      className={joinClasses(
+                        "border-b border-[var(--color-border)]",
+                        legacyHeaderClass
+                      )}
+                      style={headerStyle}
                     >
-                      {visibleColumns.map((column) => (
-                        <React.Fragment key={column.key}>
-                          {renderProductTableCell(column, item, {
-                            showStatusColumn,
-                            showStockQuantity: fields.showStockQuantity,
-                            links,
-                            linkAttrs,
-                          })}
-                        </React.Fragment>
-                      ))}
-                      {showActionColumn
-                        ? renderProductTableActionCell(item, links, linkAttrs)
-                        : null}
+                      {visibleColumns.map((column) => {
+                        const sortField = resolveProductTableSortableField(column.key);
+                        const sortActive =
+                          sortField !== undefined && runtime?.sortField === sortField;
+                        const interactiveSort =
+                          controls.sorting === "interactive" && sortField !== undefined;
+                        const nextSortDir: CommerceWidgetSortDirection =
+                          sortActive && runtime?.sortDir === "asc" ? "desc" : "asc";
+                        const sortBadge = sortField
+                          ? resolveProductTableSortBadge({
+                              active: sortActive,
+                              dir: runtime?.sortDir ?? "desc",
+                              interactive: interactiveSort,
+                            })
+                          : "";
+                        const ariaSort = sortActive
+                          ? runtime?.sortDir === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : undefined;
+                        const sortHref = interactiveSort
+                          ? resolveProductTableActiveSortHref({
+                              blockId,
+                              runtime,
+                              nextField: sortField,
+                              nextDir: nextSortDir,
+                            })
+                          : undefined;
+                        const headerCellClassName = joinClasses(
+                          densityClasses.header,
+                          typographyClasses.header,
+                          presentation.stickyHeader ? "sticky top-0 z-10" : undefined,
+                          "text-left font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                        );
+
+                        return (
+                          <th
+                            key={column.key}
+                            scope="col"
+                            aria-sort={ariaSort}
+                            className={headerCellClassName}
+                            style={presentation.stickyHeader ? stickyHeaderStyle : undefined}
+                          >
+                            {interactiveSort && sortHref ? (
+                              <a
+                                href={sortHref}
+                                className={productTableSortLinkClassName}
+                                aria-label={`Sort by ${normalized.labels?.[column.labelKey]} ${nextSortDir === "asc" ? "ascending" : "descending"}`}
+                              >
+                                <span>{normalized.labels?.[column.labelKey]}</span>
+                                {sortBadge ? (
+                                  <span
+                                    className={productTableSortIndicatorClassName}
+                                    aria-hidden="true"
+                                  >
+                                    {sortBadge}
+                                  </span>
+                                ) : null}
+                              </a>
+                            ) : (
+                              <span className="inline-flex items-center gap-2">
+                                <span>{normalized.labels?.[column.labelKey]}</span>
+                                {controls.sorting === "indicator" && sortField && sortBadge ? (
+                                  <span
+                                    className={productTableSortIndicatorClassName}
+                                    aria-hidden="true"
+                                  >
+                                    {sortBadge}
+                                  </span>
+                                ) : null}
+                              </span>
+                            )}
+                          </th>
+                        );
+                      })}
+                      {showActionColumn ? (
+                        <th
+                          scope="col"
+                          className={joinClasses(
+                            densityClasses.header,
+                            typographyClasses.header,
+                            presentation.stickyHeader ? "sticky top-0 z-10" : undefined,
+                            "text-right font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                          )}
+                          style={presentation.stickyHeader ? stickyHeaderStyle : undefined}
+                        >
+                          Action
+                        </th>
+                      ) : null}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <ProductTablePaginationActions controls={controls} runtime={runtime} />
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => {
+                      const linkAttrs = resolveProductTableLinkAttrs(item, links);
+                      const rowInteractive =
+                        Boolean(linkAttrs) && (links.linkedColumn !== "none" || links.showAction);
+                      const stripedRowClass =
+                        presentation.rowTreatment === "striped" && index % 2 === 1
+                          ? productTableStripedRowClassName
+                          : undefined;
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={joinClasses(
+                            "border-b border-[var(--color-border)]/70 last:border-b-0 transition-colors",
+                            stripedRowClass,
+                            productTableRowToneClassMap[item.status],
+                            presentation.hoverRows ? productTableHoverRowClassName : undefined,
+                            rowInteractive ? "hover:bg-slate-50/60" : undefined
+                          )}
+                          data-product-status={item.status}
+                        >
+                          {visibleColumns.map((column) => (
+                            <React.Fragment key={column.key}>
+                              {renderProductTableCell(column, item, {
+                                showStatusColumn,
+                                showStockQuantity: fields.showStockQuantity,
+                                links,
+                                linkAttrs,
+                                presentation,
+                              })}
+                            </React.Fragment>
+                          ))}
+                          {showActionColumn
+                            ? renderProductTableActionCell(item, links, linkAttrs, presentation)
+                            : null}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <ProductTablePaginationActions controls={controls} runtime={runtime} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -1881,6 +2318,11 @@ export function createProductTableWidget(editors: {
         id: "default",
         label: "Default",
         description: "Standard product table for dense catalogs.",
+      },
+      {
+        id: "compact",
+        label: "Compact",
+        description: "Denser preset with tighter spacing, typography, and reading width.",
       },
     ],
     schema: productTableSchema,

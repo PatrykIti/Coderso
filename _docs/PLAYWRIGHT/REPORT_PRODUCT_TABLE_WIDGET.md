@@ -245,6 +245,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 #### UX-01 — Tylko jeden wariant (default)
 **Opis:** Widget ma wyłącznie wariant `default`. Brak wariantów alternatywnych layoutów (compact, card-based, kanban). Porównując z innymi widgetami commerce (ProductGallery, ProductCompare) — brak elastyczności w wyborze widoku.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 **Rekomendacja:** Dodać wariant `compact` (zmniejszone padding, mniejszy font) i/lub `striped` (alternujące kolory wierszy).
 
 #### UX-02 — Brak paginacji / "Show more"
@@ -309,9 +310,11 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-05 — Brak zebra striping (alternujące kolory wierszy)
 **Opis:** Wszystkie wiersze mają jednolite tło. Brak opcji `striped` alternujących wierszy dla czytelności przy długich listach.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-06 — Brak kontroli gęstości wierszy (row density)
 **Opis:** Padding `py-2 px-3` hardcoded. Brak opcji compact/comfortable/spacious — ważne dla tabel z 48 produktami.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-07 — Brak nagłówka sekcji (eyebrow/title/description)
 **Opis:** Widget nie ma opcji nagłówka sekcji — brak eyebrow, title, description nad tabelą. Inne widgety (FeatureGrid, Stats KPI) mają tę funkcjonalność. Brak kontekstu dla tabeli w layoutach wielowidgetowych.
@@ -319,12 +322,15 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-08 — Brak kontroli typografii
 **Opis:** Rozmiar fonta komórek (`text-sm`), nagłówków (`text-xs font-semibold uppercase`) i opcje stylu tekstowego hardcoded. Brak kontroli przez edytor.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-09 — Brak kontroli max-width i wyrównania
 **Opis:** `overflow-x-auto` bez max-width ograniczenia. Tabela rozciąga się na pełną szerokość kontenera bez możliwości zwężenia.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-10 — Brak kontroli row hover (efekt hover na wierszu)
 **Opis:** Brak `hover:bg-*` na wierszach. Dla klikalnej tabeli (jeśli dodany link) — hover jest niezbędny. Nawet dla read-only czytelność poprawia subtelny hover.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-11 — Brak kolumny akcji (Actions column)
 **Opis:** Brak opcjonalnej kolumny z przyciskami akcji per wiersz (np. "View", "Edit"). Tabela tylko do odczytu.
@@ -332,6 +338,7 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 ### BF-12 — Brak sticky header
 **Opis:** Przy 48 produktach i scrollowaniu pionowym nagłówek tabeli znika. Brak opcji `sticky header`.
+**Status (2026-05-22):** Fixed in `TASK-281-08`.
 
 ### BF-13 — Brak etykiety dla kolumny "Collections count"
 **Opis:** Kolumna `showCollectionCount` wyświetla liczbę kolekcji (integer), ale brak kontekstu — komórka pokazuje samo "3" bez jednostki. Etykieta nagłówka ("Collections") jest edytowalna w schemacie, ale nie w edytorze (BUG-01).
@@ -380,11 +387,11 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | UX-02 | Brak paginacji — max 48 produktów (Fixed in TASK-281-07) | Wysoki |
 | UX-03 | Brak klikalnych wierszy / linków do produktów (Fixed in TASK-281-04) | Wysoki |
 | UX-05 | Brak thumbnails — produkt bez zdjęcia (Fixed in TASK-281-06) | Wysoki |
-| UX-01 | Tylko jeden wariant (default) | Średni |
+| UX-01 | Tylko jeden wariant (default) (Fixed in TASK-281-08) | Średni |
 | UX-04 | Brak sortowania interaktywnego kliknięciem nagłówka (Fixed in TASK-281-07) | Średni |
 | UX-06 | Brak search inline na froncie (Fixed in TASK-281-07) | Średni |
 | UX-08 | Brak filtrów widocznych dla użytkownika frontendu (Fixed in TASK-281-07) | Średni |
-| UX-10 | Brak hover na wierszach tabeli | Średni |
+| UX-10 | Brak hover na wierszach tabeli (Fixed in TASK-281-08 as the same row-hover wave as BF-10) | Średni |
 | UX-09 | Runtime error flag edytowalny przez użytkownika (Fixed in TASK-281-01) | Niski |
 | BUG-04 | Title i Price niewyłączalne — asymetria togglei (Fixed in TASK-281-02) | Niski |
 
@@ -397,11 +404,11 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 | BF-03 | Wysoki | Brak ilości sztuk (stock.quantity) w kolumnie Stock (Fixed in TASK-281-03) |
 | BF-07 | Wysoki | Brak nagłówka sekcji (eyebrow/title/description nad tabelą) (Fixed in TASK-281-06) |
 | BF-04 | Średni | Brak kolorowania wierszy wg statusu (Fixed in TASK-281-03) |
-| BF-05 | Średni | Brak zebra striping |
-| BF-06 | Średni | Brak kontroli gęstości wierszy (row density) |
-| BF-10 | Średni | Brak row hover efektu |
+| BF-05 | Średni | Brak zebra striping (Fixed in TASK-281-08) |
+| BF-06 | Średni | Brak kontroli gęstości wierszy (row density) (Fixed in TASK-281-08) |
+| BF-10 | Średni | Brak row hover efektu (Fixed in TASK-281-08) |
 | BF-11 | Średni | Brak kolumny akcji (Actions column) (Fixed in TASK-281-04) |
-| BF-12 | Średni | Brak sticky header przy 48 produktach |
+| BF-12 | Średni | Brak sticky header przy 48 produktach (Fixed in TASK-281-08) |
 | BF-15 | Średni | Brak wyszukiwarki po stronie klienta (Fixed in TASK-281-07 as the same gap as UX-06) |
 
 ---
@@ -630,6 +637,28 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun test tests/integration/runtime/product-table-runtime-pagination.test.ts`
+- `set -a && source .env && set +a && bun run gates:coderso`
+- `bun run precommit`
+- `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`
+
+## Status po TASK-281-08 (2026-05-22)
+
+### Fixed in TASK-281-08
+
+- `UX-01`: Product Table now exposes a shipped `compact` block variant instead of only `default`, giving dense-catalog tables a bounded preset without introducing unrelated card/kanban renderers.
+- `BF-05`: Visual mode now exposes `style.rowTreatment`, and the renderer supports bounded striped rows while preserving the existing draft/archived row-state tones from `TASK-281-03`.
+- `BF-06` / `BF-08`: Product Table now centralizes header/cell/action class maps and exposes bounded density plus typography controls instead of hardcoded padding and text sizing.
+- `BF-09`: Product Table now exposes bounded `style.maxWidth` and `style.align` controls so large tables can stay left-aligned or centered within content/wide shells without breaking horizontal overflow.
+- `BF-10` / `UX-10`: Product Table now exposes an optional table-wide row-hover treatment while keeping the stronger link-only interaction cue introduced in `TASK-281-04`.
+- `BF-12`: Product Table now exposes an optional sticky-header mode that keeps `<th scope="col">` cells pinned inside the current horizontal scroll shell.
+- Existing `TASK-281-01` through `TASK-281-07` seams remain preserved: preview stays backend-owned, shared column guardrails remain intact, public controls/runtime metadata still work, and explicit clearable surfaces keep their authored-cleared behavior.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts`
 - `set -a && source .env && set +a && bun run gates:coderso`
 - `bun run precommit`
 - `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)`

@@ -4,7 +4,10 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { ProductTableData } from "../../../core/widgets/core/productTable";
+import type {
+  ProductTableData,
+  ProductTableVariantId,
+} from "../../../core/widgets/core/productTable";
 import type { WidgetPreviewState } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -229,10 +232,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ProductTable editors normalize source, section header, full column registry, labels, and read-only preview diagnostics", async () => {
+test("ProductTable editors normalize source, layout styles, section header, full column registry, labels, and read-only preview diagnostics", async () => {
   const { ProductTableAdvancedEditor, ProductTableVisualEditor, ProductTableWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
 
+  let latestVariant: ProductTableVariantId = "default";
   let latestValue: ProductTableData = {
     resolved: {
       items: [
@@ -271,6 +275,7 @@ test("ProductTable editors normalize source, section header, full column registr
 
   const Harness = () => {
     const [value, setValue] = useState<ProductTableData>(latestValue);
+    const [variant, setVariant] = useState<ProductTableVariantId>(latestVariant);
 
     return (
       <>
@@ -280,8 +285,11 @@ test("ProductTable editors normalize source, section header, full column registr
             latestValue = next;
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next as ProductTableVariantId;
+            setVariant(next as ProductTableVariantId);
+          }}
         />
         <ProductTableVisualEditor
           value={value}
@@ -289,8 +297,11 @@ test("ProductTable editors normalize source, section header, full column registr
             latestValue = next;
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next as ProductTableVariantId;
+            setVariant(next as ProductTableVariantId);
+          }}
         />
         <ProductTableAdvancedEditor
           value={value}
@@ -298,8 +309,11 @@ test("ProductTable editors normalize source, section header, full column registr
             latestValue = next;
             setValue(next);
           }}
-          variant="default"
-          onVariantChange={() => undefined}
+          variant={variant}
+          onVariantChange={(next) => {
+            latestVariant = next as ProductTableVariantId;
+            setVariant(next as ProductTableVariantId);
+          }}
         />
       </>
     );
@@ -313,6 +327,14 @@ test("ProductTable editors normalize source, section header, full column registr
       normalizeText("Resolved items: 1 · Total: 0")
     );
     expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
+    expect(findSelectByLabel(view.container, "Table variant")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Row density")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Row treatment")).toBeInstanceOf(HTMLSelectElement);
+    expect(findInputByLabel(view.container, "Show row hover")).toBeInstanceOf(HTMLInputElement);
+    expect(findInputByLabel(view.container, "Use sticky header")).toBeInstanceOf(HTMLInputElement);
+    expect(findSelectByLabel(view.container, "Table max width")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Table alignment")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(view.container, "Typography")).toBeInstanceOf(HTMLSelectElement);
     expect(findInputByLabel(view.container, "Section eyebrow")).toBeInstanceOf(HTMLInputElement);
     expect(findInputByLabel(view.container, "Section title")).toBeInstanceOf(HTMLInputElement);
     expect(findTextareaByLabel(view.container, "Section description")).toBeInstanceOf(
@@ -346,6 +368,15 @@ test("ProductTable editors normalize source, section header, full column registr
       (findSelectByLabel(view.container, "Sort field") as HTMLSelectElement | null | undefined)
         ?.value
     ).toBe("updatedAt");
+
+    setSelectValue(findSelectByLabel(view.container, "Table variant"), "compact");
+    setSelectValue(findSelectByLabel(view.container, "Row density"), "spacious");
+    setSelectValue(findSelectByLabel(view.container, "Row treatment"), "striped");
+    toggleCheckbox(findInputByLabel(view.container, "Show row hover"));
+    toggleCheckbox(findInputByLabel(view.container, "Use sticky header"));
+    setSelectValue(findSelectByLabel(view.container, "Table max width"), "wide");
+    setSelectValue(findSelectByLabel(view.container, "Table alignment"), "center");
+    setSelectValue(findSelectByLabel(view.container, "Typography"), "prominent");
 
     setInputValue(findInputByLabel(view.container, "Limit"), "52");
     setInputValue(findInputByLabel(view.container, "Search"), " starter suite ");
@@ -401,6 +432,16 @@ test("ProductTable editors normalize source, section header, full column registr
       "Adjust source filters or publish products."
     );
 
+    expect(latestVariant).toBe("compact");
+    expect(latestValue.style).toEqual({
+      density: "spacious",
+      rowTreatment: "striped",
+      hoverRows: true,
+      stickyHeader: true,
+      maxWidth: "wide",
+      align: "center",
+      typography: "prominent",
+    });
     expect(latestValue.source).toEqual({
       limit: 48,
       search: "starter suite",

@@ -5,9 +5,10 @@
 Render a resolved commerce table with an optional section header, shared
 column metadata, guarded column visibility, bounded status and stock
 presentation, public-safe product thumbnails, optional excerpt context, safe
-product links, an optional action column, SSR page-query public controls for
-search/filter/sort/pagination, empty-state styling, and admin preview parity
-for the current source query.
+product links, an optional action column, compact/default layout presets,
+bounded density/typography/zebra/hover/sticky-header controls, SSR page-query
+public controls for search/filter/sort/pagination, empty-state styling, and
+admin preview parity for the current source query.
 
 ## Widget ID
 
@@ -16,6 +17,7 @@ for the current source query.
 ## Variants (v1)
 
 - `default`
+- `compact`
 
 ## Editor Modes
 
@@ -26,6 +28,7 @@ for the current source query.
 
 ### Visual
 - admin preview status summary
+- layout and style
 - section header
 - columns
 - column labels
@@ -87,9 +90,28 @@ for the current source query.
   `rel="noopener noreferrer"` when links open in a new tab.
 - Missing or unsafe hrefs degrade to plain text and suppress the Action link
   instead of rendering broken or arbitrary URLs.
-- Interactive rows get a bounded hover cue only when a real safe product link
-  is active; this is not the broader row-hover styling wave owned by
-  `TASK-281-08`.
+- Interactive rows keep a bounded stronger hover cue only when a real safe
+  product link is active; the new table-wide hover control composes with that
+  cue instead of replacing it.
+
+## Layout Variants and Table Styling
+
+- Block variant `default` keeps the balanced Product Table baseline, while
+  block variant `compact` acts as a preset for tighter density, typography,
+  and a narrower reading width.
+- Visual mode exposes independent bounded overrides through `style.density`,
+  `style.rowTreatment`, `style.hoverRows`, `style.stickyHeader`,
+  `style.maxWidth`, `style.align`, and `style.typography`.
+- `style.rowTreatment: striped` adds alternating published-row backgrounds for
+  longer catalog scans without replacing the existing draft/archived row-state
+  tones from `TASK-281-03`.
+- `style.hoverRows` adds a subtle read-only row-hover treatment. Linked rows
+  still layer the stronger interaction cue introduced in `TASK-281-04`.
+- `style.stickyHeader` keeps header cells sticky inside the existing horizontal
+  scroll shell instead of introducing a second table layout.
+- `style: {}` still clears the default table/header/empty-state surface classes
+  without forcing transparent inline backgrounds, and style-token-only edits do
+  not implicitly clear those legacy surfaces.
 
 ## Public Controls and Query Contract
 
@@ -132,6 +154,10 @@ for the current source query.
   - `data-widget="product-table"`
   - `data-product-table-count`
   - `data-product-table-page`
+  - `data-product-table-variant`
+  - `data-product-table-density`
+  - `data-product-table-row-treatment`
+  - `data-product-table-sticky`
   - `data-product-status`
 - `resolved.items[].productHref` is derived from the shared commerce
   content-route contract and normalized to safe relative URLs before render.
@@ -207,8 +233,20 @@ for the current source query.
   "emptyState": {
     "title": "No products available",
     "description": "Publish products or adjust source query."
+  },
+  "style": {
+    "density": "comfortable",
+    "rowTreatment": "plain",
+    "hoverRows": false,
+    "stickyHeader": false,
+    "maxWidth": "full",
+    "align": "left",
+    "typography": "balanced"
   }
 }
 ```
 
-Runtime-only `resolved.runtime` metadata carries the current public query state, available filter options, page meta, retained params, rejected tokens, and safe clear/previous/next hrefs.
+Block-level `variant` stays outside widget `data` and currently supports
+`default` plus the `compact` preset. Runtime-only `resolved.runtime` metadata
+carries the current public query state, available filter options, page meta,
+retained params, rejected tokens, and safe clear/previous/next hrefs.

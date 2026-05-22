@@ -226,7 +226,7 @@ test("normalizeWidgetBlock accepts Contact runtime hydration data but rejects un
   ).toThrow("widget_schema_invalid");
 });
 
-test("normalizeWidgetBlock accepts Product Table public controls but rejects unknown runtime keys", () => {
+test("normalizeWidgetBlock accepts Product Table compact variant and bounded style/public controls but rejects unknown keys", () => {
   registerWidget(
     createProductTableWidget({
       wizard: Dummy,
@@ -239,9 +239,18 @@ test("normalizeWidgetBlock accepts Product Table public controls but rejects unk
     normalizeWidgetBlock({
       id: "product-table-runtime",
       type: "product-table",
-      variant: "default",
+      variant: "compact",
       data: {
         ...productTableDefaults,
+        style: {
+          density: "compact",
+          rowTreatment: "striped",
+          hoverRows: true,
+          stickyHeader: true,
+          maxWidth: "content",
+          align: "center",
+          typography: "prominent",
+        },
         controls: {
           showSearchInput: true,
           showCollectionFilter: true,
@@ -291,6 +300,21 @@ test("normalizeWidgetBlock accepts Product Table public controls but rejects unk
             searchQuery: "starter",
             extra: "nope",
           },
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "product-table-style-bad",
+      type: "product-table",
+      variant: "compact",
+      data: {
+        ...productTableDefaults,
+        style: {
+          density: "compact",
+          extra: "nope",
         },
       } as never,
     })
