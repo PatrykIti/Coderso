@@ -8,6 +8,69 @@
 
 ---
 
+## Status po TASK-291, TASK-299, i TASK-256-01 (2026-05-22)
+
+- Timeline follow-up execution is complete for every widget-local row owned by
+  the `TASK-291` family.
+- Exact out-of-family owners now exist for the remaining shared rows:
+  `NEW -> TASK-256-01`, `W7 -> TASK-299`.
+- No live Playwright replay was run in this isolated worktree because
+  `http://localhost:5173/admin` and `http://localhost:3000` were not booted
+  during this rollout. Closure evidence below comes from targeted Timeline
+  validation and final repo commands:
+  `git diff --check`, `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun run test:vitest -- tests/vitest/widgets/timeline.test.tsx`,
+  `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx`,
+  `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`,
+  `bun test tests/unit/widgets/validator.test.ts`, `bun run lint`,
+  `bun run gates:coderso`, and `bun run precommit`.
+- `bun run scan:security:strict` did not finish green in this environment:
+  `bun audit` ran, but `semgrep` and `trivy` were missing from `PATH`, and the
+  installed `gitleaks` binary did not support the repo's `git` / `dir`
+  subcommands.
+
+| Finding | Final status | Owner | Evidence |
+|---|---|---|---|
+| NEW | task-256-physical-owner | TASK-256-01 | Shared atomic block updates now prevent Timeline mode/variant clobbering; the Timeline Visual editor wave keeps `mode=alternating` while switching the compatibility variant to `cards`. |
+| C1 | fixed | TASK-291-01 | Wizard now renders and edits the full normalized `3-8` step set instead of slicing after the first four entries. |
+| C2 | fixed | TASK-291-01 | Wizard now authors step status directly and does not force `upcoming` as the only practical path. |
+| C3 | fixed | TASK-291-01 | Wizard now supports explicit per-step removal with a confirmation flow and min-step guard. |
+| C4 | fixed | TASK-291-01 | Wizard now exposes beginner-safe icon and accent fields for every authored step. |
+| C5 | fixed | TASK-291-03 | Horizontal milestone connectors now size from spacing-aware layout output instead of a fixed `4rem` width. |
+| W1 | fixed | TASK-291-05 | Timeline now owns bounded `style.titleWeight` tokens for step headings. |
+| W2 | fixed | TASK-291-02 | Visual now supports drag reorder while preserving button-based step movement. |
+| W3 | fixed | TASK-291-04 | Per-step accents now fall back to the existing global `style.markerColor` contract instead of demanding repeated local values. |
+| W4 | deferred | TASK-291-04 | Per-step `labelPosition` stays out of the live schema because only the global `layout.labelPosition` token remains deterministic across axis, chronology, alternating, and compact layouts. |
+| W5 | fixed | TASK-291-05 | Timeline now owns bounded section padding and outer section spacing tokens instead of hardcoded container spacing only. |
+| W6 | fixed | TASK-291-04 | Marker rendering now supports bounded `dot`, `number`, and `icon` display modes. |
+| W7 | shared-physical-owner | TASK-299 | Shared contrast advisories now cover Timeline line, marker, text, and background color surfaces in the editor. |
+| W8 | deferred | TASK-291-06 | Timeline remains intentionally static; no motion schema or runtime animation classes were added because the report ask implied scroll-triggered behavior outside the current widget contract. |
+| W9 | fixed | TASK-291-05 | Timeline now owns bounded `layout.maxWidth` tokens instead of a single hardcoded `max-w-6xl` container. |
+| W10 | fixed | TASK-291-04 | Steps now support optional safe whole-step links and suppress them whenever a CTA exists so nested anchors never render. |
+| W11 | fixed | TASK-291-05 | Date/dateLabel metadata now renders in axis/milestone layouts, so horizontal milestones can stay date-aware without forcing chronology mode. |
+| W12 | fixed | TASK-291-05 | Timeline now owns optional widget-level header title and description fields. |
+| U1 | fixed | TASK-291-02 | Visual now exposes mode preview cards instead of relying on a mode-only dropdown. |
+| U2 | fixed | TASK-291-02 | Visual now explains how mode changes map to compatibility variants. |
+| U3 | fixed | TASK-291-02 | Date fields now provide strict `YYYY-MM-DD` guidance while preserving editorial `dateLabel` copy. |
+| U4 | fixed | TASK-291-02 | Raw step fields now include helper text instead of relying on placeholders alone. |
+| U5 | fixed | TASK-291-02 | Visual status selectors now expose an explicit `No status` option that clears persisted badges. |
+| U6 | fixed | TASK-291-04 | Visual/runtime now support icon-in-marker rendering plus marker background and icon color controls. |
+| U7 | fixed | TASK-291-01 | Wizard now warns when `titleSize: none` hides step titles. |
+| U8 | fixed | TASK-291-02 | Marker and accent controls are now grouped per step in Visual. |
+| U9 | fixed | TASK-291-02 | Spacing controls now include readable token-effect helper copy. |
+| R1 | fixed | TASK-291-03 | Alternating layout now keeps date metadata visible on mobile instead of hiding it behind `hidden md:block`. |
+| R2 | fixed | TASK-291-03 | Chronology now uses a clamped date column instead of a fixed `10rem` width. |
+| R3 | fixed | TASK-291-03 | Horizontal milestones now use overflow-safe axis rendering instead of uncontrolled multi-row wrapping. |
+| R4 | fixed | TASK-291-03 | Current steps now render `aria-current="step"`. |
+| R5 | fixed | TASK-291-03 | Timeline step lists now expose an accessible name. |
+| R6 | fixed | TASK-291-03 | Timeline sections now expose a readable `aria-label`/`aria-labelledby` contract. |
+| R7 | fixed | TASK-291-03 | Decorative step icons and marker glyphs are now hidden from assistive technology by default. |
+| R8 | fixed | TASK-291-03 | Connector sizing now follows the same spacing-aware milestone fix that closed C5. |
+| R9 | fixed | TASK-291-03 | `lineStyle` now styles the guide/axis treatment instead of changing card borders. |
+| R10 | fixed | TASK-291-03 | Short timelines now keep a denser, bounded presentation instead of looking empty on sparse data. |
+
+---
+
 ## 1. Przegląd widgetu
 
 **Typ:** Composite

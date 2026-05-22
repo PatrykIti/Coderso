@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 121 tasks
+- **To Do:** 113 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1896 tasks
+- **Done:** 1904 tasks
 
 ---
 
@@ -54,14 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
-| TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Timeline-only follow-up family for `REPORT_TIMELINE_WIDGET.md`, excluding shared TASK-256 mechanisms |
-| TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Expand Wizard all-step editing, status authoring, icon/accent controls, remove UX, and hidden-title warning after shared atomic updates |
-| TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Add mode preview cards, date validation/help, Visual no-status UX, grouped marker controls, spacing guidance, and drag reorder with button fallback |
-| TASK-291-03 | Timeline Renderer Accessibility Axis and Responsive Correctness | High | Large | Repair Timeline-only ARIA, mobile dates, chronology/milestone responsiveness, connector sizing, line-style semantics, and short-timeline density |
-| TASK-291-04 | Timeline Marker Accent Numbering and Step Link Model | Medium | Large | Add global accent inheritance, numbered/icon markers, per-step label-position decisions, and safe whole-step links |
-| TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Add title weight, bounded padding/max-width/min-height, header title/description, and dated milestone composition |
-| TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
-| TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -167,6 +159,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Timeline-local runtime, editor, schema, report, docs, and closure evidence are synchronized; W7 is consumed through TASK-299 and W4/W8 remain explicit deferrals instead of hidden scope creep |
+| TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): report/widget docs/task-board/changelog closure is synchronized with the final Timeline validation sweep |
+| TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Done (2026-05-22): Timeline intentionally stays static in the current contract, with no motion schema or runtime animation classes added |
+| TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Done (2026-05-22): Timeline now owns header copy, title weight, bounded padding/section-spacing/max-width controls, and dated axis milestones |
+| TASK-291-04 | Timeline Marker Accent Numbering and Step Link Model | Medium | Large | Done (2026-05-22): marker display modes, icon-in-marker controls, accent inheritance, and safe whole-step links are landed while per-step label position stays deferred |
+| TASK-291-03 | Timeline Renderer Accessibility Axis and Responsive Correctness | High | Large | Done (2026-05-22): section/list ARIA, current-step semantics, mobile date visibility, responsive connector sizing, and sparse-density fixes are covered |
+| TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Done (2026-05-22): mode preview cards, date guidance, no-status UX, grouped marker controls, spacing help, and drag reorder are landed |
+| TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Done (2026-05-22): Wizard now edits all normalized steps, authors status/icon/accent, confirms removals, and warns when titles are hidden |
 | TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Testimonials family is closed with richer Wizard/Visual/Advanced authoring, safe media and CTA contracts, owned pagination/import-export, and synchronized report/docs/changelog evidence while the remaining shared residuals now route to `TASK-334`, `TASK-335`, and `TASK-333` |
 | TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-290 family on `feature/corrections` |
 | TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Done (2026-05-22): Testimonials now supports a local 24-item cap, owned SSR load-more disclosure, and safe local JSON/CSV import-export without external provider sync |

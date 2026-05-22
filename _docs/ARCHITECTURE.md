@@ -1335,7 +1335,7 @@ Pierwsza wersja core musi zawierac podstawowe widgety, ktore pozwalaja
 zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
 
 - hero section
-- timeline (bez dat; etapy/proces w formie osi)
+- timeline (proces, milestones, i datowane wydarzenia na osi)
 - compare timeline (porownanie dwoch procesow na jednej osi)
 - newsletter
 - kontakt

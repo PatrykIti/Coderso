@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-291, TASK-256-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -20,22 +20,22 @@ helpers or rewrite unrelated widgets.
 
 ## Sub-Tasks
 
-- [ ] Keep dates visible in `TimelineAlternatingLayout` on mobile.
-- [ ] Replace fixed `md:grid-cols-[10rem_1fr]` chronology columns with
+- [x] Keep dates visible in `TimelineAlternatingLayout` on mobile.
+- [x] Replace fixed `md:grid-cols-[10rem_1fr]` chronology columns with
   overflow-safe responsive sizing.
-- [ ] Repair horizontal milestone responsiveness so wrapped rows remain
+- [x] Repair horizontal milestone responsiveness so wrapped rows remain
   coherent or intentionally switch to a scroll/stack mode.
-- [ ] Add section and ordered-list accessible names from static Timeline labels
+- [x] Add section and ordered-list accessible names from static Timeline labels
   or existing visible copy; TASK-291-05 may later upgrade this to
   header-backed `aria-labelledby` after header fields exist.
-- [ ] Render `aria-current="step"` on the current step container.
-- [ ] Hide decorative emoji/icon output with `aria-hidden="true"` unless a later
+- [x] Render `aria-current="step"` on the current step container.
+- [x] Hide decorative emoji/icon output with `aria-hidden="true"` unless a later
   task adds labelled icon semantics.
-- [ ] Replace fixed `4rem` milestone connector width with layout-aware flex or
+- [x] Replace fixed `4rem` milestone connector width with layout-aware flex or
   token-based sizing.
-- [ ] Stop applying `lineStyle` to card borders when the control is meant to
+- [x] Stop applying `lineStyle` to card borders when the control is meant to
   style the axis/guide.
-- [ ] Add bounded short-timeline density behavior with existing renderer
+- [x] Add bounded short-timeline density behavior with existing renderer
   structure; persisted `layout.minHeight` tokens, if accepted, belong to
   TASK-291-05.
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Timeline Editor
 **Estimated Effort:** Large
 **Dependencies:** TASK-291
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -21,17 +21,17 @@ implement the shared atomic block update mechanism from TASK-256-01.
 
 ## Sub-Tasks
 
-- [ ] Replace the Wizard `steps.slice(0, 4)` quick-title surface with a bounded
+- [x] Replace the Wizard `steps.slice(0, 4)` quick-title surface with a bounded
   all-step editor for every normalized step from `timelineStepMin` to
   `timelineStepMax`.
-- [ ] Add Wizard status controls that can set and preserve supported status
+- [x] Add Wizard status controls that can set and preserve supported status
   values without forcing `upcoming`; leave the explicit Visual no-status option
   to TASK-291-02.
-- [ ] Add Wizard icon and accent controls for each step with compact guidance.
-- [ ] Add step removal from Wizard with `timelineStepMin` guard, a clear target
+- [x] Add Wizard icon and accent controls for each step with compact guidance.
+- [x] Add step removal from Wizard with `timelineStepMin` guard, a clear target
   step label, and either confirmation or immediate undo.
-- [ ] Warn when `style.titleSize === "none"` would make step titles invisible.
-- [ ] Keep Wizard density beginner-safe; deeper fields remain in Visual.
+- [x] Warn when `style.titleSize === "none"` would make step titles invisible.
+- [x] Keep Wizard density beginner-safe; deeper fields remain in Visual.
 
 ## Files to Change
 

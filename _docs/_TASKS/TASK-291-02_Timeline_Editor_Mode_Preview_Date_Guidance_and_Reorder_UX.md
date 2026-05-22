@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Timeline Editor
 **Estimated Effort:** Large
 **Dependencies:** TASK-291, TASK-256-01, TASK-291-01
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -21,18 +21,18 @@ mode changes also update the preferred variant.
 
 ## Sub-Tasks
 
-- [ ] Replace or supplement the mode dropdown with preview cards/icons for
+- [x] Replace or supplement the mode dropdown with preview cards/icons for
   `process`, `axis`, `chronology`, and `alternating`.
-- [ ] Add mode-change messaging that explains the preferred variant side effect
+- [x] Add mode-change messaging that explains the preferred variant side effect
   without dropping current data.
-- [ ] Add date input guidance: date picker when possible, format validation, and
+- [x] Add date input guidance: date picker when possible, format validation, and
   preserved `dateLabel` for non-ISO copy.
-- [ ] Add an explicit Visual `No status` option for each step so clearing status
+- [x] Add an explicit Visual `No status` option for each step so clearing status
   persists as `undefined` and does not render an `upcoming` badge by default.
-- [ ] Add concise helper text for icon, accent, date, spacing, and marker
+- [x] Add concise helper text for icon, accent, date, spacing, and marker
   controls that currently rely on placeholders only.
-- [ ] Group per-step marker/accent controls so long timelines remain scannable.
-- [ ] Add drag reorder for pointer users while preserving existing Up/Down
+- [x] Group per-step marker/accent controls so long timelines remain scannable.
+- [x] Add drag reorder for pointer users while preserving existing Up/Down
   keyboard fallback and stable IDs.
 
 ## Files to Change

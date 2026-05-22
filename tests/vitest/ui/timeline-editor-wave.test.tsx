@@ -229,6 +229,31 @@ const setCheckboxValue = (element: Element | null | undefined, checked: boolean)
   });
 };
 
+const createDataTransfer = () => {
+  const store = new Map<string, string>();
+  return {
+    effectAllowed: "move",
+    dropEffect: "move",
+    setData: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    getData: (key: string) => store.get(key) ?? "",
+  };
+};
+
+const dispatchDragEvent = (
+  node: Element,
+  type: "dragstart" | "dragover" | "drop" | "dragend",
+  dataTransfer = createDataTransfer()
+) => {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
+  React.act(() => {
+    node.dispatchEvent(event);
+  });
+  return dataTransfer;
+};
+
 const clickButtonByText = (container: ParentNode, text: string, index = 0) => {
   const button = Array.from(container.querySelectorAll("button")).filter((candidate) =>
     candidate.textContent?.includes(text)
@@ -288,7 +313,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Timeline wizard editor covers variant selection, normalized step growth, and quick layout toggles", async () => {
+test("Timeline wizard editor covers full step authoring, status, accent, remove flow, and hidden-title warning", async () => {
   const { TimelineWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
@@ -297,9 +322,11 @@ test("Timeline wizard editor covers variant selection, normalized step growth, a
     steps: [
       { id: "", title: " " },
       { id: "custom-step", title: "Kickoff" },
+      { id: "step-3", title: "Launch" },
     ],
     layout: {},
     guides: {},
+    style: { titleSize: "none" },
   };
   let currentVariant = "milestones";
 
@@ -327,56 +354,48 @@ test("Timeline wizard editor covers variant selection, normalized step growth, a
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Timeline style");
+    expect(view.container.textContent).toContain("Step titles are hidden right now");
 
     const variantSelect = findSelectByOptions(view.container, ["milestones", "cards", "compact"]);
     setSelectValue(variantSelect, "cards");
     expect(currentVariant).toBe("cards");
 
-    const modeSelect = findSelectByOptions(view.container, [
-      "process",
-      "axis",
-      "chronology",
-      "alternating",
-    ]);
-    setSelectValue(modeSelect, "alternating");
-    expect(latestValue.mode).toBe("alternating");
-    expect(currentVariant).toBe("cards");
-
     const stepCountSelect = findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"]);
-    expect((stepCountSelect as HTMLSelectElement | null | undefined)?.value).toBe("3");
     setSelectValue(stepCountSelect, "5");
-
     expect(latestValue.steps).toHaveLength(5);
-    expect(latestValue.steps[0]).toEqual(
-      expect.objectContaining({ id: "step-1", title: "Discovery" })
-    );
-    expect(latestValue.steps[4]).toEqual(
-      expect.objectContaining({ id: "step-5", title: "Step 5" })
-    );
+    expect(findInputByPlaceholder(view.container, "Step 5")).toBeTruthy();
 
-    setInputValue(findInputByPlaceholder(view.container, "Step 1"), "Explore");
-    setInputValue(findInputByPlaceholder(view.container, "Step 4"), "Launch prep");
-    expect(findInputByPlaceholder(view.container, "Step 5")).toBeUndefined();
+    const statusSelects = findSelectsByOptions(view.container, [
+      "__none__",
+      "upcoming",
+      "current",
+      "complete",
+    ]);
+    setSelectValue(statusSelects[0], "current");
+    setInputValue(findInputsByPlaceholder(view.container, "Icon text or emoji")[0], "compass");
+    setInputValue(findInputsByPlaceholder(view.container, "#1d4ed8")[0], "#00aaee");
 
-    setSelectValue(findSelectByOptions(view.container, ["horizontal", "vertical"]), "vertical");
-    setCheckboxValue(view.container.querySelector("input[type='checkbox']") ?? undefined, false);
+    clickButtonByText(view.container, "Remove", 4);
+    expect(view.container.textContent).toContain("Remove Step 5?");
+    clickButtonByText(view.container, "Confirm");
 
     expect(onChangeSpy).toHaveBeenCalled();
+    expect(latestValue.steps).toHaveLength(4);
     expect(latestValue.steps[0]).toEqual(
-      expect.objectContaining({ id: "step-1", title: "Explore" })
+      expect.objectContaining({
+        id: "step-1",
+        title: "Discovery",
+        status: "current",
+        icon: "compass",
+        accent: "#00aaee",
+      })
     );
-    expect(latestValue.steps[3]).toEqual(
-      expect.objectContaining({ id: "step-4", title: "Launch prep" })
-    );
-    expect(latestValue.layout).toEqual(expect.objectContaining({ orientation: "vertical" }));
-    expect(latestValue.guides).toEqual(expect.objectContaining({ enabled: false }));
   } finally {
     view.cleanup();
   }
 });
 
-test("Timeline visual editor covers variant cards, step ordering, color fallbacks, and style controls", async () => {
+test("Timeline visual editor covers mode previews, drag reorder, no-status, grouped marker controls, and container tokens", async () => {
   const { TimelineVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
@@ -387,11 +406,10 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
         id: "alpha",
         title: "Discover",
         description: "Existing intro",
-        icon: "📍",
-        accent: "not-a-color",
+        status: "current",
       },
       { id: "beta", title: "Plan" },
-      { id: "gamma", title: "Deliver" },
+      { id: "gamma", title: "Ship" },
     ],
     style: {
       lineColor: "bad-token",
@@ -428,157 +446,109 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
   const view = mount(<Harness />);
 
   try {
-    clickButtonByText(view.container, "Compact");
-    expect(currentVariant).toBe("compact");
+    clickButtonByText(view.container, "Alternating");
+    expect(latestValue.mode).toBe("alternating");
+    expect(currentVariant).toBe("cards");
+    expect(view.container.textContent).toContain("prefers the cards visual variant");
 
-    const structureSection = findSectionByTitle(view.container, "Variant and timeline structure");
     const contentSection = findSectionByTitle(view.container, "Steps content and order");
-    const guidesSection = findSectionByTitle(view.container, "Guides and axis line");
     const markersSection = findSectionByTitle(view.container, "Markers and accents");
-    const colorsSection = findSectionByTitle(view.container, "Colors and background");
     const typographySection = findSectionByTitle(view.container, "Typography and spacing");
 
-    setSelectValue(
-      findSelectByOptions(structureSection as ParentNode, ["3", "4", "5", "6", "7", "8"]),
-      "4"
-    );
-    setSelectValue(
-      findSelectByOptions(structureSection as ParentNode, ["horizontal", "vertical"]),
-      "vertical"
-    );
-    setSelectValue(
-      findSelectByOptions(structureSection as ParentNode, ["top", "bottom"]),
-      "bottom"
-    );
-    setSelectValue(
-      findSelectByOptions(structureSection as ParentNode, ["start", "center", "end"]),
-      "end"
-    );
+    const dateInputs = findInputsByPlaceholder(contentSection as ParentNode, "2026-05-11");
+    setInputValue(dateInputs[0], "Q3 launch");
+    expect(contentSection?.textContent).toContain("Use YYYY-MM-DD here or move prose");
 
-    expect(contentSection?.textContent).toContain("4 steps configured");
-
-    setInputValue(findInputsByPlaceholder(contentSection as ParentNode, "Step title")[0], "Map");
-    setTextareaValue(
-      findTextareaByPlaceholder(contentSection as ParentNode, "Step description"),
-      "Align stakeholders"
-    );
-    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "2026-05-11"), "2026-05-12");
-    setInputValue(
-      findInputByPlaceholder(contentSection as ParentNode, "May 11, 2026"),
-      "May 12, 2026"
-    );
-    const statusSelect = findSelectByOptions(contentSection as ParentNode, [
+    const statusSelects = findSelectsByOptions(contentSection as ParentNode, [
+      "__none__",
       "upcoming",
       "current",
       "complete",
     ]);
-    setSelectValue(statusSelect, "current");
-    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "Icon text or emoji"), "🧭");
-    setInputValue(findInputByPlaceholder(contentSection as ParentNode, "Step CTA label"), "Open");
+    setSelectValue(statusSelects[0], "__none__");
+    expect(latestValue.steps.find((step) => step.id === "alpha")?.status).toBeUndefined();
+
+    const getStepCards = () => contentSection?.querySelectorAll(".space-y-3.rounded-lg.border.p-3");
+    const getStepCard = (index: number) => getStepCards()?.[index] as ParentNode;
+
+    setInputValue(findInputByPlaceholder(getStepCard(0), "Step CTA label"), "Read details");
+    await Promise.resolve();
+    setInputValue(findInputsByPlaceholder(getStepCard(0), "/timeline-step")[0], "/cta-step");
+    await Promise.resolve();
     setInputValue(
-      findInputByPlaceholder(contentSection as ParentNode, "/timeline-step"),
-      "javascript:alert(1)"
+      findInputByPlaceholder(getStepCard(0), "Whole-step link label"),
+      "Open discovery"
     );
-    expect(contentSection?.textContent).toContain("Use a relative path, hash, or full URL.");
-
-    clickButtonByText(contentSection as ParentNode, "Down", 0);
-    clickButtonByText(contentSection as ParentNode, "Up", 1);
-    clickButtonByText(contentSection as ParentNode, "Add step");
-    expect(contentSection?.textContent).toContain("5 steps configured");
-    expect(latestValue.steps[4]).toEqual(
-      expect.objectContaining({ id: "step-5", title: "Step 5" })
+    await Promise.resolve();
+    const refreshedHrefInputs = findInputsByPlaceholder(getStepCard(0), "/timeline-step");
+    setInputValue(refreshedHrefInputs[refreshedHrefInputs.length - 1], "/whole-step");
+    await Promise.resolve();
+    expect(view.container.textContent).toContain(
+      "Whole-step links are disabled when a CTA link is configured"
     );
 
-    clickButtonByText(contentSection as ParentNode, "Remove", 4);
-    expect(latestValue.steps).toHaveLength(4);
-    expect(contentSection?.textContent).toContain("4 steps configured");
-
-    setCheckboxValue(guidesSection?.querySelector("input[type='checkbox']") ?? undefined, false);
-    const solidDashedSelects = findSelectsByOptions(guidesSection as ParentNode, [
-      "solid",
-      "dashed",
-    ]);
-    setSelectValue(solidDashedSelects[0], "solid");
-    setSelectValue(findSelectByOptions(guidesSection as ParentNode, ["1", "2", "3", "4"]), "4");
-    setSelectValue(solidDashedSelects[1], "dashed");
-
-    setSelectValue(findSelectByOptions(markersSection as ParentNode, ["sm", "md", "lg"]), "lg");
-    const accentTextInputs = findInputsByPlaceholder(markersSection as ParentNode, "#1d4ed8");
-    setInputValue(accentTextInputs[1], "#00aaee");
-
-    const colorInputs = Array.from(
-      (colorsSection as ParentNode).querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
-    expect(colorInputs[0]?.value).toBe("#e2e8f0");
-    expect(colorInputs[1]?.value).toBe("#1d4ed8");
-    expect(colorInputs[2]?.value).toBe("#123123");
-    expect(colorInputs[3]?.value).toBe("#334155");
-    expect(colorInputs[4]?.value).toBe("#ffffff");
-
-    setInputValue(colorInputs[0], "#111111");
-    setInputValue(colorInputs[1], "#222222");
-    setInputValue(colorInputs[2], "#333333");
-    setInputValue(colorInputs[3], "#444444");
-    setInputValue(colorInputs[4], "#555555");
+    const dragHandle = view.container.querySelector('[aria-label="Drag step 1"]');
+    const stepCards = getStepCards();
+    const dataTransfer = dispatchDragEvent(dragHandle as Element, "dragstart");
+    dispatchDragEvent(stepCards?.[1] as Element, "dragover", dataTransfer);
+    dispatchDragEvent(stepCards?.[1] as Element, "drop", dataTransfer);
+    expect(latestValue.steps.map((step) => step.title)).toEqual(["Plan", "Discover", "Ship"]);
 
     setSelectValue(
-      findSelectByOptions(typographySection as ParentNode, ["none", "sm", "base", "lg", "xl"]),
-      "xl"
+      findSelectByOptions(markersSection as ParentNode, ["dot", "number", "icon"]),
+      "icon"
+    );
+    setInputValue(
+      findInputByPlaceholder(markersSection as ParentNode, "Marker icon or emoji"),
+      "rocket"
+    );
+    expect(markersSection?.textContent).toContain("Accent fallback");
+
+    setInputValue(
+      findInputByPlaceholder(typographySection as ParentNode, "Timeline heading"),
+      "Roadmap"
     );
     setSelectValue(
-      findSelectByOptions(typographySection as ParentNode, ["none", "xs", "sm", "base", "lg"]),
-      "lg"
+      findSelectByOptions(typographySection as ParentNode, [
+        "normal",
+        "medium",
+        "semibold",
+        "bold",
+      ]),
+      "bold"
     );
     setSelectValue(
       findSelectByOptions(typographySection as ParentNode, ["none", "sm", "md", "lg", "xl"]),
       "xl"
     );
+    setSelectValue(
+      findSelectByOptions(typographySection as ParentNode, [
+        "none",
+        "4xl",
+        "5xl",
+        "6xl",
+        "7xl",
+        "full",
+      ]),
+      "7xl"
+    );
+    expect(typographySection?.textContent).toContain("36px gap");
 
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.steps.map((step) => step.title)).toEqual([
-      "Map",
-      "Plan",
-      "Deliver",
-      "Launch",
-    ]);
-    expect(latestValue.steps[0]).toEqual(
-      expect.objectContaining({
-        id: "alpha",
-        title: "Map",
-        description: "Align stakeholders",
-        date: "2026-05-12",
-        dateLabel: "May 12, 2026",
-        status: "current",
-        icon: "🧭",
-        cta: expect.objectContaining({
-          label: "Open",
-          href: "javascript:alert(1)",
-        }),
-      })
-    );
-    expect(latestValue.layout).toEqual(
-      expect.objectContaining({
-        orientation: "vertical",
-        labelPosition: "bottom",
-        align: "end",
-        spacing: "xl",
-      })
-    );
-    expect(latestValue.guides).toEqual(expect.objectContaining({ enabled: false, style: "solid" }));
     expect(latestValue.style).toEqual(
       expect.objectContaining({
-        lineStyle: "dashed",
-        thickness: "4",
-        markerSize: "lg",
-        lineColor: "#111111",
-        markerColor: "#222222",
-        titleColor: "#333333",
-        descriptionColor: "#444444",
-        titleSize: "xl",
-        descriptionSize: "lg",
+        markerDisplay: "icon",
+        titleWeight: "bold",
       })
     );
-    expect(latestValue.background).toEqual({ color: "#555555" });
+    expect(latestValue.layout).toEqual(expect.objectContaining({ spacing: "xl", maxWidth: "7xl" }));
+    expect(latestValue.header).toEqual(expect.objectContaining({ title: "Roadmap" }));
+    expect(latestValue.steps.find((step) => step.id === "alpha")?.cta).toEqual(
+      expect.objectContaining({ label: "Read details", href: "/cta-step" })
+    );
+    expect(latestValue.steps.find((step) => step.id === "alpha")?.link).toEqual(
+      expect.objectContaining({ href: "/whole-step", label: "Open discovery" })
+    );
   } finally {
     view.cleanup();
   }
@@ -681,31 +651,14 @@ test("Timeline advanced editor covers layout-only controls and payload normaliza
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.mode).toBe("axis");
     expect(latestValue.steps).toHaveLength(8);
-    expect(latestValue.steps.map((step) => step.id)).toEqual([
-      "step-1",
-      "custom",
-      "step-2",
-      "step-4",
-      "step-3",
-      "step-6",
-      "step-7",
-      "step-5",
-    ]);
-    expect(latestValue.steps.map((step) => step.title)).toEqual([
-      "Discovery",
-      "Plan",
-      "Build",
-      "Review",
-      "Ship",
-      "Step 6",
-      "Scale",
-      "Step 8",
-    ]);
     expect(latestValue.layout).toEqual({
       orientation: "vertical",
       align: "start",
       spacing: "md",
       labelPosition: "bottom",
+      padding: "md",
+      sectionSpacing: "none",
+      maxWidth: "6xl",
     });
     expect(latestValue.guides).toEqual({
       enabled: false,

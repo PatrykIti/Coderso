@@ -33,7 +33,7 @@ Wymagane:
 - Spacer (kontrolowany pionowy rytm i odstepy miedzy sekcjami)
 - Divider (wizualny separator sekcji z opcjonalnym podpisem)
 - Hero section
-- Timeline (bez dat; etapy/proces w formie osi)
+- Timeline (proces, milestones, i datowane wydarzenia na osi)
 - Compare timeline (porownanie dwoch procesow na jednej osi)
 - Newsletter signup
 - Kontakt (formularz + dane kontaktowe)
@@ -193,11 +193,11 @@ Use `none` only for visual styling controls that can be disabled:
 
 | Token family | Widgets and fields |
 |---|---|
-| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing`, `compareTimeline.layout.trackSpacing` |
+| Layout gap/spacing/padding | `stack.gap.*`, `splitLayout.gap`, `gridColumns.layout.gapX/gapY`, `gridColumns.style.columnPadding`, `screenTwoColumn.gap`, `statsKpi.style.spacing`, `featureGrid.style.gap`, `contentList.style.gap`, `postsFeed.style.gap`, `galleryMosaic.style.gap`, `pricingPlans.style.spacing`, `faqAccordion.style.spacing`, `team.style.gap`, `testimonials.style.spacing`, `contact.style.spacing`, `newsletter.style.spacing`, `ctaBanner.style.padding`, `logoCloud.style.gap`, `richTextSection.style.spacing`, `timeline.layout.spacing/padding/sectionSpacing`, `compareTimeline.layout.trackSpacing` |
 | Vertical utility rhythm | `divider.marginTop/marginBottom`, `spacer.height.desktop/tablet/mobile` |
 | Radius | `hero.style.borderRadius/mediaRadius`, `entryTeaser.style.radius`, plus existing radius fields on `section`, `ctaBanner`, `featureGrid`, `galleryMosaic`, `pricingPlans`, `team`, and `gridColumns` |
-| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
-| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
+| Width and size | `hero.layout.maxWidth/contentWidth`, `navigation.layout.maxWidth`, `footer.layout.maxWidth`, `formEmbed.layout.width`, `timeline.layout.maxWidth`, `logoCloud.style.logoHeight`, `formEmbed.style.inputSize`, `hero.style.primaryButtonSize/secondaryButtonSize` |
+| Typography | `hero.style.headlineSize/subheadSize/bodySize`, `navigation.style.fontSize/fontWeight`, `footer.style.fontSize`, `richTextSection.style.fontScale/lineHeight`, `timeline.style.titleSize/titleWeight/descriptionSize`, `compareTimeline.style.trackLabelSize/stepLabelSize/segmentLabelSize` |
 
 Legacy numeric zero values remain backward compatible where they already existed
 and continue to render as zero spacing. Do not add `none` to structural choices

@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-291, TASK-291-03
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -28,15 +28,20 @@ The leaf must choose one of two explicit outcomes:
   requires shared runtime motion, TASK-291-07 must create or reference a
   concrete physical future task before closure.
 
+Final outcome: Timeline stays intentionally static. No motion schema,
+editor controls, or runtime classes were added because the original report ask
+centered on scroll-triggered animation and this family did not approve a
+low-signal CSS-only preset surface.
+
 ## Sub-Tasks
 
-- [ ] Decide which motion presets belong to Timeline without broad platform
+- [x] Decide which motion presets belong to Timeline without broad platform
   runtime changes.
-- [ ] Add bounded motion tokens such as `none`, `fade`, and `stagger` only if
+- [x] Add bounded motion tokens such as `none`, `fade`, and `stagger` only if
   they can render without client-side scripts.
-- [ ] Add reduced-motion safe classes/styles and tests.
-- [ ] Add editor controls with clear copy about static vs animated behavior.
-- [ ] If scroll-triggered animation remains required, keep W8 static and defer
+- [x] Add reduced-motion safe classes/styles and tests.
+- [x] Add editor controls with clear copy about static vs animated behavior.
+- [x] If scroll-triggered animation remains required, keep W8 static and defer
   it with an exact shared runtime-motion owner instead of adding a one-off
   script.
 

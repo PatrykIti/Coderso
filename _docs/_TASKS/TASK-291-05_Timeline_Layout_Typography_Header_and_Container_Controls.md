@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-291, TASK-291-01, TASK-291-02, TASK-291-03, TASK-291-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -18,20 +18,24 @@ currently hardcoded in the renderer.
 This leaf owns W1, W5, W9, W11, and W12 from
 `REPORT_TIMELINE_WIDGET.md`.
 
+Final outcome: header/title-weight/padding/section-spacing/max-width
+controls are landed, and axis/milestone layouts now keep date/dateLabel
+metadata visible without inventing a separate hybrid variant.
+
 ## Sub-Tasks
 
-- [ ] Add bounded title font-weight tokens for step titles.
-- [ ] Add bounded section padding controls that replace hardcoded `px-4 py-8`
+- [x] Add bounded title font-weight tokens for step titles.
+- [x] Add bounded section padding controls that replace hardcoded `px-4 py-8`
   without exposing raw class strings.
-- [ ] Add bounded outer section margin controls, or an explicitly named section
+- [x] Add bounded outer section margin controls, or an explicitly named section
   spacing token, so W5's padding/margin request is not reduced to padding only.
-- [ ] Add bounded max-width tokens that replace hardcoded `max-w-6xl`.
-- [ ] Add optional `headerTitle` and `headerDescription` fields for the whole
+- [x] Add bounded max-width tokens that replace hardcoded `max-w-6xl`.
+- [x] Add optional `headerTitle` and `headerDescription` fields for the whole
   Timeline widget.
-- [ ] Decide and implement a truthful horizontal dated milestone composition
+- [x] Decide and implement a truthful horizontal dated milestone composition
   that covers the report's `milestones + chronology` gap, or defer with exact
   constraints in TASK-291-07.
-- [ ] Keep header fields usable as accessible labels for TASK-291-03.
+- [x] Keep header fields usable as accessible labels for TASK-291-03.
 
 ## Files to Change
 

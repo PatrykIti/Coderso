@@ -6,7 +6,7 @@
 **Category:** Widgets + Content + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256-01, TASK-256-04, TASK-299
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -31,7 +31,17 @@ global color-contrast validator, or generic clear/none-token behavior, the
 shared mechanism lands through TASK-256 first and TASK-291 consumes it only for
 Timeline.
 
-## Scope Boundary
+## Closure Outcome
+
+- TASK-291 is now closed for all Timeline-local runtime, editor, test, report,
+  and widget-doc work.
+- Shared contrast guidance is consumed through exact owner `TASK-299`.
+- `W4` remains an explicit Timeline-local deferral: per-step label placement
+  was rejected because only the global `layout.labelPosition` contract stays
+  deterministic across the supported layouts.
+- `W8` remains an explicit no-code/static decision: Timeline does not persist a
+  motion schema or runtime animation classes in this family.
+
 
 TASK-291 implements report rows that are specific to `timeline` data, rendering,
 editor affordances, or product surface.
@@ -122,13 +132,13 @@ TASK-291 explicitly excludes these shared mechanisms:
 
 ## Sub-Tasks
 
-- [ ] TASK-291-01: Timeline Wizard Step Authoring and Status UX
-- [ ] TASK-291-02: Timeline Editor Mode Preview Date Guidance and Reorder UX
-- [ ] TASK-291-03: Timeline Renderer Accessibility Axis and Responsive Correctness
-- [ ] TASK-291-04: Timeline Marker Accent Numbering and Step Link Model
-- [ ] TASK-291-05: Timeline Layout Typography Header and Container Controls
-- [ ] TASK-291-06: Timeline Motion Presets and Reduced-Motion Policy
-- [ ] TASK-291-07: Timeline Report Docs Changelog and Closure
+- [x] TASK-291-01: Timeline Wizard Step Authoring and Status UX
+- [x] TASK-291-02: Timeline Editor Mode Preview Date Guidance and Reorder UX
+- [x] TASK-291-03: Timeline Renderer Accessibility Axis and Responsive Correctness
+- [x] TASK-291-04: Timeline Marker Accent Numbering and Step Link Model
+- [x] TASK-291-05: Timeline Layout Typography Header and Container Controls
+- [x] TASK-291-06: Timeline Motion Presets and Reduced-Motion Policy
+- [x] TASK-291-07: Timeline Report Docs Changelog and Closure
 
 ## Implementation Order
 

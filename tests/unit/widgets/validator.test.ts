@@ -45,6 +45,12 @@ import {
 } from "../../../core/widgets/core/statsKpi";
 import { createStackWidget, type StackData } from "../../../core/widgets/core/stack";
 import { createTeamWidget, teamDefaults } from "../../../core/widgets/core/team";
+import {
+  createTimelineWidget,
+  normalizeTimelineData,
+  timelineDefaults,
+  type TimelineData,
+} from "../../../core/widgets/core/timeline";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { clearWidgetValidators, normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetBlock } from "../../../core/widgets/types";
@@ -1674,6 +1680,142 @@ testTask287StatsKpi(
     ).toThrow("widget_schema_invalid");
   }
 );
+
+test("normalizeWidgetBlock accepts Timeline header, link, and container tokens while rejecting unknown timeline keys", () => {
+  registerWidget(
+    createTimelineWidget({
+      wizard: Dummy,
+      visual: Dummy,
+      advanced: Dummy,
+    })
+  );
+
+  const normalizedTimelineBlock = normalizeWidgetBlock({
+    id: "timeline-runtime",
+    type: "timeline",
+    variant: "cards",
+    data: {
+      ...timelineDefaults,
+      header: {
+        title: "Launch path",
+        description: "Shared milestones",
+      },
+      mode: "chronology",
+      steps: [
+        {
+          id: "timeline-step-1",
+          title: "Discover",
+          status: "current",
+          markerIcon: "rocket",
+          markerIconColor: "#ffffff",
+          markerBackgroundColor: "#0f172a",
+          cta: { label: "Read details", href: "/timeline/discover" },
+          link: { href: "/timeline/discover", label: "Open discovery" },
+        },
+        {
+          id: "timeline-step-2",
+          title: "Plan",
+          link: { href: "javascript:alert(1)", label: "Blocked" },
+        },
+        {
+          id: "timeline-step-3",
+          title: "Ship",
+          date: "2026-05-22",
+          dateLabel: "May 22, 2026",
+        },
+      ],
+      layout: {
+        orientation: "vertical",
+        align: "start",
+        spacing: "lg",
+        labelPosition: "bottom",
+        padding: "lg",
+        sectionSpacing: "md",
+        maxWidth: "7xl",
+      },
+      guides: {
+        enabled: true,
+        style: "dashed",
+      },
+      style: {
+        lineStyle: "dashed",
+        thickness: "3",
+        markerSize: "lg",
+        markerDisplay: "icon",
+        lineColor: "#cbd5e1",
+        markerColor: "#1d4ed8",
+        titleColor: "#0f172a",
+        descriptionColor: "#334155",
+        titleSize: "lg",
+        descriptionSize: "sm",
+        titleWeight: "bold",
+      },
+      background: {
+        color: "#f8fafc",
+      },
+    },
+  });
+
+  expect(normalizedTimelineBlock.variant).toBe("cards");
+  const data = normalizeTimelineData(
+    normalizedTimelineBlock.data as TimelineData,
+    normalizedTimelineBlock.variant
+  );
+  expect(data.header).toEqual({
+    title: "Launch path",
+    description: "Shared milestones",
+  });
+  expect(data.layout).toEqual(
+    expect.objectContaining({
+      orientation: "vertical",
+      padding: "lg",
+      sectionSpacing: "md",
+      maxWidth: "7xl",
+    })
+  );
+  expect(data.style).toEqual(
+    expect.objectContaining({
+      markerDisplay: "icon",
+      titleWeight: "bold",
+    })
+  );
+  expect(data.steps[0]?.link).toEqual({ href: "/timeline/discover", label: "Open discovery" });
+  expect(data.steps[1]?.link).toBeUndefined();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "timeline-header-bad",
+      type: "timeline",
+      variant: "cards",
+      data: {
+        ...timelineDefaults,
+        header: {
+          title: "Launch path",
+          extra: "nope",
+        },
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "timeline-link-bad",
+      type: "timeline",
+      variant: "cards",
+      data: {
+        ...timelineDefaults,
+        steps: [
+          {
+            id: "timeline-step-1",
+            title: "Discover",
+            link: { href: "/timeline/discover", label: "Open discovery", extra: "nope" },
+          },
+          ...timelineDefaults.steps.slice(1),
+        ],
+      } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
 
 test("normalizeWidgetBlock accepts and rejects task-289 Team schema fields", () => {
   registerWidget(

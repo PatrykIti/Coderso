@@ -11,7 +11,7 @@
 - `SPACER.md` - Vertical spacing primitive
 - `DIVIDER.md` - Visual separator primitive
 - `HERO.md` - Hero section
-- `TIMELINE.md` - Timeline (proces bez dat)
+- `TIMELINE.md` - Timeline (proces, milestones, i datowane wydarzenia)
 - `COMPARE_TIMELINE.md` - Compare timeline (porownanie dwoch procesow)
 - `NEWSLETTER.md` - Newsletter signup
 - `CONTACT.md` - Kontakt

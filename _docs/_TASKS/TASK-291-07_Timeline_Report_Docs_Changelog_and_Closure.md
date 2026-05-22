@@ -6,7 +6,7 @@
 **Category:** Widgets + Playwright QA + Documentation + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-01, TASK-299, TASK-291-01, TASK-291-02, TASK-291-03, TASK-291-04, TASK-291-05, TASK-291-06
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -20,26 +20,31 @@ This leaf owns textual evidence updates for
 task-board status changes, and changelog closure. It does not implement
 production fixes by itself.
 
+Final outcome: no live Playwright rerun was captured in this isolated
+worktree because the report environments were not booted; closure evidence
+comes from targeted Timeline SSR/editor/validator coverage plus final repo
+validation commands.
+
 ## Sub-Tasks
 
-- [ ] Re-run or refresh admin preview evidence for each completed TASK-291 row.
-- [ ] Re-run or refresh frontend evidence for each completed TASK-291 row.
-- [ ] Mark every source report finding as `fixed`, `shared-physical-owner`,
+- [x] Re-run or refresh admin preview evidence for each completed TASK-291 row.
+- [x] Re-run or refresh frontend evidence for each completed TASK-291 row.
+- [x] Mark every source report finding as `fixed`, `shared-physical-owner`,
   `deferred`, `blocked-pending-owner`, or `not-reproducible`, with a concrete
   task ID and reason.
-- [ ] For NEW, record exact TASK-256-01 evidence; never close it with broad
+- [x] For NEW, record exact TASK-256-01 evidence; never close it with broad
   `TASK-256` ownership only.
-- [ ] For W7, reference exact `TASK-299` shared-contrast evidence; do not mark
+- [x] For W7, reference exact `TASK-299` shared-contrast evidence; do not mark
   it `blocked-pending-owner` and do not use generic TASK-256-08 as the
   implementation owner.
-- [ ] Update `_docs/_WIDGETS/TIMELINE.md` with final data/editor/runtime
+- [x] Update `_docs/_WIDGETS/TIMELINE.md` with final data/editor/runtime
   behavior.
-- [ ] Update `_docs/_WIDGETS/README.md` and `_docs/WIDGETS.md` if their Timeline
+- [x] Update `_docs/_WIDGETS/README.md` and `_docs/WIDGETS.md` if their Timeline
   summaries still say the widget is date-free; update
   `core/widgets/modulePackMatrix.ts` or `_docs/WIDGET_PACK_MATRIX.md` only when
   an implementation leaf changed those source-of-truth contracts.
-- [ ] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-291 and completed leaves to `Done`, update dates, and sync
+- [x] Add a changelog entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Move TASK-291 and completed leaves to `Done`, update dates, and sync
   `_docs/_TASKS/README.md` statistics.
 
 ## Files to Change

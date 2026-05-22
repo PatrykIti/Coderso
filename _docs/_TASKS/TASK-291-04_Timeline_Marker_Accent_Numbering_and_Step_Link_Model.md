@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-291, TASK-291-01, TASK-291-02, TASK-291-03
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -18,18 +18,23 @@ Playwright report.
 This leaf owns W3, W4, W6, W10, and U6. It must keep schema/defaults/rendering
 strict and beginner-safe.
 
+Final outcome: marker display modes, icon-in-marker rendering, accent
+inheritance, and safe whole-step links are landed. `steps[].labelPosition`
+remains intentionally deferred because only the global `layout.labelPosition`
+field stays truthful across axis, chronology, alternating, and compact layouts.
+
 ## Sub-Tasks
 
-- [ ] Reuse the existing `style.markerColor` inheritance model so per-step
+- [x] Reuse the existing `style.markerColor` inheritance model so per-step
   accents fall back to the configured Timeline marker color instead of manual
   repeated values.
-- [ ] Add bounded marker display modes: dot, number, and icon.
-- [ ] Support icon-in-marker rendering with separate marker background and icon
+- [x] Add bounded marker display modes: dot, number, and icon.
+- [x] Support icon-in-marker rendering with separate marker background and icon
   color controls.
-- [ ] Add per-step label-position override only if it stays deterministic across
+- [x] Add per-step label-position override only if it stays deterministic across
   milestone, compact, chronology, and alternating layouts.
-- [ ] Add optional whole-step links through the shared safe-href normalizer.
-- [ ] Keep existing CTA links backward compatible and avoid nested interactive
+- [x] Add optional whole-step links through the shared safe-href normalizer.
+- [x] Keep existing CTA links backward compatible and avoid nested interactive
   anchors.
 
 ## Files to Change

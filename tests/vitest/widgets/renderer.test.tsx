@@ -11,6 +11,7 @@ import {
 } from "../../../core/widgets/core/compareTimeline";
 import {
   createTimelineWidget,
+  normalizeTimelineSteps,
   timelineDefaults,
   type TimelineData,
 } from "../../../core/widgets/core/timeline";
@@ -744,7 +745,7 @@ test("renderer renders footer column and bottom slot content", () => {
   expect(html).not.toContain(">twitter<");
 });
 
-test("renderer outputs timeline variant and orientation markers", () => {
+test("renderer outputs timeline semantics and container metadata", () => {
   clearWidgets();
   registerWidget(
     createTimelineWidget({
@@ -762,11 +763,38 @@ test("renderer outputs timeline variant and orientation markers", () => {
         variant: "cards",
         data: {
           ...timelineDefaults,
+          header: {
+            title: "Product roadmap",
+            description: "Key milestones for launch",
+          },
           layout: {
             ...timelineDefaults.layout,
             orientation: "vertical",
             labelPosition: "bottom",
+            padding: "lg",
+            maxWidth: "7xl",
           },
+          style: {
+            ...timelineDefaults.style,
+            markerDisplay: "icon",
+          },
+          steps: normalizeTimelineSteps([
+            {
+              id: "timeline-step-1",
+              title: "Discover",
+              status: "current",
+              markerIcon: "rocket",
+              link: { href: "/timeline/discover", label: "Open discovery" },
+            },
+            {
+              id: "timeline-step-2",
+              title: "Plan",
+            },
+            {
+              id: "timeline-step-3",
+              title: "Ship",
+            },
+          ]),
         },
       }}
     />
@@ -775,6 +803,13 @@ test("renderer outputs timeline variant and orientation markers", () => {
   expect(html).toContain('data-timeline-variant="cards"');
   expect(html).toContain('data-timeline-orientation="vertical"');
   expect(html).toContain('data-timeline-label-position="bottom"');
+  expect(html).toContain('data-timeline-padding="lg"');
+  expect(html).toContain('data-timeline-max-width="7xl"');
+  expect(html).toContain('data-timeline-marker-display="icon"');
+  expect(html).toContain('aria-label="Product roadmap steps"');
+  expect(html).toContain('aria-current="step"');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain('href="/timeline/discover"');
 });
 
 test("renderer outputs compare timeline highlight segments", () => {

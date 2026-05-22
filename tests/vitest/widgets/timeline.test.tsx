@@ -12,9 +12,9 @@ import {
   TimelineBlock,
   createTimelineWidget,
   normalizeTimelineData,
-  resolveTimelineMode,
   normalizeTimelineStepCount,
   normalizeTimelineSteps,
+  resolveTimelineMode,
   timelineDefaults,
   timelineStepMax,
   type TimelineData,
@@ -25,13 +25,17 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 
-test("timeline renders defaults", () => {
+test("timeline renders defaults with container metadata", () => {
   const html = renderToString(<TimelineBlock data={timelineDefaults} variant="milestones" />);
   expect(html).toContain(timelineDefaults.steps[0]?.title ?? "");
   expect(html).toContain('data-timeline-variant="milestones"');
   expect(html).toContain('data-timeline-mode="axis"');
   expect(html).toContain('data-timeline-orientation="horizontal"');
   expect(html).toContain('data-timeline-label-position="top"');
+  expect(html).toContain('data-timeline-padding="md"');
+  expect(html).toContain('data-timeline-max-width="6xl"');
+  expect(html).toContain('data-timeline-marker-display="dot"');
+  expect(html).toContain('data-timeline-title-weight="semibold"');
 });
 
 test("timeline normalizes step count and keeps IDs unique", () => {
@@ -55,7 +59,7 @@ test("timeline step count clamp respects min and max", () => {
   expect(normalizeTimelineStepCount(99)).toBe(timelineStepMax);
 });
 
-test("timeline validator accepts extended model fields", () => {
+test("timeline validator accepts extended model fields and normalizes safe links", () => {
   clearWidgets();
   registerWidget(
     createTimelineWidget({
@@ -71,18 +75,31 @@ test("timeline validator accepts extended model fields", () => {
     variant: "cards",
     data: {
       ...timelineDefaults,
+      header: {
+        title: "Roadmap",
+        description: "Quarterly milestones",
+      },
       mode: "alternating",
       steps: normalizeTimelineSteps(timelineDefaults.steps, 4).map((step, index) => ({
         ...step,
         accent: index === 0 ? "#1d4ed8" : undefined,
+        markerIcon: index === 0 ? "rocket" : undefined,
+        markerIconColor: index === 0 ? "#ffffff" : undefined,
+        markerBackgroundColor: index === 0 ? "#0f172a" : undefined,
         date: `2026-05-0${index + 1}`,
         dateLabel: `May ${index + 1}, 2026`,
-        status: index === 1 ? "current" : "upcoming",
+        status: index === 1 ? "current" : undefined,
         cta:
           index === 0
             ? { label: "Read step", href: "/timeline-step" }
             : index === 1
               ? { label: "Blocked", href: "javascript:alert(1)" }
+              : undefined,
+        link:
+          index === 2
+            ? { href: "/whole-step", label: "Open whole step" }
+            : index === 3
+              ? { href: "javascript:alert(1)", label: "Bad" }
               : undefined,
       })),
       layout: {
@@ -90,6 +107,9 @@ test("timeline validator accepts extended model fields", () => {
         align: "start",
         spacing: "lg",
         labelPosition: "bottom",
+        padding: "lg",
+        sectionSpacing: "md",
+        maxWidth: "7xl",
       },
       guides: {
         enabled: true,
@@ -99,10 +119,14 @@ test("timeline validator accepts extended model fields", () => {
         lineStyle: "dashed",
         thickness: "3",
         markerSize: "lg",
+        markerDisplay: "icon",
         lineColor: "#cbd5e1",
         markerColor: "#1d4ed8",
+        titleColor: "#0f172a",
+        descriptionColor: "#334155",
         titleSize: "lg",
         descriptionSize: "sm",
+        titleWeight: "bold",
       },
       background: {
         color: "#f8fafc",
@@ -113,13 +137,29 @@ test("timeline validator accepts extended model fields", () => {
   expect(normalized.variant).toBe("cards");
   const data = normalized.data as TimelineData;
   const normalizedData = normalizeTimelineData(data, normalized.variant);
+  expect(normalizedData.header).toEqual({ title: "Roadmap", description: "Quarterly milestones" });
   expect(normalizedData.mode).toBe("alternating");
-  expect(normalizedData.layout?.spacing).toBe("lg");
-  expect(normalizedData.style?.thickness).toBe("3");
-  expect(normalizedData.style?.titleSize).toBe("lg");
+  expect(normalizedData.layout).toEqual(
+    expect.objectContaining({
+      spacing: "lg",
+      padding: "lg",
+      sectionSpacing: "md",
+      maxWidth: "7xl",
+    })
+  );
+  expect(normalizedData.style).toEqual(
+    expect.objectContaining({
+      thickness: "3",
+      markerDisplay: "icon",
+      titleSize: "lg",
+      titleWeight: "bold",
+    })
+  );
   expect(normalizedData.background?.color).toBe("#f8fafc");
   expect(normalizedData.steps[0]?.cta).toEqual({ label: "Read step", href: "/timeline-step" });
   expect(normalizedData.steps[1]?.cta).toBeUndefined();
+  expect(normalizedData.steps[2]?.link).toEqual({ href: "/whole-step", label: "Open whole step" });
+  expect(normalizedData.steps[3]?.link).toBeUndefined();
 });
 
 test("timeline cleared background omits section style while semantic markers remain readable", () => {
@@ -235,12 +275,49 @@ test("timeline resolves legacy variants to compatibility modes", () => {
   expect(resolveTimelineMode(undefined, "compact")).toBe("process");
 });
 
-test("timeline renders chronology metadata and strips unsafe CTA links", () => {
+test("timeline renderer adds section labels, list labels, current-step semantics, and hides decorative icons", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        header: {
+          title: "Roadmap",
+          description: "Shared milestones",
+        },
+        steps: normalizeTimelineSteps([
+          {
+            id: "step-1",
+            title: "Discover",
+            icon: "compass",
+            status: "current",
+            link: { href: "/discover", label: "Open discovery" },
+          },
+          { id: "step-2", title: "Plan" },
+          { id: "step-3", title: "Ship" },
+        ]),
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(html).toContain('aria-labelledby="timeline-heading-roadmap"');
+  expect(html).toContain('aria-label="Roadmap steps"');
+  expect(html).toContain('aria-current="step"');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain('href="/discover"');
+  expect(html).toContain('aria-label="Open discovery"');
+});
+
+test("timeline chronology, alternating, and cards layouts reflect runtime bug fixes", () => {
   const html = renderToString(
     <TimelineBlock
       data={{
         ...timelineDefaults,
         mode: "chronology",
+        style: {
+          ...timelineDefaults.style,
+          lineStyle: "dashed",
+        },
         steps: normalizeTimelineSteps([
           {
             id: "step-1",
@@ -249,13 +326,11 @@ test("timeline renders chronology metadata and strips unsafe CTA links", () => {
             date: "2026-05-11",
             dateLabel: "May 11, 2026",
             status: "current",
-            cta: { label: "View notes", href: "javascript:alert(1)" },
           },
           {
             id: "step-2",
             title: "Iterate",
             dateLabel: "Next week",
-            cta: { label: "Plan sprint", href: "/sprint" },
           },
           {
             id: "step-3",
@@ -267,10 +342,96 @@ test("timeline renders chronology metadata and strips unsafe CTA links", () => {
     />
   );
 
-  expect(html).toContain('data-timeline-mode="chronology"');
-  expect(html).toContain("May 11, 2026");
+  expect(html).toContain("md:grid-cols-[minmax(0,clamp(8rem,24vw,14rem))_minmax(0,1fr)]");
+  expect(html).not.toContain("md:grid-cols-[10rem_1fr]");
   expect(html).toContain('dateTime="2026-05-11"');
-  expect(html).toContain('data-timeline-status="current"');
-  expect(html).toContain('href="/sprint"');
-  expect(html).not.toContain("javascript:alert");
+
+  const alternatingHtml = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        mode: "alternating",
+        steps: normalizeTimelineSteps([
+          { id: "step-1", title: "Discover", dateLabel: "Week 1" },
+          { id: "step-2", title: "Plan", dateLabel: "Week 2" },
+          { id: "step-3", title: "Ship", dateLabel: "Week 3" },
+        ]),
+      }}
+      variant="cards"
+    />
+  );
+
+  expect(alternatingHtml).toContain("md:hidden");
+  expect(alternatingHtml).not.toContain("hidden md:block");
+
+  const cardsHtml = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        style: {
+          ...timelineDefaults.style,
+          lineStyle: "dashed",
+        },
+      }}
+      variant="cards"
+    />
+  );
+
+  expect(cardsHtml).toContain("border-top-style:dashed");
+  expect(cardsHtml).toContain(
+    "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4"
+  );
+
+  const milestonesHtml = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        steps: normalizeTimelineSteps(timelineDefaults.steps, 4),
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(milestonesHtml).toContain("overflow-x-auto");
+  expect(milestonesHtml).not.toContain("width:4rem");
+});
+
+test("timeline whole-step links stay safe and do not nest with CTA links", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        style: {
+          ...timelineDefaults.style,
+          markerDisplay: "icon",
+        },
+        steps: normalizeTimelineSteps([
+          {
+            id: "step-1",
+            title: "Discover",
+            markerIcon: "rocket",
+            markerBackgroundColor: "#0f172a",
+            markerIconColor: "#ffffff",
+            link: { href: "/whole-step", label: "Open discovery" },
+          },
+          {
+            id: "step-2",
+            title: "Plan",
+            cta: { label: "Read details", href: "/cta-step" },
+            link: { href: "/suppressed-whole-step", label: "Should not render" },
+          },
+          {
+            id: "step-3",
+            title: "Ship",
+          },
+        ]),
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(html).toContain('href="/whole-step"');
+  expect(html).toContain('href="/cta-step"');
+  expect(html).not.toContain("/suppressed-whole-step");
+  expect(html).toContain('data-timeline-marker-display="icon"');
 });
