@@ -681,13 +681,13 @@ const normalizeSectionBackgroundMedia = (
 };
 
 const resolveSectionBorderWidth = (value: string | undefined): SectionBorderWidth => {
-  if (value === "0" || value === "2" || value === "3") return value;
-  return "1";
+  if (value === "0" || value === "1" || value === "2" || value === "3") return value;
+  return sectionDefaults.style?.borderWidth ?? "0";
 };
 
 const resolveSectionRadius = (value: string | undefined): SectionRadius => {
-  if (value === "none" || value === "lg" || value === "xl") return value;
-  return "2xl";
+  if (value === "none" || value === "lg" || value === "xl" || value === "2xl") return value;
+  return sectionDefaults.style?.radius ?? "none";
 };
 
 const resolveOptionalSectionShadow = (value: string | undefined): SectionShadow | undefined => {

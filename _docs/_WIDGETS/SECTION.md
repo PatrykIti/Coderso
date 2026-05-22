@@ -50,9 +50,9 @@ Notes:
 - Width, min-height, region flow, and spacing are bounded by schema-owned
   layout tokens instead of raw CSS fields.
 - Width controls use friendly labels such as `7XL (80rem / 1280px)`, and the
-  editor guidance explains that `Wide` currently shares the same base wrapper as
-  `Content` while true edge-to-edge still needs `Bleed` + `Full-width wrapper` +
-  `No max width`.
+  editor guidance explains that `Wide alias` intentionally shares the same
+  wrapper classes as `Content`; visible widening comes from `Max width`, while
+  true edge-to-edge still needs `Bleed` + `Full-width wrapper` + `No max width`.
 - Grid columns stay inactive until `layout.regionFlow = "grid"`, and `regionGap`
   can remain unset to keep the legacy variant spacing contract.
 - Responsive padding overrides now use the same bounded padding tokens with
@@ -72,8 +72,8 @@ Notes:
 
 ### Advanced
 - semantics tokens (`anchorId`, `ariaLabel`)
-- surface numeric tokens (`gradientAngle`, `overlayOpacity`)
 - normalized payload snapshot for diagnostics
+- no duplicated surface numeric controls; `gradientAngle` and `overlayOpacity` stay in Visual
 
 ## Local Presets
 

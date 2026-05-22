@@ -296,6 +296,30 @@ test("section normalization keeps deterministic style and layout bounds", () => 
   expect(resolveSectionVariant("unknown")).toBe("default");
 });
 
+test("section normalization falls back to declared border and radius defaults for invalid values", () => {
+  const invalid = normalizeSectionData({
+    style: {
+      borderWidth: "9" as never,
+      radius: "round" as never,
+    },
+  });
+  const explicit = normalizeSectionData({
+    style: {
+      borderWidth: "1",
+      radius: "2xl",
+    },
+  });
+
+  expect(invalid.style).toMatchObject({
+    borderWidth: "0",
+    radius: "none",
+  });
+  expect(explicit.style).toMatchObject({
+    borderWidth: "1",
+    radius: "2xl",
+  });
+});
+
 test("section grid columns clamp only when grid flow is active", () => {
   const gridNormalized = normalizeSectionData({
     layout: {
@@ -791,4 +815,6 @@ test("section editors render expected sections", () => {
   );
   expect(advancedHtml).toContain("Technical tokens");
   expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("Gradient angle");
+  expect(advancedHtml).not.toContain("Overlay opacity");
 });

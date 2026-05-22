@@ -34,7 +34,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 - **Wizard** — szybki start: quick presets, ten sam card UI wariantów co Visual, label, tytuł, opis, kolor tła
 - **Visual** — pełna kontrola: quick presets, wariant (karty), heading copy/level/alignment/size/color, semantics, szerokość/padding, surface/borders, shadow/motion, i derived surface preview
-- **Advanced** — tokeny techniczne: anchorId, ariaLabel, raw JSON snapshot; `gradientAngle` i `overlayOpacity` nadal są zdublowane z Visual i pozostają shared drift ownerem `TASK-326`
+- **Advanced** — tokeny techniczne: `anchorId`, `ariaLabel`, oraz raw JSON snapshot do diagnostyki; `gradientAngle` i `overlayOpacity` należą już wyłącznie do Visual po domknięciu `TASK-326`
 
 ### 2.3 Renderowanie
 
@@ -78,10 +78,10 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | # | Problem | Lokalizacja |
 |---|---------|-------------|
-| B1 | `resolveSectionBorderWidth`: wartość niestandardowa daje `"1"` (fallback), ale default to `"0"` — niespójność | `section.tsx:515` |
-| B2 | `resolveSectionRadius`: wartość niestandardowa daje `"2xl"` zamiast `"none"` (brak spójności z defaults) | `section.tsx:520` |
-| B3 | `containerWidth: "content"` i `"wide"` generują identyczne klasy CSS (`mx-auto w-full`) — różnica tylko w intencji, brak wizualnego efektu | `section.tsx:254` |
-| B4 | `gradientAngle` i `overlayOpacity` są zduplikowane w Visual i Advanced edytorze — podwójne pola dla tej samej wartości | `SectionEditors.tsx:1473,1564,1868,1887` |
+| B1 | Zamknięte (2026-05-22, TASK-326): `resolveSectionBorderWidth` dla wartości niestandardowej wraca teraz do rzeczywistego defaultu `"0"` zamiast mylącego `"1"` | `section.tsx:683` |
+| B2 | Zamknięte (2026-05-22, TASK-326): `resolveSectionRadius` dla wartości niestandardowej wraca teraz do rzeczywistego defaultu `"none"` zamiast `"2xl"` | `section.tsx:688` |
+| B3 | Zamknięte (2026-05-22, TASK-326): szerokość jest teraz opisana truthfully jako `Wide alias (same wrapper)`, a guidance wskazuje `Max width` lub `Full-width wrapper` dla widocznego poszerzenia | `SectionEditors.tsx:115,1931-1933` |
+| B4 | Zamknięte (2026-05-22, TASK-326): `gradientAngle` i `overlayOpacity` należą już tylko do Visual, a Advanced zostaje panelem semantyki + snapshotu | `SectionEditors.tsx:1982,2111,2404-2435` |
 | B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`), ale shared color swatch nadal nadpisuje je hexem przy zmianie pickera — reopened owner `TASK-327` | `SectionEditors.tsx:1493` |
 
 ### 3.4 Ulepszenia UX edytora
@@ -134,7 +134,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Element (section / div) | ✅ Działa | Zmienia outer HTML element |
 | Anchor ID | Historyczne | W sesji 2026-05-16 brakowało walidacji; bieżący baseline po TASK-256-05-01 sanitizuje `anchorId` przed persistence/render |
 | Aria label | ✅ Działa | Poprawnie dodawane jako `aria-label` |
-| Container width (Content / Wide / Full) | ⚠️ Problem | „Content" i „Wide" dają IDENTYCZNE klasy CSS (`mx-auto w-full`) — brak wizualnej różnicy |
+| Container width (Content / Wide / Full) | ✅ Działa | `Wide alias` świadomie reuseuje te same klasy wrappera co `Content`; widoczne poszerzenie idzie przez `Max width`, a `Full-width wrapper` zostaje osobnym wyborem |
 | Max width (4xl–7xl) | ✅ Działa | Friendly labels pokazują rem/px, ale zapisane tokeny pozostają `4xl`–`7xl` |
 | Vertical padding (sm/md/lg/xl) | ✅ Działa | |
 | Side padding (none/sm/md/lg) | ✅ Działa | |
@@ -159,8 +159,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 |------|-------|-------|
 | Anchor ID | ✅ Działa | Pole zsynchronizowane z Visual |
 | Aria label | ✅ Działa | |
-| Gradient angle (duplikat z Visual) | ❌ Shared drift | To samo pole co w Visual — zbędna duplikacja, owner `TASK-326` |
-| Overlay opacity (duplikat z Visual) | ❌ Shared drift | To samo pole co w Visual — zbędna duplikacja, owner `TASK-326` |
+| Semantics-only panel | ✅ Działa | Advanced trzyma teraz tylko `anchorId`, `ariaLabel`, i normalized snapshot; `gradientAngle` / `overlayOpacity` pozostały wyłącznie w Visual po TASK-326 |
 | Raw payload snapshot | ✅ Działa | JSON poprawnie odzwierciedla aktualny stan |
 | Layout (Container, Padding top/bottom, Margin top/bottom) | ✅ Działa | Globalny system layoutu strony — oddzielny od Section's własnego layoutu |
 | Visibility (Desktop/Tablet/Mobile toggle) | ✅ Działa | Globalne przełączniki widoczności — nie ma w `SectionData` |
@@ -176,7 +175,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | `bleed` + `full container` | `w-full [maxWidth]` | brak | `gap-8` | Uwaga: bez `mx-auto` i bez `paddingInline` |
 | `bleed` + `content container` | `mx-auto w-full [maxWidth] [paddingInline]` | brak | `gap-8` | Mylące: variant "bleed" bez zmian w containerWidth nie daje efektu bleed |
 
-**Problem Bleed:** Rzeczywisty edge-to-edge nadal wymaga DODATKOWO ustawienia `containerWidth: full` i `maxWidth: none`. TASK-283-04 urealnił copy edytora do `Expanded section band. Pair with Full-width wrapper + No max width for true edge-to-edge.`, ale bazowa semantyka `content` / `wide` / `bleed` pozostaje shared ownerem `TASK-326`.
+**Bleed baseline po TASK-326:** Rzeczywisty edge-to-edge nadal wymaga DODATKOWO ustawienia `containerWidth: full` i `maxWidth: none`, ale editor copy mówi już o tym wprost: `Wide alias` reuseuje wrapper `Content`, a `Bleed` zmienia section band dopóki autor świadomie nie wybierze `Full-width wrapper` i `No max width`.
 
 #### 4.2.5 Weryfikacja DOM
 
@@ -216,7 +215,7 @@ Struktura HTML (historyczna sesja 2026-05-16 — Default variant):
 - Heading title było hardcoded `<h3>` w sesji 2026-05-16; baseline został zamknięty w TASK-256-05-01, a otwarte pozostaje dopiero konfigurowalne `h1`–`h6` z TASK-283-03.
 - Regiony były zawsze `flex flex-col` w sesji 2026-05-16; issue C5 jest zamknięte od 2026-05-21 przez TASK-283-01.
 - Anchor ID z nieprawidłowymi znakami był akceptowany w sesji 2026-05-16; issue W10 jest zamknięte od 2026-05-17 przez TASK-256-05-01.
-- `content` i `wide` containerWidth — identyczne klasy CSS ← Potwierdzone Issue B3
+- `content` i `wide` containerWidth — identyczne klasy CSS zgodnie z jawną semantyką `Wide alias` po TASK-326
 
 ---
 
@@ -344,8 +343,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
-| **P0** | TASK-326 — domknąć shared truthfulness drift: fallback `borderWidth` / `radius`, dublowanie `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed` | Niski–Średni | Poprawność normalizacji / Truthfulness UI |
-| **P1** | TASK-283-05-02 — po `TASK-326` zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX bez dublowania ownera | Średni | UX edytora / Truthfulness |
+| **P1** | TASK-283-05-02 — zamienić pozostałe numeric-only pola `gradientAngle` / `overlayOpacity` na finalny slider/stepper UX na pojedynczym ownerze Visual | Średni | UX edytora / Truthfulness |
 | **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
 | **P3** | TASK-283-08 — zsynchronizować końcowe report/docs/changelog/board po domknięciu wszystkich owner leaves | Niski | Evidence hygiene |
 
@@ -370,11 +368,8 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 ### Co wymaga poprawy ❌
 
-- **Bleed variant**: rzeczywisty edge-to-edge nadal wymaga dodatkowo `containerWidth: full` i `maxWidth: none`; shared owner `TASK-326` ma domknąć bazową semantykę kontrolek.
-- **Shared truthfulness**: obecne Section owner nadal ma błędne fallback defaults, zdublowane `gradientAngle` / `overlayOpacity`, oraz obecne semantyki `content` / `wide` / `bleed`; to zostało wycięte do `TASK-326` zamiast lokalnej łaty w `TASK-283`.
 - **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
-- **Angle/opacity UX**: finalne slider/stepper controls czekają na `TASK-283-05-02` po domknięciu shared owner drift w `TASK-326`.
-- **Container width „Content" vs „Wide"**: identyczne CSS — shared truthfulness drift ownerem jest `TASK-326`, nie lokalny leaf TASK-283.
+- **Angle/opacity UX**: finalne slider/stepper controls pozostają w `TASK-283-05-02`; po TASK-326 mają już jeden truthfully owned surface w Visual, ale wciąż są numeric-only.
 
 ### Uwagi do sesji testowej
 
@@ -391,6 +386,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   the shared render-context path and stay visible only in editor/admin preview.
 - `TASK-256-05-01`: anchor IDs are now sanitized before persistence/render, and
   the default section heading level moved off the hardcoded `<h3>` path.
+- `TASK-326`: shared Section truthfulness is now closed: invalid `borderWidth` / `radius`
+  values fall back to the actual defaults, `gradientAngle` / `overlayOpacity` stay
+  owned only by Visual, and the width/bleed guidance now names `Wide alias` plus
+  the explicit edge-to-edge requirements without inventing a new runtime layout.
 - `TASK-283-01`: Section now owns bounded `minHeight`, `regionFlow`,
   `regionColumns`, `headingGap`, and optional `regionGap`, so report findings
   C1, C5, W7, and W8 are no longer active.
@@ -409,7 +408,8 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   and insert-target selectors can show author labels without changing public
   runtime output.
 - Targeted evidence for the current 2026-05-22 audit:
-  - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/ui/widgetInsertUtils.test.ts` passed.
-  - `bunx vitest run --config vitest.config.ts tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx` passed.
-  - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `set -a && source .env && set +a && bun run gates:coderso` passed during the latest TASK-283-07 implementation pass.
+  - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx` passed for the shared TASK-326 owner split.
+  - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run lint` passed on the finalized TASK-326 worktree state.
+  - `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso` passed after providing the dedicated worktree with a temporary local `.env` symlink for the gate wrapper.
+  - `bun run precommit` and `git diff --check` passed on the completed shared closure.
   - `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are missing; `bun audit` ran successfully inside the command.

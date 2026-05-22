@@ -6,7 +6,7 @@
 **Category:** Widgets + Section + Shared Contract + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256, TASK-256-05-01, TASK-283
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -59,15 +59,15 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Align `resolveSectionBorderWidth` and `resolveSectionRadius` fallback
+- [x] Align `resolveSectionBorderWidth` and `resolveSectionRadius` fallback
   behavior with `sectionDefaults` and prove the contract in focused Section
   runtime tests.
-- [ ] Remove duplicated `gradientAngle` and `overlayOpacity` ownership from
+- [x] Remove duplicated `gradientAngle` and `overlayOpacity` ownership from
   Section Visual/Advanced modes and update the focused editor-wave coverage to
   match the final mode contract.
-- [ ] Make `content` / `wide` / `bleed` editor copy and behavior truthful for
+- [x] Make `content` / `wide` / `bleed` editor copy and behavior truthful for
   the current runtime without silently inventing new width semantics.
-- [ ] Update the Section report/task ownership docs so reopened shared
+- [x] Update the Section report/task ownership docs so reopened shared
   truthfulness findings no longer masquerade as already-fixed TASK-256 work or
   as widget-local TASK-283 scope.
 
@@ -166,7 +166,7 @@ No API routes are added.
 - Update `_docs/_WIDGETS/SECTION.md` if current Section editor/runtime behavior
   changes.
 - Update `_docs/_TASKS/README.md`.
-- Add a changelog entry only when `TASK-326` is actually completed.
+- Add the changelog entry and board sync for the completed shared closure.
 
 ## Acceptance Criteria
 
@@ -178,3 +178,15 @@ No API routes are added.
   behavior that does not exist.
 - Section report and task ownership clearly distinguish reopened shared drift
   from the remaining widget-local TASK-283 leaves.
+
+## Validation Notes
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx`
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun run gates:coderso` (the dedicated worktree used a temporary local `.env` symlink because it does not carry its own env file)
+- `bun run precommit`
+- `git diff --check`
+- `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are unavailable; `bun audit` ran inside the command.

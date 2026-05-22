@@ -558,8 +558,8 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     expect(findInputByPlaceholder(surfaceSection, "#000000")?.value).toBe("overlay-token");
     expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
 
-    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
-    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("2xl");
+    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("0");
+    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("none");
     expect(
       findSelectByOptions(surfaceSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
         .value
@@ -954,7 +954,9 @@ test("Section editor presets preserve heading copy and expose friendly width and
     if (!(spacingSection instanceof HTMLElement)) {
       throw new Error("Missing width and spacing section");
     }
-    expect(spacingSection.textContent).toContain("`Wide` keeps the same base wrapper as `Content`");
+    expect(spacingSection.textContent).toContain(
+      "`Wide alias` keeps the same wrapper classes as `Content`"
+    );
     expect(spacingSection.textContent).toContain("Full-width wrapper");
     const maxWidthSelect = findSelectByOptions(spacingSection, [
       "none",
@@ -1229,7 +1231,7 @@ test("Section visual editor resolves decorative background video and poster asse
   }
 });
 
-test("Section advanced editor clamps non-finite and out-of-range technical token values", async () => {
+test("Section advanced editor keeps semantics fields while surface controls own angle and opacity normalization", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
@@ -1245,9 +1247,7 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
       throw new Error("Missing technical tokens section");
     }
 
-    const [angleInput, opacityInput] = findNumberInputs(technicalTokensSection);
-    expect(angleInput?.value).toBe("180");
-    expect(opacityInput?.value).toBe("0");
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     setInputValue(
       findInputByPlaceholder(technicalTokensSection, "section-anchor"),
@@ -1257,6 +1257,15 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
       findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
       "Team overview section"
     );
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
+    expect(angleInput?.value).toBe("180");
+    expect(opacityInput?.value).toBe("0");
     setInputValue(angleInput, "-12");
     setInputValue(opacityInput, "125");
 
@@ -1377,9 +1386,7 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
       throw new Error("Missing technical tokens section");
     }
 
-    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
-    expect(advancedAngleInput?.value).toBe("180");
-    expect(advancedOpacityInput?.value).toBe("0");
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"gradientAngle": 180');
@@ -1389,7 +1396,7 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
   }
 });
 
-test("Section advanced technical tokens round decimals, clamp boundaries, and stay synchronized with surface controls", async () => {
+test("Section surface numeric controls round decimals, clamp boundaries, and stay visible in the advanced snapshot", async () => {
   const view = await renderEditors({
     initialValue: {
       semantics: {
@@ -1409,22 +1416,16 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
       throw new Error("Missing technical tokens section");
     }
 
-    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
     setInputValue(findInputByPlaceholder(technicalTokensSection, "section-anchor"), "wave-layout");
     setInputValue(
       findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
       "Wave layout section"
     );
-    setInputValue(advancedAngleInput, "44.6");
-    setInputValue(advancedOpacityInput, "15.5");
 
     expect(view.getLatestValue().semantics).toMatchObject({
       anchorId: "wave-layout",
       ariaLabel: "Wave layout section",
-    });
-    expect(view.getLatestValue().style).toMatchObject({
-      gradientAngle: 45,
-      overlayOpacity: 16,
     });
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
@@ -1433,6 +1434,13 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
     }
 
     const [surfaceAngleInput, surfaceOpacityInput] = findNumberInputs(surfaceSection);
+    setInputValue(surfaceAngleInput, "44.6");
+    setInputValue(surfaceOpacityInput, "15.5");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 45,
+      overlayOpacity: 16,
+    });
     expect(surfaceAngleInput?.value).toBe("45");
     expect(surfaceOpacityInput?.value).toBe("16");
 
@@ -1443,8 +1451,8 @@ test("Section advanced technical tokens round decimals, clamp boundaries, and st
       gradientAngle: 360,
       overlayOpacity: 0,
     });
-    expect(advancedAngleInput?.value).toBe("360");
-    expect(advancedOpacityInput?.value).toBe("0");
+    expect(surfaceAngleInput?.value).toBe("360");
+    expect(surfaceOpacityInput?.value).toBe("0");
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"anchorId": "wave-layout"');
@@ -1596,6 +1604,7 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value).toBe(
       ""
     );
+    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"gradientAngle": 180');

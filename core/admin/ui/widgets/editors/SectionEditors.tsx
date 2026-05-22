@@ -73,7 +73,7 @@ const variantOptions: Array<{
     id: "bleed",
     label: "Bleed",
     description:
-      "Expanded section band. Pair with Full-width wrapper + No max width for true edge-to-edge.",
+      "Expanded section band. Still uses current wrapper settings; pair with Full-width wrapper + No max width for true edge-to-edge.",
   },
 ];
 
@@ -112,7 +112,7 @@ const motionOptions: Array<{ id: SectionMotion; label: string }> = [
 
 const containerWidthOptions: Array<{ id: SectionContainerWidth; label: string }> = [
   { id: "content", label: "Content wrapper" },
-  { id: "wide", label: "Wide wrapper" },
+  { id: "wide", label: "Wide alias (same wrapper)" },
   { id: "full", label: "Full-width wrapper" },
 ];
 
@@ -1928,9 +1928,9 @@ export function SectionVisualEditor({
           </WidgetControlRow>
         </div>
         <p className="text-xs text-muted-foreground">
-          `Wide` keeps the same base wrapper as `Content`; increase max width below when you want a
-          visibly wider section without switching to full bleed. For true edge-to-edge, pair `Bleed`
-          with `Full-width wrapper` and `No max width`.
+          `Wide alias` keeps the same wrapper classes as `Content`; use a larger Max width below
+          when you want a visibly wider section. `Bleed` changes the section band styling, but true
+          edge-to-edge still needs `Full-width wrapper` and `No max width`.
         </p>
         <p className="text-xs text-muted-foreground">
           Grid columns stay inactive until Region flow is set to Grid. Leaving Region gap on Match
@@ -2402,7 +2402,7 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
     <div className="space-y-4">
       <WidgetEditorSection
         title="Technical tokens"
-        description="Fine-grained values for semantics and surface tokens."
+        description="Semantics fields and a normalized snapshot for technical diagnostics."
         id="section.technical-tokens"
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -2432,46 +2432,6 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
                   updateSemantics(value, onChange, { ariaLabel: event.target.value })
                 }
                 placeholder="Descriptive section label"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-            )}
-          </WidgetControlRow>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <WidgetControlRow id="section.advanced.gradientAngle" label="Gradient angle">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
-                type="number"
-                min={0}
-                max={360}
-                value={String(clampAngle(normalized.style?.gradientAngle))}
-                onChange={(event) =>
-                  updateStyle(value, onChange, {
-                    gradientAngle: clampAngle(Number(event.target.value)),
-                  })
-                }
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-            )}
-          </WidgetControlRow>
-
-          <WidgetControlRow id="section.advanced.overlayOpacity" label="Overlay opacity">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
-                type="number"
-                min={0}
-                max={100}
-                value={String(clampOpacity(normalized.style?.overlayOpacity))}
-                onChange={(event) =>
-                  updateStyle(value, onChange, {
-                    overlayOpacity: clampOpacity(Number(event.target.value)),
-                  })
-                }
                 aria-labelledby={fieldProps["aria-labelledby"]}
                 aria-describedby={fieldProps["aria-describedby"]}
               />
