@@ -37,6 +37,17 @@ content remains readable while newer content can target breakpoints:
 }
 ```
 
+Read/write contract:
+
+- The normalizer must accept legacy scalar `align`, `justify`, and `wrap`
+  values and project them to all three breakpoints at read time.
+- Once a Stack editor writes `align`, `justify`, or `wrap`, it must persist the
+  full breakpoint object shape so stored payloads stay deterministic after
+  interactive edits.
+- Compatibility markers `data-stack-align`, `data-stack-justify`, and
+  `data-stack-wrap` remain present and must always mirror the resolved mobile
+  breakpoint values. New breakpoint markers carry the full responsive truth.
+
 ## Scope Boundary
 
 This leaf does not repair variant-to-direction sync, duplicate zero gap tokens,
@@ -64,8 +75,8 @@ in scope because Stack already uses those for `direction` and `gap`.
   `data-stack-justify-desktop|tablet|mobile`, and
   `data-stack-wrap-desktop|tablet|mobile`.
 - [ ] Keep existing `data-stack-align`, `data-stack-justify`, and
-  `data-stack-wrap` as compatibility markers using mobile/current effective
-  values until docs can retire them.
+  `data-stack-wrap` as compatibility markers that always mirror the resolved
+  mobile breakpoint values until docs can retire them.
 - [ ] Update Visual and Advanced editors with breakpoint-aware controls.
 
 ## Files to Change
@@ -160,6 +171,30 @@ Error handling:
 - Unknown nested breakpoint keys are rejected by schema.
 - Unknown values normalize to defaults and must not produce undefined class map
   lookups.
+- Interactive editor writes must not leave mixed scalar/object state for the
+  touched field after the change is applied.
+
+## Regression Test Shape
+
+- `tests/vitest/widgets/stack.test.tsx`
+  - Accept legacy scalar `align`, `justify`, and `wrap`, normalize them to full
+    breakpoint objects, and preserve their prior effective runtime behavior.
+  - Accept sparse responsive objects, fill missing breakpoints with safe
+    defaults, and render deterministic base/`md:`/`lg:` classes plus
+    breakpoint-specific `data-stack-*-(desktop|tablet|mobile)` markers.
+  - Keep compatibility markers `data-stack-align`, `data-stack-justify`, and
+    `data-stack-wrap` equal to the resolved mobile values.
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - Assert Visual and Advanced expose per-breakpoint align/justify/wrap
+    controls.
+  - Assert editing one breakpoint rewrites the touched field to a full
+    breakpoint object without clobbering direction, gap, or the other responsive
+    fields.
+  - Assert scalar input values are upgraded to object form after interaction.
+- `bun test tests/unit/widgets/validator.test.ts`
+  - Accept both scalar legacy values and object breakpoint values.
+  - Reject unknown breakpoint keys and unknown token values inside responsive
+    objects.
 
 ## Security Contract
 
@@ -204,7 +239,11 @@ No API routes are added.
 - Existing scalar `align`, `justify`, and `wrap` payloads remain valid and render
   with the same effective behavior.
 - Runtime output has deterministic breakpoint markers for axis and wrap values.
+- Compatibility markers `data-stack-align`, `data-stack-justify`, and
+  `data-stack-wrap` deterministically equal the resolved mobile values.
 - Visual and Advanced editors expose responsive axis/wrap controls without
   overwriting unrelated direction or gap fields.
+- Editor writes persist full breakpoint objects for touched responsive
+  axis/wrap fields.
 - Tests prove schema, legacy compatibility, runtime classes, editor updates, and
   data markers.

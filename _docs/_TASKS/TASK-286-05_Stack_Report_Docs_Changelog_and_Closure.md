@@ -33,6 +33,9 @@ or explicitly deferred with a reason in both the report and this closure doc.
 
 - [ ] Re-audit `_docs/PLAYWRIGHT/REPORT_STACK_WIDGET.md` finding by finding.
 - [ ] Mark each finding as fixed, deferred, or TASK-256-owned with evidence.
+- [ ] Replace or reconcile the report priority checklist and `Status po TASK-256`
+  block with one canonical final-status matrix so the report has no conflicting
+  open/fixed sections.
 - [ ] Update `_docs/_WIDGETS/STACK.md` with the final Stack data/editor/runtime
   behavior.
 - [ ] Update `_docs/WIDGETS.md` only for shared contract changes that actually
@@ -96,6 +99,30 @@ Error handling:
   focused Stack suites and record the exact unrelated blocker.
 - If `_docs/_TASKS/README.md` conflicts with other agents, preserve all task
   families and recompute counts from the final table.
+- Derive the next changelog number from the actual `_docs/_CHANGELOG/*.md`
+  filenames before updating `_docs/_CHANGELOG/README.md`; do not trust the
+  README index if duplicate numbers already exist there.
+
+## Regression Test Shape
+
+- `git diff --check`
+  - No trailing whitespace, broken task-table formatting, or malformed
+    changelog/report tables after the closure edits.
+- `tests/vitest/widgets/stack.test.tsx`
+  - Final assertions cover the landed Stack runtime/data contract after all
+    TASK-286 implementation leaves are merged.
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - Final assertions cover the landed editor surfaces, variant miniatures,
+    responsive axis/wrap, and Wizard copy/guidance.
+- Report closure evidence
+  - `REPORT_STACK_WIDGET.md` contains one canonical finding-by-finding final
+    status matrix and no conflicting stale checklist/status block claiming the
+    opposite state.
+- Board/changelog closure evidence
+  - `_docs/_TASKS/README.md` contains each TASK-286 row exactly once with
+    recomputed counts.
+  - `_docs/_CHANGELOG/README.md` indexes the new TASK-286 entry using the next
+    unused changelog number found from filenames.
 
 ## Security Contract
 
@@ -142,6 +169,8 @@ No API routes are added by this closure leaf.
 
 - Every finding in `REPORT_STACK_WIDGET.md` has a final owner/status/evidence
   row.
+- `REPORT_STACK_WIDGET.md` no longer contains conflicting stale summary sections
+  that contradict the final owner/status/evidence matrix.
 - TASK-286 does not overclaim TASK-256 scope.
 - Stack source-of-truth docs match the final code and tests.
 - Task board statistics are recomputed and contain each TASK-286 row once.

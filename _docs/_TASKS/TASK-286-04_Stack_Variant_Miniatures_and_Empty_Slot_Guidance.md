@@ -5,7 +5,7 @@
 **Priority:** Low
 **Category:** Widgets + Admin UI + Runtime Render + UX Polish
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-03, TASK-256-05-02, TASK-286
+**Dependencies:** TASK-256-05-02, TASK-286
 **Status:** To Do
 
 ---
@@ -63,6 +63,23 @@ preview context from TASK-256-03.
 
 ```tsx
 function StackVariantMiniature({ variant }: { variant: StackVariantId }) {
+  if (variant === "responsive") {
+    return (
+      <div aria-hidden="true" data-stack-variant-miniature="responsive" className="grid gap-1">
+        <div className="grid gap-1 rounded-md border bg-muted/30 p-2">
+          <span className="h-2 w-full rounded bg-primary/50" />
+          <span className="h-2 w-full rounded bg-primary/50" />
+          <span className="h-2 w-full rounded bg-primary/50" />
+        </div>
+        <div className="grid grid-flow-col gap-1 rounded-md border bg-muted/30 p-2">
+          <span className="h-2 w-6 rounded bg-primary/50" />
+          <span className="h-2 w-6 rounded bg-primary/50" />
+          <span className="h-2 w-6 rounded bg-primary/50" />
+        </div>
+      </div>
+    );
+  }
+
   const bars =
     variant === "horizontal"
       ? ["w-6 h-2", "w-6 h-2", "w-6 h-2"]
@@ -71,6 +88,7 @@ function StackVariantMiniature({ variant }: { variant: StackVariantId }) {
   return (
     <div
       aria-hidden="true"
+      data-stack-variant-miniature={variant}
       className={cn(
         "grid rounded-md border bg-muted/30 p-2",
         variant === "horizontal" ? "grid-flow-col gap-1" : "gap-1"
@@ -123,6 +141,21 @@ Error handling:
 - Public runtime must not expose admin-only copy or clickable mutation controls.
 - Miniatures must remain decorative and not replace semantic labels.
 
+## Regression Test Shape
+
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - Assert the Visual variant cards render one deterministic miniature each for
+    `vertical`, `horizontal`, and `responsive`.
+  - Assert the responsive miniature communicates both mobile stacked flow and
+    tablet/desktop row flow, not a duplicate of the vertical card.
+  - Assert accessible text labels remain present alongside decorative
+    miniatures.
+  - Assert admin-safe empty-slot guidance copy remains visible in Wizard/Visual
+    editor surfaces.
+- `tests/vitest/widgets/stack.test.tsx`
+  - If runtime placeholder behavior changes, assert admin-preview-only guidance
+    is gated and the public runtime still renders neutral non-mutating copy.
+
 ## Security Contract
 
 No API routes are added.
@@ -158,6 +191,8 @@ No API routes are added.
 
 - Stack variant cards include visual miniatures for Vertical, Horizontal, and
   Responsive variants.
+- The Responsive miniature visually communicates both stacked mobile flow and
+  row-based tablet/desktop flow.
 - Miniatures are decorative and do not remove accessible text labels.
 - Empty Stack guidance is available in an admin-safe surface.
 - Public Stack output does not leak admin-only instructions or mutation actions.

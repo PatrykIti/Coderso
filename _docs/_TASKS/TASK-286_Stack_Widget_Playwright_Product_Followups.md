@@ -92,7 +92,9 @@ of hiding it inside this family.
    final Stack token set.
 3. Complete TASK-286-02 before TASK-286-03 so Wizard copy and controls target
    the final responsive axis/wrap model.
-4. Complete TASK-286-04 after TASK-256-03 determines public placeholder safety.
+4. Complete TASK-286-04 after TASK-286-02. Variant miniatures and editor-side
+   empty-slot guidance may land immediately; only an admin-preview-only runtime
+   placeholder is gated on TASK-256-03 determining public placeholder safety.
 5. Complete TASK-286-05 last with report evidence, widget docs, task-board, and
    changelog updates.
 

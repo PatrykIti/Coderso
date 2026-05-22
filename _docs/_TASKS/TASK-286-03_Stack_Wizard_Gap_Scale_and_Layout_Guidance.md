@@ -39,8 +39,8 @@ data remains the existing allowlisted Stack token model.
   text without persisting px/rem values.
 - [ ] Add Wizard-level align and justify presets that write through the same
   normalizers as Visual/Advanced.
-- [ ] If TASK-286-02 has landed, make Wizard align/justify controls update all
-  breakpoints intentionally and label that behavior.
+- [ ] Make Wizard align/justify controls update all breakpoints intentionally
+  and label that behavior.
 - [ ] Preserve current Wizard variant and mobile direction controls after
   TASK-256-05-02 fixes their data sync.
 - [ ] Add tests for Wizard labels, all-breakpoint gap writes, and align/justify
@@ -112,6 +112,20 @@ Error handling:
   compatibility through the normalizer selected by TASK-286-02.
 - Labels must stay explanatory; persisted values remain enum tokens.
 
+## Regression Test Shape
+
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - Assert Wizard copy says which controls write all breakpoints.
+  - Assert the gap select uses the shared token list and shows descriptive scale
+    labels without persisting copy text.
+  - Assert Wizard align/justify changes rewrite those fields across desktop,
+    tablet, and mobile together without clobbering direction or gap data.
+  - Assert base-gap changes still write all three breakpoint gap values.
+- `tests/vitest/widgets/stack.test.tsx`
+  - Only if editor-facing gap label metadata moves into the widget owner,
+    assert the exported helper stays deterministic and uses the same token list
+    as Stack schema/editor options.
+
 ## Security Contract
 
 No API routes are added.
@@ -151,4 +165,6 @@ No API routes are added.
 - Gap options include practical scale context without adding arbitrary spacing.
 - Wizard can set common align/justify behavior without forcing authors into
   Visual for the simplest layout distribution changes.
+- Wizard align/justify writes use the same responsive object contract as
+  TASK-286-02 and intentionally write all three breakpoints together.
 - Tests prove Wizard interaction, copy, and all-breakpoint writes.

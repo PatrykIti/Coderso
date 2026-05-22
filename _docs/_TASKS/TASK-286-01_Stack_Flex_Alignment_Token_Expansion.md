@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Layout + Design Tokens + Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** TASK-256-05-02, TASK-286
+**Dependencies:** TASK-286
 **Status:** To Do
 
 ---
@@ -102,6 +102,24 @@ Error handling:
   interpolation.
 - Legacy payloads with current values must render byte-for-byte equivalent
   classes except for intentional option-list ordering.
+
+## Regression Test Shape
+
+- `tests/vitest/widgets/stack.test.tsx`
+  - Normalize `align="baseline"` and `justify="around"|"evenly"` without
+    changing unrelated direction/gap defaults.
+  - Render SSR output with `items-baseline`, `justify-around`, and
+    `justify-evenly`.
+  - Keep invalid persisted `align`/`justify` values clamped to `stretch` and
+    `start`.
+- `tests/vitest/ui/stack-editor-wave.test.tsx`
+  - Assert Visual and Advanced selects expose `Baseline`, `Space around`, and
+    `Space evenly`.
+  - Assert selecting each new token persists normalized Stack data and updates
+    the Advanced snapshot.
+- `bun test tests/unit/widgets/validator.test.ts`
+  - Accept the new allowlisted enum values and continue rejecting unknown
+    `align`/`justify` tokens.
 
 ## Security Contract
 
