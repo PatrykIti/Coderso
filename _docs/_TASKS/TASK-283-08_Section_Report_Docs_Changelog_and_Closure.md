@@ -127,6 +127,12 @@ Docs-only closure validation:
 - `_docs/_CHANGELOG/README.md`
 - New changelog entry under `_docs/_CHANGELOG/`
 
+## Current Audit Notes (2026-05-22)
+
+- `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync is now present in the current checkout.
+- A follow-up audit reran `bunx vitest run --config vitest.config.ts tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx`, and both suites passed on 2026-05-22.
+- `TASK-283-05-02` remains intentionally blocked by shared `TASK-326`, so the TASK-283 umbrella must stay `In Progress` until U2 can be truthfully resolved or explicitly carried forward at the final family closeout.
+
 ## Acceptance Criteria
 
 - Every report finding is mapped to fixed evidence, a truthful shared-task

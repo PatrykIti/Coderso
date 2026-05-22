@@ -384,7 +384,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 ---
 
-## Status po TASK-256 (2026-05-17)
+## Status po shared baseline i kolejnych leafach (audit 2026-05-22)
 
 - `TASK-256-03` + `TASK-256-05-01`: public runtime no longer renders the
   editor-only `Empty region.` placeholder. Builder affordances are now gated by
@@ -402,10 +402,14 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   match-variant fallback, CSS-only reduced-motion-safe `fade` / `slide-up`
   surface motion, and a derived preview swatch, so W2, W3, and U5 are no
   longer active while U2 stays in `TASK-283-05-02` after `TASK-326`.
+- `TASK-283-06`: Section now owns bounded mobile/desktop padding overrides with
+  `Match base` fallback and deterministic `md` restore to the base token.
 - `TASK-283-07`: Section now stores editor-only `regions[]` metadata keyed by
   stable region instance ids, so Visual rename controls, canvas slot headers,
   and insert-target selectors can show author labels without changing public
   runtime output.
-- Shared evidence from this turn:
-  `bun run test:vitest -- tests/vitest/widgets/section.test.tsx
-  tests/vitest/pageBuilder/visualPanel.test.tsx` passed on 2026-05-17.
+- Targeted evidence for the current 2026-05-22 audit:
+  - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/blockList.test.tsx tests/vitest/ui/widgetInsertUtils.test.ts` passed.
+  - `bunx vitest run --config vitest.config.ts tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx` passed.
+  - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `set -a && source .env && set +a && bun run gates:coderso` passed during the latest TASK-283-07 implementation pass.
+  - `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` executables are missing; `bun audit` ran successfully inside the command.
