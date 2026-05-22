@@ -560,6 +560,14 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
 
     expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
     expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("2xl");
+    expect(
+      findSelectByOptions(surfaceSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"])
+        .value
+    ).toBe("__match_variant__");
+    expect(findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]).value).toBe("none");
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("none");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("none");
 
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
     expect(angleInput?.value).toBe("360");
@@ -667,6 +675,15 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     }
     const borderWidthSelect = findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]);
     const radiusSelect = findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]);
+    const shadowSelect = findSelectByOptions(surfaceSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const motionSelect = findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]);
     const spacingSelects = findSelectsByOptions(spacingSection, ["content", "wide", "full"]);
     setSelectValue(spacingSelects[0], "wide");
     setSelectValue(
@@ -703,6 +720,8 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setInputValue(findInputByPlaceholder(surfaceSection, "var(--color-border)"), "#0f172a");
     setSelectValue(borderWidthSelect, "2");
     setSelectValue(radiusSelect, "xl");
+    setSelectValue(shadowSelect, "lg");
+    setSelectValue(motionSelect, "slide-up");
 
     setInputValue(findInputByPlaceholder(surfaceSection, "#000000"), "#333333");
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
@@ -747,9 +766,19 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       gradientAngle: 270,
       borderWidth: "2",
       radius: "xl",
+      shadow: "lg",
+      motion: "slide-up",
       overlayColor: "#333333",
       overlayOpacity: 35,
     });
+
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("lg");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("slide-up");
+    expect(preview?.className).toContain("shadow-lg");
+    expect(
+      surfaceSection.querySelector('[data-section-surface-preview-overlay="true"]')
+    ).not.toBeNull();
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"level": "h4"');
@@ -794,6 +823,49 @@ test("Section presets and variant cards use atomic block patches when available"
     }
     clickByText(variantSection, "Contained");
     expect(view.getLatestVariant()).toBe("contained");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section shadow fallback stays match-variant until explicitly overridden", async () => {
+  const view = await renderEditors({
+    initialValue: {},
+    initialVariant: "contained",
+  });
+
+  try {
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const shadowSelect = findSelectByOptions(surfaceSection, [
+      "__match_variant__",
+      "none",
+      "sm",
+      "md",
+      "lg",
+      "xl",
+    ]);
+    const motionSelect = findSelectByOptions(surfaceSection, ["none", "fade", "slide-up"]);
+    const preview = surfaceSection.querySelector('[data-section-surface-preview="true"]');
+
+    expect(shadowSelect.value).toBe("__match_variant__");
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("sm");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("none");
+
+    setSelectValue(shadowSelect, "none");
+    expect(view.getLatestValue().style?.shadow).toBe("none");
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("none");
+
+    setSelectValue(shadowSelect, "__match_variant__");
+    expect(view.getLatestValue().style?.shadow).toBeUndefined();
+    expect(preview?.getAttribute("data-section-surface-preview-shadow")).toBe("sm");
+
+    setSelectValue(motionSelect, "fade");
+    expect(view.getLatestValue().style?.motion).toBe("fade");
+    expect(preview?.getAttribute("data-section-surface-preview-motion")).toBe("fade");
   } finally {
     view.cleanup();
   }

@@ -42,6 +42,8 @@ test("section renders defaults", () => {
   expect(html).toContain('data-section-region-columns="1"');
   expect(html).toContain('data-section-heading-gap="md"');
   expect(html).toContain('data-section-region-gap="match-variant"');
+  expect(html).toContain('data-section-shadow="none"');
+  expect(html).toContain('data-section-motion="none"');
   expect(html).toContain('data-section-background-media="none"');
   expect(html).toContain('data-section-layer-order="media-under-overlay"');
   expect(html).toContain('data-section-regions="1"');
@@ -138,6 +140,8 @@ test("section normalization keeps deterministic style and layout bounds", () => 
       overlayOpacity: 120,
       borderWidth: "2",
       radius: "xl",
+      shadow: "massive" as never,
+      motion: "bounce" as never,
       backgroundMedia: {
         type: "video",
         source: "library",
@@ -178,6 +182,8 @@ test("section normalization keeps deterministic style and layout bounds", () => 
   expect(normalized.style?.overlayOpacity).toBe(100);
   expect(normalized.style?.borderWidth).toBe("2");
   expect(normalized.style?.radius).toBe("xl");
+  expect(normalized.style?.shadow).toBeUndefined();
+  expect(normalized.style?.motion).toBe("none");
   expect(normalized.style?.backgroundMedia).toMatchObject({
     type: "video",
     source: "library",
@@ -275,6 +281,8 @@ test("section validator accepts expanded model", () => {
           borderColor: "#cbd5e1",
           borderWidth: "1",
           radius: "2xl",
+          shadow: "lg",
+          motion: "fade",
           overlayColor: "#000000",
           overlayOpacity: 16,
           backgroundMedia: {
@@ -367,6 +375,33 @@ test("section renders row flow without forcing grid classes", () => {
   expect(html).toContain("md:flex-row md:flex-wrap");
   expect(html).toContain("md:min-w-[16rem] md:flex-1");
   expect(html).not.toContain("md:grid-cols-2 xl:grid-cols-4");
+});
+
+test("section renders legacy contained shadow fallback and bounded motion classes", () => {
+  const legacyContainedHtml = renderToString(
+    <SectionBlock data={sectionDefaults} variant="contained" />
+  );
+  const explicitHtml = renderToString(
+    <SectionBlock
+      data={{
+        ...sectionDefaults,
+        style: {
+          ...(sectionDefaults.style ?? {}),
+          shadow: "xl",
+          motion: "slide-up",
+        },
+      }}
+      variant="contained"
+    />
+  );
+
+  expect(legacyContainedHtml).toContain('data-section-shadow="sm"');
+  expect(legacyContainedHtml).toContain('data-section-motion="none"');
+  expect(legacyContainedHtml).toContain("shadow-sm");
+  expect(explicitHtml).toContain('data-section-shadow="xl"');
+  expect(explicitHtml).toContain('data-section-motion="slide-up"');
+  expect(explicitHtml).toContain("shadow-xl");
+  expect(explicitHtml).toContain("motion-safe:slide-in-from-bottom-2");
 });
 
 test("section renders decorative background image layers with bounded blend and ordering", () => {
@@ -591,6 +626,8 @@ test("section editors render expected sections", () => {
   expect(visualHtml).toContain("Semantics and anchor");
   expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");
+  expect(visualHtml).toContain("Surface preview");
+  expect(visualHtml).toContain('data-section-surface-preview="true"');
   expect(visualHtml).toContain('data-widget-editor-section="section.semantics-anchor"');
   expect(visualHtml).toContain('data-widget-editor-section="section.width-spacing"');
 

@@ -57,6 +57,9 @@ Notes:
 - Heading controls now include bounded `h1`-`h6`, left/center/right alignment,
   label/title/description size tokens, and clearable heading text colors with
   guidance that the default section title remains `h2`.
+- Surface and borders now adds optional shadow and motion presets plus a derived
+  `Surface preview` swatch; the preview reflects current background, gradient,
+  overlay, border, radius, and effective shadow without persisting extra state.
 - Background media is decorative only: Visual exposes bounded image/video source,
   fit, position, blend, opacity, and layer-order controls plus video poster
   metadata without widening Section into interactive media.
@@ -79,6 +82,12 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
+- Optional `style.shadow` tokens stay bounded to `none`, `sm`, `md`, `lg`, and
+  `xl`; when unset, contained sections keep the legacy `shadow-sm` framing while
+  other variants stay flat.
+- Optional `style.motion` is bounded to CSS-only `none`, `fade`, and
+  `slide-up`, always emitted through `motion-safe` / `motion-reduce` classes and
+  never through observers or inline scripts.
 - Section headings default to a safe `h2` path and can opt into bounded `h1`-`h6`,
   left/center/right alignment, size tokens, and optional clearable text colors
   without widening into rich text or raw HTML.
@@ -101,6 +110,8 @@ Notes:
   - `data-section-region-columns`
   - `data-section-heading-gap`
   - `data-section-region-gap`
+  - `data-section-shadow`
+  - `data-section-motion`
   - `data-section-background-media`
   - `data-section-layer-order`
   - `data-section-regions`
@@ -156,6 +167,8 @@ Notes:
     "borderColor": "var(--color-border)",
     "borderWidth": "0",
     "radius": "none",
+    "shadow": "none",
+    "motion": "none",
     "overlayColor": "#000000",
     "overlayOpacity": 0,
     "backgroundMedia": {
@@ -190,6 +203,16 @@ Notes:
 - `layout.regionGap`: optional `none`, `sm`, `md`, `lg`, `xl`; if omitted, the
   renderer keeps the legacy variant spacing (`default=lg`, `contained=md`,
   `bleed=xl`)
+
+## Surface Tokens
+
+- `style.shadow`: optional `none`, `sm`, `md`, `lg`, `xl`; when omitted, the
+  renderer matches the current variant fallback (`contained=sm`, others `none`)
+  until the author chooses an explicit override
+- `style.motion`: `none`, `fade`, `slide-up`; runtime output stays CSS-only and
+  reduced-motion safe through bounded class maps
+- `Surface preview` is editor-only derived UI and never persists extra keys into
+  `SectionData`
 
 ## Background Media Tokens
 

@@ -5,8 +5,8 @@
 **Priority:** Medium
 **Category:** Widgets + Section + Style + Admin UI + Runtime Render
 **Estimated Effort:** Large
-**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-02
-**Status:** To Do
+**Dependencies:** TASK-256-02, TASK-256-05-01, TASK-283, TASK-283-02, TASK-326
+**Status:** In Progress (2026-05-21)
 
 ---
 
@@ -15,8 +15,12 @@
 Add Section-owned surface styling controls for shadows, reduced-motion-safe
 effects, and visual preview controls for gradient and overlay values.
 
-This leaf covers report findings W2, W3, U2, and U5. It must build on TASK-256
-for clear/token behavior and duplicate Advanced cleanup.
+This parent leaf covers report findings W2, W3, U2, and U5 and is now
+split between `TASK-283-05-01` and `TASK-283-05-02`.
+
+`TASK-283-05-01` closes the widget-local shadow, CSS-only motion, and preview
+owners. `TASK-283-05-02` keeps the remaining angle/opacity slider UX behind
+shared `TASK-326` duplicate-owner cleanup.
 
 ## Scope Boundary
 
@@ -27,8 +31,8 @@ In scope:
 - bounded `style.motion` tokens such as `none`, `fade`, and `slide-up` that
   respect reduced-motion preferences and do not require scroll observers or
   unsafe inline scripts;
-- slider/stepper style controls for `gradientAngle` and `overlayOpacity` once
-  TASK-256 removes duplicate Advanced ownership;
+- slider/stepper style controls for `gradientAngle` and `overlayOpacity` only
+  after `TASK-326` removes duplicate Visual/Advanced ownership;
 - a small editor preview swatch for gradient/overlay composition;
 - renderer output through class maps and safe inline styles only.
 
@@ -50,19 +54,29 @@ Out of scope:
 - `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md:95` - U5 gradient/overlay preview
   missing.
 
+## Execution Split
+
+- `TASK-283-05-01` (Done, 2026-05-21) closes W2, the bounded CSS-only W3
+  scope, and U5 with widget-local shadow, motion, and preview owners.
+- `TASK-283-05-02` (To Do) keeps U2 for the final angle/opacity slider
+  contract after shared `TASK-326` removes the duplicate Visual/Advanced owner.
+
 ## Sub-Tasks
 
-- [ ] Extend `SectionData.style` with bounded shadow and motion/effect tokens.
-- [ ] Add resolver helpers that default to current output for legacy payloads.
-- [ ] Render shadows through class maps and motion through bounded classes or
-  inert data markers owned by `section.tsx`; keep W3 explicitly CSS-only and do
-  not introduce observer-backed behavior in this leaf.
-- [ ] Replace or augment number inputs for gradient angle and overlay opacity
-  with slider/stepper controls in the owning editor section.
-- [ ] Add a preview swatch that derives from normalized Section data rather than
-  storing extra preview-only payload.
-- [ ] Add tests for normalization, SSR class output, slider updates, preview
-  rendering, and reduced-motion-safe behavior.
+- [x] `TASK-283-05-01` extends `SectionData.style` with bounded `shadow` and
+  `motion` tokens plus legacy-safe resolver helpers.
+- [x] `TASK-283-05-01` renders shadow and motion through bounded class maps and
+  deterministic data markers without observers or preview-only persisted state.
+- [x] `TASK-283-05-01` adds a derived preview swatch that reflects normalized
+  Section background, gradient, overlay, border, radius, and effective shadow
+  values.
+- [ ] `TASK-283-05-02` replaces the remaining `gradientAngle` /
+  `overlayOpacity` number inputs with slider/stepper controls after `TASK-326`.
+- [x] `TASK-283-05-01` adds focused runtime/editor tests for normalization, SSR
+  class output, contained shadow fallback, preview rendering, and
+  reduced-motion-safe behavior.
+- [ ] `TASK-283-05-02` adds the final slider interaction coverage once the
+  shared owner cleanup lands.
 
 ## Files to Change
 
@@ -148,8 +162,9 @@ No API routes are added.
 ## Documentation Updates Required
 
 - Update `_docs/_WIDGETS/SECTION.md` with shadow, motion, and preview behavior.
-- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows W2, W3, U2, and U5
-  after validation.
+- Update `_docs/PLAYWRIGHT/REPORT_SECTION_WIDGET.md` rows W2, W3, and U5
+  after `TASK-283-05-01`, and keep U2 explicitly mapped to
+  `TASK-283-05-02` after `TASK-326`.
 
 ## Acceptance Criteria
 

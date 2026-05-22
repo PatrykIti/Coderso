@@ -83,10 +83,10 @@ this family.
 | U3 friendly max-width names | TASK-283-04 | Section editor copy/labels around width tokens. |
 | U4 gradient override guidance | TASK-283-04 | Section-local guidance after TASK-256 clear/token behavior lands. |
 | U6 Wizard/Visual variant UI mismatch | TASK-283-04 | Section editor onboarding consistency. |
-| W2 box-shadow controls | TASK-283-05 | Section surface styling expansion beyond current `contained` shadow. |
-| W3 animation/scroll effects | TASK-283-05 | Bounded, reduced-motion-safe Section effects. |
-| U2 slider/visual controls for angle and opacity | TASK-283-05 | Section-local control UX after duplicate Advanced ownership is removed. |
-| U5 gradient/overlay preview | TASK-283-05 | Section surface preview. |
+| W2 box-shadow controls | TASK-283-05-01 | Section surface styling expansion beyond current `contained` shadow with explicit match-variant fallback. |
+| W3 animation/scroll effects | TASK-283-05-01 | Bounded, reduced-motion-safe CSS-only Section reveals; scroll observers and parallax stay out of contract. |
+| U2 slider/visual controls for angle and opacity | TASK-283-05-02 | Final Section-local slider UX after `TASK-326` removes duplicate Advanced ownership. |
+| U5 gradient/overlay preview | TASK-283-05-01 | Derived Section surface preview without preview-only persisted state. |
 | W6 responsive padding variants | TASK-283-06 | Section-owned mobile/desktop padding tokens. |
 | W4 custom region names | TASK-283-07 | Section structure labels for editor and optional safe runtime markers. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-283-08 | Final evidence and synchronization. |
@@ -113,7 +113,7 @@ this family.
 - [x] TASK-283-02: Section Background Media and Layering Model
 - [x] TASK-283-03: Section Heading Typography Alignment and Wizard UX
 - [x] TASK-283-04: Section Presets Variant Guidance and Width Copy
-- [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls
+- [ ] TASK-283-05: Section Surface Shadow Motion and Preview Controls (split into closed `TASK-283-05-01` and pending `TASK-283-05-02` after `TASK-326`)
 - [ ] TASK-283-06: Section Responsive Spacing and Mobile Density
 - [ ] TASK-283-07: Section Custom Region Labels and Structure UX
 - [ ] TASK-283-08: Section Report Docs Changelog and Closure
@@ -133,8 +133,9 @@ this family.
    product-owned level and typography controls.
 5. Complete TASK-283-04 after width truthfulness and heading basics are stable,
    then add safer presets and variant guidance.
-6. Complete TASK-283-05 after surface/background fields settle so preview,
-   shadow, and motion controls do not fork the style model.
+6. Continue TASK-283-05 through `TASK-283-05-02` after shared `TASK-326`
+   lands so the remaining angle/opacity slider UX does not fork the final owner
+   model.
 7. Complete TASK-283-06 after base spacing tokens exist, then add responsive
    overrides with deterministic fallback behavior.
 8. Complete TASK-283-07 after region flow is stable, because custom labels must

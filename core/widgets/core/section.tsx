@@ -36,6 +36,8 @@ export type SectionBackgroundMediaFit = "cover" | "contain";
 export type SectionBackgroundMediaPosition = "center" | "top" | "bottom" | "left" | "right";
 export type SectionBackgroundMediaBlendMode = "normal" | "multiply" | "screen" | "overlay";
 export type SectionLayerOrder = "media-under-overlay" | "overlay-under-media";
+export type SectionShadow = "none" | "sm" | "md" | "lg" | "xl";
+export type SectionMotion = "none" | "fade" | "slide-up";
 
 export type SectionBackgroundMedia = {
   type?: SectionBackgroundMediaType;
@@ -92,6 +94,8 @@ export type SectionData = {
     borderColor?: string;
     borderWidth?: SectionBorderWidth;
     radius?: SectionRadius;
+    shadow?: SectionShadow;
+    motion?: SectionMotion;
     overlayColor?: string;
     overlayOpacity?: number;
     backgroundMedia?: SectionBackgroundMedia;
@@ -162,6 +166,8 @@ export const sectionSchema = {
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
         radius: { enum: ["none", "lg", "xl", "2xl"] },
+        shadow: { enum: ["none", "sm", "md", "lg", "xl"] },
+        motion: { enum: ["none", "fade", "slide-up"] },
         overlayColor: { type: "string" },
         overlayOpacity: { type: "number" },
         backgroundMedia: {
@@ -223,6 +229,7 @@ export const sectionDefaults: SectionData = {
     borderColor: "var(--color-border)",
     borderWidth: "0",
     radius: "none",
+    motion: "none",
     overlayColor: "#000000",
     overlayOpacity: 0,
     backgroundMedia: {
@@ -249,6 +256,14 @@ const radiusClassMap: Record<SectionRadius, string> = {
   lg: "rounded-lg",
   xl: "rounded-xl",
   "2xl": "rounded-2xl",
+};
+
+const shadowClassMap: Record<SectionShadow, string> = {
+  none: "",
+  sm: "shadow-sm",
+  md: "shadow-md",
+  lg: "shadow-lg",
+  xl: "shadow-xl",
 };
 
 const containerWidthClassMap: Record<SectionContainerWidth, string> = {
@@ -335,6 +350,13 @@ const descriptionSizeClassMap: Record<SectionDescriptionSize, string> = {
   lg: "text-lg",
 };
 
+const motionClassMap: Record<SectionMotion, string | undefined> = {
+  none: undefined,
+  fade: "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none",
+  "slide-up":
+    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-500 motion-reduce:animate-none",
+};
+
 const regionGapVariantFallbackMap: Record<SectionVariantId, SectionGap> = {
   default: "lg",
   contained: "md",
@@ -408,13 +430,7 @@ const resolveRenderableSectionMediaSrc = (
 };
 
 const resolveSectionHeadingLevel = (value: string | undefined): SectionHeadingLevel => {
-  if (
-    value === "h1" ||
-    value === "h3" ||
-    value === "h4" ||
-    value === "h5" ||
-    value === "h6"
-  ) {
+  if (value === "h1" || value === "h3" || value === "h4" || value === "h5" || value === "h6") {
     return value;
   }
   return "h2";
@@ -435,9 +451,7 @@ const resolveSectionTitleSize = (value: string | undefined): SectionTitleSize =>
   return "2xl";
 };
 
-const resolveSectionDescriptionSize = (
-  value: string | undefined
-): SectionDescriptionSize => {
+const resolveSectionDescriptionSize = (value: string | undefined): SectionDescriptionSize => {
   if (value === "base" || value === "lg") return value;
   return "sm";
 };
@@ -521,6 +535,24 @@ const resolveSectionRadius = (value: string | undefined): SectionRadius => {
   if (value === "none" || value === "lg" || value === "xl") return value;
   return "2xl";
 };
+
+const resolveOptionalSectionShadow = (value: string | undefined): SectionShadow | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl") {
+    return value;
+  }
+  return undefined;
+};
+
+const resolveSectionMotion = (value: string | undefined): SectionMotion => {
+  if (value === "fade" || value === "slide-up") return value;
+  return "none";
+};
+
+const resolveRenderedSectionShadow = (
+  variant: SectionVariantId,
+  shadow: SectionShadow | undefined
+): SectionShadow => shadow ?? (variant === "contained" ? "sm" : "none");
 
 const resolveSectionContainerWidth = (value: string | undefined): SectionContainerWidth => {
   if (value === "wide" || value === "full") return value;
@@ -627,6 +659,7 @@ export function normalizeSectionData(data: SectionData): SectionData {
     borderColor: "var(--color-border)",
     borderWidth: "0",
     radius: "none",
+    motion: "none" as const,
     overlayColor: "#000000",
     overlayOpacity: 0,
   };
@@ -685,6 +718,8 @@ export function normalizeSectionData(data: SectionData): SectionData {
       borderColor: data.style?.borderColor ?? styleDefaults.borderColor,
       borderWidth: resolveSectionBorderWidth(data.style?.borderWidth),
       radius: resolveSectionRadius(data.style?.radius),
+      shadow: resolveOptionalSectionShadow(data.style?.shadow),
+      motion: resolveSectionMotion(data.style?.motion ?? styleDefaults.motion),
       overlayColor: data.style?.overlayColor ?? styleDefaults.overlayColor,
       overlayOpacity: clampOpacity(data.style?.overlayOpacity),
       backgroundMedia: normalizeSectionBackgroundMedia(data.style?.backgroundMedia),
@@ -720,6 +755,8 @@ export function SectionBlock({
   const headingDescriptionColor = resolveClearableStyleValue(heading.descriptionColor);
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
+  const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
+  const resolvedMotion = resolveSectionMotion(style.motion);
 
   const resolvedRegionGap = layout.regionGap ?? regionGapVariantFallbackMap[resolvedVariant];
   const backgroundMedia = style.backgroundMedia ??
@@ -744,7 +781,8 @@ export function SectionBlock({
     "relative w-full",
     minHeightClassMap[layout.minHeight ?? "none"],
     paddingBlockClassMap[layout.paddingBlock ?? "md"],
-    resolvedVariant === "contained" ? "shadow-sm" : undefined
+    shadowClassMap[resolvedShadow],
+    motionClassMap[resolvedMotion]
   );
   const clippedSurfaceClass = joinClasses(
     "pointer-events-none absolute inset-0 overflow-hidden",
@@ -849,6 +887,8 @@ export function SectionBlock({
       data-section-region-columns={layout.regionColumns ?? "1"}
       data-section-heading-gap={layout.headingGap ?? "md"}
       data-section-region-gap={layout.regionGap ?? "match-variant"}
+      data-section-shadow={resolvedShadow}
+      data-section-motion={resolvedMotion}
       data-section-background-media={renderedBackgroundMediaType}
       data-section-layer-order={backgroundLayerOrder}
       data-section-regions={String(slotTargets.length)}
@@ -896,7 +936,9 @@ export function SectionBlock({
 
         <div className={contentClass}>
           {hasHeading ? (
-            <header className={joinClasses("space-y-2", headingAlignClassMap[heading.align ?? "left"])}>
+            <header
+              className={joinClasses("space-y-2", headingAlignClassMap[heading.align ?? "left"])}
+            >
               {(heading.label ?? "").trim().length > 0 ? (
                 <p
                   className={joinClasses(
@@ -909,21 +951,23 @@ export function SectionBlock({
                   {heading.label}
                 </p>
               ) : null}
-              {(heading.title ?? "").trim().length > 0 ? (() => {
-                const HeadingTag = heading.level ?? "h2";
-                return (
-                  <HeadingTag
-                    className={joinClasses(
-                      titleSizeClassMap[heading.titleSize ?? "2xl"],
-                      "font-semibold",
-                      headingTitleColor ? undefined : "text-[var(--color-text)]"
-                    )}
-                    style={compactStyle({ color: headingTitleColor })}
-                  >
-                    {heading.title}
-                  </HeadingTag>
-                );
-              })() : null}
+              {(heading.title ?? "").trim().length > 0
+                ? (() => {
+                    const HeadingTag = heading.level ?? "h2";
+                    return (
+                      <HeadingTag
+                        className={joinClasses(
+                          titleSizeClassMap[heading.titleSize ?? "2xl"],
+                          "font-semibold",
+                          headingTitleColor ? undefined : "text-[var(--color-text)]"
+                        )}
+                        style={compactStyle({ color: headingTitleColor })}
+                      >
+                        {heading.title}
+                      </HeadingTag>
+                    );
+                  })()
+                : null}
               {(heading.description ?? "").trim().length > 0 ? (
                 <p
                   className={joinClasses(

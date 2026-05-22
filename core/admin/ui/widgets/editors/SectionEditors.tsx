@@ -46,6 +46,8 @@ import {
   type SectionRadius,
   type SectionRegionColumns,
   type SectionRegionFlow,
+  type SectionMotion,
+  type SectionShadow,
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
@@ -92,6 +94,20 @@ const radiusOptions: Array<{ id: SectionRadius; label: string }> = [
   { id: "lg", label: "Large" },
   { id: "xl", label: "Extra large" },
   { id: "2xl", label: "2XL" },
+];
+
+const shadowOptions: Array<{ id: SectionShadow; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "sm", label: "Soft" },
+  { id: "md", label: "Medium" },
+  { id: "lg", label: "Large" },
+  { id: "xl", label: "Extra large" },
+];
+
+const motionOptions: Array<{ id: SectionMotion; label: string }> = [
+  { id: "none", label: "None" },
+  { id: "fade", label: "Fade in" },
+  { id: "slide-up", label: "Slide up" },
 ];
 
 const containerWidthOptions: Array<{ id: SectionContainerWidth; label: string }> = [
@@ -242,6 +258,41 @@ const backgroundMediaLayerOrderOptions: Array<{
 ];
 
 const sectionRegionGapAutoValue = "__match_variant__";
+const sectionShadowAutoValue = "__match_variant__";
+
+const sectionShadowOptions: Array<{
+  id: SectionShadow | typeof sectionShadowAutoValue;
+  label: string;
+}> = [{ id: sectionShadowAutoValue, label: "Match variant" }, ...shadowOptions];
+
+const sectionSurfacePreviewRadiusClassMap: Record<SectionRadius, string> = {
+  none: "",
+  lg: "rounded-lg",
+  xl: "rounded-xl",
+  "2xl": "rounded-2xl",
+};
+
+const sectionSurfacePreviewShadowClassMap: Record<SectionShadow, string> = {
+  none: "",
+  sm: "shadow-sm",
+  md: "shadow-md",
+  lg: "shadow-lg",
+  xl: "shadow-xl",
+};
+
+const sectionShadowDisplayLabelMap: Record<SectionShadow, string> = {
+  none: "None",
+  sm: "Soft",
+  md: "Medium",
+  lg: "Large",
+  xl: "Extra large",
+};
+
+const sectionMotionDisplayLabelMap: Record<SectionMotion, string> = {
+  none: "None",
+  fade: "Fade in",
+  "slide-up": "Slide up",
+};
 
 const regionGapOptions: Array<{
   id: SectionGap | typeof sectionRegionGapAutoValue;
@@ -437,6 +488,75 @@ const resolveBackgroundMedia = (style: SectionData["style"] | undefined): Backgr
 
 function normalizeValue(value: SectionData): SectionData {
   return normalizeSectionData(value);
+}
+
+const resolveRenderedSectionShadow = (
+  variant: SectionVariantId,
+  shadow: SectionShadow | undefined
+): SectionShadow => shadow ?? (variant === "contained" ? "sm" : "none");
+
+function SectionSurfacePreview({ value, variant }: { value: SectionData; variant: string }) {
+  const normalized = normalizeValue(value);
+  const style = normalized.style ?? sectionDefaults.style ?? {};
+  const resolvedVariant = resolveSectionVariant(variant);
+  const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
+  const resolvedMotion = style.motion ?? "none";
+  const hasGradient =
+    (style.gradientFrom ?? "").trim().length > 0 && (style.gradientTo ?? "").trim().length > 0;
+  const overlayOpacity = clampOpacity(style.overlayOpacity);
+  const overlayVisible = overlayOpacity > 0;
+
+  return (
+    <div className="space-y-2" data-section-surface-preview-panel="true">
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Surface preview</p>
+        <p>
+          Shadow {sectionShadowDisplayLabelMap[resolvedShadow]} · Motion{" "}
+          {sectionMotionDisplayLabelMap[resolvedMotion]}
+        </p>
+      </div>
+      <div
+        data-section-surface-preview="true"
+        data-section-surface-preview-shadow={resolvedShadow}
+        data-section-surface-preview-motion={resolvedMotion}
+        className={cn(
+          "relative h-24 overflow-hidden border bg-background/40",
+          sectionSurfacePreviewRadiusClassMap[style.radius ?? "none"],
+          sectionSurfacePreviewShadowClassMap[resolvedShadow]
+        )}
+        style={{
+          backgroundColor: style.backgroundColor ?? "transparent",
+          backgroundImage: hasGradient
+            ? `linear-gradient(${clampAngle(style.gradientAngle)}deg, ${style.gradientFrom}, ${style.gradientTo})`
+            : undefined,
+          borderColor: style.borderColor ?? "var(--color-border)",
+          borderStyle: "solid",
+          borderWidth: `${style.borderWidth ?? "0"}px`,
+        }}
+      >
+        {overlayVisible ? (
+          <div
+            data-section-surface-preview-overlay="true"
+            className="absolute inset-0"
+            style={{
+              backgroundColor: style.overlayColor ?? "#000000",
+              opacity: overlayOpacity / 100,
+            }}
+          />
+        ) : null}
+        <div className="absolute inset-x-3 bottom-3 z-[1] flex items-center justify-between gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/85">
+          <span>
+            {hasGradient ? `Gradient ${clampAngle(style.gradientAngle)}°` : "Solid surface"}
+          </span>
+          <span>{overlayVisible ? `Overlay ${overlayOpacity}%` : "No overlay"}</span>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Preview reflects current background, gradient, overlay, border, radius, and effective shadow
+        without saving extra state.
+      </p>
+    </div>
+  );
 }
 
 function VariantCards({
@@ -1674,7 +1794,7 @@ export function SectionVisualEditor({
 
       <WidgetEditorSection
         title="Surface and borders"
-        description="Tune background, gradient, overlay, border width, and radius."
+        description="Tune background, gradient, overlay, border width, radius, shadow, and motion."
         id="section.surface-borders"
       >
         <ColorField
@@ -1740,7 +1860,7 @@ export function SectionVisualEditor({
           pickerFallback="#e2e8f0"
         />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <WidgetControlRow id="section.style.borderWidth" label="Border width">
             {(fieldProps) => (
               <Select
@@ -1792,7 +1912,40 @@ export function SectionVisualEditor({
               </Select>
             )}
           </WidgetControlRow>
+
+          <WidgetControlRow id="section.style.shadow" label="Surface shadow">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.shadow ?? sectionShadowAutoValue}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    shadow: next === sectionShadowAutoValue ? undefined : (next as SectionShadow),
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select shadow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectionShadowOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Match variant keeps the current contained shadow-sm legacy framing and leaves default and
+          bleed flat until you choose an explicit shadow token.
+        </p>
 
         <ColorField
           id="section.style.overlayColor"
@@ -1821,6 +1974,34 @@ export function SectionVisualEditor({
             />
           )}
         </WidgetControlRow>
+
+        <WidgetControlRow id="section.style.motion" label="Surface motion">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.motion ?? "none"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { motion: next as SectionMotion })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
+        <SectionSurfacePreview value={value} variant={variant} />
       </WidgetEditorSection>
       <WidgetEditorSection
         title="Background media and layers"

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 897 | 2026-05-21 | TASK-283-05-01 section shadow motion and surface preview | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 896 | 2026-05-21 | TASK-283-04 section presets and width guidance | CMS Widgets/Admin UI/QA/Docs |
 | 895 | 2026-05-21 | TASK-283-03 section heading typography alignment and Wizard UX | CMS Widgets/Admin UI/Runtime/QA |
 | 894 | 2026-05-21 | TASK-283-02 section background media and layering model | CMS Widgets/Admin UI/Runtime/QA |
