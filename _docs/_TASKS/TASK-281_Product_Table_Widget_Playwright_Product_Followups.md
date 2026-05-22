@@ -73,11 +73,11 @@ the Product Table slice.
 | BUG-01 missing Slug, Stock, CompareAt, Collections label controls | TASK-281-02 | Complete editor controls for every schema-owned label through the shared column registry. |
 | BUG-04 title and price are always visible | TASK-281-02 | Add bounded visibility policy for mandatory columns without allowing an empty unusable table. |
 | BF-13 collections count header context is schema-only | TASK-281-02 | Collections count now keeps its editor-owned header label through the shared column registry. |
-| BUG-02 status renders raw text and duplicates title suffix | TASK-281-03 | Product Table status badge, title/status copy, and row-state treatment. |
+| BUG-02 and A3 status/title accessible copy | TASK-281-03 | Product Table status badge, title/status copy, row-state treatment, and the non-duplicated accessible title/status baseline. |
 | BUG-03 and BF-03 stock quantity is ignored | TASK-281-03 | Optional stock quantity display inside the stock column. |
 | BF-04 status row coloring | TASK-281-03 | Bounded row-state presentation, no arbitrary classes. |
 | UX-03 and BF-11 product links/action column | TASK-281-04 | Safe product navigation and optional action column. |
-| A1, A2, A3, A4, A5, A6 Product Table table semantics | TASK-281-05 | Table caption, `scope`, alert/live, title/status accessible copy, and Product Table section labels. |
+| A1, A2, A4, A5, A6 Product Table table semantics | TASK-281-05 | Table caption, `scope`, section/table labels, and local runtime alert/live semantics without redundant wrapper table roles. |
 | UX-05, BF-01, BF-02, A7 product media and excerpt columns | TASK-281-06 | Use existing runtime card data; media URL resolution and lazy thumbnail behavior must stay backend-owned/runtime-safe. |
 | BF-07 section heading | TASK-281-06 | Product Table-owned contextual header above the table. |
 | UX-02, UX-04, UX-06, UX-08, BF-15 front-end controls | TASK-281-07 | Pagination/load-more, search, filters, and sortable headers with explicit route/security policy. |
@@ -100,7 +100,7 @@ the Product Table slice.
 - [x] TASK-281-02: Product Table Column Labels and Visibility Model
 - [x] TASK-281-03: Product Table Status Stock and Row State Presentation
 - [x] TASK-281-04: Product Table Product Links and Action Column
-- [ ] TASK-281-05: Product Table Accessibility and Runtime Semantics
+- [x] TASK-281-05: Product Table Accessibility and Runtime Semantics
 - [ ] TASK-281-06: Product Table Media Excerpt and Section Header Context
 - [ ] TASK-281-07: Product Table Pagination Search Filter and Sorting UX
 - [ ] TASK-281-08: Product Table Variants Density Layout and Sticky Header

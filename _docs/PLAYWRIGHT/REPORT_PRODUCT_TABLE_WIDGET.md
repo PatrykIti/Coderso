@@ -338,12 +338,12 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 
 | # | Problem | Standard | Priorytet |
 |---|---------|----------|-----------|
-| A1 | Tabela bez `<caption>` — brak opisu tabeli dla screen readerów | WCAG 1.3.1 | Wysoki |
-| A2 | `<th>` bez atrybutu `scope="col"` — kolumny niezidentyfikowane dla AT | WCAG 1.3.1 | Wysoki |
-| A3 | Status "(draft)" / "(archived)" w tytule produktu — tekst niespójny z `aria-label` | WCAG 4.1.2 | Średni |
-| A4 | Brak `role="table"` / `aria-label` na sekcji nadrzędnej | WCAG 4.1.2 | Średni |
-| A5 | Błąd commerce renderuje `<div>` z amber — brak `role="alert"` | WCAG 4.1.3 | Średni |
-| A6 | Empty state bez `aria-live` — dynamiczne zmiany niezgłaszane | WCAG 4.1.3 | Niski |
+| A1 | Tabela bez `<caption>` — brak opisu tabeli dla screen readerów (Fixed in TASK-281-05) | WCAG 1.3.1 | Wysoki |
+| A2 | `<th>` bez atrybutu `scope="col"` — kolumny niezidentyfikowane dla AT (Fixed in TASK-281-05) | WCAG 1.3.1 | Wysoki |
+| A3 | Status "(draft)" / "(archived)" w tytule produktu — tekst niespójny z `aria-label` (Fixed in TASK-281-03) | WCAG 4.1.2 | Średni |
+| A4 | Brak `role="table"` / `aria-label` na sekcji nadrzędnej (Fixed in TASK-281-05) | WCAG 4.1.2 | Średni |
+| A5 | Błąd commerce renderuje `<div>` z amber — brak `role="alert"` (Fixed in TASK-281-05) | WCAG 4.1.3 | Średni |
+| A6 | Empty state bez `aria-live` — dynamiczne zmiany niezgłaszane (Fixed in TASK-281-05) | WCAG 4.1.3 | Niski |
 | A7 | Brak `loading="lazy"` na przyszłych thumbnail obrazach | Performance | Niski |
 
 ---
@@ -356,8 +356,8 @@ Tło tabeli: rgb(240, 244, 255) ← z custom koloru
 |----|------|-----------|-------------|
 | BUG-00 | Admin preview nigdy nie hydruje danych commerce — edytor widzi tylko empty state (Fixed in TASK-281-01) | Krytyczny | ✓ Playwright |
 | BUG-01 | Brak edycji etykiet dla Slug, Stock, CompareAt, Collections (Fixed in TASK-281-02) | Wysoki | ✓ Playwright |
-| A1 | Brak `<caption>` w tabeli | Wysoki (WCAG 1.3.1) | ✓ Playwright |
-| A2 | Brak `scope="col"` na `<th>` | Wysoki (WCAG 1.3.1) | ✓ Playwright |
+| A1 | Brak `<caption>` w tabeli (Fixed in TASK-281-05) | Wysoki (WCAG 1.3.1) | ✓ Playwright |
+| A2 | Brak `scope="col"` na `<th>` (Fixed in TASK-281-05) | Wysoki (WCAG 1.3.1) | ✓ Playwright |
 | BUG-02 | Status jako plain text — brak badge/koloru + duplikacja w tytule (Fixed in TASK-281-03) | Średni | ✓ Playwright |
 | BUG-03 | stock.quantity nigdy niewyświetlany mimo że jest w danych (Fixed in TASK-281-03) | Średni | ✓ Kod |
 
@@ -555,6 +555,26 @@ Tylko elementy nie zależne od danych runtime są zgodne:
 - `bun test tests/unit/commerce/commerceRuntimeResolver.test.ts`
 - `bun test tests/unit/commerce/commerceWidgetRuntime.test.ts`
 - `bun test tests/unit/widgets/validator.test.ts`
+- `bun run gates:coderso`
+- `git diff --check`
+- `bun run precommit`
+- `bun run scan:security:strict`
+
+## Status po TASK-281-05 (2026-05-21)
+
+### Fixed in TASK-281-05
+
+- `A1` / `A2`: Product Table now renders an sr-only `Product table` caption and applies `scope="col"` to every current header, including the optional Action column added in `TASK-281-04`.
+- `A4`: Product Table now keeps deterministic section/table labels while preserving native `<table>` semantics instead of adding a redundant wrapper `role="table"`.
+- `A5`: Commerce runtime warnings now announce through `role="alert"`, and preview warning banners follow the same local alert treatment.
+- `A6`: The editor-preview empty state remains a polite live region and is now locked by focused SSR coverage; preview refresh banners also announce through `role="status"` without introducing a new shared helper.
+- `A3`: Ownership is synchronized back to `TASK-281-03`, which already removed duplicated title/status copy; `TASK-281-05` now keeps that baseline under regression coverage.
+
+### Validation evidence
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/productTable.test.tsx`
 - `bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit`

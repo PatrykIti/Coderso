@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 898 | 2026-05-21 | TASK-281-05 product table accessibility semantics | CMS Widgets/Accessibility/Runtime/QA |
 | 897 | 2026-05-21 | TASK-281-04 product table links and action column | CMS Widgets/Admin UI/Runtime/QA |
 | 896 | 2026-05-21 | TASK-281-03 product table status stock and row state | CMS Widgets/Admin UI/Runtime/QA |
 | 895 | 2026-05-21 | TASK-281-02 product table column labels and visibility | CMS Widgets/Admin UI/Runtime/QA |

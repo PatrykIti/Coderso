@@ -43,6 +43,58 @@ test("product table renders empty state", () => {
   expect(html).toContain('data-widget="product-table"');
 });
 
+test("product table renders accessible caption, labels, and scoped headers", () => {
+  const html = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        fields: {
+          showTitle: true,
+          showSlug: true,
+          showPrice: true,
+          showStatus: true,
+          showStock: true,
+          showStockQuantity: false,
+          showCompareAt: true,
+          showCollectionCount: true,
+        },
+        links: {
+          linkedColumn: "title",
+          showAction: true,
+          actionLabel: "View",
+          openInNewTab: false,
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-accessible",
+              title: "Accessible Home",
+              slug: "accessible-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 120000, currency: "USD", compareAtAmount: 130000 },
+              stock: { state: "in_stock", quantity: 3, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: ["collection-1"],
+              productHref: "/products/accessible-home",
+            },
+          ],
+          total: 1,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toMatch(/<section[^>]*aria-label="Product table"/);
+  expect(html).toMatch(/<div[^>]*tabindex="0"[^>]*aria-label="Product table"/);
+  expect(html).toMatch(/<table[^>]*aria-labelledby="[^"]+"/);
+  expect(html).toMatch(/<caption id="[^"]+" class="sr-only">Product table<\/caption>/);
+  expect(html.match(/scope="col"/g)?.length).toBe(8);
+});
+
 test("product table renders rows with shared column labels and visibility", () => {
   const html = renderToString(
     <ProductTableBlock
@@ -183,6 +235,9 @@ test("product table renders status badges and bounded row-state treatment", () =
   expect(html).toContain("Published");
   expect(html).toContain("Draft");
   expect(html).toContain("Archived");
+  expect(html).toContain('aria-label="Status: Published"');
+  expect(html).toContain('aria-label="Status: Draft"');
+  expect(html).toContain('aria-label="Status: Archived"');
   expect(html).toContain("border-emerald-200");
   expect(html).toContain("border-amber-200");
   expect(html).toContain("border-slate-200");
@@ -545,10 +600,32 @@ test("product table cleared surfaces omit empty, table, and header backgrounds",
 });
 
 test("product table renderer surfaces preview warnings and widget preview support", () => {
+  const previewData = normalizeProductTableData({
+    ...productTableDefaults,
+    resolved: {
+      items: [
+        {
+          id: "product-preview",
+          title: "Preview Home",
+          slug: "preview-home",
+          excerpt: null,
+          status: "published",
+          pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+          stock: { state: "in_stock", quantity: 3, inStock: true },
+          primaryMediaId: null,
+          mediaIds: [],
+          collectionIds: [],
+          productHref: null,
+        },
+      ],
+      total: 1,
+      resolvedAt: "2026-02-19T12:00:00.000Z",
+    },
+  });
   const loadingHtml = renderToString(
     <ProductTableBlock
       variant="default"
-      data={normalizeProductTableData(productTableDefaults)}
+      data={previewData}
       renderContext={{
         mode: "editor-preview",
         previewState: { status: "loading" },
@@ -558,11 +635,32 @@ test("product table renderer surfaces preview warnings and widget preview suppor
   const errorHtml = renderToString(
     <ProductTableBlock
       variant="default"
-      data={normalizeProductTableData(productTableDefaults)}
+      data={previewData}
       renderContext={{
         mode: "editor-preview",
         previewState: { status: "error", message: "Preview timed out" },
       }}
+    />
+  );
+  const runtimeErrorHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData({
+        ...productTableDefaults,
+        resolved: {
+          items: [],
+          total: 0,
+          resolvedAt: "2026-02-19T12:00:00.000Z",
+          error: "Provider timeout",
+        },
+      })}
+    />
+  );
+  const emptyPreviewHtml = renderToString(
+    <ProductTableBlock
+      variant="default"
+      data={normalizeProductTableData(productTableDefaults)}
+      renderContext={{ mode: "editor-preview" }}
     />
   );
   const widget = createProductTableWidget({
@@ -572,8 +670,16 @@ test("product table renderer surfaces preview warnings and widget preview suppor
   });
 
   expect(loadingHtml).toContain("Refreshing Product Table preview");
+  expect(loadingHtml).toContain('role="status"');
+  expect(loadingHtml).toContain('aria-live="polite"');
   expect(errorHtml).toContain("Product Table preview warning:");
   expect(errorHtml).toContain("Preview timed out");
+  expect(errorHtml).toContain('role="alert"');
+  expect(runtimeErrorHtml).toContain("Commerce runtime warning:");
+  expect(runtimeErrorHtml).toContain("Provider timeout");
+  expect(runtimeErrorHtml).toContain('role="alert"');
+  expect(emptyPreviewHtml).toContain('role="status"');
+  expect(emptyPreviewHtml).toContain('aria-live="polite"');
   expect(widget.editorCapabilities?.supportsPreviewState).toBe(true);
 });
 

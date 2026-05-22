@@ -248,6 +248,7 @@ export const productTableDefaults: ProductTableData = {
 };
 
 const maxPreviewStatusMessageLength = 160;
+const productTableDefaultCaptionText = "Product table";
 
 const text = (value: unknown, fallback: string) => {
   if (typeof value !== "string") return fallback;
@@ -746,27 +747,40 @@ export function ProductTableBlock({
   const legacyHeaderClass = normalized.style === undefined ? "bg-[var(--color-bg)]/80" : "";
   const legacyEmptyClass =
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/70" : "";
+  const tableCaptionText = productTableDefaultCaptionText;
+  const tableCaptionId = React.useId();
 
   return (
     <section
       className="space-y-4"
       data-widget="product-table"
       data-product-table-count={String(items.length)}
+      aria-label={tableCaptionText}
     >
       {previewLoading ? (
-        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+        <div
+          className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900"
+          role="status"
+          aria-live="polite"
+        >
           Refreshing Product Table preview...
         </div>
       ) : null}
 
       {previewError ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div
+          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          role="alert"
+        >
           Product Table preview warning: {previewError}
         </div>
       ) : null}
 
       {hasError ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div
+          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+          role="alert"
+        >
           Commerce runtime warning: {normalized.resolved?.error}
         </div>
       ) : null}
@@ -786,8 +800,16 @@ export function ProductTableBlock({
           </p>
         </div>
       ) : (
-        <div className={`overflow-x-auto rounded-xl border ${legacyTableClass}`} style={tableStyle}>
-          <table className="min-w-full text-sm">
+        <div
+          className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
+          style={tableStyle}
+          tabIndex={0}
+          aria-label={tableCaptionText}
+        >
+          <table className="min-w-full text-sm" aria-labelledby={tableCaptionId}>
+            <caption id={tableCaptionId} className="sr-only">
+              {tableCaptionText}
+            </caption>
             <thead>
               <tr
                 className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
@@ -796,13 +818,17 @@ export function ProductTableBlock({
                 {visibleColumns.map((column) => (
                   <th
                     key={column.key}
+                    scope="col"
                     className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
                   >
                     {normalized.labels?.[column.labelKey]}
                   </th>
                 ))}
                 {showActionColumn ? (
-                  <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65">
+                  <th
+                    scope="col"
+                    className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65"
+                  >
                     Action
                   </th>
                 ) : null}

@@ -74,6 +74,13 @@ preview parity for the current source query.
   is active; this is not the broader row-hover styling wave owned by
   `TASK-281-08`.
 
+## Accessibility Notes
+
+- Product Table now renders an sr-only `Product table` caption and keeps `scope="col"` on every rendered header, including the optional Action column.
+- The widget section and scroll region use the same deterministic accessible label until visible section header fields land in `TASK-281-06`.
+- Commerce runtime warnings announce through `role="alert"`, preview refresh banners announce through `role="status"` with polite live behavior, and the existing editor-preview empty state keeps polite live semantics without broadening this into a shared helper.
+- The existing `TASK-281-03` status badge/title copy baseline remains intact and is now locked by focused SSR assertions.
+
 ## Runtime Behavior Notes
 
 - Public rendering hydrates Product Table rows through
