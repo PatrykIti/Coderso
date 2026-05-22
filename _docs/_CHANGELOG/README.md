@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 926 | 2026-05-22 | TASK-292 toggle block widget followups | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
 | 925 | 2026-05-22 | TASK-291 timeline widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 924 | 2026-05-22 | TASK-290 testimonials widget product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 923 | 2026-05-22 | TASK-289 Team widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |

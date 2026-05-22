@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 113 tasks
+- **To Do:** 106 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1904 tasks
+- **Done:** 1911 tasks
 
 ---
 
@@ -47,13 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Shared follow-up extracted during TASK-288 implementation: interactive widgets still duplicate static inline runtime payloads per widget instance until a render-scoped transport helper lands |
 | TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
-| TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Toggle Block-only follow-up family for `REPORT_TOGGLE_BLOCK_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Add Toggle Block-owned cards distinction, active contrast, and bounded pane style controls after TASK-256 shared style semantics |
-| TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Add bounded fade/slide/no-motion options without weakening TASK-256 interactive runtime semantics |
-| TASK-292-03 | Toggle Block Accessible Label Localization and Status Copy | High | Medium | Add widget-owned localized radiogroup and selected-state copy while TASK-256 owns structural ARIA/ID repairs |
-| TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Add variant thumbnails, clearer Wizard/Visual/Advanced ownership, reset defaults, and active default-state messaging |
-| TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Add builder-facing pane guidance and document the intentional two-state Toggle Block boundary |
-| TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Refresh Toggle Block report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -159,6 +152,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Toggle Block is fully closed with new visual/runtime/editor contracts, refreshed report/docs, changelog coverage, and final validation evidence |
+| TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-292 family |
+| TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Done (2026-05-22): Toggle Block now ships preview-only pane guidance tied to user-facing labels and documents the intentional two-pane product boundary |
+| TASK-292-04 | Toggle Block Editor Mode Flow, Variant Previews, and Reset UX | High | Large | Done (2026-05-22): Wizard/Visual/Advanced now have explicit ownership, preview miniatures, shared color controls, default-state messaging, and reset-to-defaults with undo |
+| TASK-292-03 | Toggle Block Accessible Label Localization and Status Copy | High | Medium | Done (2026-05-22): radiogroup labels and selected-state live copy are now widget-owned, localized fields instead of hardcoded English strings |
+| TASK-292-02 | Toggle Block Motion and Pane Transition Contract | Medium | Medium | Done (2026-05-22): Toggle Block now supports bounded none/fade/slide motion with reduced-motion-safe rendering and no runtime contract downgrade |
+| TASK-292-01 | Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling | High | Large | Done (2026-05-22): cards is now visibly distinct, active trigger contrast is configurable, and both panes own independent bounded style tokens |
 | TASK-291 | Timeline Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Timeline-local runtime, editor, schema, report, docs, and closure evidence are synchronized; W7 is consumed through TASK-299 and W4/W8 remain explicit deferrals instead of hidden scope creep |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): report/widget docs/task-board/changelog closure is synchronized with the final Timeline validation sweep |
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Done (2026-05-22): Timeline intentionally stays static in the current contract, with no motion schema or runtime animation classes added |

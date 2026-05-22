@@ -6,7 +6,7 @@
 **Category:** Widgets + Accessibility + Admin UI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-292, TASK-256-04, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -51,14 +51,14 @@ top of it without taking over structural ARIA ownership.
 
 ## Sub-Tasks
 
-- [ ] Add schema/default/normalizer support for Toggle Block accessible copy.
-- [ ] Render the radiogroup label and selected-state announcement through the
+- [x] Add schema/default/normalizer support for Toggle Block accessible copy.
+- [x] Render the radiogroup label and selected-state announcement through the
   final TASK-256 ARIA helper plus normalized plain-text values.
-- [ ] Add editor controls in Visual/Advanced and a Wizard-safe summary if
+- [x] Add editor controls in Visual/Advanced and a Wizard-safe summary if
   needed.
-- [ ] Add runtime/editor/validator tests for default, custom, empty, and invalid
+- [x] Add runtime/editor/validator tests for default, custom, empty, and invalid
   accessible-copy paths.
-- [ ] Update widget docs and report evidence without claiming TASK-256 ARIA
+- [x] Update widget docs and report evidence without claiming TASK-256 ARIA
   relationship fixes.
 
 ## Files to Change

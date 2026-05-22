@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Admin UI + Runtime Render + Accessibility + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -81,12 +81,12 @@ define a weaker local replacement for a shared contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-292-01: Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling
-- [ ] TASK-292-02: Toggle Block Motion and Pane Transition Contract
-- [ ] TASK-292-03: Toggle Block Accessible Label Localization and Status Copy
-- [ ] TASK-292-04: Toggle Block Editor Mode Flow, Variant Previews, and Reset UX
-- [ ] TASK-292-05: Toggle Block Pane Authoring Guidance and Two-State Documentation
-- [ ] TASK-292-06: Toggle Block Report Docs Changelog and Closure
+- [x] TASK-292-01: Toggle Block Variant Visual Hierarchy, Contrast, and Pane Styling
+- [x] TASK-292-02: Toggle Block Motion and Pane Transition Contract
+- [x] TASK-292-03: Toggle Block Accessible Label Localization and Status Copy
+- [x] TASK-292-04: Toggle Block Editor Mode Flow, Variant Previews, and Reset UX
+- [x] TASK-292-05: Toggle Block Pane Authoring Guidance and Two-State Documentation
+- [x] TASK-292-06: Toggle Block Report Docs Changelog and Closure
 
 ## Implementation Order
 

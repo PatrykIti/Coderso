@@ -6,7 +6,7 @@
 **Category:** Documentation + QA + Changelog + Task Board
 **Estimated Effort:** Medium
 **Dependencies:** TASK-292-01, TASK-292-02, TASK-292-03, TASK-292-04, TASK-292-05, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -48,15 +48,15 @@ shared-contract fixes or overclaiming future product scope.
 
 ## Sub-Tasks
 
-- [ ] Enumerate every finding from
+- [x] Enumerate every finding from
   `_docs/PLAYWRIGHT/REPORT_TOGGLE_BLOCK_WIDGET.md`.
-- [ ] Classify each finding as fixed by TASK-292, routed to TASK-256,
+- [x] Classify each finding as fixed by TASK-292, routed to TASK-256,
   intentional two-state boundary, or deferred future product scope.
-- [ ] Refresh the Toggle Block report and widget docs with concrete evidence.
-- [ ] Add changelog coverage and update `_docs/_CHANGELOG/README.md`.
-- [ ] Move completed TASK-292 rows in `_docs/_TASKS/README.md` and recompute
+- [x] Refresh the Toggle Block report and widget docs with concrete evidence.
+- [x] Add changelog coverage and update `_docs/_CHANGELOG/README.md`.
+- [x] Move completed TASK-292 rows in `_docs/_TASKS/README.md` and recompute
   statistics.
-- [ ] Record final validation commands before marking the family Done.
+- [x] Record final validation commands before marking the family Done.
 
 ## Files to Change
 

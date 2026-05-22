@@ -1,16 +1,12 @@
 import React from "react";
 import type { ComponentType } from "react";
-import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
+import { expect, test } from "vitest";
 
-import {
-  ToggleBlockAdvancedEditor,
-  ToggleBlockVisualEditor,
-  ToggleBlockWizardEditor,
-} from "../../../core/admin/ui/widgets/editors/ToggleBlockEditors";
 import {
   createToggleBlockWidget,
   normalizeToggleBlockData,
+  resetToggleBlockData,
   ToggleBlock,
   toggleBlockDefaults,
   type ToggleBlockData,
@@ -21,51 +17,210 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
 
-test("toggle block renders defaults", () => {
-  const html = renderToString(<ToggleBlock data={toggleBlockDefaults} variant="switch" />);
-
-  expect(html).toContain('data-coderso-toggle-block="1"');
-  expect(html).toContain('data-coderso-toggle-state="primary"');
-  expect(html).toContain('role="radiogroup"');
-  expect(html).toContain('role="radio"');
-  expect(html).toContain('aria-controls="toggle-block-primary-pane-primary"');
-  expect(html).toContain('aria-controls="toggle-block-primary-pane-secondary"');
-  expect(html).toContain('aria-labelledby="toggle-block-primary-trigger-primary"');
-  expect(html).toContain('aria-labelledby="toggle-block-primary-trigger-secondary"');
-  expect(html).toContain("data-coderso-toggle-status");
-  expect(html).not.toContain("Add widgets for the primary view.");
-  expect(html).toContain("codersoToggleBound");
+test("toggle block reset helper returns normalized defaults", () => {
+  expect(resetToggleBlockData()).toEqual({
+    labels: {
+      primary: "View A",
+      secondary: "View B",
+      helper: "Switch between two content views.",
+      ariaLabel: "Toggle content view",
+      selectedSuffix: "selected",
+    },
+    options: {
+      defaultState: "primary",
+      motion: "none",
+    },
+    style: {
+      surfaceColor: "var(--color-surface)",
+      borderColor: "var(--color-border)",
+      accentColor: "var(--color-text)",
+      accentContrastColor: "var(--color-background)",
+      panes: {
+        primary: {
+          surface: "default",
+          padding: "comfortable",
+          radius: "md",
+          borderEmphasis: "subtle",
+        },
+        secondary: {
+          surface: "default",
+          padding: "comfortable",
+          radius: "md",
+          borderEmphasis: "subtle",
+        },
+      },
+    },
+  });
 });
 
-test("toggle block normalization applies defaults", () => {
+test("toggle block normalization applies bounded defaults and independent pane fallback", () => {
   const normalized = normalizeToggleBlockData({
     labels: {
-      primary: "Summary",
+      primary: " Summary ",
       secondary: "Details",
+      helper: "",
+      ariaLabel: "",
+      selectedSuffix: "",
     },
     options: {
       defaultState: "secondary",
+      motion: "spin" as never,
+    },
+    style: {
+      surfaceColor: "   ",
+      borderColor: " #1f2937 ",
+      accentColor: " #0f172a ",
+      accentContrastColor: "",
+      panes: {
+        primary: {
+          surface: "contrast",
+          padding: "spacious",
+          radius: "lg",
+          borderEmphasis: "strong",
+        },
+        secondary: {
+          surface: "invalid" as never,
+          padding: "compact",
+          radius: "broken" as never,
+          borderEmphasis: "unknown" as never,
+        },
+      },
     },
   });
 
-  expect(normalized.options?.defaultState).toBe("secondary");
-  expect(normalized.labels?.primary).toBe("Summary");
-  expect(normalized.labels?.secondary).toBe("Details");
+  expect(normalized).toEqual({
+    labels: {
+      primary: "Summary",
+      secondary: "Details",
+      helper: "",
+      ariaLabel: "Toggle content view",
+      selectedSuffix: "selected",
+    },
+    options: {
+      defaultState: "secondary",
+      motion: "none",
+    },
+    style: {
+      borderColor: "#1f2937",
+      accentColor: "#0f172a",
+      accentContrastColor: "var(--color-background)",
+      panes: {
+        primary: {
+          surface: "contrast",
+          padding: "spacious",
+          radius: "lg",
+          borderEmphasis: "strong",
+        },
+        secondary: {
+          surface: "default",
+          padding: "compact",
+          radius: "md",
+          borderEmphasis: "subtle",
+        },
+      },
+    },
+  });
 });
 
-test("toggle block preserves an intentional empty helper state", () => {
-  const normalized = normalizeToggleBlockData({
+test("toggle block renders defaults with accessible labels and motion markers", () => {
+  const html = renderToString(
+    <ToggleBlock data={toggleBlockDefaults} variant="switch" blockId="toggle-default" />
+  );
+
+  expect(html).toContain('data-coderso-toggle-block="1"');
+  expect(html).toContain('data-coderso-toggle-variant="switch"');
+  expect(html).toContain('data-coderso-toggle-motion="none"');
+  expect(html).toContain('aria-label="Toggle content view"');
+  expect(html).toContain('aria-controls="toggle-block-toggle-default-pane-primary"');
+  expect(html).toContain('aria-labelledby="toggle-block-toggle-default-trigger-primary"');
+  expect(html).toContain("data-coderso-toggle-status");
+  expect(html).toContain("View A selected");
+  expect(html).toContain('data-coderso-toggle-selected-suffix="selected"');
+  expect(html).toContain("codersoToggleBound");
+});
+
+test("toggle block cards variant renders accent contrast, motion classes, and pane tokens", () => {
+  const html = renderToString(
+    <ToggleBlock
+      blockId="toggle-cards"
+      variant="cards"
+      data={{
+        labels: {
+          primary: "Overview",
+          secondary: "Details",
+          helper: "",
+          ariaLabel: "Wybierz widok",
+          selectedSuffix: "aktywny",
+        },
+        options: {
+          defaultState: "secondary",
+          motion: "slide",
+        },
+        style: {
+          surfaceColor: "#f8fafc",
+          borderColor: "#cbd5e1",
+          accentColor: "#0f172a",
+          accentContrastColor: "#ffffff",
+          panes: {
+            primary: {
+              surface: "soft",
+              padding: "compact",
+              radius: "sm",
+              borderEmphasis: "subtle",
+            },
+            secondary: {
+              surface: "contrast",
+              padding: "spacious",
+              radius: "lg",
+              borderEmphasis: "strong",
+            },
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-coderso-toggle-variant="cards"');
+  expect(html).toContain('data-coderso-toggle-state="secondary"');
+  expect(html).toContain('data-coderso-toggle-motion="slide"');
+  expect(html).toContain('aria-label="Wybierz widok"');
+  expect(html).toContain("Details aktywny");
+  expect(html).toContain("--nextless-toggle-accent-contrast:#ffffff");
+  expect(html).toContain("motion-safe:slide-in-from-bottom-2");
+  expect(html).toContain("Primary pane");
+  expect(html).toContain("Secondary pane");
+  expect(html).toContain("grid grid-cols-1 gap-3 sm:grid-cols-2");
+  expect(html).toContain("bg-[var(--color-surface)]");
+  expect(html).toContain("p-6");
+  expect(html).toContain("rounded-xl");
+  expect(html).toContain("shadow-sm");
+});
+
+test("toggle block editor-preview placeholders use pane labels and stay out of public runtime", () => {
+  const data: ToggleBlockData = {
     labels: {
+      primary: "Summary",
+      secondary: "Specs",
       helper: "",
     },
-  });
-  const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
+  };
 
-  expect(normalized.labels?.helper).toBe("");
-  expect(html).not.toContain("Switch between two content views.");
+  const publicHtml = renderToString(<ToggleBlock data={data} variant="switch" blockId="public" />);
+  const previewHtml = renderToString(
+    <ToggleBlock
+      data={data}
+      variant="switch"
+      blockId="preview"
+      renderContext={{ mode: "editor-preview" }}
+    />
+  );
+
+  expect(publicHtml).not.toContain("Use the page builder to add widgets");
+  expect(previewHtml).toContain("Use the page builder to add widgets to the summary pane.");
+  expect(previewHtml).toContain("Use the page builder to add widgets to the specs pane.");
 });
 
-test("toggle block validator accepts schema", () => {
+test("toggle block validator accepts expanded task-292 schema", () => {
   clearWidgets();
   const widget = createToggleBlockWidget({
     wizard: StubEditor,
@@ -83,9 +238,29 @@ test("toggle block validator accepts schema", () => {
         labels: {
           primary: "Overview",
           secondary: "Specs",
+          ariaLabel: "Choose pane",
+          selectedSuffix: "active",
         },
         options: {
-          defaultState: "primary",
+          defaultState: "secondary",
+          motion: "fade",
+        },
+        style: {
+          accentContrastColor: "#ffffff",
+          panes: {
+            primary: {
+              surface: "soft",
+              padding: "compact",
+              radius: "sm",
+              borderEmphasis: "subtle",
+            },
+            secondary: {
+              surface: "contrast",
+              padding: "spacious",
+              radius: "lg",
+              borderEmphasis: "strong",
+            },
+          },
         },
       },
       slots: {
@@ -94,62 +269,4 @@ test("toggle block validator accepts schema", () => {
       },
     })
   ).not.toThrow();
-});
-
-test("toggle block cleared surface omits background style", () => {
-  const normalized = normalizeToggleBlockData({
-    ...toggleBlockDefaults,
-    style: {},
-  });
-  const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
-
-  expect(normalized.style?.surfaceColor).toBeUndefined();
-  expect(html).toContain('data-coderso-toggle-block="1"');
-  expect(html).not.toContain("background-color:");
-});
-
-test("toggle block shows empty-pane placeholders only in editor preview", () => {
-  const publicHtml = renderToString(<ToggleBlock data={toggleBlockDefaults} variant="switch" />);
-  const previewHtml = renderToString(
-    <ToggleBlock
-      data={toggleBlockDefaults}
-      variant="switch"
-      renderContext={{ mode: "editor-preview" }}
-    />
-  );
-
-  expect(publicHtml).not.toContain("Add widgets for the primary view.");
-  expect(previewHtml).toContain("Add widgets for the primary view.");
-});
-
-test("toggle block visual editor renders key sections", () => {
-  const html = renderToString(
-    <ToggleBlockVisualEditor
-      value={toggleBlockDefaults}
-      onChange={() => undefined}
-      variant="switch"
-      onVariantChange={() => undefined}
-    />
-  );
-
-  expect(html).toContain("Labels");
-  expect(html).toContain("Behavior and Style");
-  expect(html).toContain('data-widget-editor-section="toggle-block.labels"');
-  expect(html).toContain('data-widget-editor-section="toggle-block.behavior-style"');
-});
-
-const editors = [ToggleBlockWizardEditor, ToggleBlockAdvancedEditor];
-
-test("toggle block wizard and advanced editors render", () => {
-  for (const Editor of editors) {
-    const html = renderToString(
-      <Editor
-        value={toggleBlockDefaults}
-        onChange={() => undefined}
-        variant="switch"
-        onVariantChange={() => undefined}
-      />
-    );
-    expect(html).toContain("Variant");
-  }
 });

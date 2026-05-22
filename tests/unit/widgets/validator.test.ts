@@ -37,6 +37,7 @@ import {
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
 import { createSplitLayoutWidget } from "../../../core/widgets/core/splitLayout";
+import { createToggleBlockWidget } from "../../../core/widgets/core/toggleBlock";
 import {
   createStatsKpiWidget,
   statsKpiDefaults,
@@ -1866,6 +1867,83 @@ test("normalizeWidgetBlock accepts and rejects task-289 Team schema fields", () 
           compactMobileBio: "auto",
         },
       } as never,
+    })
+  ).toThrow("widget_schema_invalid");
+});
+
+test("normalizeWidgetBlock accepts bounded Toggle Block task-292 fields and rejects unknown pane keys", () => {
+  registerWidget(
+    createToggleBlockWidget({
+      wizard: Dummy as never,
+      visual: Dummy as never,
+      advanced: Dummy as never,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "toggle-block-valid",
+      type: "toggle-block",
+      variant: "cards",
+      data: {
+        labels: {
+          primary: "Overview",
+          secondary: "Specs",
+          ariaLabel: "Choose pane",
+          selectedSuffix: "active",
+        },
+        options: {
+          defaultState: "secondary",
+          motion: "fade",
+        },
+        style: {
+          accentContrastColor: "#ffffff",
+          panes: {
+            primary: {
+              surface: "soft",
+              padding: "compact",
+              radius: "sm",
+              borderEmphasis: "subtle",
+            },
+            secondary: {
+              surface: "contrast",
+              padding: "spacious",
+              radius: "lg",
+              borderEmphasis: "strong",
+            },
+          },
+        },
+      },
+      slots: {
+        primary: [],
+        secondary: [],
+      },
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "toggle-block-invalid",
+      type: "toggle-block",
+      variant: "cards",
+      data: {
+        labels: {
+          primary: "Overview",
+          secondary: "Specs",
+        },
+        style: {
+          panes: {
+            primary: {
+              surface: "soft",
+              extra: "nope",
+            },
+          },
+        },
+      } as never,
+      slots: {
+        primary: [],
+        secondary: [],
+      },
     })
   ).toThrow("widget_schema_invalid");
 });

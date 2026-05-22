@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Runtime Render + Admin UI + Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-292, TASK-256-02, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -61,15 +61,15 @@ base, so this leaf must consume them instead of branching around them.
 
 ## Sub-Tasks
 
-- [ ] Add persisted `accentContrastColor` support and document the legacy
+- [x] Add persisted `accentContrastColor` support and document the legacy
   fallback path for payloads that omit it.
-- [ ] Extend Toggle Block schema/defaults/normalizer with bounded style fields.
-- [ ] Render the final `cards` visual hierarchy and pane style classes from
+- [x] Extend Toggle Block schema/defaults/normalizer with bounded style fields.
+- [x] Render the final `cards` visual hierarchy and pane style classes from
   normalized enum/token values.
-- [ ] Add editor controls that consume shared TASK-256 color/clear helpers when
+- [x] Add editor controls that consume shared TASK-256 color/clear helpers when
   they are available.
-- [ ] Add focused runtime, editor, and validator tests.
-- [ ] Update Toggle Block widget docs and Playwright report evidence.
+- [x] Add focused runtime, editor, and validator tests.
+- [x] Update Toggle Block widget docs and Playwright report evidence.
 
 ## Files to Change
 

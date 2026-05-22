@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI + Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-292, TASK-256-03, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -57,16 +57,16 @@ changing public placeholder safety, which remains TASK-256 scope.
 
 ## Sub-Tasks
 
-- [ ] Audit `PageEditor` and `BlockList` slot insertion owners before adding
+- [x] Audit `PageEditor` and `BlockList` slot insertion owners before adding
   any pane CTA.
-- [ ] Add Toggle Block pane guidance that uses user-facing pane labels instead
+- [x] Add Toggle Block pane guidance that uses user-facing pane labels instead
   of technical slot IDs.
-- [ ] Keep public runtime placeholder output aligned with TASK-256 placeholder
+- [x] Keep public runtime placeholder output aligned with TASK-256 placeholder
   gating.
-- [ ] Document the fixed two-pane v1 contract and route 3+ states outside
+- [x] Document the fixed two-pane v1 contract and route 3+ states outside
   TASK-292.
-- [ ] Add runtime/editor/page-builder tests only for the owners touched.
-- [ ] Update widget docs and report evidence.
+- [x] Add runtime/editor/page-builder tests only for the owners touched.
+- [x] Update widget docs and report evidence.
 
 ## Files to Change
 

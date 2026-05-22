@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Admin UI + Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-292, TASK-292-01, TASK-256-04, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -49,15 +49,15 @@ presentation only if the final TASK-256 interactive contract remains correct.
 
 ## Sub-Tasks
 
-- [ ] Choose the final normalized motion field location (`options` vs `style`)
+- [x] Choose the final normalized motion field location (`options` vs `style`)
   based on existing Toggle Block data ownership.
-- [ ] Add bounded motion enum values and schema/default/normalizer coverage.
-- [ ] Render reduced-motion-safe transition classes without changing the final
+- [x] Add bounded motion enum values and schema/default/normalizer coverage.
+- [x] Render reduced-motion-safe transition classes without changing the final
   TASK-256 active/inactive state contract.
-- [ ] Add editor controls for motion values in the correct modes.
-- [ ] Add Vitest coverage for defaults, invalid values, rendered classes, and
+- [x] Add editor controls for motion values in the correct modes.
+- [x] Add Vitest coverage for defaults, invalid values, rendered classes, and
   editor updates.
-- [ ] Update Toggle Block widget docs and report evidence.
+- [x] Update Toggle Block widget docs and report evidence.
 
 ## Files to Change
 

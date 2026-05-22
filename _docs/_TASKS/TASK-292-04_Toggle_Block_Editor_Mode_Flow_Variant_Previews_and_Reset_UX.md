@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Editor UX + Playwright QA
 **Estimated Effort:** Large
 **Dependencies:** TASK-292, TASK-292-01, TASK-256-02, TASK-256-05-04
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -59,13 +59,13 @@ current raw-only Toggle Block inputs.
 
 ## Sub-Tasks
 
-- [ ] Add compact previews to the `switch` and `cards` variant cards.
-- [ ] Split Wizard, Visual, and Advanced ownership so repeated sections are
+- [x] Add compact previews to the `switch` and `cards` variant cards.
+- [x] Split Wizard, Visual, and Advanced ownership so repeated sections are
   intentional and not redundant.
-- [ ] Add a deliberate reset-to-defaults action using normalized defaults.
-- [ ] Add active/default pane messaging in the editor.
-- [ ] Adopt final TASK-256 color/token controls only through the shared helper.
-- [ ] Add editor-focused tests and update docs/report evidence.
+- [x] Add a deliberate reset-to-defaults action using normalized defaults.
+- [x] Add active/default pane messaging in the editor.
+- [x] Adopt final TASK-256 color/token controls only through the shared helper.
+- [x] Add editor-focused tests and update docs/report evidence.
 
 ## Files to Change
 
