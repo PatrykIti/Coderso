@@ -32,13 +32,13 @@ shared ownerów:
   - B-02 pagination ownership belongs to linked `content-list` / TASK-262-03,
     not to a second pagination surface inside `listing-filters`,
   - B-11/T-09 page-reset concern is stale against the live runtime client and
-    now routes only to shared runtime follow-ups in TASK-315.
+    now routes only to the already-closed shared runtime follow-up TASK-315.
 - Nadal otwarte w TASK-273 family:
   - none. TASK-273 local widget scope and its extracted shared owner follow-ups
     are now landed in the current branch.
-- Nadal otwarte poza lokalnym ownerem widgetu:
-  - any broader listing-form UX convergence with `search-box` should be split to
-    a separate shared follow-up instead of being silently redefined here.
+- Poza lokalnym ownerem widgetu nie ma aktywnego shared backlogu w tej
+  rodzinie. Ewentualna przyszła convergence UX z `search-box` wymagałaby nowego
+  shared follow-up zamiast cichego rozszerzania zamkniętego `TASK-273`.
 
 ---
 
@@ -369,7 +369,7 @@ Frontend (localhost:3000)
 
 7. **B-03 — Brak wskaźnika aktywnych filtrów**: Brak licznika aktywnych filtrów, tagów wyborów, przycisku "Clear all". Użytkownik nie wie jakie filtry są aktywne bez czytania URL.
 
-8. **B-11 — Stale against the live runtime client**: Aktualny skrypt już czyści namespace `lq.<queryId>.*` przed zbudowaniem nowych wartości, więc nie-page submit nie przenosi starego `__page`. Otwarte pozostają shared loading/error/stale-response follow-upy w TASK-315, nie lokalny reset strony w TASK-273.
+8. **B-11 — Stale against the live runtime client**: Aktualny skrypt już czyści namespace `lq.<queryId>.*` przed zbudowaniem nowych wartości, więc nie-page submit nie przenosi starego `__page`. Shared loading/error/stale-response follow-upy zostały później domknięte w TASK-315; nie pozostał tu lokalny reset strony do naprawy w TASK-273.
 
 9. **B-01 — Tylko jeden wariant (`default`)**: Brak `horizontal` (filtry w wierszu), `sidebar` (sticky panel), `drawer` (mobilny). Wszystkie typowe wzorce UX dla listingów są nieobsługiwane.
 
@@ -469,7 +469,7 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 | Field suggestions, kind-scoped operators, structured option rows, and facet preview | TASK-273-02 | Listing Filters editors now use shared listing-query suggestions, structured option/sort rows, and rendered previews; covered in `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
 | Range/date practical controls, taxonomy hierarchy, and searchable option mode | TASK-273-03 | `listingFilters.tsx`, `filterContract.ts`, and `listingRuntimeScript.ts` now support dual range inputs with optional sliders, native date-range fields, taxonomy parent hierarchy, and searchable option mode; covered in `tests/vitest/widgets/listingFilters.test.tsx`, `tests/vitest/widgets/listingRuntimeScript.test.ts`, `tests/vitest/ui/listing-filters-editor-wave.test.tsx`, and `tests/unit/widgets/validator.test.ts`. |
 | Active summary, clear-all, truthful unloaded counts, and non-contradictory auto-apply UX | TASK-273-04 | Runtime now renders active chips, `Clear all`, hides manual submit in auto-apply mode, and suppresses fake zero counts when metrics are unresolved; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/widgets/listingRuntimeScript.test.ts`. |
-| Local loading/error anchors and current-state pagination evidence | TASK-273-05 | Listing Filters now emits deterministic `data-listing-runtime-loading` / `data-listing-runtime-error` anchors and keeps `__page` ownership out of the widget; shared fetch lifecycle remains externalized to TASK-315. |
+| Local loading/error anchors and current-state pagination evidence | TASK-273-05 | Listing Filters now emits deterministic `data-listing-runtime-loading` / `data-listing-runtime-error` anchors and keeps `__page` ownership out of the widget; the wider fetch lifecycle was later closed in TASK-315. |
 | Horizontal/sidebar/drawer variants, bounded width, collapsible facets, and sticky sidebar option | TASK-273-06 | `listingFilters.tsx` and `ListingFiltersEditors.tsx` now expose four bounded variants, max-width settings, native collapsible facets, and optional sticky sidebar behavior; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
 | Wizard facet onboarding, diagnostics outside Advanced, and clearer contract linkage | TASK-273-07 | Wizard and Visual already expose facet onboarding plus runtime diagnostics, while Advanced keeps contract linkage and snapshot visibility; covered in `tests/vitest/widgets/listingFilters.test.tsx` and `tests/vitest/ui/listing-filters-editor-wave.test.tsx`. |
 
@@ -478,9 +478,9 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 | Report seam | Owner | Closure note |
 |---|---|---|
 | B-02 pagination UI ownership | TASK-262-03 | Listing Filters does not render a second pagination surface; linked results continue to own `__page` navigation through `content-list`. |
-| B-08/B-09 shared refresh busy/error lifecycle | TASK-315 | Listing Filters now exposes local anchors, but shared fetch lifecycle, stale-response protection, and no-redirect recovery remain in the shared runtime task. |
-| B-11 / T-09 page reset | Current live contract + TASK-315 | The live runtime client already clears the `lq.<queryId>.*` namespace before rebuilding current values; no local fix remains in TASK-273. |
-| First-open `Not authenticated` picker load | TASK-316 | Shared `useListingQueries()` owner now handles bounded retry/manual retry; Listing Filters consumes that contract without widget-local fetch hooks. |
+| B-08/B-09 shared refresh busy/error lifecycle | TASK-315 (closed) | Listing Filters exposes local anchors, and the shared fetch lifecycle, stale-response protection, and no-redirect recovery were later closed in `TASK-315`. |
+| B-11 / T-09 page reset | Current live contract + TASK-315 (closed) | The live runtime client already clears the `lq.<queryId>.*` namespace before rebuilding current values; no local fix remains in TASK-273 and the wider refresh contract is closed in `TASK-315`. |
+| First-open `Not authenticated` picker load | TASK-316 (closed) | Shared `useListingQueries()` now owns bounded retry/manual retry and that shared owner is already closed; Listing Filters consumes it without widget-local fetch hooks. |
 | Raw script policy, uncontrolled/shared ARIA baselines, generic clear/color semantics, and mode atomicity | TASK-256 family | These remain shared-contract evidence and are not claimed as TASK-273-local fixes. |
 
 ### Validation used for closure

@@ -14,11 +14,12 @@ checkout has moved since then:
 
 - shared safe-href output for external logo links, fallback section naming, and
   `hoverColor` truthfulness already landed under `TASK-256-06-02`;
-- the remaining shared residuals still missing on current `HEAD` are now
-  reopened under `TASK-314`: Advanced duplicate controls, shared Link URL
-  feedback, shared heading semantics, and safe `logoHeight: "none"` output;
-- `TASK-274` continues to own only Logo Cloud product/UX work that is local to
-  this widget after those shared prerequisites are honest.
+- the formerly reopened shared prerequisites from `TASK-314` are now closed:
+  Advanced duplicate controls, shared Link URL feedback, shared heading
+  semantics, and safe `logoHeight: "none"` output all landed before the widget
+  family closure;
+- `TASK-274` continues to own only Logo Cloud product/UX work that was local to
+  this widget after those shared prerequisites became honest.
 
 ### Shared residual closure note — 2026-05-19
 

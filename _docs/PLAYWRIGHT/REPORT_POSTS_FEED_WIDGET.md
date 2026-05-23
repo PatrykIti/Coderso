@@ -370,15 +370,14 @@ Admin canvas nie uruchamia SSR resolvera — edytor renderuje widget z `resolved
 - Shared truthfulness already fixed at current HEAD is no longer open widget
   scope: `UX-07` columns truthfulness landed through TASK-302 and the
   `posts-feed-variant-list.png` evidence is historical only.
-- Remaining shared `ContentListBlock` accessibility residuals now need named
-  follow-up ownership rather than the closed TASK-256 classifier:
-  date semantics / `<time>` and contextual CTA text route to TASK-320.
-- Shared editor clear-undo behavior is not widget-local Posts Feed scope; it
-  routes to TASK-321 instead of the already-closed TASK-256 color-control
-  closure.
-- Global auth/session expiry remains out of family scope and routes to
-  TASK-322 family is now closed; TASK-277-03 still owns only the local picker
-  retry/error UX around that platform failure.
+- Shared `ContentListBlock` accessibility residuals are now closed under
+  `TASK-320`: date semantics use `<time>` and CTA links expose contextual
+  accessible naming.
+- Shared editor clear-undo behavior is closed under `TASK-321`; Posts Feed does
+  not fork that helper locally.
+- Global auth/session expiry remains out of family scope and is now closed by
+  the `TASK-322` family; TASK-277-03 still owns only the local picker retry/error UX
+  around that platform failure.
 - `BF-09` is no longer a missing shared renderer capability. The shared
   `ContentListBlock` already owns bounded image-aspect behavior, and the
   remaining Posts Feed gap is only the local bridge into that contract.
