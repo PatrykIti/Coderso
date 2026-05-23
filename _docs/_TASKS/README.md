@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 8 tasks
+- **To Do:** 26 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1920 tasks
 
@@ -38,6 +38,24 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
+| TASK-336-01 | Editor Contract Type and Registry Validator | High | Large | Add typed v2 editor contract, soft registry validation, and strict Vitest helpers |
+| TASK-336-02 | Editor DOM Metadata and Control Ownership Enforcement | High | Large | Add shared mode/section/control DOM metadata so Vitest and Playwright can inspect ownership |
+| TASK-336-03 | Playwright 38 Widget Fixture and Smoke Harness | High | Large | Build repeatable admin/frontend smoke coverage for all widgets and CSS overflow checks |
+| TASK-336-04 | Template Section Mode Ownership | High | Large | Split repeated Template Section editor into setup, visual, and read-only diagnostic owners |
+| TASK-336-05 | Search Box Mode Ownership | High | Large | Split search source setup, visible copy/style, and runtime diagnostics |
+| TASK-336-06 | Listing Filters Mode Ownership | High | Large | Split collection/facet setup, filter presentation, and query diagnostics |
+| TASK-336-07 | Tabs Mode Ownership | High | Large | Remove residual Advanced duplicates while preserving TASK-288/TASK-330 behavior |
+| TASK-336-08 | Accordion Mode Ownership | High | Large | Make Advanced technical/read-only instead of a duplicate structure/style editor |
+| TASK-336-09 | Posts Feed Mode Ownership | High | Large | Split feed source setup, card display, and resolved-query diagnostics |
+| TASK-336-10 | Form Embed Mode Ownership | High | Large | Split form setup, wrapper presentation, and read-only security/runtime diagnostics |
+| TASK-336-11 | Hero Mode Ownership and Legacy Control Migration | High | Large | Move Hero copy/media/surface controls to Visual and keep Advanced technical/read-only |
+| TASK-336-12 | Stats KPI Mode Ownership | High | Large | Remove Advanced metric/style duplicates while preserving TASK-287/TASK-331 fixes |
+| TASK-336-13 | P2 Source Style and Diagnostics Cleanup | Medium | Large | Clean remaining source/style/diagnostic drift in content, booking, appointment, and product widgets |
+| TASK-336-14 | Layout Widget Advanced Technical Token Policy | Medium | Large | Define when layout Advanced may own technical tokens versus read-only summaries |
+| TASK-336-15 | Renderer Fixture Overflow and Team UX Contract | Medium | Large | Fix frontend fixture/CSS drift, overflow markers, and Team spotlight smoke coverage |
+| TASK-336-16 | One-Time Wizard and Daily Work Tabs | High | Very Large | Introduce setup-complete Wizard lifecycle only after widget owner contracts are strict |
+| TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

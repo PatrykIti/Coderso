@@ -1,0 +1,145 @@
+# TASK-336-15: Renderer Fixture Overflow and Team UX Contract
+
+# FileName: TASK-336-15_Renderer_Fixture_Overflow_and_Team_UX_Contract.md
+
+**Priority:** Medium
+**Category:** Widgets + Frontend CSS + Fixtures + Playwright
+**Estimated Effort:** Large
+**Dependencies:** TASK-336-03, TASK-336-13, TASK-336-14
+**Status:** To Do
+
+---
+
+## Overview
+
+Close frontend CSS and fixture gaps found during the 38-widget re-audit.
+
+Some widgets can look correct in admin but fail or remain unproven on the
+frontend because fixture content is empty, weak, or missing. This task makes
+frontend smoke meaningful and fixes known CSS drift such as overflow and Team
+spotlight layout behavior.
+
+## Scope
+
+- Improve public fixtures so widgets render realistic content.
+- Add explicit intentional-overflow markers where overflow is a product choice.
+- Fix unintentional public CSS overflow or layout drift.
+- Recheck Team spotlight and representative long-content cases.
+- Ensure Playwright can distinguish real frontend bugs from empty fixture noise.
+
+## Widgets in Scope
+
+- `team`
+- `testimonials`
+- `pricing-plans`
+- `product-gallery`
+- `product-compare`
+- `product-table`
+- `content-list`
+- `stack`
+- `split-layout`
+- `grid-columns`
+- Any widget flagged by `TASK-336-03` as frontend CSS/fixture gap.
+
+## Sub-Tasks
+
+- [ ] Run the Playwright frontend smoke and collect current failures.
+- [ ] Replace empty fixture data with realistic bounded content.
+- [ ] Add long-name/long-copy Team spotlight fixture coverage.
+- [ ] Add intentional overflow markers to widgets where horizontal scroll is a
+  deliberate interaction.
+- [ ] Fix any unintentional `body` overflow.
+- [ ] Add renderer/unit tests where CSS classes or runtime markup change.
+- [ ] Re-run Playwright frontend smoke and save evidence.
+- [ ] Update report rows with final CSS/fixture status.
+
+## Files to Change
+
+| File | Required change |
+|---|---|
+| `core/widgets/core/team.tsx` | Fix or document Team spotlight frontend layout behavior if needed. |
+| `core/widgets/core/testimonials.tsx` | Add intentional overflow marker if slider/static overflow is deliberate. |
+| `core/widgets/core/pricingPlans.tsx` | Add intentional overflow marker or fix CSS if overflow is accidental. |
+| `core/widgets/core/product*.tsx` | Improve realistic fixture coverage and CSS checks. |
+| `core/widgets/core/contentList.tsx` | Improve fixture coverage if empty content hides render bugs. |
+| `core/widgets/core/stack.tsx` | Add representative nested fixture coverage. |
+| `core/widgets/core/splitLayout.tsx` | Add representative responsive fixture coverage. |
+| `core/widgets/core/gridColumns.tsx` | Add deep fixture coverage for current layout cases. |
+| `_docs/PLAYWRIGHT/` | Store smoke output and screenshots. |
+
+## Implementation Pseudocode
+
+```ts
+function assertNoUnexpectedBodyOverflow(page: Page) {
+  return page.evaluate(() => {
+    const overflowing = [...document.querySelectorAll<HTMLElement>("body *")]
+      .filter((element) => element.scrollWidth > element.clientWidth)
+      .filter((element) => element.dataset.overflowIntentional !== "true");
+    return overflowing.map((element) => ({
+      tag: element.tagName,
+      className: element.className,
+      width: element.scrollWidth,
+      clientWidth: element.clientWidth,
+    }));
+  });
+}
+```
+
+Data flow:
+
+- Fixture inventory identifies which public page covers each widget.
+- Public renderer receives realistic normalized widget data.
+- Playwright checks body overflow and widget-specific layout assertions.
+- Runtime tests cover markup/class changes where Playwright alone is too broad.
+
+Error handling:
+
+- Do not mark overflow intentional unless it is a user-facing interaction with
+  visible affordance.
+- Do not create oversized fixture data that exceeds the widget's product
+  contract.
+- Do not hide frontend bugs by clipping the page globally.
+
+## Security Contract
+
+No API routes are added.
+
+- Endpoint visibility: none.
+- Auth/RBAC/CSRF/rate limit: unchanged.
+- Reject-unknown validation: unchanged.
+- Anti-abuse: fixture content must not include scripts, unsafe HTML, or
+  untrusted external payloads.
+- Secret handling: no secrets, private draft data, or real customer data in
+  fixtures/screenshots.
+
+## Testing Requirements
+
+- Focused widget renderer tests for any changed runtime markup/classes.
+- `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts` if
+  fixture changes touch widget definitions.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- Playwright CLI frontend CSS/overflow smoke for all affected fixtures.
+
+Regression-test shape:
+
+- Body overflow is zero unless the owning element has
+  `data-overflow-intentional="true"`.
+- Team spotlight remains readable with long names/roles/bios.
+- Product/content fixtures are non-empty and representative.
+- Stack/Split/Grid fixture pages expose nested layout behavior.
+
+## Documentation Updates Required
+
+- Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md` with
+  final frontend CSS/fixture evidence.
+- Update affected widget docs if product overflow behavior is intentional.
+- Keep `_docs/_TASKS/README.md` synchronized when status changes.
+
+## Acceptance Criteria
+
+- Frontend fixture pages give meaningful coverage for affected widgets.
+- Unintentional body overflow is fixed.
+- Intentional overflow is marked and documented.
+- Team spotlight and representative complex layouts pass smoke checks.
+
