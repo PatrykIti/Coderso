@@ -136,9 +136,9 @@ Error handling:
 - Width options are enum-only; missing legacy width maps to current `max-w-xl`.
 - Contrast diagnostics are advisory and must not block saves unless a later
   accessibility policy explicitly requires it.
-- True per-breakpoint variant config stays out of this family. If the report
-  still needs it after truthful mobile guidance lands, defer it to `TASK-319`
-  instead of widening this schema.
+- True per-breakpoint variant config stays out of this family. The later
+  `TASK-319` decision already closed that concern as current-state sufficient,
+  so this leaf does not widen the schema.
 
 ## Security Contract
 

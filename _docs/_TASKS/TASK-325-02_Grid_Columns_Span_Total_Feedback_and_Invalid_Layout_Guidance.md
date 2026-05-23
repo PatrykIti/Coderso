@@ -95,7 +95,8 @@ No API routes are added.
 
 - Current span totals are visible for desktop, tablet, and mobile.
 - Totals that do not fit a single row now explain wrap or unused-width behavior explicitly.
-- The runtime-guard decision remains deferred to `TASK-325-05`.
+- The runtime-guard decision was later closed in `TASK-325-05` as an explicit
+  `no-runtime-guard` outcome.
 
 ## Completion Notes (2026-05-21)
 

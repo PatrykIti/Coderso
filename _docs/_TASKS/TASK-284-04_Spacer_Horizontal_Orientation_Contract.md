@@ -139,8 +139,8 @@ No API routes are added.
   and the blocker for future horizontal support.
 - Update `_docs/PLAYWRIGHT/REPORT_SPACER_WIDGET.md` with BF-05 deferred
   evidence.
-- Create the shared follow-up `TASK-328` and synchronize
-  `_docs/_TASKS/README.md`.
+- Record the shared follow-up `TASK-328` and synchronize
+  `_docs/_TASKS/README.md`; that prerequisite is now landed.
 
 ## Changelog Policy
 
