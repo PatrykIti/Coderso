@@ -1,4 +1,4 @@
-# 914. TASK-292 toggle block widget followups
+# 926. TASK-292 toggle block widget followups
 
 - **Date:** 2026-05-22
 - **Version:** Unreleased
