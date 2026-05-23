@@ -291,6 +291,62 @@ testIfDbWithOptions(
   { timeout: dbRuntimeTimeout }
 );
 
+testIfDb(
+  "public page runtime derives site dev assets from the admin dev url for published and preview pages",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const previousSiteDevUrl = process.env.VITE_SITE_DEV_SERVER_URL;
+    const previousAdminDevUrl = process.env.VITE_DEV_SERVER_URL;
+    const previousPublicAdminDevUrl = process.env.CODERSO_PUBLIC_VITE_DEV_URL;
+
+    delete process.env.VITE_SITE_DEV_SERVER_URL;
+    delete process.env.VITE_DEV_SERVER_URL;
+    process.env.CODERSO_PUBLIC_VITE_DEV_URL = "http://127.0.0.1:5173/admin/";
+
+    try {
+      const fixture = await createPublishedPageWithDraft();
+      const { token } = await createPreviewToken({
+        targetType: "page",
+        targetId: fixture.page.id,
+        ttlMinutes: 5,
+      });
+
+      const publicResponse = await requestPublicPath(fixture.slug);
+      expect(publicResponse.status).toBe(200);
+      const publicHtml = await publicResponse.text();
+      expect(publicHtml).toContain("http://127.0.0.1:5174/site/@vite/client");
+      expect(publicHtml).toContain("http://127.0.0.1:5174/site/main.ts");
+
+      const previewResponse = await requestPublicPath(
+        `/preview?type=page&token=${encodeURIComponent(token)}&device=desktop`
+      );
+      expect(previewResponse.status).toBe(200);
+      const previewHtml = await previewResponse.text();
+      expect(previewHtml).toContain("http://127.0.0.1:5174/site/@vite/client");
+      expect(previewHtml).toContain("http://127.0.0.1:5174/site/main.ts");
+    } finally {
+      if (previousSiteDevUrl === undefined) {
+        delete process.env.VITE_SITE_DEV_SERVER_URL;
+      } else {
+        process.env.VITE_SITE_DEV_SERVER_URL = previousSiteDevUrl;
+      }
+      if (previousAdminDevUrl === undefined) {
+        delete process.env.VITE_DEV_SERVER_URL;
+      } else {
+        process.env.VITE_DEV_SERVER_URL = previousAdminDevUrl;
+      }
+      if (previousPublicAdminDevUrl === undefined) {
+        delete process.env.CODERSO_PUBLIC_VITE_DEV_URL;
+      } else {
+        process.env.CODERSO_PUBLIC_VITE_DEV_URL = previousPublicAdminDevUrl;
+      }
+    }
+  }
+);
+
 testIfDb("public root renders the configured homepage by page id", async () => {
   resetRateLimitBuckets();
   await setTestSetting("site.cacheTtlSeconds", 0);

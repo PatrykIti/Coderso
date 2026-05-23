@@ -49,7 +49,7 @@ import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
-import { resolveDevAssetUrl } from "./utils/styleUrl";
+import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
 import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
 import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
 import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/entryTeaser";
@@ -161,15 +161,18 @@ const serveSiteAsset = async (pathname: string) => {
 const resolvePublicStyles = async () => {
   const tokens = await getResolvedTokens();
   const inlineCss = toCssVariables(tokens);
+  const adminDevBaseUrl =
+    process.env.VITE_DEV_SERVER_URL ?? process.env.CODERSO_PUBLIC_VITE_DEV_URL;
+  const siteDevBaseUrl = resolveSiteDevServerUrl(
+    process.env.VITE_SITE_DEV_SERVER_URL,
+    adminDevBaseUrl
+  );
 
   const siteCssHref = resolveSiteCss();
   if (siteCssHref) return { inlineCss, cssHref: siteCssHref, devModuleScripts: [] };
 
-  const siteDevClient = resolveDevAssetUrl(
-    process.env.VITE_SITE_DEV_SERVER_URL,
-    "/site/@vite/client"
-  );
-  const siteDevEntry = resolveDevAssetUrl(process.env.VITE_SITE_DEV_SERVER_URL, "/site/main.ts");
+  const siteDevClient = resolveDevAssetUrl(siteDevBaseUrl ?? undefined, "/site/@vite/client");
+  const siteDevEntry = resolveDevAssetUrl(siteDevBaseUrl ?? undefined, "/site/main.ts");
   if (siteDevClient && siteDevEntry) {
     return {
       inlineCss,
@@ -181,8 +184,8 @@ const resolvePublicStyles = async () => {
   const adminCssHref = resolveAdminCss();
   if (adminCssHref) return { inlineCss, cssHref: adminCssHref, devModuleScripts: [] };
 
-  const adminDevClient = resolveDevAssetUrl(process.env.VITE_DEV_SERVER_URL, "/admin/@vite/client");
-  const adminDevEntry = resolveDevAssetUrl(process.env.VITE_DEV_SERVER_URL, "/admin/main.tsx");
+  const adminDevClient = resolveDevAssetUrl(adminDevBaseUrl ?? undefined, "/admin/@vite/client");
+  const adminDevEntry = resolveDevAssetUrl(adminDevBaseUrl ?? undefined, "/admin/main.tsx");
   if (adminDevClient && adminDevEntry) {
     return {
       inlineCss,
