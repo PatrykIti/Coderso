@@ -53,6 +53,24 @@ the lane exercises real database and runtime flows that can exceed Bun's default
 `test:coverage:bun` uses the same curated Bun-owned route/plugin/perf suites through `scripts/run-bun-lane.ts`.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
 
+## Manual Smoke
+
+The TASK-336 widget contract smoke is a Bun-owned Playwright CLI harness. It is
+not part of the default automated lane because it requires local admin/frontend
+servers and admin credentials.
+
+```bash
+CODERSO_PLAYWRIGHT_EMAIL="<admin email>" \
+CODERSO_PLAYWRIGHT_PASSWORD="<admin password>" \
+bun scripts/playwright-widget-contract-smoke.ts \
+  --session widget-contract-smoke \
+  --admin http://localhost:5173/admin \
+  --front http://localhost:3000
+```
+
+Use `--dry-run` for inventory validation and `--widget <type>` for targeted
+debugging. The durable evidence is written to `_docs/PLAYWRIGHT`.
+
 ## Lane guidance
 
 - Prefer adding new Bun-free tests to `tests/vitest/*`.

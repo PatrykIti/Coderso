@@ -6,7 +6,7 @@
 **Category:** Playwright + QA + Widgets + Frontend CSS
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 
@@ -35,24 +35,24 @@ and known CSS drift areas.
 
 ## Sub-Tasks
 
-- [ ] Create a 38-widget inventory file used by the smoke script.
-- [ ] Exclude the four screen-only widgets from the 38-widget page-builder
+- [x] Create a 38-widget inventory file used by the smoke script.
+- [x] Exclude the four screen-only widgets from the 38-widget page-builder
   inventory: `screen-record-header`, `screen-field-value`,
   `screen-field-group`, and `screen-two-column`.
-- [ ] Add or document fixture pages for every widget that must be checked on
+- [x] Add or document fixture pages for every widget that must be checked on
   the frontend.
-- [ ] Implement admin login/session reuse for Playwright CLI.
-- [ ] For each widget, insert or open a fresh block before checking a mode so
+- [x] Implement admin login/session reuse for Playwright CLI.
+- [x] For each widget, insert or open a fresh block before checking a mode so
   unsaved-state dialogs do not leak between modes.
-- [ ] Assert each mode has one `data-widget-editor-mode` root and at least one
+- [x] Assert each mode has one `data-widget-editor-mode` root and at least one
   `data-widget-editor-section`.
-- [ ] Collect writable paths by mode and fail on unallowlisted duplicates only
+- [x] Collect writable paths by mode and fail on unallowlisted duplicates only
   when the widget/control metadata is instrumented; otherwise record
   `path-metadata-gap` until `TASK-336-17` strict mode.
-- [ ] Capture local screenshots for P0/P1/P2 widgets and frontend CSS risk
+- [x] Capture local screenshots for P0/P1/P2 widgets and frontend CSS risk
   widgets, but make tracked JSON/Markdown the durable evidence.
-- [ ] Add body-overflow checks with explicit intentional-overflow markers.
-- [ ] Write the final smoke report into `_docs/PLAYWRIGHT`.
+- [x] Add body-overflow checks with explicit intentional-overflow markers.
+- [x] Write the final smoke report into `_docs/PLAYWRIGHT`.
 
 ## Files to Change
 
@@ -173,3 +173,28 @@ Regression-test shape:
 - No sensitive credentials or sessions are committed.
 - Later widget leaves can cite this harness as their manual/automated smoke
   lane.
+
+## Completion Notes
+
+Completed on 2026-05-23.
+
+Final TASK-336-03 smoke evidence:
+
+- `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-results.json`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-results.md`
+
+Latest smoke summary:
+
+- 38 selected page-builder widgets.
+- Admin auth succeeded.
+- Admin failures: 31.
+- Public CSS failures: 3.
+- Fixture gaps: 9.
+- Metadata gaps: 9.
+
+Validation:
+
+- `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+- `bun scripts/playwright-widget-contract-smoke.ts --dry-run --output-json .tmp/widget-smoke-dry.json --output-md .tmp/widget-smoke-dry.md`
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-smoke --admin http://localhost:5173/admin --front http://localhost:3000`

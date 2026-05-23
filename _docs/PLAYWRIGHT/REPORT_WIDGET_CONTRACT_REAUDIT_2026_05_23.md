@@ -44,6 +44,33 @@ evidence. TASK-336 implementation waves should append dated status notes or
 write a final superseding closure report instead of rewriting source-evidence
 sections in place.
 
+## 2026-05-23 TASK-336-03 Smoke Harness Update
+
+The repeatable smoke lane now lives in
+`scripts/playwright-widget-contract-smoke.ts`.
+
+Tracked evidence:
+
+- `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-results.json`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-results.md`
+
+The harness covers the 38 page-builder widgets, explicitly excludes the four
+screen-only widgets, checks each admin mode from a fresh Playwright state, and
+records public CSS/fixture status separately from admin contract failures.
+Credentials and browser storage state stay in environment variables and
+`.tmp/playwright-widget-contract-smoke/` only.
+
+Latest recorded run in `widget-contract-smoke-results.json`:
+
+- 38 widgets selected.
+- Admin auth succeeded.
+- Admin mode failures: 31 widgets.
+- Public CSS failures: 3 widgets: `testimonials`, `pricing-plans`, `team`.
+- Fixture gaps: 9 public/admin fixture gaps, including missing standalone
+  public fixtures and empty-state-only public pages.
+- Metadata gaps: 9 widgets with missing control-path ownership metadata.
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

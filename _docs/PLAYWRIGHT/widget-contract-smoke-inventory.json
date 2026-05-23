@@ -1,0 +1,404 @@
+{
+  "version": 1,
+  "expectedWidgetCount": 38,
+  "excludedScreenOnlyWidgets": [
+    "screen-record-header",
+    "screen-field-value",
+    "screen-field-group",
+    "screen-two-column"
+  ],
+  "widgets": [
+    {
+      "widgetType": "section",
+      "title": "Section",
+      "adminInsertLabel": "Section",
+      "adminFixtureSlug": "/ctr-section-2305",
+      "publicPath": "/section-widget-test",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "template-section",
+      "title": "Template Section",
+      "adminInsertLabel": "Template Section",
+      "adminFixtureSlug": "/ctr-template-section-2305",
+      "publicPath": null,
+      "publicFixtureStatus": "missing",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "notes": "Hidden from the regular page-builder picker in the 2026-05-23 re-audit."
+    },
+    {
+      "widgetType": "grid-columns",
+      "title": "Grid Columns",
+      "adminInsertLabel": "Grid Columns",
+      "adminFixtureSlug": "/ctr-grid-columns-2305",
+      "publicPath": "/test-grid-columns-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "card-overflow"]
+    },
+    {
+      "widgetType": "split-layout",
+      "title": "Split Layout",
+      "adminInsertLabel": "Split Layout",
+      "adminFixtureSlug": "/ctr-split-layout-2305",
+      "publicPath": "/test-split-layout-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"]
+    },
+    {
+      "widgetType": "tabs",
+      "title": "Tabs",
+      "adminInsertLabel": "Tabs",
+      "adminFixtureSlug": "/ctr-tabs-2305",
+      "publicPath": "/test-tabs-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "accordion",
+      "title": "Accordion",
+      "adminInsertLabel": "Accordion",
+      "adminFixtureSlug": "/ctr-accordion-2305",
+      "publicPath": "/test-accordion-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "toggle-block",
+      "title": "Toggle Block",
+      "adminInsertLabel": "Toggle Block",
+      "adminFixtureSlug": "/ctr-toggle-block-2305",
+      "publicPath": "/test-toggle-block-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "spacer",
+      "title": "Spacer",
+      "adminInsertLabel": "Spacer",
+      "adminFixtureSlug": "/ctr-spacer-2305",
+      "publicPath": "/test-spacer-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "divider",
+      "title": "Divider",
+      "adminInsertLabel": "Divider",
+      "adminFixtureSlug": "/ctr-divider-2305",
+      "publicPath": "/test-divider-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "stack",
+      "title": "Stack",
+      "adminInsertLabel": "Stack",
+      "adminFixtureSlug": "/ctr-stack-2305",
+      "publicPath": "/test-stack-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"]
+    },
+    {
+      "widgetType": "hero",
+      "title": "Hero",
+      "adminInsertLabel": "Hero",
+      "adminFixtureSlug": "/ctr-hero-2305",
+      "publicPath": "/homepage",
+      "publicFixtureStatus": "shared-page",
+      "priority": "P1",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "feature-grid",
+      "title": "Feature Grid",
+      "adminInsertLabel": "Feature Grid",
+      "adminFixtureSlug": "/ctr-feature-grid-2305",
+      "publicPath": "/featuregridtest",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "card-overflow"]
+    },
+    {
+      "widgetType": "testimonials",
+      "title": "Testimonials",
+      "adminInsertLabel": "Testimonials",
+      "adminFixtureSlug": "/ctr-testimonials-2305",
+      "publicPath": "/test-testimonials-0516",
+      "publicFixtureStatus": "published",
+      "priority": "P1",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "card-overflow"],
+      "notes": "Known intentional slider overflow requires explicit marker."
+    },
+    {
+      "widgetType": "pricing-plans",
+      "title": "Pricing Plans",
+      "adminInsertLabel": "Pricing Plans",
+      "adminFixtureSlug": "/ctr-pricing-plans-2305",
+      "publicPath": "/test-pricing-plans-0516",
+      "publicFixtureStatus": "published",
+      "priority": "P1",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "card-overflow"],
+      "notes": "Comparison table horizontal scroll must be marked intentional."
+    },
+    {
+      "widgetType": "faq-accordion",
+      "title": "FAQ Accordion",
+      "adminInsertLabel": "FAQ Accordion",
+      "adminFixtureSlug": "/ctr-faq-accordion-2305",
+      "publicPath": "/test-faq-accordion-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "cta-banner",
+      "title": "CTA Banner",
+      "adminInsertLabel": "CTA Banner",
+      "adminFixtureSlug": "/ctr-cta-banner-2305",
+      "publicPath": "/test-cta-banner-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "logo-cloud",
+      "title": "Logo Cloud",
+      "adminInsertLabel": "Logo Cloud",
+      "adminFixtureSlug": "/ctr-logo-cloud-2305",
+      "publicPath": "/test-logo-cloud-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "gallery-mosaic",
+      "title": "Gallery Mosaic",
+      "adminInsertLabel": "Gallery Mosaic",
+      "adminFixtureSlug": "/ctr-gallery-mosaic-2305",
+      "publicPath": "/gallery-mosaic-test-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "stats-kpi",
+      "title": "Stats KPI",
+      "adminInsertLabel": "Stats KPI",
+      "adminFixtureSlug": "/ctr-stats-kpi-2305",
+      "publicPath": "/stats-kpi-audit-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "team",
+      "title": "Team",
+      "adminInsertLabel": "Team",
+      "adminFixtureSlug": "/ctr-team-2305",
+      "publicPath": "/test-team-0516",
+      "publicFixtureStatus": "published",
+      "priority": "P1",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "card-overflow"],
+      "notes": "Known spotlight side-rail density risk."
+    },
+    {
+      "widgetType": "rich-text-section",
+      "title": "Rich Text Section",
+      "adminInsertLabel": "Rich Text Section",
+      "adminFixtureSlug": "/ctr-rich-text-section-2305",
+      "publicPath": "/richtextsectiontest",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "content-list",
+      "title": "Content List",
+      "adminInsertLabel": "Content List",
+      "adminFixtureSlug": "/ctr-content-list-2305",
+      "publicPath": "/test-content-list-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"],
+      "notes": "Known empty-state fixture gap."
+    },
+    {
+      "widgetType": "posts-feed",
+      "title": "Posts Feed",
+      "adminInsertLabel": "Posts Feed",
+      "adminFixtureSlug": "/ctr-posts-feed-2305",
+      "publicPath": "/posts-feed-test-page",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "entry-teaser",
+      "title": "Entry Teaser",
+      "adminInsertLabel": "Entry Teaser",
+      "adminFixtureSlug": "/ctr-entry-teaser-2305",
+      "publicPath": "/test-entry-teaser-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "product-gallery",
+      "title": "Product Gallery",
+      "adminInsertLabel": "Product Gallery",
+      "adminFixtureSlug": "/ctr-product-gallery-2305",
+      "publicPath": "/test-product-gallery-widget",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"],
+      "notes": "Known empty-state fixture gap."
+    },
+    {
+      "widgetType": "product-compare",
+      "title": "Product Compare",
+      "adminInsertLabel": "Product Compare",
+      "adminFixtureSlug": "/ctr-product-compare-2305",
+      "publicPath": "/test-product-compare-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"],
+      "notes": "Known empty-state fixture gap."
+    },
+    {
+      "widgetType": "product-table",
+      "title": "Product Table",
+      "adminInsertLabel": "Product Table",
+      "adminFixtureSlug": "/ctr-product-table-2305",
+      "publicPath": "/producttabletestproducttabletest",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow", "empty-fixture"],
+      "notes": "Known empty-state fixture gap."
+    },
+    {
+      "widgetType": "listing-filters",
+      "title": "Listing Filters",
+      "adminInsertLabel": "Listing Filters",
+      "adminFixtureSlug": "/ctr-listing-filters-2305",
+      "publicPath": "/test-listing-filters-0516",
+      "publicFixtureStatus": "published",
+      "priority": "P0",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "search-box",
+      "title": "Search Box",
+      "adminInsertLabel": "Search Box",
+      "adminFixtureSlug": "/ctr-search-box-2305",
+      "publicPath": null,
+      "publicFixtureStatus": "missing",
+      "priority": "P0",
+      "requiredModes": ["wizard", "visual", "advanced"]
+    },
+    {
+      "widgetType": "timeline",
+      "title": "Timeline",
+      "adminInsertLabel": "Timeline",
+      "adminFixtureSlug": "/ctr-timeline-2305",
+      "publicPath": null,
+      "publicFixtureStatus": "missing",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "notes": "Reported as covered in the 2026-05-23 re-audit, but no published standalone slug is present in the current local page list."
+    },
+    {
+      "widgetType": "compare-timeline",
+      "title": "Compare Timeline",
+      "adminInsertLabel": "Compare Timeline",
+      "adminFixtureSlug": "/ctr-compare-timeline-2305",
+      "publicPath": "/test-compare-timeline-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "newsletter",
+      "title": "Newsletter",
+      "adminInsertLabel": "Newsletter",
+      "adminFixtureSlug": "/ctr-newsletter-2305",
+      "publicPath": "/test-newsletter-widget-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "booking-calendar",
+      "title": "Booking Calendar",
+      "adminInsertLabel": "Booking Calendar",
+      "adminFixtureSlug": "/ctr-booking-calendar-2305",
+      "publicPath": "/test-booking-calendar-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "appointment-form",
+      "title": "Appointment Form",
+      "adminInsertLabel": "Appointment Form",
+      "adminFixtureSlug": "/ctr-appointment-form-2305",
+      "publicPath": "/test-appointment-form-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "form-embed",
+      "title": "Form Embed",
+      "adminInsertLabel": "Form Embed",
+      "adminFixtureSlug": "/ctr-form-embed-2305",
+      "publicPath": null,
+      "publicFixtureStatus": "draft-only",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "notes": "Draft-only fixture in the current local page list."
+    },
+    {
+      "widgetType": "contact",
+      "title": "Contact",
+      "adminInsertLabel": "Contact",
+      "adminFixtureSlug": "/ctr-contact-2305",
+      "publicPath": "/contact-audit-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "navigation",
+      "title": "Navigation",
+      "adminInsertLabel": "Navigation",
+      "adminFixtureSlug": "/ctr-navigation-2305",
+      "publicPath": "/homepage",
+      "publicFixtureStatus": "shared-page",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    },
+    {
+      "widgetType": "footer",
+      "title": "Footer",
+      "adminInsertLabel": "Footer",
+      "adminFixtureSlug": "/ctr-footer-2305",
+      "publicPath": "/test-footer-widget-0516",
+      "publicFixtureStatus": "published",
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "cssChecks": ["body-overflow"]
+    }
+  ]
+}
