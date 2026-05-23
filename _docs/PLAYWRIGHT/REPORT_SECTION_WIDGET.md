@@ -83,7 +83,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | B2 | Zamknięte (2026-05-22, TASK-326): `resolveSectionRadius` dla wartości niestandardowej wraca teraz do rzeczywistego defaultu `"none"` zamiast `"2xl"` | `section.tsx:688` |
 | B3 | Zamknięte (2026-05-22, TASK-326): szerokość jest teraz opisana truthfully jako `Wide alias (same wrapper)`, a guidance wskazuje `Max width` lub `Full-width wrapper` dla widocznego poszerzenia | `SectionEditors.tsx:115,1931-1933` |
 | B4 | Zamknięte (2026-05-22, TASK-326): `gradientAngle` i `overlayOpacity` należą już tylko do Visual, a Advanced zostaje panelem semantyki + snapshotu | `SectionEditors.tsx:1982,2111,2404-2435` |
-| B5 | `borderColor` akceptuje CSS zmienne (np. `var(--color-border)`), ale shared color swatch nadal nadpisuje je hexem przy zmianie pickera — reopened owner `TASK-327` | `SectionEditors.tsx:1493` |
+| B5 | Zamknięte (2026-05-23, TASK-327): shared color swatch zachowuje CSS-variable/custom token text, dopóki autor nie zastąpi go jawnie przez text input lub explicit picker override | `ClearableFields.tsx`, `SectionEditors.tsx:1493` |
 
 ### 3.4 Ulepszenia UX edytora
 
@@ -95,7 +95,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | U4 | Zamknięte (2026-05-21, TASK-283-04): Visual wyjaśnia, że dwa gradient stop-y stają się widoczną powierzchnią, a kolor tła pozostaje fallbackiem po wyczyszczeniu gradientu | Edytor |
 | U5 | Zamknięte (2026-05-21, TASK-283-05-01): Visual ma teraz derived `Surface preview`, który pokazuje gradient, overlay, border, radius, i effective shadow bez dodatkowego persisted state | Edytor |
 | U6 | Zamknięte (2026-05-21, TASK-283-04): Wizard i Visual używają już tego samego card UI dla wariantów, a Wizard dodatkowo pokazuje quick presets | Spójność |
-| U7 | No standalone TASK-283 leaf: media URL validation została domknięta przez `TASK-283-02`, a freeform color/token text pozostaje intencjonalne; jedyny aktywny shared drift to `TASK-327` dla color swatch overwrite | Walidacja |
+| U7 | No standalone TASK-283 leaf: media URL validation została domknięta przez `TASK-283-02`, freeform color/token text pozostaje intencjonalne, a shared swatch overwrite drift został domknięty przez `TASK-327` | Walidacja |
 | U8 | Zamknięte (2026-05-17, TASK-256-03 + TASK-256-05-01): placeholder „Empty region.” jest już ograniczony do editor/admin preview i nie jest aktywnym frontend defectem | Frontend UX |
 
 ---
@@ -344,7 +344,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
-| **P1** | TASK-327 — domknąć shared color-swatch token drift, żeby `SharedColorFieldInputs` nie zamieniał CSS-variable/custom token text na hex przy zmianie swatcha | Średni | Shared editor truthfulness |
+| **P1** | Zamknięte (2026-05-23, TASK-327) — `SharedColorFieldInputs` zachowuje CSS-variable/custom token text przy zmianie swatcha, a deliberate replacement wymaga text input lub explicit picker override | Średni | Shared editor truthfulness |
 
 ## 8. Podsumowanie sesji testowej
 
@@ -368,7 +368,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 ### Co wymaga poprawy ❌
 
-- **Shared color-swatch token drift**: `SharedColorFieldInputs` nadal zapisuje hex przez domyślny `onChange`, gdy aktywny jest CSS variable/custom token; ownerem jest `TASK-327`, nie Section-local leaf.
+- Brak aktywnych Section-local ani shared residuali z tej sesji po domknięciu `TASK-327`; shared color swatch zachowuje token text, a deliberate replacement wymaga jawnej ścieżki override.
 
 ### Uwagi do sesji testowej
 

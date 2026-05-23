@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Admin UI + Editor Controls
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-02, TASK-283
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

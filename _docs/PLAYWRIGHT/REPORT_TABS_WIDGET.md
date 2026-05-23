@@ -434,7 +434,7 @@ className={joinClasses(
 | W1 | Fixed | `TabsItem` obsługuje `icon` / emoji w triggerze. |
 | W2, U4, U5, U9 | Fixed | Wizard ma własną sekcję Layout, compact row dla orientation/alignment, default badge, slot guidance i confirm przy redukcji liczby tabów. |
 | W3, W12, R1, U2 | Fixed | Vertical alignment używa `items-*`, etykiety alignment/orientation są user-facing, a outer width pozostaje truthfully w shared ownerze `layout.container` zamiast duplikować lokalny max-width. |
-| W6 | Shared follow-up | Tabs zachowuje local inline script guard, ale shared payload transport/dedupe został wyodrębniony do `TASK-329` zamiast dorabiania Tabs-only obejścia. |
+| W6 | Fixed by `TASK-329` | Public page renders now register the Tabs runtime payload once per page through the shared script collector, while preview remains script-free and widget roots stay isolated; covered by `tests/vitest/widgets/tabs.test.tsx` and `tests/vitest/site/publicRenderer.test.tsx`. |
 | W7, U3 | Fixed | Legacy `description` normalizuje się do `panelIntro`; osobne `triggerDescription` opisuje trigger zamiast panelu. |
 | W8, W9, U6, U8 | Fixed | Tabs ma bounded overflow, spacing, trigger typography i rozdzielone sekcje Layout / Trigger style / Colors. |
 | W10 | Fixed | `disabled` jest częścią schematu, editora i runtime; runtime aktywuje pierwszy enabled tab, ale zapisany `defaultItemId` nie znika, dopóki autor go nie zmieni. |
@@ -444,13 +444,13 @@ className={joinClasses(
 ### 9.1 Walidacja końcowa
 
 - `bun test tests/unit/widgets/validator.test.ts` — green
-- `bun x vitest tests/vitest/widgets/tabs.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx` — green
+- `bun x vitest tests/vitest/widgets/tabs.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/ui-integration/tabs-preview-activation.test.tsx tests/vitest/site/publicRenderer.test.tsx` — green
 - `bun run lint` — green
 - `bun run gates:coderso` — green
 - `bun run precommit` — green
 - `git diff --check` — green
 - `bun run scan:security:strict` — green
 
-### 9.2 Remaining residual scope po zamknięciu TASK-330
+### 9.2 Remaining residual scope po zamknięciu TASK-329
 
-- `TASK-329` — shared widget runtime-script transport and dedupe
+- Brak aktywnych shared residuali w rodzinie Tabs po domknięciu `TASK-329` i `TASK-330`.

@@ -4,7 +4,8 @@ import { renderToString } from "react-dom/server";
 import type { ReactNode } from "react";
 
 import { createTemplateCache } from "../themes/cache";
-import type { DeviceTarget, WidgetBlock } from "../widgets/types";
+import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
+import type { DeviceTarget, WidgetBlock, WidgetRenderContext } from "../widgets/types";
 import type { PageLayoutSettings } from "../services/pages/layoutSettings";
 import {
   DEFAULT_PAGE_TEMPLATE_KEY,
@@ -55,7 +56,8 @@ const renderDocument = (
   canonicalUrl?: string | null,
   imageUrl?: string | null,
   devModuleScripts?: string[] | null,
-  isPreview?: boolean
+  isPreview?: boolean,
+  renderBodyScripts?: () => ReactNode
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -105,8 +107,9 @@ const renderDocument = (
 
   const head = renderToString(<>{headTags}</>);
   const bodyHtml = renderToString(body);
+  const bodyScriptsHtml = renderBodyScripts ? renderToString(<>{renderBodyScripts()}</>) : "";
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}</body></html>`;
+  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${bodyScriptsHtml}</body></html>`;
 };
 
 const PreviewBanner = () => (
@@ -147,6 +150,13 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     layoutSettings: rawLayoutSettings,
   } = options;
 
+  const runtimeScripts = createWidgetRuntimeScriptRegistry();
+  const renderContext: WidgetRenderContext = {
+    mode: "public",
+    previewDevice,
+    runtimeScripts,
+  };
+
   const templateProps: PageTemplateProps = {
     title,
     templateKey: DEFAULT_PAGE_TEMPLATE_KEY,
@@ -154,6 +164,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     layoutSettings: rawLayoutSettings,
     isPreview,
     previewDevice,
+    renderContext,
   };
 
   const body = (
@@ -171,7 +182,8 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     canonicalUrl,
     options.imageUrl,
     devModuleScripts,
-    isPreview
+    isPreview,
+    () => runtimeScripts.renderScripts()
   );
 }
 
@@ -202,6 +214,13 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     ? await loadTemplateComponent<PageTemplateProps>(templatePath)
     : null;
 
+  const runtimeScripts = createWidgetRuntimeScriptRegistry();
+  const renderContext: WidgetRenderContext = {
+    mode: "public",
+    previewDevice,
+    runtimeScripts,
+  };
+
   const templateProps: PageTemplateProps = {
     title,
     templateKey: normalizedTemplateKey,
@@ -209,6 +228,7 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     layoutSettings: rawLayoutSettings,
     isPreview,
     previewDevice,
+    renderContext,
   };
 
   const body = (
@@ -226,6 +246,7 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     canonicalUrl,
     options.imageUrl,
     devModuleScripts,
-    isPreview
+    isPreview,
+    () => runtimeScripts.renderScripts()
   );
 }

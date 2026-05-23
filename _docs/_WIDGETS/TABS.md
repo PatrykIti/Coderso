@@ -57,7 +57,8 @@ Notes:
   slot instance IDs when older saved defaults do not match the new selection
   surface.
 - Admin/editor preview uses a React-local activation path and does not rely on
-  parser-executed inline scripts.
+  parser-executed inline scripts. Public page renders now register the Tabs
+  runtime payload once per page through the shared script collector.
 - Public runtime emits deterministic markers:
   - `data-coderso-tabs`
   - `data-coderso-tabs-variant`
@@ -77,8 +78,6 @@ Notes:
 - Triggers render with `role="tab"`; the tablist uses the deterministic label
   `Content tabs`, and active panels render `tabIndex={0}` while inactive panels
   stay `hidden`.
-- Remaining shared follow-up:
-  - `TASK-329`: shared widget runtime-script transport and dedupe
 
 ## Clear Controls
 

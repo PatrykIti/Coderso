@@ -33,6 +33,38 @@ export function resolveColorSwatchValue(value: string | undefined, fallback?: st
   return resolveColorPickerValue(value, fallback ?? "#000000");
 }
 
+export function isPickerRepresentableColorValue(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return false;
+  if (isHexColorValue(normalized)) return true;
+
+  const rgbMatch = normalized.match(rgbColorPattern);
+  if (!rgbMatch) return false;
+  const [, , , , alpha] = rgbMatch;
+  return !(typeof alpha === "string" && alpha.length > 0);
+}
+
+export function applySharedColorPickerChange({
+  currentValue,
+  nextValue,
+  onChange,
+  onPickerChange,
+}: {
+  currentValue: string | undefined;
+  nextValue: string;
+  onChange: (next: string) => void;
+  onPickerChange?: (next: string) => void;
+}) {
+  if (onPickerChange) {
+    onPickerChange(nextValue);
+    return;
+  }
+
+  if (!currentValue || isPickerRepresentableColorValue(currentValue)) {
+    onChange(nextValue);
+  }
+}
+
 export type ColorContrastAdvisory = {
   status: "ok" | "unknown" | "warning";
   message?: string;
@@ -293,7 +325,14 @@ export function SharedColorFieldInputs({
         <Input
           type="color"
           value={resolveColorPickerValue(value, pickerFallback)}
-          onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
+          onChange={(event) =>
+            applySharedColorPickerChange({
+              currentValue: value,
+              nextValue: event.target.value,
+              onChange,
+              onPickerChange,
+            })
+          }
           className="h-9 w-10 p-1"
           aria-labelledby={ariaLabelledby}
           aria-describedby={ariaDescribedby}

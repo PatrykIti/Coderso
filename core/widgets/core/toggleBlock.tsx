@@ -10,6 +10,7 @@ import type {
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type ToggleBlockVariantId = "switch" | "cards";
@@ -544,9 +545,18 @@ export function ToggleBlock({
   const primaryPaneId = scopedId(rootInstanceId, "pane-primary");
   const secondaryPaneId = scopedId(rootInstanceId, "pane-secondary");
 
+  const previewMode =
+    renderContext?.mode === "editor-preview" || renderContext?.mode === "admin-preview";
   const slotMap = slots && typeof slots === "object" && !Array.isArray(slots) ? slots : {};
   const primaryBlocks = Array.isArray(slotMap.primary) ? slotMap.primary : [];
   const secondaryBlocks = Array.isArray(slotMap.secondary) ? slotMap.secondary : [];
+  const runtimeScript = !previewMode
+    ? renderSharedWidgetRuntimeScript({
+        renderContext,
+        id: "toggle-block",
+        source: getToggleRuntimeClientScript(),
+      })
+    : null;
 
   const containerStyle: CSSProperties =
     compactStyle({
@@ -691,7 +701,7 @@ export function ToggleBlock({
           : renderEditorPlaceholder(resolvePanePlaceholder(labels.secondary), renderContext)}
       </div>
 
-      <script dangerouslySetInnerHTML={{ __html: getToggleRuntimeClientScript() }} />
+      {runtimeScript}
     </div>
   );
 }

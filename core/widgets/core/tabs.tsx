@@ -17,6 +17,7 @@ import type {
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type TabsVariantId = "pills" | "underline" | "minimal";
@@ -659,6 +660,13 @@ export function TabsBlock({
   const activeId = previewMode
     ? resolvePanelSelectionId(panels, previewActiveId ?? initialActiveId)
     : initialActiveId;
+  const runtimeScript = !previewMode
+    ? renderSharedWidgetRuntimeScript({
+        renderContext,
+        id: "tabs",
+        source: getTabsRuntimeClientScript(),
+      })
+    : null;
   const style = normalized.style ?? tabsDefaults.style!;
   const options = normalized.options ?? tabsDefaults.options!;
   const orientation = options.orientation ?? "horizontal";
@@ -857,12 +865,7 @@ export function TabsBlock({
         );
       })}
 
-      {!previewMode ? (
-        <script
-          type="text/javascript"
-          dangerouslySetInnerHTML={{ __html: getTabsRuntimeClientScript() }}
-        />
-      ) : null}
+      {runtimeScript}
     </div>
   );
 }

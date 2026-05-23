@@ -12,6 +12,7 @@ import {
   type ToggleBlockData,
 } from "../../../core/widgets/core/toggleBlock";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import { createWidgetRuntimeScriptRegistry } from "../../../core/widgets/runtimeScripts";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -139,6 +140,33 @@ test("toggle block renders defaults with accessible labels and motion markers", 
   expect(html).toContain("codersoToggleBound");
 });
 
+test("toggle block registers shared runtime scripts when a page-scoped collector is available", () => {
+  const runtimeScripts = createWidgetRuntimeScriptRegistry();
+  const renderContext = { mode: "public" as const, runtimeScripts };
+  const html = renderToString(
+    <>
+      <ToggleBlock
+        data={toggleBlockDefaults}
+        variant="switch"
+        blockId="toggle-one"
+        renderContext={renderContext}
+      />
+      <ToggleBlock
+        data={toggleBlockDefaults}
+        variant="cards"
+        blockId="toggle-two"
+        renderContext={renderContext}
+      />
+    </>
+  );
+  const scriptsHtml = renderToString(<>{runtimeScripts.renderScripts()}</>);
+
+  expect(html).not.toContain('data-coderso-runtime-script="toggle-block"');
+  expect(html).not.toContain("codersoToggleBound");
+  expect(scriptsHtml.match(/data-coderso-runtime-script="toggle-block"/g)).toHaveLength(1);
+  expect(scriptsHtml).toContain("codersoToggleBound");
+});
+
 test("toggle block cards variant renders accent contrast, motion classes, and pane tokens", () => {
   const html = renderToString(
     <ToggleBlock
@@ -218,6 +246,7 @@ test("toggle block editor-preview placeholders use pane labels and stay out of p
   expect(publicHtml).not.toContain("Use the page builder to add widgets");
   expect(previewHtml).toContain("Use the page builder to add widgets to the summary pane.");
   expect(previewHtml).toContain("Use the page builder to add widgets to the specs pane.");
+  expect(previewHtml).not.toContain("codersoToggleBound");
 });
 
 test("toggle block validator accepts expanded task-292 schema", () => {

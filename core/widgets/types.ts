@@ -54,10 +54,16 @@ export type WidgetPreviewState = {
   requestKey?: string;
 };
 
+export type WidgetRuntimeScriptRegistry = {
+  registerScript: (id: string, source: string) => void;
+  renderScripts: () => ReactNode[];
+};
+
 export type WidgetRenderContext = {
   mode: WidgetRenderMode;
   previewDevice?: DeviceTarget;
   previewState?: WidgetPreviewState | null;
+  runtimeScripts?: WidgetRuntimeScriptRegistry;
 };
 
 export type WidgetEditorSlotTarget = {

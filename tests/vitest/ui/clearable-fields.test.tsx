@@ -13,12 +13,14 @@ vi.mock("sonner", () => ({
 }));
 
 import {
+  applySharedColorPickerChange,
   ColorTokenHint,
   ColorContrastNotice,
   ClearableFieldHeader,
   ClearableInputField,
   SharedColorFieldInputs,
   hasClearableFieldValue,
+  isPickerRepresentableColorValue,
   resolveColorContrastAdvisory,
   resolveColorPickerValue,
 } from "../../../core/admin/ui/widgets/editors/ClearableFields";
@@ -99,6 +101,13 @@ test("shared color picker resolves hex and rgb values but falls back for rgba an
   expect(resolveColorPickerValue("rgb(17, 34, 51)", "#ffffff")).toBe("#112233");
   expect(resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")).toBe("#ffffff");
   expect(resolveColorPickerValue("var(--color-border)", "#ffffff")).toBe("#ffffff");
+});
+
+test("shared color picker representable-value detection stays bounded to hex and rgb without alpha", () => {
+  expect(isPickerRepresentableColorValue("#112233")).toBe(true);
+  expect(isPickerRepresentableColorValue("rgb(17, 34, 51)")).toBe(true);
+  expect(isPickerRepresentableColorValue("rgba(17, 34, 51, 0.4)")).toBe(false);
+  expect(isPickerRepresentableColorValue("var(--color-border)")).toBe(false);
 });
 
 test("clearable input disables empty clear and delegates configured clear behavior", () => {
@@ -210,9 +219,50 @@ test("shared color field inputs preserve text tokens while showing a token hint"
     expect(colorInput?.value).toBe("#e2e8f0");
     expect(textInput?.value).toBe("var(--color-border)");
     expect(view.container.textContent).toContain("Custom token active");
+
+    if (!colorInput) throw new Error("Missing color input");
+    React.act(() => {
+      colorInput.value = "#123456";
+      colorInput.dispatchEvent(new Event("input", { bubbles: true }));
+      colorInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
+});
+
+test("shared color field inputs keep picker writes for hex and rgb values", () => {
+  const onHexChange = vi.fn();
+  applySharedColorPickerChange({
+    currentValue: "#112233",
+    nextValue: "#445566",
+    onChange: onHexChange,
+  });
+  expect(onHexChange).toHaveBeenCalledWith("#445566");
+
+  const onRgbChange = vi.fn();
+  applySharedColorPickerChange({
+    currentValue: "rgb(17, 34, 51)",
+    nextValue: "#778899",
+    onChange: onRgbChange,
+  });
+  expect(onRgbChange).toHaveBeenCalledWith("#778899");
+});
+
+test("shared color field inputs allow explicit picker override callbacks for token values", () => {
+  const onChange = vi.fn();
+  const onPickerChange = vi.fn();
+
+  applySharedColorPickerChange({
+    currentValue: "var(--color-border)",
+    nextValue: "#abcdef",
+    onChange,
+    onPickerChange,
+  });
+
+  expect(onPickerChange).toHaveBeenCalledWith("#abcdef");
+  expect(onChange).not.toHaveBeenCalled();
 });
 
 test("color token hint stays hidden for empty and hex values", () => {

@@ -17,7 +17,7 @@ Create the Tabs-specific follow-up family for
 
 TASK-256 owns the already-landed shared widget-contract drift from the
 Playwright reports. This family deliberately excludes shared fixes and keeps
-only product scope that belongs to the standalone `tabs` layout widget. Shared residuals extracted during implementation stay visible in `TASK-330` (Tabs accessibility / ID carryover after TASK-256) and `TASK-329` (shared runtime-script transport / dedupe):
+only product scope that belongs to the standalone `tabs` layout widget. Shared residuals extracted during implementation were split to `TASK-330` (Tabs accessibility / ID carryover after TASK-256) and `TASK-329` (shared runtime-script transport / dedupe); both are now closed on 2026-05-23:
 
 - `core/widgets/core/tabs.tsx`
 - `core/admin/ui/widgets/editors/TabsEditors.tsx`
@@ -64,7 +64,7 @@ this family.
 | Generic clear-token/color-picker semantics connected to Tabs colors | TASK-256-02 | Excluded. TASK-288 may consume the final helper, not reimplement it. |
 | C1, U2, U7, U8 | TASK-288-01 | Add Tabs-specific Visual color parity, readable labels, section IA, and contrast guidance using the shared color-control model. |
 | W2, U4, U5, U9 | TASK-288-02 | Add Wizard layout shortcuts, default-tab preview, panel-slot guidance, and safe slot-removal impact copy. |
-| C3, W6, R5 | TASK-288-03 | Repair Tabs-specific admin preview activation and explicit script-type behavior locally, then route the still-shared runtime payload dedupe residue to `TASK-329` after TASK-256 finalizes the shared instance contract. |
+| C3, W6, R5 | TASK-288-03 + TASK-329 | Tabs-specific preview activation and script-type behavior landed in TASK-288-03, while the shared once-per-page runtime payload transport was later closed in TASK-329. |
 | W1, W7, W10, U3 | TASK-288-04 | Add trigger metadata, description semantics, and disabled-tab product behavior. |
 | W3, W8, W9, W12, U6, R1 | TASK-288-05 | Add Tabs-owned vertical alignment, overflow, typography, spacing, and any inner/panel width controls without duplicating shared `layout.container`. |
 | W11, U1 | TASK-288-06 | Add reduced-motion-safe transitions and visual variant previews after the functional model lands. |

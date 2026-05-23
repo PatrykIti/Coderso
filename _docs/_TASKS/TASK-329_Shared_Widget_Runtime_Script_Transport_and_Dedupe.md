@@ -6,7 +6,7 @@
 **Category:** Widgets + Runtime Render + Shared Infrastructure + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-04, TASK-288-03
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

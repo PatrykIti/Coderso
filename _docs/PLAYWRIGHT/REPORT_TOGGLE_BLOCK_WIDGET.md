@@ -2,7 +2,7 @@
 
 **Widget:** `toggle-block`
 **Original audit date:** 2026-05-16
-**Status:** Refreshed on 2026-05-22 after TASK-292 implementation and targeted validation
+**Status:** Refreshed on 2026-05-23 after TASK-292 implementation plus TASK-329 shared runtime transport sync
 **Owner files:** `core/widgets/core/toggleBlock.tsx`, `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 
 ---
@@ -57,6 +57,10 @@ clear behavior, scoped IDs, runtime binding, or public placeholder gating.
 Those rows are documented as shared-scope dependencies that are already present
 on the current base.
 
+`TASK-329` now owns the later shared runtime transport layer: Toggle Block
+consumes the page-scoped script collector so multiple public instances share one
+static runtime payload while editor preview stays script-free.
+
 ### Public/runtime safety
 
 No API routes were added. New styling and motion controls stay bounded to enum
@@ -65,8 +69,8 @@ admin-only controls.
 
 ## 4. Validation refresh
 
-Validated on 2026-05-22 with:
-- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx` — PASS
+Validated on 2026-05-23 with:
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/site/publicRenderer.test.tsx` — PASS
 - `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx` — PASS
 - `bun test tests/unit/widgets/validator.test.ts` — PASS
 - `bun run lint` — PASS

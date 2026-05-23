@@ -16,6 +16,7 @@ import {
   type TabsData,
 } from "../../../core/widgets/core/tabs";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import { createWidgetRuntimeScriptRegistry } from "../../../core/widgets/runtimeScripts";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -38,6 +39,24 @@ test("tabs renders defaults with runtime marker", () => {
   expect(html).not.toContain("Add widgets to this tab panel.");
   expect(html).toContain("codersoTabsBound");
   expect(html).toContain('type="text/javascript"');
+});
+
+test("tabs register shared runtime scripts when a page-scoped collector is available", () => {
+  const runtimeScripts = createWidgetRuntimeScriptRegistry();
+  const renderContext = { mode: "public" as const, runtimeScripts };
+  const html = renderToString(
+    <>
+      <TabsBlock data={tabsDefaults} variant="pills" renderContext={renderContext} />
+      <TabsBlock data={tabsDefaults} variant="underline" renderContext={renderContext} />
+    </>
+  );
+  const scriptsHtml = renderToString(<>{runtimeScripts.renderScripts()}</>);
+
+  expect(html).not.toContain('data-coderso-runtime-script="tabs"');
+  expect(html).not.toContain("codersoTabsBound");
+  expect(scriptsHtml.match(/data-coderso-runtime-script="tabs"/g)).toHaveLength(1);
+  expect(scriptsHtml).toContain("codersoTabsBound");
+  expect(scriptsHtml).toContain('type="text/javascript"');
 });
 
 test("tabs normalization migrates legacy descriptions, keeps disabled tabs out of activation, and resolves extended options", () => {

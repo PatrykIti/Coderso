@@ -79,6 +79,9 @@ controls the live-status suffix and defaults to `selected`.
 
 ### Motion
 
+Public page renders register the Toggle Block runtime payload once per page through
+ the shared widget script collector. Editor-preview output stays script-free.
+
 Supported motion values:
 - `none`
 - `fade`

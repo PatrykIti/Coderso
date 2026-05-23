@@ -54,7 +54,7 @@ cross-widget contract drift or structural baseline repair.
 |---|---|---|---|
 | Public `Empty region.` placeholder leakage and U8 public empty-region behavior | `REPORT_SECTION_WIDGET.md:43,98,288,300,325,332,384` | TASK-256-03, TASK-256-05-01 | Shared editor-vs-public placeholder contract. If product later wants a user-facing empty-region message, that must be a separate Section product task after the placeholder leak is fixed. |
 | Invalid `anchorId` accepted and emitted | `REPORT_SECTION_WIDGET.md:74,133,213,379` | TASK-256-05-01 | Baseline safe DOM ID validation. |
-| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-327 | Reopened shared color-control drift in `SharedColorFieldInputs`; keep it out of widget-local TASK-283 leaves. |
+| CSS variable color picker overwrites token values | `REPORT_SECTION_WIDGET.md:85,142` | TASK-327 | Closed on 2026-05-23 in the shared helper; keep the historical finding out of widget-local TASK-283 leaves. |
 | `resolveSectionBorderWidth` and `resolveSectionRadius` fallback drift | `REPORT_SECTION_WIDGET.md:81-82,343` | TASK-326 | Closed shared truthfulness cleanup on 2026-05-22; keep the historical finding out of widget-local TASK-283 leaves. |
 | Duplicate `gradientAngle` and `overlayOpacity` in Advanced | `REPORT_SECTION_WIDGET.md:84,157-158,342,381` | TASK-326 | Closed shared mode-ownership cleanup on 2026-05-22; TASK-283 continues only with Visual-owned slider UX. |
 | `content` and `wide` render identical CSS | `REPORT_SECTION_WIDGET.md:83,135,214,347,385` | TASK-326 | Closed as a truthfulness issue on 2026-05-22 by relabeling `wide` as an explicit alias and documenting the current runtime behavior. |
@@ -99,7 +99,7 @@ this family.
 |---|---|---|
 | Existing section/div element switch | No TASK-283 task | The report confirms it works. Keep covered by existing Section tests unless future leaves change semantics. |
 | Closed shared current-control truthfulness cleanup (`borderWidth`/`radius` fallbacks, duplicated Visual/Advanced surface numbers, and `content`/`wide`/`bleed` semantics) | Shared TASK-326 | Closed on 2026-05-22; TASK-283 no longer owns any remaining work in this shared boundary. |
-| Reopened shared color-swatch token overwrite drift (`borderColor` swatch replaces CSS-variable/custom token text) | Shared TASK-327 | `SharedColorFieldInputs` still routes swatch writes through generic `onChange`; keep the fix in the shared helper, not in Section-only editor code. |
+| Reopened shared color-swatch token overwrite drift (`borderColor` swatch replaces CSS-variable/custom token text) | Shared TASK-327 | Closed on 2026-05-23: shared swatch writes now preserve token/custom text unless a consumer opts into explicit picker replacement. |
 | Region add/remove min/max behavior | No TASK-283 task | The report confirms min 1, max 8, and disabled add state work. |
 | Raw payload snapshot | No TASK-283 task | The report confirms normalized JSON output works. |
 | Admin/global Layout and Visibility panels in Advanced | No TASK-283 task | They are global editor wrapper controls, not Section data fields. |
@@ -236,5 +236,5 @@ Implementation leaves:
 
 - Shared prerequisite `TASK-326` was integrated into this worktree as commit `491f048f`.
 - `TASK-283-05-02` landed as commit `cbe4ffa6` on the dedicated Section branch/worktree.
-- Final TASK-283 closure keeps the remaining shared color-swatch overwrite drift mapped to `TASK-327` only.
+- Final TASK-283 closure keeps the historical shared color-swatch overwrite drift mapped to `TASK-327`, which is now closed on 2026-05-23.
 - Final validation commands and outcomes are recorded in `TASK-283-08`.

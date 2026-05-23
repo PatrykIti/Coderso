@@ -9,6 +9,12 @@ import {
   renderPublicPageRuntimeHtml,
 } from "../../../core/site/renderPublicPage";
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
+import { createTabsWidget, tabsDefaults, type TabsData } from "../../../core/widgets/core/tabs";
+import {
+  createToggleBlockWidget,
+  toggleBlockDefaults,
+  type ToggleBlockData,
+} from "../../../core/widgets/core/toggleBlock";
 import {
   createContentListWidget,
   type ContentListData,
@@ -31,6 +37,8 @@ const StubPostsFeedEditor: ComponentType<WidgetEditorProps<PostsFeedData>> = () 
 const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () => null;
 
 const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () => null;
+const StubTabsEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
+const StubToggleEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
 
 const DummyWidgetEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
@@ -82,6 +90,39 @@ test("renderPublicPageHtml hides preview until load when using dev modules", () 
 
   expect(html).toContain("body{opacity:0}");
   expect(html).toContain('window.addEventListener("load"');
+});
+
+test("renderPublicPageHtml dedupes shared runtime scripts across multiple widget instances", () => {
+  clearWidgets();
+  registerWidget(
+    createTabsWidget({
+      wizard: StubTabsEditor,
+      visual: StubTabsEditor,
+      advanced: StubTabsEditor,
+    })
+  );
+  registerWidget(
+    createToggleBlockWidget({
+      wizard: StubToggleEditor,
+      visual: StubToggleEditor,
+      advanced: StubToggleEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Shared runtime scripts",
+    blocks: [
+      { id: "tabs-1", type: "tabs", variant: "pills", data: tabsDefaults },
+      { id: "tabs-2", type: "tabs", variant: "underline", data: tabsDefaults },
+      { id: "toggle-1", type: "toggle-block", variant: "switch", data: toggleBlockDefaults },
+      { id: "toggle-2", type: "toggle-block", variant: "cards", data: toggleBlockDefaults },
+    ],
+  });
+
+  expect(html.match(/data-coderso-runtime-script="tabs"/g)).toHaveLength(1);
+  expect(html.match(/data-coderso-runtime-script="toggle-block"/g)).toHaveLength(1);
+  expect(html).toContain('data-coderso-runtime-script="tabs"');
+  expect(html).toContain('data-coderso-runtime-script="toggle-block"');
 });
 
 test("renderPublicPageHtml applies wrapper settings and inherited block defaults", () => {
