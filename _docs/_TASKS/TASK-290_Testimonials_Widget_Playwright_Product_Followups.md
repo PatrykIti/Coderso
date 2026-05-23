@@ -53,8 +53,8 @@ TASK-256 already owns them as shared widget-contract drift.
 | BUG-03 / BF-12 hardcoded heading level | `REPORT_TESTIMONIALS_WIDGET.md:148-153,248-250,260,294` | TASK-256-06-03 / TASK-256-04 | Shared runtime heading/ARIA baseline. TASK-290 may add typography controls but not baseline hierarchy repair. |
 | BUG-04 section and article accessible names | `REPORT_TESTIMONIALS_WIDGET.md:155-158,257-259,295` | TASK-256-06-03 / TASK-256-04 | Shared public runtime accessibility baseline. |
 | UX-02 text/accent clear controls | `REPORT_TESTIMONIALS_WIDGET.md:169-171,301-304` | TASK-256-02 / TASK-256-06-03 | Shared clear-control semantics and design token behavior. |
-| UX-08 duplicated spacing token in Visual and Advanced | `REPORT_TESTIMONIALS_WIDGET.md:191-193` | TASK-334 | Reopened shared editor-mode ownership residual after TASK-256-01 closure. TASK-290 records the truthful split instead of patching the shared policy locally. |
-| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,261-262` | TASK-335 | Reopened shared media accessibility residual: lazy-loading remains present, but contextual avatar alt naming still needs the shared owner. |
+| UX-08 duplicated spacing token in Visual and Advanced | `REPORT_TESTIMONIALS_WIDGET.md:191-193` | TASK-334 | Shared editor-mode ownership residual was closed on 2026-05-23; TASK-290 keeps the truthful split instead of retroactively claiming the shared policy. |
+| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,261-262` | TASK-335 | Shared media accessibility residual was closed on 2026-05-23; lazy-loading remains present and contextual avatar alt naming now uses the shared owner outcome. |
 
 If a TASK-290 implementation leaf discovers that a desired Testimonials product
 feature requires a shared editor helper, generic runtime script policy, global
@@ -232,4 +232,4 @@ Implementation leaves:
   `quoteHtml` import rows, Visual media-picker draft sync, and the last local
   coverage gaps called out during the post-closure drift audit.
 - Report evidence, widget docs, board rows, and changelog entry `924` now match
-  the completed implementation family, while the newly confirmed shared residuals are routed to `TASK-334`, `TASK-335`, and `TASK-333` and the final local closure evidence stays recorded in `TASK-290-08`.
+  the completed implementation family, while the later shared follow-ups `TASK-333`, `TASK-334`, and `TASK-335` are now also closed and the final local closure evidence stays recorded in `TASK-290-08`.

@@ -76,9 +76,9 @@ Notes:
   - legacy payloads without the new fields still render with safe defaults
 - Animated count-up remains intentionally rejected by the research matrix until a
   later accessibility/performance task explicitly approves it.
-- `split-highlight` secondary-metric odd-count rebalancing is still a shared
-  residual owned by `TASK-331`; the current branch continues to use the landed
-  shared baseline rather than inventing widget-local runtime drift.
+- `split-highlight` secondary-metric odd-count rebalancing was closed by
+  shared `TASK-331`; the current branch now uses count-aware odd/even rest-grid
+  classes without inventing widget-local runtime drift.
 
 ## Clear Controls
 

@@ -86,9 +86,9 @@ Allowlisted gap tokens:
 - `10`
 - `12`
 
-`none` and `0` currently both resolve to zero gap classes. That shared token UX
-policy remains owned by TASK-256; Stack consumes the existing serialized values
-without inventing a local divergence.
+Legacy serialized `"0"` payloads still resolve to zero gap classes for backward
+compatibility, but visible Stack controls now expose one canonical zero-gap
+option (`none`) instead of two competing labels.
 
 ## Data Model (summary)
 

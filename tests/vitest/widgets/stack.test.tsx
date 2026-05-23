@@ -51,6 +51,22 @@ test("stack normalization supports presets, legacy scalars, and responsive objec
     mobile: "stretch",
   });
 
+  const legacyZeroGap = normalizeStackData(
+    {
+      gap: {
+        desktop: "0",
+        tablet: "0",
+        mobile: "0",
+      },
+    },
+    "vertical"
+  );
+  expect(legacyZeroGap.gap).toEqual({
+    desktop: "0",
+    tablet: "0",
+    mobile: "0",
+  });
+
   const responsive = normalizeStackData(
     {
       direction: { mobile: "row" },

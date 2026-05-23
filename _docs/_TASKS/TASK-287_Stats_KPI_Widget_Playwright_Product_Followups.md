@@ -27,7 +27,7 @@ header and metric content inputs observed in the report. TASK-287-03 owns that
 current-state Wizard parity work so the family remains executable on this
 branch.
 
-The family is now closed on 2026-05-22. The only remaining report residual outside this widget-local scope is shared `TASK-331`, while animated counters remain intentionally rejected by the research matrix.
+The family is now closed on 2026-05-22. The later shared `TASK-331` residual is also closed on 2026-05-23, while animated counters remain intentionally rejected by the research matrix.
 
 ## Source Report Boundary
 
@@ -60,7 +60,7 @@ TASK-256 already owns them as shared widget-contract drift.
 |---|---|---|---|
 | C1 divider toggle persists without effect outside `inline` | `REPORT_STATS_KPI_WIDGET.md:53-56,126-141,269-282` | TASK-256-06-01 | Shared truthful-control repair for visible controls that do not affect runtime. |
 | C2/R5 cards grid holes from fixed `lg:grid-cols-4` | `REPORT_STATS_KPI_WIDGET.md:56,143-152,252-253,284-298` | TASK-256-06-01 | Shared truthful renderer/control baseline already routes Stats KPI grid behavior. |
-| W11/R6 split-highlight secondary grid imbalance | `REPORT_STATS_KPI_WIDGET.md:73,154-163,242,284-298` | TASK-331 | Shared renderer truthfulness residual remains open on the current branch after `TASK-256-06-01`; keep the fix in the dedicated shared follow-up instead of burying it inside TASK-287. |
+| W11/R6 split-highlight secondary grid imbalance | `REPORT_STATS_KPI_WIDGET.md:73,154-163,242,284-298` | TASK-331 | Shared renderer truthfulness residual was closed on 2026-05-23; keep the historical fix in the dedicated shared follow-up instead of burying it inside TASK-287. |
 | R1/R2/R3/R4 section, article, icon, and heading semantics | `REPORT_STATS_KPI_WIDGET.md:94-99,165-175,200-226,300-315` | TASK-256-04, TASK-256-06-01 | Baseline runtime accessibility belongs to the shared widget contract. |
 | U2 CSS-variable color picker fallback | `REPORT_STATS_KPI_WIDGET.md:81,177-183,258` | TASK-256-02 | Generic color/token editor semantics must be fixed once for all widgets. |
 | U3 divider switch context | `REPORT_STATS_KPI_WIDGET.md:82,137-139,259` | TASK-256-06-01 | Divider visibility/disablement is the same truthful-control bug as C1. |

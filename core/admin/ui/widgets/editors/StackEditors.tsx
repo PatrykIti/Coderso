@@ -75,10 +75,12 @@ const gapScaleLabels: Record<StackGap, string> = {
   "12": "Gap 12 - extra spacious",
 };
 
-const gapOptions = stackGapTokens.map((value) => ({
-  id: value,
-  label: gapScaleLabels[value],
-}));
+const gapOptions = stackGapTokens
+  .filter((value) => value !== "0")
+  .map((value) => ({
+    id: value,
+    label: gapScaleLabels[value],
+  }));
 
 const alignOptions: Array<{ id: StackAlign; label: string }> = [
   { id: "start", label: "Start" },
@@ -130,6 +132,10 @@ function normalizeValue(value: StackData, variant: string): NormalizedStackData 
   return normalizeStackData(value, variant);
 }
 
+function resolveStackGapControlValue(value: StackGap): StackGap {
+  return value === "0" ? "none" : value;
+}
+
 function resolveResponsiveEditorValue<T extends string | boolean>(
   value: unknown,
   fallback: StackResolvedResponsiveValue<T>,
@@ -165,7 +171,14 @@ function resolveEditorState(value: StackData, variant: string) {
       resolveStackVariantDirectionDefaults(resolveStackVariant(variant)),
       isStackDirection
     ),
-    gap: resolveResponsiveEditorValue(normalized.gap, stackGapDefaults, isStackGap),
+    gap: Object.fromEntries(
+      Object.entries(
+        resolveResponsiveEditorValue(normalized.gap, stackGapDefaults, isStackGap)
+      ).map(([breakpoint, gapValue]) => [
+        breakpoint,
+        resolveStackGapControlValue(gapValue as StackGap),
+      ])
+    ) as GapData,
     align: resolveResponsiveEditorValue(normalized.align, stackAlignDefaults, isStackAlign),
     justify: resolveResponsiveEditorValue(normalized.justify, stackJustifyDefaults, isStackJustify),
     wrap: resolveResponsiveEditorValue(normalized.wrap, stackWrapDefaults, isBoolean),

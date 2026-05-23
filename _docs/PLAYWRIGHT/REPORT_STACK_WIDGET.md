@@ -3,7 +3,7 @@
 **Widget:** `stack`
 **Original audit date:** 2026-05-16
 **Closure refresh:** 2026-05-22
-**Status:** Closed for TASK-286; shared residuals remain routed through TASK-256
+**Status:** Closed for TASK-286; audit refresh 2026-05-23 aligned the remaining gap-control and mode-ownership notes with current code
 **Files:** `core/widgets/core/stack.tsx`, `core/admin/ui/widgets/editors/StackEditors.tsx`
 
 ---
@@ -37,9 +37,9 @@ Advanced).
 | Finding | Final owner / status | Evidence |
 |---|---|---|
 | `BUG-01` variant selection does not synchronize `data.direction.*` | `TASK-256-05-02` owned, fixed on 2026-05-17 | Shared atomic variant/data patch landed in `TASK-256-05-02`; Stack now applies variant changes through `buildVariantSyncedStackData()` in `core/admin/ui/widgets/editors/StackEditors.tsx`; regression coverage: `tests/vitest/ui/stack-editor-wave.test.tsx`, `tests/vitest/widgets/stack.test.tsx`. |
-| `BUG-02` duplicate `None` / `Gap 0` semantics | `TASK-256` owned, still open | `stackGapTokens` still allow both `none` and `0`, and runtime maps both to zero-gap classes in `core/widgets/core/stack.tsx`. TASK-286 did not re-claim this shared token policy. |
+| `BUG-02` duplicate `None` / `Gap 0` semantics | Fixed in audit refresh 2026-05-23 | Legacy payload `"0"` remains accepted at runtime for backward compatibility, but visible Stack gap controls now expose one canonical zero-gap option (`none`) instead of two competing labels. |
 | `ISSUE-01` Wizard mobile direction drift after variant changes | `TASK-256-05-02` owned, fixed on 2026-05-17 | Variant changes now patch direction data atomically; Wizard regression coverage lives in `tests/vitest/ui/stack-editor-wave.test.tsx`. |
-| `ISSUE-02` Advanced editor lacks variant control | `TASK-256` owned, still open | Advanced still intentionally omits variant switching in `core/admin/ui/widgets/editors/StackEditors.tsx`; TASK-286 kept ownership with the shared contract family. |
+| `ISSUE-02` Advanced editor lacks variant control | Closed by current mode-ownership contract | Advanced intentionally stays token/diagnostics-only while Visual owns variant selection; this matches the shared editor-mode ownership contract instead of being an active Stack bug. |
 | `ISSUE-03` `align` is not responsive | Fixed by `TASK-286-02` | `core/widgets/core/stack.tsx` now accepts scalar-or-breakpoint `align`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint controls in Visual and Advanced. |
 | `ISSUE-04` `wrap` is not responsive | Fixed by `TASK-286-02` | `core/widgets/core/stack.tsx` now accepts scalar-or-breakpoint `wrap`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint wrap toggles. |
 | `ISSUE-05` Wizard exposes too little layout control | Fixed by `TASK-286-03` | Wizard now exposes all-breakpoint `gap`, `align`, and `justify` controls with explicit copy in `core/admin/ui/widgets/editors/StackEditors.tsx`; regression coverage: `tests/vitest/ui/stack-editor-wave.test.tsx`. |
@@ -74,16 +74,12 @@ Advanced).
 ### Documentation boundary
 
 - Variants are documented as presets rather than immutable behavior locks.
-- Shared duplicate-zero semantics and Advanced variant ownership remain routed to
-  TASK-256 instead of being silently re-implemented here.
+- Legacy payload compatibility for zero-gap tokens is preserved, while visible
+  controls now collapse onto one canonical `none` option and Advanced remains
+  intentionally token/diagnostics-only.
 
 ---
 
 ## 4. Remaining shared follow-ups
 
-- `BUG-02` (`none` vs `0` zero-gap semantics) remains a shared TASK-256 token
-  policy item.
-- `ISSUE-02` (Advanced variant ownership) remains a shared TASK-256 editor-mode
-  ownership item.
-
-No other Stack-specific Playwright drift remains unrouted after TASK-286.
+No active Stack-specific or shared follow-up remains from the original TASK-286 audit after the 2026-05-23 truthfulness refresh.

@@ -118,8 +118,8 @@ Runtime transport note:
 
 - Preview interaction proof must live in a dedicated Bun-free UI integration
   suite under `tests/vitest/ui-integration/*`.
-- Public script transport de-duplication must either use an existing
-  request-scoped helper or move to a shared follow-up task before W6 is closed.
+- Public script transport de-duplication was later closed in shared `TASK-329`,
+  so W6 no longer depends on a local Tabs-only workaround.
 
 Error handling:
 

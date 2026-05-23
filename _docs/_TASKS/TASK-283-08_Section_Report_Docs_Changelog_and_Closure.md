@@ -131,7 +131,7 @@ Docs-only closure validation:
 
 - `TASK-283-07` landed as commit `6637a849` in the isolated Section worktree, and its report/docs/changelog/task-board sync remains present in the current checkout.
 - `TASK-326` was integrated into the Section follow-up branch as commit `491f048f`, preserving the truthful shared owner split before the final widget-local U2 closure.
-- `TASK-283-05-02` landed as commit `cbe4ffa6`, closing U2 with slider, stepper, and exact-value controls on the single-owner Visual surface. The only remaining open report item after TASK-283 closure is shared `TASK-327`.
+- `TASK-283-05-02` landed as commit `cbe4ffa6`, closing U2 with slider, stepper, and exact-value controls on the single-owner Visual surface. The later shared `TASK-327` follow-up is also closed on 2026-05-23.
 
 ## Acceptance Criteria
 

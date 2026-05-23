@@ -36,11 +36,12 @@ TASK-256:
 
 - BUG-01 variant selection not synchronizing `data.direction.*` remains
   TASK-256-05-02.
-- BUG-02 duplicate `none` / `0` gap token semantics remain TASK-256-05-02 and
-  TASK-256-02.
+- Legacy `"0"` gap payload compatibility is preserved, but Stack controls now
+  expose one canonical zero-gap option after the 2026-05-23 audit refresh.
 - ISSUE-01 Wizard mobile-direction drift after variant changes remains
-  TASK-256-05-02.
-- ISSUE-02 Advanced variant ownership remains TASK-256-05-02.
+  TASK-256-05-02 historical evidence and is already fixed on the current branch.
+- ISSUE-02 Advanced variant ownership now follows the settled shared owner model:
+  Visual owns variant selection and Advanced stays token/diagnostics-only.
 - Public placeholder safety for nested slots remains TASK-256-03. TASK-286 may
   add Stack-local admin guidance only after it can avoid public admin copy.
 
@@ -54,9 +55,9 @@ of hiding it inside this family.
 | Report finding | Owner | TASK-286 action |
 |---|---|---|
 | BUG-01 | TASK-256-05-02 | Excluded. Atomic variant + direction patching is shared structural drift. |
-| BUG-02 | TASK-256-05-02 / TASK-256-02 | Excluded. Duplicate zero/off token semantics are shared token-control drift. |
+| BUG-02 | Audit refresh 2026-05-23 | Closed locally by collapsing visible Stack controls onto one canonical zero-gap option while keeping legacy `"0"` payload compatibility. |
 | ISSUE-01 | TASK-256-05-02 | Excluded. Wizard direction truthfulness depends on the shared variant patch. |
-| ISSUE-02 | TASK-256-05-02 | Excluded. Advanced variant ownership is already listed in the shared Stack leaf. |
+| ISSUE-02 | Audit refresh 2026-05-23 | Closed by truthfulness clarification: Visual owns variant selection and Advanced intentionally stays token/diagnostics-only. |
 | ISSUE-03 | TASK-286-02 | Add responsive `align` and `justify` without breaking legacy scalar payloads. |
 | ISSUE-04 | TASK-286-02 | Add responsive `wrap` without changing non-Stack slot behavior. |
 | ISSUE-05 | TASK-286-03 | Improve Stack Wizard layout coverage and label the all-breakpoint gap action. |
@@ -182,4 +183,4 @@ This umbrella does not add API routes.
 ## Completion Notes (2026-05-22)
 
 - Stack now ships responsive `align`, `justify`, and `wrap`, the missing Stack-owned flex tokens, clearer Wizard layout guidance, and deterministic variant miniatures without expanding into arbitrary CSS.
-- Final report, widget docs, task files, board rows, and changelog now agree on the TASK-286 outcome; only shared duplicate-zero semantics and Advanced variant ownership remain routed to TASK-256.
+- Final report, widget docs, task files, board rows, and changelog now agree on the TASK-286 outcome after the 2026-05-23 truthfulness refresh closed the remaining duplicate-zero and mode-ownership doc drift.

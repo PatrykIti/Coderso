@@ -152,11 +152,13 @@ Docs-only closure validation:
   closure only layers Team-owned product and editor behavior on top of that
   baseline.
 - `TASK-332` was extracted during the closure audit as the truthful shared owner
-  for the still-open Team member-card/avatar identity accessibility residuals
-  that the first TASK-289 report matrix had overstated.
+  for the Team member-card/avatar identity accessibility residuals that the
+  first TASK-289 report matrix had overstated; that shared follow-up is now
+  closed on 2026-05-23.
 - `TASK-333` was extracted as the shared owner for the remaining historical
   changelog-index numbering and row-to-file truthfulness drift discovered while
-  auditing `_docs/_CHANGELOG/README.md`.
+  auditing `_docs/_CHANGELOG/README.md`; that shared docs follow-up is now
+  closed on 2026-05-23.
 - The remaining local security-scan limitation is split across missing and
   incompatible scanner tooling: `semgrep` and `trivy` are absent from `$PATH`,
   while the installed `gitleaks` binary does not support the `git` / `dir`

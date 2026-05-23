@@ -222,9 +222,11 @@ test("StackWizardEditor writes variant, gap, align, and justify across breakpoin
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-    expect(
-      Array.from((selects[2] as HTMLSelectElement).options).map((option) => option.value)
-    ).toContain("none");
+    const gapOptionValues = Array.from((selects[2] as HTMLSelectElement).options).map(
+      (option) => option.value
+    );
+    expect(gapOptionValues).toContain("none");
+    expect(gapOptionValues).not.toContain("0");
 
     setSelectValue(selects[0], "responsive");
     expect(currentVariant).toBe("responsive");
