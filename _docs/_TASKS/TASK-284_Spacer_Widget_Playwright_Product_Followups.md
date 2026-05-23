@@ -87,7 +87,7 @@ documentation, and copy that is not part of the shared contract.
 | BF-02 viewport units `vh`, `dvh`, `svh`, `vw` | TASK-284-02 | Bounded CSS length grammar and schema/normalizer/render/editor tests. |
 | BF-03 `clamp()` / fluid spacing | TASK-284-02 | Bounded fluid-spacing value parser; no arbitrary CSS/class passthrough. |
 | BF-04 named presets/templates for vertical rhythm | TASK-284-03 | Product presets that map to existing or expanded safe height values. |
-| BF-05 horizontal spacer option | TASK-284-04 / TASK-328 | TASK-284-04 closes the decision as deferred; future implementation belongs to shared `TASK-328` because the current widget shell is still full-width/block-first. |
+| BF-05 horizontal spacer option | TASK-284-04 / TASK-328 | TASK-284-04 closed BF-05 as deferred; `TASK-328` has now landed the shared child-shell prerequisite, but Spacer still needs its own product contract before horizontal support can reopen. |
 | A1 `aria-hidden` decorative output | No TASK-284 implementation | Report marks the current behavior as OK; keep covered by existing and future runtime tests. |
 | A3 guide overlay ARIA/role | No TASK-284 implementation | Closure records `no-action` because the guide remains decorative inside the `aria-hidden` Spacer shell. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-284-05 | Final documentation and evidence pass. |
@@ -119,8 +119,7 @@ documentation, and copy that is not part of the shared contract.
    length resolver instead of duplicating viewport/fluid parsing.
 4. Complete TASK-284-03 after length semantics are stable.
 5. TASK-284-04 is now closed as an explicit defer decision. Horizontal
-   Spacer support is blocked on shared nested row-flow rendering truthfulness
-   and was reassigned to `TASK-328`.
+   Spacer support was originally blocked on shared nested row-flow rendering truthfulness and reassigned to `TASK-328`; that shared prerequisite is now landed, but horizontal Spacer itself remains deferred.
 6. TASK-284-05 closes the family after report classifications, final
    validation, widget docs, changelog, and board state are synchronized.
 
@@ -228,4 +227,4 @@ Implementation leaves:
 
 - TASK-284-01 through TASK-284-05 are closed.
 - Spacer-owned report rows now point only at `TASK-284-01` through `TASK-284-04`; shared fixes stay attributed to `TASK-256-05-03` or `TASK-303`.
-- `UX-04`, `A1`, and `A3` are intentionally recorded as `no-action`, while BF-05 remains deferred to `TASK-328`.
+- `UX-04`, `A1`, and `A3` are intentionally recorded as `no-action`, while BF-05 remains deferred after the shared `TASK-328` prerequisite landed.

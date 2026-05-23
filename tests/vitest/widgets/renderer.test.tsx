@@ -286,6 +286,36 @@ test("renderer resolves inherit layout tokens from page defaults", () => {
   expect(html).toContain("mb-4");
 });
 
+test("renderer can render a nested row-flow child shell without the default block wrapper", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-row-flow",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+  };
+
+  const html = renderToStaticMarkup(
+    <WidgetRenderer
+      block={block}
+      renderContext={{ mode: "public", nestedSurface: "row-flow-item" }}
+    />
+  );
+
+  expect(html).toContain('data-widget-surface="row-flow-item"');
+  expect(html).toContain('data-widget-type="hero"');
+  expect(html).not.toContain("<section");
+  expect(html).not.toContain("max-w-5xl");
+});
+
 test("renderer renders nested blocks", () => {
   clearWidgets();
   registerWidget(

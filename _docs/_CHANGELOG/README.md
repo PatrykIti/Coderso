@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 929 | 2026-05-23 | Shared row-flow child shell | CMS Widgets/Layout/Runtime/QA/Docs |
 | 928 | 2026-05-23 | Shared widget script dedupe and color-token truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 927 | 2026-05-23 | Shared widget residual audit closure | CMS Widgets/Accessibility/Admin UI/QA/Docs |
 | 926 | 2026-05-22 | TASK-292 toggle block widget followups | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |

@@ -282,8 +282,15 @@ test("stack renders content slot blocks", () => {
       block={{
         id: "stack-parent",
         type: "stack",
-        variant: "vertical",
-        data: stackDefaults,
+        variant: "horizontal",
+        data: {
+          ...stackDefaults,
+          direction: {
+            desktop: "row",
+            tablet: "row",
+            mobile: "column",
+          },
+        },
         slots: {
           content: [
             {
@@ -303,6 +310,8 @@ test("stack renders content slot blocks", () => {
 
   expect(html).toContain("Stack child");
   expect(html).toContain('data-stack-items="1"');
+  expect(html).toContain('data-widget-surface="row-flow-item"');
+  expect(html.match(/<section/g) ?? []).toHaveLength(1);
 });
 
 test("stack editors render updated sections, copy, and miniatures", () => {

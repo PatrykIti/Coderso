@@ -44,10 +44,10 @@ Notes:
 ## Runtime Behavior Notes
 
 - Renders an empty structural block with responsive height values.
-- Spacer remains intentionally vertical-only. Horizontal width spacing is
-  deferred until a future shared row-flow/container-aware rendering owner
-  exists, because the current builder still wraps Spacer in the default
-  full-width widget shell.
+- Spacer remains intentionally vertical-only. The shared row-flow child
+  shell from `TASK-328` is now available for future nested layout work, but
+  Spacer still has no widget-local horizontal authoring contract and therefore
+  stays a vertical rhythm primitive in v1.
 - Named presets are editor-only shortcuts that write concrete `height` values; Spacer does not persist a separate `preset` field or emit preset-specific DOM markers.
 - Supports token-based heights (`0..32`) plus bounded custom lengths: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
 - Rejects unsafe custom strings such as standalone `rem`, `calc(...)`, CSS variables, URLs, semicolons, malformed `clamp()`, and unsupported units like `lvh` by falling back to deterministic defaults before runtime output.
@@ -79,8 +79,9 @@ Notes:
 
 - `fixed` reuses the desktop height for tablet and mobile at runtime.
 - Horizontal Spacer behavior is not available in v1. Authors should use the
-  existing row/column layout widgets for structural horizontal spacing until a
-  future shared nested row-flow rendering contract lands.
+  existing row/column layout widgets for structural horizontal spacing; the
+  shared nested row-flow child shell from `TASK-328` is now landed, but Spacer
+  still needs its own truthful horizontal product contract before reopening BF-05.
 - If `showGuideInEditor` is turned off, Spacer intentionally returns to a
   minimal invisible block in editor-preview surfaces; there is no separate
   always-on outline.

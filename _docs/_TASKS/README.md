@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 98 tasks
+- **To Do:** 97 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1919 tasks
+- **Done:** 1920 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -151,6 +150,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Done (2026-05-23): Stats KPI `split-highlight` now uses count-aware odd/even secondary-grid classes with focused widget and renderer coverage. |
 | TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Done (2026-05-23): Tabs tablists now expose a deterministic accessible name and active tabpanels stay keyboard reachable with `tabIndex=0`. |
 | TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Done (2026-05-23): public page renders now register shared runtime payloads once per page while Tabs and Toggle Block previews stay script-free. |
+| TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Done (2026-05-23): WidgetRenderer now exposes a shared `row-flow-item` child shell, and Stack adopts it as the truthful owner for one-dimensional nested flow. |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Done (2026-05-23): shared color swatches now preserve CSS-variable/custom token text unless a consumer opts into explicit picker replacement. |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Toggle Block is fully closed with new visual/runtime/editor contracts, refreshed report/docs, changelog coverage, and final validation evidence |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-292 family |

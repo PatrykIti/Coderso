@@ -1,7 +1,13 @@
 import type { ComponentType } from "react";
 
-import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import { createNestedRowFlowRenderContext, WidgetRenderer } from "../renderers/widgetRenderer";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 
 export const stackBreakpoints = ["desktop", "tablet", "mobile"] as const;
 export const stackGapTokens = ["none", "0", "1", "2", "3", "4", "5", "6", "8", "10", "12"] as const;
@@ -291,11 +297,13 @@ export function StackBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
 }: {
   data: StackData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
 }) {
   const resolvedVariant = resolveStackVariant(variant);
   const normalized = normalizeStackData(data, resolvedVariant);
@@ -304,6 +312,7 @@ export function StackBlock({
   const mobileWrap = normalized.wrap.mobile ? "true" : "false";
   const tabletWrap = normalized.wrap.tablet ? "true" : "false";
   const desktopWrap = normalized.wrap.desktop ? "true" : "false";
+  const childRenderContext = createNestedRowFlowRenderContext(renderContext, previewDevice);
 
   return (
     <div
@@ -348,7 +357,12 @@ export function StackBlock({
     >
       {contentBlocks.length > 0 ? (
         contentBlocks.map((block) => (
-          <WidgetRenderer key={block.id} block={block} previewDevice={previewDevice} />
+          <WidgetRenderer
+            key={block.id}
+            block={block}
+            previewDevice={previewDevice}
+            renderContext={childRenderContext}
+          />
         ))
       ) : (
         <div className="w-full rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/50 px-3 py-2 text-xs text-[var(--color-text)]/70">

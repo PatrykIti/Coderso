@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-284-04
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

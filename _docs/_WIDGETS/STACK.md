@@ -64,6 +64,9 @@ Notes:
   - `data-stack-justify-desktop|tablet|mobile`
   - `data-stack-wrap-desktop|tablet|mobile`
 - Public runtime keeps a neutral empty placeholder (`Empty stack.`).
+- Stack now renders nested children through the shared `row-flow-item` shell so
+  row-flow layouts do not inherit the default full-width `WidgetRenderer`
+  section/container wrapper inside the stack itself.
 - Admin guidance for adding child widgets lives in editor surfaces, not public
   runtime output.
 

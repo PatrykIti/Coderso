@@ -96,6 +96,22 @@ const resolveSpacingToken = (
     : fallback;
 };
 
+export function createNestedRowFlowRenderContext(
+  renderContext: WidgetRenderContext | undefined,
+  previewDevice?: DeviceTarget
+): WidgetRenderContext {
+  const baseRenderContext = renderContext ?? {
+    mode: "public" as const,
+    previewDevice,
+  };
+
+  return {
+    ...baseRenderContext,
+    previewDevice: baseRenderContext.previewDevice ?? previewDevice,
+    nestedSurface: "row-flow-item",
+  };
+}
+
 export function MissingWidget({ type, message }: { type: string; message?: string }) {
   return (
     <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
@@ -194,6 +210,7 @@ export function WidgetRenderer({
     mode: "public",
     previewDevice,
   };
+  const renderSurface = renderContext?.nestedSurface ?? "default-block";
   const renderBlockWithContext = (
     child: WidgetBlock,
     nextRenderContext: WidgetRenderContext = renderContext
@@ -209,27 +226,39 @@ export function WidgetRenderer({
       />
     );
 
+  const widgetNode = (
+    <>
+      <WidgetComponent
+        data={normalized.data}
+        variant={normalized.variant ?? def.variants[0].id}
+        slots={slots}
+        previewDevice={previewDevice}
+        pageDefaults={pageDefaults}
+        blockId={normalized.id}
+        renderContext={renderContext}
+        renderBlock={renderBlockWithContext}
+      />
+      {!hasSlotDefinitions && legacyChildren.length ? (
+        <div className="mt-6 flex flex-col gap-6">
+          {legacyChildren.map((child) => (
+            <div key={child.id}>{renderBlockWithContext(child)}</div>
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (renderSurface === "row-flow-item") {
+    return (
+      <div data-widget-surface="row-flow-item" data-widget-type={normalized.type}>
+        {widgetNode}
+      </div>
+    );
+  }
+
   return (
     <section className={sectionClass} style={backgroundStyle}>
-      <div className={wrapperClass}>
-        <WidgetComponent
-          data={normalized.data}
-          variant={normalized.variant ?? def.variants[0].id}
-          slots={slots}
-          previewDevice={previewDevice}
-          pageDefaults={pageDefaults}
-          blockId={normalized.id}
-          renderContext={renderContext}
-          renderBlock={renderBlockWithContext}
-        />
-        {!hasSlotDefinitions && legacyChildren.length ? (
-          <div className="mt-6 flex flex-col gap-6">
-            {legacyChildren.map((child) => (
-              <div key={child.id}>{renderBlockWithContext(child)}</div>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <div className={wrapperClass}>{widgetNode}</div>
     </section>
   );
 }

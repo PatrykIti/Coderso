@@ -47,6 +47,8 @@ export type WidgetSlotDefinition = {
 
 export type WidgetRenderMode = "public" | "editor-preview" | "admin-preview";
 
+export type NestedRenderSurface = "default-block" | "row-flow-item";
+
 export type WidgetPreviewState = {
   status: "idle" | "loading" | "ready" | "error";
   dataPatch?: Record<string, unknown>;
@@ -64,6 +66,7 @@ export type WidgetRenderContext = {
   previewDevice?: DeviceTarget;
   previewState?: WidgetPreviewState | null;
   runtimeScripts?: WidgetRuntimeScriptRegistry;
+  nestedSurface?: NestedRenderSurface;
 };
 
 export type WidgetEditorSlotTarget = {
