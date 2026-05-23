@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 930 | 2026-05-23 | Widget editor contract v2 foundation | CMS Widgets/Admin UI/QA/Docs |
 | 929 | 2026-05-23 | Shared row-flow child shell | CMS Widgets/Layout/Runtime/QA/Docs |
 | 928 | 2026-05-23 | Shared widget script dedupe and color-token truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 927 | 2026-05-23 | Shared widget residual audit closure | CMS Widgets/Accessibility/Admin UI/QA/Docs |

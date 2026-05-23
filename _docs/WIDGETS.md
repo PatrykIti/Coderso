@@ -103,6 +103,16 @@ Zasady:
 - Widgety z `slots` lub nested content przenosza kontrole struktury do nazwanej
   sekcji `Visual` albo `Advanced`; nie wracamy do top-of-panel slot banners nad
   zakladkami.
+- Deklaratywny `editorContract.version = 2` opisuje wspolny kontrakt
+  `wizard` / `visual` / `advanced`: lista sekcji, role IA, sciezki zapisu,
+  sciezki read-only i tymczasowe dopuszczenia duplikatow. Kontrakt nie
+  zastepuje komponentow `editor.*`, tylko jest testowalnym ownerem UX i danych.
+  W trakcie TASK-336 brak kontraktu jest dopuszczony w trybie migracyjnym, ale
+  walidacja strict musi byc wlaczona przed zamknieciem programu.
+- `Wizard` nie powinien byc wlascicielem sciezek stylu/layoutu; `Visual`
+  wlada contentem i wygladem, a `Advanced` ogranicza sie do technicznych,
+  layoutowych i diagnostycznych ustawien. Sekcje diagnostyczne w `Advanced` sa
+  read-only.
 
 ## Detail Template Content Bindings
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Contract + Type System
 **Estimated Effort:** Large
 **Dependencies:** TASK-336
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 
@@ -31,21 +31,21 @@ Wizard toward one-time setup.
 
 ## Sub-Tasks
 
-- [ ] Reuse the existing `EditorMode` type as `WidgetEditorMode` instead of
+- [x] Reuse the existing `EditorMode` type as `WidgetEditorMode` instead of
   creating a second source of truth, then define `WidgetEditorSectionRole`,
   `WidgetEditorSectionContract`, `WidgetEditorContract`, and
   `WidgetEditorContractError`.
-- [ ] Add `editorContract?: WidgetEditorContract` to `WidgetDefinition`.
-- [ ] Document the relationship between the existing `WidgetDefinition.editor`
+- [x] Add `editorContract?: WidgetEditorContract` to `WidgetDefinition`.
+- [x] Document the relationship between the existing `WidgetDefinition.editor`
   render callbacks and the new `editorContract` metadata. The callbacks remain
   the rendering mechanism; `editorContract` is the ownership/test contract.
-- [ ] Implement `validateWidgetEditorContract(definition, options)`.
-- [ ] Implement `assertValidWidgetEditorContract(definition, options)` for
+- [x] Implement `validateWidgetEditorContract(definition, options)`.
+- [x] Implement `assertValidWidgetEditorContract(definition, options)` for
   strict tests.
-- [ ] Wire soft validation into `registerWidget` without blocking current
+- [x] Wire soft validation into `registerWidget` without blocking current
   widgets.
-- [ ] Add fixture contracts that prove each validation rule fails and passes.
-- [ ] Add registry-level tests that can be tightened in `TASK-336-17`.
+- [x] Add fixture contracts that prove each validation rule fails and passes.
+- [x] Add registry-level tests that can be tightened in `TASK-336-17`.
 
 ## Files to Change
 

@@ -5,8 +5,14 @@ import {
   type ModuleWidgetPackDefinition,
   type WidgetPackEnforcement,
 } from "./modulePackMatrix";
+import {
+  validateWidgetEditorContract,
+  type WidgetEditorContractValidation,
+  type WidgetEditorContractValidationOptions,
+} from "./editorContract";
 
 const registry = new Map<string, WidgetDefinition<any>>();
+const editorContractDiagnostics = new Map<string, WidgetEditorContractValidation>();
 
 const coreTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const pluginTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -300,6 +306,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
   if (registry.has(def.type)) {
     throw new Error("widget_already_registered");
   }
+  const editorContractValidation = validateWidgetEditorContract(def);
   registry.set(def.type, {
     ...def,
     complexity: normalizedComplexity,
@@ -316,6 +323,11 @@ export function registerWidget(def: WidgetDefinition<any>) {
       : undefined,
     bindingTargets: normalizedBindingTargets,
   });
+  if (editorContractValidation.valid) {
+    editorContractDiagnostics.delete(def.type);
+  } else {
+    editorContractDiagnostics.set(def.type, editorContractValidation);
+  }
 }
 
 export function getWidget(type: string): WidgetDefinition<any> | null {
@@ -347,6 +359,49 @@ export function listWidgetsForSurfaceContext(input: {
 
 export function clearWidgets() {
   registry.clear();
+  editorContractDiagnostics.clear();
+}
+
+export function getWidgetEditorContractDiagnostics(
+  type: string
+): WidgetEditorContractValidation | null {
+  return editorContractDiagnostics.get(type) ?? null;
+}
+
+export function listWidgetEditorContractDiagnostics(): WidgetEditorContractValidation[] {
+  return Array.from(editorContractDiagnostics.values());
+}
+
+export type RegisteredWidgetEditorContractValidationOptions =
+  WidgetEditorContractValidationOptions & {
+    widgets?: WidgetDefinition<any>[];
+  };
+
+export function validateRegisteredWidgetEditorContracts(
+  options: RegisteredWidgetEditorContractValidationOptions = {}
+): WidgetEditorContractValidation[] {
+  return (options.widgets ?? listWidgets()).map((widget) =>
+    validateWidgetEditorContract(widget, {
+      requireContract: options.requireContract,
+    })
+  );
+}
+
+export function assertRegisteredWidgetEditorContracts(
+  options: RegisteredWidgetEditorContractValidationOptions = {}
+): WidgetEditorContractValidation[] {
+  const validations = validateRegisteredWidgetEditorContracts(options);
+  const failures = validations.filter((validation) => !validation.valid);
+  if (failures.length > 0) {
+    const summary = failures
+      .map((failure) => {
+        const codes = failure.errors.map((error) => error.code).join(",");
+        return `${failure.widgetType}:${codes}`;
+      })
+      .join(";");
+    throw new Error(`widget_editor_contract_registry_invalid:${summary}`);
+  }
+  return validations;
 }
 
 function resolvePackStatus(

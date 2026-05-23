@@ -140,6 +140,39 @@ export type WidgetEditorCapabilities = {
   supportsPreviewState?: boolean;
 };
 
+export type WidgetEditorMode = EditorMode;
+
+export type WidgetEditorSectionRole =
+  | "setup"
+  | "source"
+  | "content"
+  | "visual"
+  | "layout"
+  | "technical"
+  | "diagnostics"
+  | "summary";
+
+export type WidgetEditorDuplicateWritablePathAllowance = {
+  path: string;
+  reason: string;
+  expiresWithTask: string;
+};
+
+export type WidgetEditorSectionContract = {
+  mode: WidgetEditorMode;
+  id: string;
+  title: string;
+  role: WidgetEditorSectionRole;
+  writablePaths: string[];
+  readOnlyPaths?: string[];
+  allowedDuplicateWritablePaths?: WidgetEditorDuplicateWritablePathAllowance[];
+};
+
+export type WidgetEditorContract = {
+  version: 2;
+  sections: WidgetEditorSectionContract[];
+};
+
 export type WidgetDefinition<T = Record<string, unknown>> = {
   type: string;
   title: string;
@@ -165,6 +198,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     advanced: ComponentType<WidgetEditorProps<T>>;
   };
   editorCapabilities?: WidgetEditorCapabilities;
+  editorContract?: WidgetEditorContract;
   render: ComponentType<{
     data: T;
     variant: string;
