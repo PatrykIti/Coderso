@@ -2,7 +2,7 @@
 
 - Date: 2026-05-22
 - Version: Unreleased
-- Tasks: TASK-288, TASK-288-07
+- Tasks: TASK-288, TASK-288-01, TASK-288-02, TASK-288-03, TASK-288-04, TASK-288-05, TASK-288-06, TASK-288-07
 
 ## Key Changes
 

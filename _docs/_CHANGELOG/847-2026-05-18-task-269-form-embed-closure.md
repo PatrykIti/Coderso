@@ -2,7 +2,7 @@
 
 Date: 2026-05-18
 Version: Unreleased
-Tasks: TASK-269
+Tasks: TASK-269, TASK-269-01, TASK-269-02, TASK-269-03, TASK-269-04, TASK-269-05, TASK-269-06
 
 ## Key Changes
 
