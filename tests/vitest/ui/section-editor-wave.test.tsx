@@ -643,8 +643,8 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       findTextareaByPlaceholder(view.container, "Short context for the section"),
       "Reusable wrapper for grouped content."
     );
-    const wizardColor = Array.from(view.container.querySelectorAll('input[type="color"]'))[0];
-    setInputValue(wizardColor, "#f8fafc");
+    const wizardBackgroundInput = findInputByPlaceholder(wizardSection, "transparent");
+    setInputValue(wizardBackgroundInput, "#f8fafc");
 
     expect(view.getLatestValue().heading).toMatchObject({
       label: "Platform label",
@@ -1353,6 +1353,10 @@ test("Section surface token inputs preserve raw tokens, fall back safely, and re
     expect(gradientStartColorInput.value).toBe("#ffffff");
     expect(borderTextInput?.value).toBe("border-strong-token");
     expect(borderColorInput.value).toBe("#e2e8f0");
+
+    setInputValue(backgroundTextInput, "#102030");
+    setInputValue(gradientStartTextInput, "#111111");
+    setInputValue(borderTextInput, "#222222");
 
     setInputValue(backgroundColorInput, "#112233");
     setInputValue(gradientStartColorInput, "#abcdef");

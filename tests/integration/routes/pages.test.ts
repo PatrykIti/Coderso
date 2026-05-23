@@ -510,12 +510,15 @@ testIfDb("page preview route returns sanitized probe metadata", async () => {
       };
     };
 
+    const previewTarget = new URL(preview.previewUrl);
+
     expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0]).toBe(preview.previewUrl);
     expect(preview.probe).toEqual({
       ok: false,
       status: 503,
       reason: "http_error",
-      targetLabel: "https://cms.example.test/preview",
+      targetLabel: `${previewTarget.origin}${previewTarget.pathname}`,
     });
     expect(preview.previewUrl).toContain("token=");
     expect(JSON.stringify(preview.probe)).not.toContain(preview.token);

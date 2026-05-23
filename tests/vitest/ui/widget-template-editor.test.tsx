@@ -762,9 +762,10 @@ test("widget template block settings render stats kpi visual sections", () => {
 
   expect(html).toContain("Variant and metric structure");
   expect(html).toContain("Header copy");
-  expect(html).toContain("Metrics content and order");
-  expect(html).toContain("Typography and colors");
-  expect(html).toContain("Layout display options");
+  expect(html).toContain("Metrics content and links");
+  expect(html).toContain("Text and value styling");
+  expect(html).toContain("Card and icon surfaces");
+  expect(html).toContain("Section layout and spacing");
 });
 
 test("widget template block settings render team visual sections", () => {
@@ -795,7 +796,7 @@ test("widget template block settings render team visual sections", () => {
   expect(html).toContain("Header copy");
   expect(html).toContain("Members content and order");
   expect(html).toContain("Social links");
-  expect(html).toContain("Card and layout style");
+  expect(html).toContain("Section and card style");
 });
 
 test("widget template block settings render rich text section visual sections", () => {
@@ -825,7 +826,7 @@ test("widget template block settings render rich text section visual sections", 
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Title block copy");
   expect(html).toContain("Body content");
-  expect(html).toContain("Structured fallback blocks");
+  expect(html).toContain("Structured content blocks");
   expect(html).toContain("Reader options");
   expect(html).toContain("Typography and colors");
 });

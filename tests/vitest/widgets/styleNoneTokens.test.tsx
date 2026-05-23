@@ -456,7 +456,7 @@ test("hero, navigation, footer, and timelines accept none as visual off tokens",
       <TimelineBlock
         data={{
           ...timelineDefaults,
-          layout: { ...timelineDefaults.layout, spacing: "none" },
+          layout: { ...timelineDefaults.layout, orientation: "vertical", spacing: "none" },
           style: {
             ...timelineDefaults.style,
             titleSize: "none",

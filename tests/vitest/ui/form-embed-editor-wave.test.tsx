@@ -630,7 +630,7 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
       },
     });
 
-    setInputValue(colorInputs[0], "#abcdef");
+    setInputValue(backgroundTextInput, "#abcdef");
     setInputValue(surfaceTextInput, "var(--surface-card)");
     setInputValue(borderTextInput, "#445566");
     setSelectValue(styleSelects[0], "2");
