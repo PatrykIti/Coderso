@@ -1,6 +1,6 @@
-# Filename: 204-2026-02-15-security-hardening-and-settings-ux.md
+# Filename: 850-2026-02-15-security-hardening-and-settings-ux.md
 
-# 204. Security Hardening and Settings UX
+# 850. Security Hardening and Settings UX
 
 **Date:** 2026-02-15  
 **Version:** 0.1.0  

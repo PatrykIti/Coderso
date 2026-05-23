@@ -763,10 +763,14 @@ function Avatar({
   author,
   src,
   accentColor,
+  role,
+  sourceLabel,
 }: {
   author: string;
   src?: string;
   accentColor: string;
+  role?: string;
+  sourceLabel?: string;
 }) {
   const safeSrc = normalizeTestimonialsAvatarUrl(src);
 
@@ -774,7 +778,7 @@ function Avatar({
     return (
       <img
         src={safeSrc}
-        alt={author}
+        alt={resolveTestimonialsAvatarAlt(author, role, sourceLabel)}
         loading="lazy"
         className="h-10 w-10 rounded-full border border-[var(--color-border)] object-cover"
       />
@@ -790,6 +794,13 @@ function Avatar({
       {author.charAt(0).toUpperCase()}
     </span>
   );
+}
+
+function resolveTestimonialsAvatarAlt(author: string, role?: string, sourceLabel?: string) {
+  const identityParts = [author.trim(), (role ?? "").trim(), (sourceLabel ?? "").trim()].filter(
+    (part) => part.length > 0
+  );
+  return `Photo of ${identityParts.join(", ") || author}`;
 }
 
 function TestimonialQuote({ item, highlight }: { item: TestimonialItem; highlight: boolean }) {
@@ -891,6 +902,8 @@ function TestimonialsList({
                 author={author}
                 src={item.avatar}
                 accentColor={style.accentColor ?? "var(--color-primary)"}
+                role={roleText || undefined}
+                sourceLabel={sourceText || undefined}
               />
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold">{author}</p>

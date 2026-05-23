@@ -49,14 +49,11 @@ Visual owns the full product authoring surface:
 
 ### Advanced
 
-Advanced keeps large-set tooling and the remaining lower-level display tokens.
-Today `spacing`, `ratingDisplay`, and `sliderNavigation` are still also
-editable in Visual; that shared owner-cleanup residual is tracked separately in
-`TASK-334`.
+Advanced keeps display diagnostics and large-set tooling without duplicating the
+Visual-owned spacing and display controls.
 
-- spacing token
-- rating-zero display mode
-- slider navigation mode
+- display diagnostics for variant, spacing token, rating-zero mode, and slider
+  navigation state
 - pagination `mode`, `pageSize`, `loadMoreLabel`
 - normalization/reset helpers
 - local JSON/CSV import preview + apply
@@ -77,6 +74,8 @@ editable in Visual; that shared owner-cleanup residual is tracked separately in
   visible and reveals the remainder through SSR `<details>` disclosure.
 - Avatar URLs, CTA hrefs, and background image URLs fail closed at runtime when
   they are not safe relative or `http/https` values.
+- Avatar images lazy-load and use contextual `Photo of ...` alt text derived
+  from the author plus any available role/source metadata.
 - `quoteHtml` is sanitized to bounded paragraph/line-break/emphasis/link markup
   before runtime output.
 

@@ -1,4 +1,4 @@
-# Widgets library UI refresh
+# 848. Widgets library UI refresh
 
 ## Summary
 - Refined the widgets library layout with a dedicated library sidebar, favorites list, and updated card styling.

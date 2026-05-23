@@ -6,7 +6,7 @@
 **Category:** Shared Widgets + Stats KPI + Runtime Render
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-06-01, TASK-287
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

@@ -1476,6 +1476,7 @@ test("renderer outputs stats kpi variant and style markers", () => {
   expect(html).toContain('data-stats-kpi-min-height="compact"');
   expect(html).toContain('data-stats-kpi-icon-size="lg"');
   expect(html).toContain('data-stats-kpi-trend-direction="up"');
+  expect(html).toContain("grid grid-cols-1 sm:grid-cols-2 lg:col-span-2");
   expect(html).toContain('href="https://example.com/report"');
   expect(html).toContain("Performance overview");
   expect(html).toContain("Support SLA");

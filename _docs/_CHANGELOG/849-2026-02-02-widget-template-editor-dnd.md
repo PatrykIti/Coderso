@@ -1,4 +1,4 @@
-# Widget template editor drag-and-drop
+# 849. Widget template editor drag-and-drop
 
 ## Summary
 - Enabled drag-and-drop (and click-to-add) for widget templates using real core widgets.

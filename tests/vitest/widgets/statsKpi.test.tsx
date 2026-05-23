@@ -39,6 +39,42 @@ test("stats kpi renders defaults with new style markers", () => {
   expect(html).toContain("data-stats-kpi-suffix");
 });
 
+test("stats kpi split-highlight balances odd and even secondary metric grids", () => {
+  const oddHtml = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...statsKpiDefaults,
+        items: [
+          { id: "kpi-1", value: "250", label: "Growth" },
+          { id: "kpi-2", value: "99.9", label: "Uptime" },
+          { id: "kpi-3", value: "18", label: "Support" },
+          { id: "kpi-4", value: "4.8", label: "Satisfaction" },
+        ],
+      }}
+      variant="split-highlight"
+    />
+  );
+  const evenHtml = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...statsKpiDefaults,
+        items: [
+          { id: "kpi-1", value: "250", label: "Growth" },
+          { id: "kpi-2", value: "99.9", label: "Uptime" },
+          { id: "kpi-3", value: "18", label: "Support" },
+          { id: "kpi-4", value: "4.8", label: "Satisfaction" },
+          { id: "kpi-5", value: "12", label: "Retention" },
+        ],
+      }}
+      variant="split-highlight"
+    />
+  );
+
+  expect(oddHtml).toContain("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:col-span-2");
+  expect(evenHtml).toContain("grid grid-cols-1 sm:grid-cols-2 lg:col-span-2");
+  expect(evenHtml).not.toContain("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3");
+});
+
 test("stats kpi normalization keeps deterministic ids, count bounds, and nested optional fields", () => {
   const items = normalizeStatsKpiItems(
     [

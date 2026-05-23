@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 927 | 2026-05-23 | Shared widget residual audit closure | CMS Widgets/Accessibility/Admin UI/QA/Docs |
 | 926 | 2026-05-22 | TASK-292 toggle block widget followups | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
 | 925 | 2026-05-22 | TASK-291 timeline widget followup closure | CMS Widgets/Admin UI/Runtime/QA/Docs |
 | 924 | 2026-05-22 | TASK-290 testimonials widget product followups | CMS Widgets/Admin UI/Runtime/QA/Docs |
@@ -860,8 +861,8 @@ Project Change Log.
 | 120 | 2026-02-01 | Admin input controls theming | Admin/UI |
 | 121 | 2026-02-01 | Menus editor wiring | Admin/UI |
 | 122 | 2026-02-01 | Menus editor validation | Admin/UI |
-| 123 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
-| 124 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
+| 848 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
+| 849 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
 | 210 | 2026-02-14 | Page settings retention and runtime preview polish | CMS/Pages |
 | 211 | 2026-02-14 | Page builder template sections | Admin/UI |
 | 212 | 2026-02-14 | Runtime preview FOUC dev modules | CMS/Site |
@@ -877,7 +878,7 @@ Project Change Log.
 | 221 | 2026-02-15 | Admin rate limit auth bypass | Core/Security |
 | 222 | 2026-02-16 | Settings UI polish + content type editor fix | Admin/UI |
 | 223 | 2026-02-16 | Menu editor cache + drag nesting | Admin/UI |
-| 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
+| 850 | 2026-02-15 | Security hardening and settings UX | Core/Security |
 | 224 | 2026-02-17 | Widget library cache hydration | Admin/UI |
 
 | 225 | 2026-02-17 | Admin SPA navigation + prefetch | Admin/UI |
@@ -946,4 +947,3 @@ Project Change Log.
 | 284 | 2026-02-21 | TASK-057-07 post block runtime renderer and public preview/published parity | CMS/Runtime |
 | 285 | 2026-02-21 | TASK-057-03 rich text engine and text formatting capabilities | Admin/UI |
 | 286 | 2026-02-21 | TASK-057-08 post editor QA/docs/rollout closure with fallback mode | QA/Docs |
-| 287 | 2026-02-23 | Posts editor paste flow fix (rich-text priority + image-safe fallback + section normalization) | Admin/UI |

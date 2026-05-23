@@ -90,7 +90,9 @@ Notes:
 - The shared Team baseline from `TASK-256-06-04` remains in force:
   - section output uses an accessibility label
   - the header title renders through the shared bounded heading baseline
-  - avatar images lazy-load and invalid/missing values fall back to initials
+  - member cards expose explicit accessible labels, avatar images lazy-load
+    with contextual `Photo of ...` alt text, and invalid/missing values fall
+    back to initials
   - social links and the Team CTA resolve through the shared safe-link helper
     and open external destinations in a new tab
 

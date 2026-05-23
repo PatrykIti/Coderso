@@ -6,7 +6,7 @@
 **Category:** Widgets + Accessibility + Media
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-06-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

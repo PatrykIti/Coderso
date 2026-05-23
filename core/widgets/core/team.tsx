@@ -477,7 +477,27 @@ export function normalizeTeamData(data: TeamData): TeamData {
   };
 }
 
-function Avatar({ name, photo, radius }: { name: string; photo?: string; radius: TeamRadius }) {
+function resolveTeamMemberIdentityLabel(name: string, role?: string) {
+  const identityParts = [name.trim(), (role ?? "").trim()].filter((part) => part.length > 0);
+  return identityParts.join(", ");
+}
+
+function resolveTeamAvatarAlt(name: string, role?: string) {
+  const memberIdentityLabel = resolveTeamMemberIdentityLabel(name, role);
+  return `Photo of ${memberIdentityLabel || name}`;
+}
+
+function Avatar({
+  name,
+  photo,
+  radius,
+  role,
+}: {
+  name: string;
+  photo?: string;
+  radius: TeamRadius;
+  role?: string;
+}) {
   const baseClassName = joinClasses(
     "h-16 w-16 border border-[var(--color-border)] object-cover",
     radiusClassMap[radius]
@@ -487,7 +507,14 @@ function Avatar({ name, photo, radius }: { name: string; photo?: string; radius:
     allowHttp: true,
   });
   if (safePhoto) {
-    return <img src={safePhoto} alt={name} loading="lazy" className={baseClassName} />;
+    return (
+      <img
+        src={safePhoto}
+        alt={resolveTeamAvatarAlt(name, role)}
+        loading="lazy"
+        className={baseClassName}
+      />
+    );
   }
 
   return (
@@ -551,6 +578,8 @@ function MemberCard({
   const socialLinks = normalizeTeamSocialLinks(member.socialLinks);
   const name = member.name ?? "Team Member";
   const role = member.role ?? "Role";
+  const roleText = member.role?.trim();
+  const memberIdentityLabel = resolveTeamMemberIdentityLabel(name, roleText);
   const trimmedBio = member.bio?.trim();
   const bioClassName =
     compact && compactMobileBio === "hide"
@@ -559,6 +588,7 @@ function MemberCard({
 
   return (
     <article
+      aria-label={memberIdentityLabel || name}
       className={joinClasses(
         "border p-4",
         radiusClassMap[radius],
@@ -570,7 +600,7 @@ function MemberCard({
       data-team-social-count={String(socialLinks.length)}
       data-team-spotlight-lead={String(spotlightLead)}
     >
-      <Avatar name={name} photo={member.photo} radius={radius} />
+      <Avatar name={name} photo={member.photo} radius={radius} role={roleText} />
       <div className={joinClasses("min-w-0", compact ? "flex-1" : undefined)}>
         <h4
           className={joinClasses(

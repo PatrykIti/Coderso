@@ -118,6 +118,12 @@ const minHeightClassMap: Record<StatsKpiMinHeight, string> = {
   default: "min-h-[16rem]",
 };
 
+const getStatsKpiSplitSecondaryGridClass = (count: number) => {
+  if (count <= 1) return "grid grid-cols-1";
+  if (count % 2 === 1) return "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  return "grid grid-cols-1 sm:grid-cols-2";
+};
+
 const iconSizeClassMap: Record<StatsKpiIconSize, string> = {
   sm: "h-7 w-7 text-sm",
   md: "h-8 w-8 text-base",
@@ -801,7 +807,8 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
           </div>
           <div
             className={joinClasses(
-              "grid grid-cols-1 sm:grid-cols-2 lg:col-span-2",
+              getStatsKpiSplitSecondaryGridClass(splitRest.length),
+              "lg:col-span-2",
               cardsGridClassMap[spacing]
             )}
           >

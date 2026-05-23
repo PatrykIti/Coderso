@@ -1785,6 +1785,9 @@ export function TestimonialsAdvancedEditor({
 }: WidgetEditorProps<TestimonialsData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveTestimonialsVariant(variant);
+  const resolvedSpacing = normalized.style?.spacing ?? testimonialsDefaults.style?.spacing ?? "md";
+  const resolvedRatingDisplay = normalized.behavior?.ratingDisplay ?? "hide-empty";
+  const resolvedSliderNavigation = normalized.behavior?.sliderNavigation ?? "dots";
   const [importDraft, setImportDraft] = useState("");
   const [importSummary, setImportSummary] = useState<string | null>(null);
   const [importIssues, setImportIssues] = useState<string[]>([]);
@@ -1848,80 +1851,30 @@ export function TestimonialsAdvancedEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Display tokens"
-        description="Technical controls for spacing, zero-rating behavior, and truthful slider output."
+        title="Display diagnostics"
+        description="Visual owns spacing and testimonial display behavior. Advanced keeps read-only diagnostics plus pagination, normalization, and payload tools."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card spacing token</p>
-            <Select
-              value={normalized.style?.spacing ?? testimonialsDefaults.style?.spacing ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { spacing: next as TestimonialsSpacing })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Rating zero display</p>
-            <Select
-              value={normalized.behavior?.ratingDisplay ?? "hide-empty"}
-              onValueChange={(next) =>
-                updateBehavior(value, onChange, {
-                  ratingDisplay: next as TestimonialsRatingDisplay,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Rating display" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratingDisplayOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Slider navigation</p>
-            <Select
-              value={normalized.behavior?.sliderNavigation ?? "dots"}
-              onValueChange={(next) =>
-                updateBehavior(value, onChange, {
-                  sliderNavigation: next as TestimonialsSliderNavigation,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Navigation" />
-              </SelectTrigger>
-              <SelectContent>
-                {sliderNavigationOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {resolvedVariant !== "slider-static" ? (
-              <FieldNote>
-                The runtime only renders slider dots for the slider-static variant.
-              </FieldNote>
-            ) : null}
+          <div className="space-y-2 rounded-lg border p-3 text-sm text-muted-foreground sm:col-span-2">
+            <p>
+              Variant: <span className="font-medium text-foreground">{resolvedVariant}</span>
+            </p>
+            <p>
+              Card spacing token:{" "}
+              <span className="font-medium text-foreground">{resolvedSpacing}</span>
+            </p>
+            <p>
+              Rating zero display:{" "}
+              <span className="font-medium text-foreground">{resolvedRatingDisplay}</span>
+            </p>
+            <p>
+              Slider navigation:{" "}
+              <span className="font-medium text-foreground">
+                {resolvedVariant === "slider-static"
+                  ? resolvedSliderNavigation
+                  : `${resolvedSliderNavigation} (inactive outside slider-static)`}
+              </span>
+            </p>
           </div>
 
           <div className="space-y-2">

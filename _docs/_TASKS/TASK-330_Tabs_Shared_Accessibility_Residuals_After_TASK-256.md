@@ -6,7 +6,7 @@
 **Category:** Widgets + Accessibility + Shared Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-256-04, TASK-256-05-04, TASK-288
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 

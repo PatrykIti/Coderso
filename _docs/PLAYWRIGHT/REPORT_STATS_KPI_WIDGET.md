@@ -20,15 +20,15 @@
 | W4, W5, W6, W7, R7, R8 | Naprawione w TASK-287-02 | Dodano `sectionBackground`, `maxWidth`, `padding`, `minHeight`, `iconSize`, `iconSurface`, `iconBorderColor`, i `dividerIntensity`. |
 | W9 | Naprawione w TASK-287-04 | Metryki mogą renderować bezpieczne linki przez `resolveWidgetLinkAttrs`, a unsafe href wraca do nieklikalnej karty. |
 | U7, U8 | Naprawione w TASK-287-05 | Visual editor ma drag-friendly reorder z fallbackiem Move up/Move down, confirm remove, i rozdzielone sekcje text/value, card/icon, section layout. |
-| W11, R6 | Otwarte shared | Pozostały drift `split-highlight` secondary grid został wydzielony do `TASK-331` zamiast być ukryty w zamkniętym TASK-287. |
+| W11, R6 | Naprawione w TASK-331 | `split-highlight` secondary grid now switches between count-aware odd/even layouts instead of hardcoding `sm:grid-cols-2`; covered by `tests/vitest/widgets/statsKpi.test.tsx` and `tests/vitest/widgets/renderer.test.tsx`. |
 | W12 | Odrzucone / deferred | `_docs/_WIDGETS/tmp/stats-kpi/MATRIX.md` nadal odrzuca animated counters bez osobnego tasku accessibility/performance. |
 
 ### 0.1 Finalna walidacja zamknięcia
 
 - Zielone focused lanes: `tests/vitest/widgets/statsKpi.test.tsx`, `tests/vitest/widgets/renderer.test.tsx`, `tests/vitest/ui/stats-kpi-editor-wave.test.tsx`, `tests/vitest/widgets/styleNoneTokens.test.tsx`, `tests/unit/widgets/validator.test.ts`.
 - Zielone quality gates w scope zadania: `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run precommit`.
-- `bun run scan:security:strict` nadal jest lokalnie zablokowany środowiskowo przez brak binarek `semgrep`, `trivy`, i `gitleaks`; nie jest to regression w kodzie TASK-287.
-- Shared closure pozostaje truthful: `TASK-287` nie claimuje napraw dla `TASK-331`, ani nie odwraca decyzji o braku count-up animation.
+- `bun run scan:security:strict` — green.
+- Shared closure pozostaje truthful: `TASK-331` domknął wtórny grid `split-highlight`, a decyzja o braku count-up animation pozostaje bez zmian.
 
 
 ## 1. Przegląd widgetu
@@ -353,7 +353,7 @@ Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone 
 
 ---
 
-## Status po TASK-256 / drift audit TASK-287 (2026-05-22)
+## Status po TASK-256 / TASK-287 / TASK-331 (2026-05-23)
 
 - `TASK-256-06-01`: divider controls are now variant-aware and locked outside
   the `inline` renderer path where divider output is meaningful.
@@ -364,12 +364,12 @@ Dodać pola `label` i `icon` per metrykę w Wizard obok `value`, oraz skrócone 
 - `TASK-287-03`: current branch still lacks Wizard `header` + metric
   `label`/`description`/`icon` inputs, so C3 now belongs to the widget-local
   follow-up family instead of the already-closed `TASK-256-06-01`.
-- `TASK-331`: shared split-highlight secondary-grid truthfulness remains open on
-  the current branch because the renderer still hardcodes `sm:grid-cols-2` for
-  secondary metrics. This residual is intentionally tracked outside `TASK-287`.
+- `TASK-331`: the shared split-highlight secondary grid now uses count-aware
+  odd/even classes instead of the old hardcoded `sm:grid-cols-2` path, with
+  focused widget and renderer coverage for both branches.
 - Shared evidence from this turn:
-  `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx
-  tests/vitest/widgets/statsKpi.test.tsx` passed on 2026-05-17.
+  `bun run test:vitest -- tests/vitest/widgets/statsKpi.test.tsx
+  tests/vitest/widgets/renderer.test.tsx` passed on 2026-05-23.
 
 ---
 

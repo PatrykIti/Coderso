@@ -47,7 +47,7 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 
 - **Wizard** — szybki start: wariant (dropdown), `eyebrow`/`title`/`description`, liczba, `quote`, `author`, `role`, `sourceLabel`, `rating`, oraz avatar URL/Media Library per testimonial
 - **Visual** — główny edytor produktu: wariant (karty), spotlight pinning, quote/rich quote, avatar/media, header, section surface, colors/contrast, CTA, slider semantics, destrukcyjne zarządzanie listą
-- **Advanced** — diagnostyka, import/export i pozostałe niższopoziomowe tokeny display: spacing token, slider/rating display tokens, pagination, normalizacja, import/export, raw payload JSON, padding/margin container, visibility. Bieżąca duplikacja writable spacing/navigation/rating controls między Visual i Advanced pozostaje shared residualem w `TASK-334`.
+- **Advanced** — diagnostyka display, pagination, normalizacja, import/export, i raw payload JSON. Spacing, slider navigation, i rating display są teraz read-only diagnostics w Advanced, a ich writable ownerem pozostaje Visual po domknięciu `TASK-334`.
 
 ---
 
@@ -384,7 +384,7 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
 
-## 8. Status po TASK-290 (2026-05-22)
+## 8. Status po TASK-290, TASK-334 i TASK-335 (2026-05-23)
 
 | ID | Finalny owner / status | Evidence |
 |---|---|---|
@@ -399,12 +399,12 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 | UX-05 | Fixed by `TASK-290-01` | Wizard now owns `eyebrow`, `title`, and `description`; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
 | UX-06 | Fixed by `TASK-290-03` | Avatar authoring now supports Media Library selection while persisting only the resolved public URL; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
 | UX-07 | Fixed by `TASK-290-03` | Invalid avatar URLs now surface inline feedback and fail closed at runtime; covered by widget and editor Vitest suites. |
-| UX-08 | Shared `TASK-334` residual, excluded from TASK-290 | Visual and Advanced still duplicate writable spacing and display controls; the reopened shared mode-ownership task now owns the cleanup. |
+| UX-08 | Fixed by shared `TASK-334` | Advanced now keeps display diagnostics read-only while Visual remains the single writable owner for spacing, slider navigation, and rating display controls. |
 | BF-01 | Fixed by `TASK-290-04` on top of shared slider baseline | `slider-static` now keeps truthful SSR dot navigation without introducing client-side carousel JS; covered by `tests/vitest/widgets/testimonials.test.tsx`. |
 | BF-02 | Fixed by `TASK-290-05` | Widget now owns bounded section background color/gradient/image controls; covered by widget and editor Vitest suites. |
 | BF-03 | Fixed by `TASK-290-05` | Header alignment and title-size controls now exist as bounded Testimonials-owned tokens. |
 | BF-04 | Fixed by `TASK-290-02` | Spotlight now uses explicit `layout.spotlightItemId` instead of implicit first-item ordering; covered by widget and editor Vitest suites. |
-| BF-05 | Shared `TASK-335` residual, excluded from TASK-290 | Avatar runtime still keeps `loading="lazy"`, but contextual alt naming remains a shared media accessibility residual. |
+| BF-05 | Fixed by shared `TASK-335` | Avatar runtime keeps `loading="lazy"` and now uses contextual `Photo of ...` alt text derived from author plus any available role/source metadata. |
 | BF-06 | Fixed by `TASK-290-05` | Visual now shows non-blocking contrast advisories for text/card and accent/card combinations. |
 | BF-07 | Fixed by `TASK-290-06` | Testimonials now support an optional safe CTA below the list with target/style tokens; covered by `tests/vitest/widgets/testimonials.test.tsx` and editor coverage. |
 | BF-08 | Fixed by `TASK-290-05` | Card radius and border-width are now bounded widget-owned controls with runtime markers and tests. |
@@ -414,7 +414,7 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 | BF-12 | Shared `TASK-256` owner, excluded from TASK-290 | `headingLevel` remains shared hierarchy work, not a Testimonials-local closure item. |
 | A1 / A2 | Shared `TASK-256` owner, fixed in current branch | Region/article accessible names remain present in the current runtime output. |
 | A3 | Shared `TASK-256` owner, excluded from TASK-290 | TASK-290 did not claim heading hierarchy repair. |
-| A4 / A5 | Shared `TASK-335` residual, excluded from TASK-290 | Lazy-loading remains present, but contextual avatar alt naming is still owned by the reopened shared media accessibility task. |
+| A4 / A5 | Fixed by shared `TASK-335` | Avatar images still lazy-load and now expose contextual alt naming instead of the old bare author-only fallback. |
 | A6 | Fixed by `TASK-290-04` | Rating-zero semantics now have an explicit hidden-or-labeled contract. |
 | A7 | Fixed by `TASK-290-05` | Contrast warnings now surface locally in the Visual editor. |
 | A8 | No action, preserved | Non-zero rating `aria-label` behavior remains intact in the shipped runtime output. |

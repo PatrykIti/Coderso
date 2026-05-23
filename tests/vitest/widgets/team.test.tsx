@@ -271,10 +271,34 @@ test("team social links stay safe and member photos lazy-load", () => {
   );
 
   expect(html).toContain('loading="lazy"');
+  expect(html).toContain('alt="Photo of Ada, CTO"');
+  expect(html).toContain('aria-label="Ada, CTO"');
   expect(html).toContain('target="_blank"');
   expect(html).toContain('rel="noopener noreferrer"');
   expect(html).not.toContain("javascript:");
   expect(html).not.toContain('data-team-cta="true"');
+});
+
+test("team fallback avatars stay decorative while member cards keep accessible names", () => {
+  const html = renderToString(
+    <TeamBlock
+      data={{
+        header: { title: "Leadership" },
+        members: [
+          {
+            name: "Bea",
+            role: "Design Lead",
+            socialLinks: [],
+          },
+        ],
+      }}
+      variant="cards"
+    />
+  );
+
+  expect(html).toContain('aria-label="Bea, Design Lead"');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).not.toContain("<img");
 });
 
 test("team validator rejects invalid variant", () => {

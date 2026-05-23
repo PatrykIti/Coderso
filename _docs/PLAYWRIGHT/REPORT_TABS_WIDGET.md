@@ -423,13 +423,13 @@ className={joinClasses(
 *Raport zakończony. Sekcje 4-6 zostały uzupełnione po testach przeglądarki.*
 
 
-## 9. Status po TASK-288 (2026-05-22)
+## 9. Status po TASK-288 i TASK-330 (2026-05-23)
 
 | Obszar audytu | Status końcowy | Uwagi |
 |---|---|---|
 | C1 | Fixed | Visual/Advanced dostały osobną sekcję Colors z `inactiveTextColor`, clearable surfaces i bounded contrast advisory z regresją dla warning copy. |
 | C2, R4 | Historical shared evidence | Instance-safe `coderso` IDs oraz root-scoped runtime wiring pozostały zamkniętym shared dowodem z `TASK-256-04` + `TASK-256-05-04`, więc TASK-288 ich nie przejmuje. |
-| W4, W5, R2, R3, R6 | Shared follow-up | Pozostają poza TASK-288 i są śledzone w `TASK-330` jako shared accessibility residuals. |
+| W4, W5, R2, R3, R6 | Fixed by `TASK-330` | Runtime tablist now exposes the deterministic `Content tabs` label and tabpanels render `tabIndex=0` while inactive panels remain `hidden`; covered by `tests/vitest/widgets/tabs.test.tsx` and `tests/vitest/ui-integration/tabs-preview-activation.test.tsx`. |
 | C3 | Fixed | Admin preview przełącza panele przez React-local activation path; public runtime zachowuje osobny inline script tylko poza preview i pozostaje root-scoped przy wielu instancjach. |
 | W1 | Fixed | `TabsItem` obsługuje `icon` / emoji w triggerze. |
 | W2, U4, U5, U9 | Fixed | Wizard ma własną sekcję Layout, compact row dla orientation/alignment, default badge, slot guidance i confirm przy redukcji liczby tabów. |
@@ -449,9 +449,8 @@ className={joinClasses(
 - `bun run gates:coderso` — green
 - `bun run precommit` — green
 - `git diff --check` — green
-- `bun run scan:security:strict` — local blocker: `semgrep` i `trivy` nie istnieją w `PATH`, a dostępny `gitleaks` binary nie wspiera repo-kontraktu `git` / `dir`.
+- `bun run scan:security:strict` — green
 
-### 9.2 Residual scope po zamknięciu TASK-288
+### 9.2 Remaining residual scope po zamknięciu TASK-330
 
-- `TASK-330` — shared Tabs tablist/tabpanel accessibility residuals po TASK-256
 - `TASK-329` — shared widget runtime-script transport and dedupe

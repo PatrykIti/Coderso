@@ -74,9 +74,10 @@ Notes:
   the first enabled tab until that default is changed.
 - Motion variants (`fade`, `slide`) emit `motion-safe:*` classes only and fall
   back to no animation under reduced-motion preferences.
-- Triggers render with `role="tab"`; panels render with `role="tabpanel"`.
-- Shared residuals remain tracked separately:
-  - `TASK-330`: shared Tabs tablist/tabpanel accessibility residuals after TASK-256
+- Triggers render with `role="tab"`; the tablist uses the deterministic label
+  `Content tabs`, and active panels render `tabIndex={0}` while inactive panels
+  stay `hidden`.
+- Remaining shared follow-up:
   - `TASK-329`: shared widget runtime-script transport and dedupe
 
 ## Clear Controls

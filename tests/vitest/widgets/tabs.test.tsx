@@ -30,7 +30,9 @@ test("tabs renders defaults with runtime marker", () => {
   expect(html).toContain('data-coderso-tabs-motion="none"');
   expect(html).toContain('data-coderso-tabs-overflow="wrap"');
   expect(html).toContain('role="tablist"');
+  expect(html).toContain('aria-label="Content tabs"');
   expect(html).toContain('role="tabpanel"');
+  expect(html).toMatch(/role="tabpanel"[^>]*tabindex="0"/);
   expect(html).toContain('aria-controls="tabs-1-panel-1"');
   expect(html).toContain('aria-labelledby="tabs-1-trigger-1"');
   expect(html).not.toContain("Add widgets to this tab panel.");
@@ -204,6 +206,7 @@ test("tabs preserve slot order when numeric custom ids overlap repeatable slot i
   expect(html).toMatch(
     /role="tabpanel"[^>]*data-coderso-tabs-id="1"[\s\S]*?Second slot intro\.[\s\S]*?slot-two-block/
   );
+  expect(html).toMatch(/role="tabpanel"[^>]*tabindex="0"/);
 });
 
 test("tabs render metadata, disabled tabs, and extended style options", () => {

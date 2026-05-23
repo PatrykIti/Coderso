@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 106 tasks
+- **To Do:** 100 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1911 tasks
+- **Done:** 1917 tasks
 
 ---
 
@@ -38,12 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-335 | Shared Avatar Contextual Alt and Media Accessibility Residual | High | Medium | Reopened shared avatar accessibility drift from TASK-290: Testimonials still keeps lazy loading but does not yet follow the final contextual avatar-alt contract |
-| TASK-334 | Shared Visual/Advanced Mode Ownership Residual | High | Medium | Reopened shared editor-mode ownership drift from TASK-290: Testimonials still duplicates writable spacing and slider/rating display controls across Visual and Advanced |
-| TASK-333 | Shared Changelog Index Numbering Truthfulness Repair | Low | Medium | Reopened shared docs drift: TASK-289 closure audit found duplicate changelog index numbers and stale row-to-file mapping outside widget-local scope |
-| TASK-332 | Shared Team Member Identity Accessibility Truthfulness Reopen | Medium | Medium | Reopened shared Team accessibility drift: TASK-289 closure audit found member-card naming and richer avatar identity semantics still overstated in current Team runtime/report evidence |
-| TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Reopened shared Stats KPI renderer drift: `split-highlight` still hardcodes `sm:grid-cols-2` for secondary metrics on the current branch, leaving odd-count imbalance after closed `TASK-256-06-01` |
-| TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Shared follow-up extracted during TASK-288 audit: current branch still lacks the final Tabs tablist accessible-name and tabpanel keyboard-reachability adoption promised by the closed TASK-256 contract |
 | TASK-329 | Shared Widget Runtime Script Transport and Dedupe | High | Medium | Shared follow-up extracted during TASK-288 implementation: interactive widgets still duplicate static inline runtime payloads per widget instance until a render-scoped transport helper lands |
 | TASK-328 | Shared Nested Widget Row-Flow Layout Truthfulness Contract | Medium | Large | Shared renderer follow-up so nested widgets can opt into truthful row-flow child shells before horizontal Spacer support can reopen |
 | TASK-327 | Shared Color Swatch Token Preservation Residual | High | Medium | Reopened shared color-control drift: `SharedColorFieldInputs` still lets swatch writes replace CSS-variable/custom token text in widget editors discovered during TASK-283 audit |
@@ -152,6 +146,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-335 | Shared Avatar Contextual Alt and Media Accessibility Residual | High | Medium | Done (2026-05-23): Testimonials avatars keep lazy loading and now use contextual `Photo of ...` alt text sourced from the author plus any available role/source metadata. |
+| TASK-334 | Shared Visual/Advanced Mode Ownership Residual | High | Medium | Done (2026-05-23): Testimonials Advanced now keeps display diagnostics read-only while Visual is the single writable owner for spacing, slider navigation, and rating display controls. |
+| TASK-333 | Shared Changelog Index Numbering Truthfulness Repair | Low | Medium | Done (2026-05-23): current-state audit confirms `_docs/_CHANGELOG/README.md` has unique numbering and every indexed file mapping resolves cleanly on the branch. |
+| TASK-332 | Shared Team Member Identity Accessibility Truthfulness Reopen | Medium | Medium | Done (2026-05-23): Team member cards now expose explicit accessible labels and contextual avatar alt text while initials fallback remains decorative. |
+| TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Done (2026-05-23): Stats KPI `split-highlight` now uses count-aware odd/even secondary-grid classes with focused widget and renderer coverage. |
+| TASK-330 | Tabs Shared Accessibility Residuals After TASK-256 | High | Medium | Done (2026-05-23): Tabs tablists now expose a deterministic accessible name and active tabpanels stay keyboard reachable with `tabIndex=0`. |
 | TASK-292 | Toggle Block Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Toggle Block is fully closed with new visual/runtime/editor contracts, refreshed report/docs, changelog coverage, and final validation evidence |
 | TASK-292-06 | Toggle Block Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-292 family |
 | TASK-292-05 | Toggle Block Pane Authoring Guidance and Two-State Documentation | Medium | Medium | Done (2026-05-22): Toggle Block now ships preview-only pane guidance tied to user-facing labels and documents the intentional two-pane product boundary |
@@ -167,7 +167,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-03 | Timeline Renderer Accessibility Axis and Responsive Correctness | High | Large | Done (2026-05-22): section/list ARIA, current-step semantics, mobile date visibility, responsive connector sizing, and sparse-density fixes are covered |
 | TASK-291-02 | Timeline Editor Mode Preview Date Guidance and Reorder UX | High | Large | Done (2026-05-22): mode preview cards, date guidance, no-status UX, grouped marker controls, spacing help, and drag reorder are landed |
 | TASK-291-01 | Timeline Wizard Step Authoring and Status UX | High | Large | Done (2026-05-22): Wizard now edits all normalized steps, authors status/icon/accent, confirms removals, and warns when titles are hidden |
-| TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Testimonials family is closed with richer Wizard/Visual/Advanced authoring, safe media and CTA contracts, owned pagination/import-export, and synchronized report/docs/changelog evidence while the remaining shared residuals now route to `TASK-334`, `TASK-335`, and `TASK-333` |
+| TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Testimonials family is closed with richer Wizard/Visual/Advanced authoring, safe media and CTA contracts, owned pagination/import-export, and synchronized report/docs/changelog evidence; the later shared audit residuals are now also closed through `TASK-333`, `TASK-334`, and `TASK-335` |
 | TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-290 family on `feature/corrections` |
 | TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Done (2026-05-22): Testimonials now supports a local 24-item cap, owned SSR load-more disclosure, and safe local JSON/CSV import-export without external provider sync |
 | TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Done (2026-05-22): Testimonials now renders a safe section CTA and bounded sanitized rich quote HTML with legacy plain-text fallback |
@@ -176,14 +176,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-290-03 | Testimonials Avatar Media Picker and URL Validation | High | Large | Done (2026-05-22): Wizard and Visual now support avatar Media Library picking, safe URL feedback, and fail-closed runtime avatar rendering |
 | TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Done (2026-05-22): Visual now confirms destructive removal and uses explicit spotlight pinning through `layout.spotlightItemId` |
 | TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Done (2026-05-22): Wizard now owns header copy plus role/source/rating onboarding instead of leaving key social-proof fields hidden in Visual |
-| TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Team follow-up family is fully closed with member-panel IA improvements, explicit spotlight lead selection, media-library photo authoring, section presentation controls, the bounded max-12/mobile-density decision, and synchronized report/docs/board/changelog evidence |
+| TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Team follow-up family is fully closed with member-panel IA improvements, explicit spotlight lead selection, media-library photo authoring, section presentation controls, the bounded max-12/mobile-density decision, synchronized report/docs/board/changelog evidence, and the later shared accessibility reopen resolved in `TASK-332` |
 | TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the final Team report matrix, widget docs, board rows, changelog, and validation notes now match the closed TASK-289 family |
 | TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Done (2026-05-22): Team keeps the explicit max-12 contract, adds larger-directory guidance, and ships the bounded `compactMobileBio` mobile-density control for `compact-list` |
 | TASK-289-04 | Team Header Surface Typography and CTA Controls | Medium | Very Large | Done (2026-05-22): Team now supports section background, eyebrow, header align/title-size, safe CTA, card border-width, and local contrast advisories across schema, editor, runtime, and tests |
 | TASK-289-03 | Team Photo Authoring and Media Picker | High | Large | Done (2026-05-22): Team member panels now support media-library image picking, inline preview state, direct URL authoring, invalid-photo feedback, and clear-photo recovery without widening shared runtime safety scope |
 | TASK-289-02 | Team Spotlight Lead and Variant Guidance | Medium | Large | Done (2026-05-22): Spotlight now supports stable `spotlightLeadId` selection plus explicit editor badges/actions while keeping shared count/columns truthfulness outside widget-local scope |
 | TASK-289-01 | Team Member Editor IA and Destructive Edit UX | High | Large | Done (2026-05-22): Team member panels now colocate social links, confirm destructive member/social removals, and expose add-member affordances at both the top and bottom of long lists |
-| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Tabs-specific follow-up leaves are closed, widget docs/report/board/changelog are synchronized, and the only remaining open residue lives in shared `TASK-330` and `TASK-329` |
+| TASK-288 | Tabs Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): Tabs-specific follow-up leaves are closed, widget docs/report/board/changelog are synchronized, `TASK-330` is now resolved, and the only remaining open shared residue is `TASK-329` |
 | TASK-288-07 | Tabs Report Docs and Closure | Medium | Medium | Done (2026-05-22): final Tabs report evidence, widget docs, board rows, changelog, and validation notes now match the completed TASK-288 family |
 | TASK-288-06 | Tabs Motion Variant Previews and Polish | Medium | Large | Done (2026-05-22): Tabs now ships visual variant previews plus bounded `none` / `fade` / `slide` motion with reduced-motion-safe panel classes and regression coverage |
 | TASK-288-05 | Tabs Layout Overflow Typography and Spacing | High | Very Large | Done (2026-05-22): Tabs now fixes vertical alignment and owns bounded overflow, trigger typography, spacing, padding, and layout/editor guidance without adding a duplicate local max-width field |
@@ -191,7 +191,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-288-03 | Tabs Admin Preview and Runtime Activation | High | Large | Done (2026-05-22): Tabs preview switches panels through React-local state, public runtime remains root-scoped and custom-id-safe, and the still-shared inline-script dedupe residue was split to `TASK-329` |
 | TASK-288-02 | Tabs Wizard Layout, Default Tab, and Slot Guidance | High | Large | Done (2026-05-22): Wizard now exposes layout shortcuts, default badges, panel-intro copy, slot guidance, and destructive count-reduction confirmation |
 | TASK-288-01 | Tabs Visual Color Parity and Editor IA | High | Large | Done (2026-05-22): Visual/Advanced now split structure, layout, trigger-style, and color surfaces while exposing inactive trigger color and local contrast guidance |
-| TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stats KPI follow-up family is closed with schema/editor/runtime/docs/changelog sync; the only remaining non-local residual is shared `TASK-331`, and count-up animation stays intentionally rejected |
+| TASK-287 | Stats KPI Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Stats KPI follow-up family is closed with schema/editor/runtime/docs/changelog sync, the later shared `split-highlight` grid residual is now resolved in `TASK-331`, and count-up animation stays intentionally rejected |
 | TASK-287-06 | Stats KPI Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): report/docs/board/changelog now reflect the final Stats KPI closure matrix, focused validation evidence, and the current local scanner-tool limitation |
 | TASK-287-05 | Stats KPI Metric Management and Editor IA Polish | Medium | Large | Done (2026-05-22): Visual now has drag-friendly reorder, confirmed removal, keyboard move fallback, and clearer metrics/text/surface/layout grouping |
 | TASK-287-04 | Stats KPI Metric Links and Safe Click Semantics | Medium | Large | Done (2026-05-22): metrics can now render safe internal/external links through the shared safe-href helper without turning Stats KPI into an action surface |

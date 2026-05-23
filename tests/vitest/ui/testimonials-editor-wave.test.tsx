@@ -681,6 +681,14 @@ test("TestimonialsAdvancedEditor previews invalid imports, applies valid imports
         { id: "t-4", quote: "D", author: "Drew", rating: 5 },
       ],
       layout: { spotlightItemId: "missing" },
+      behavior: {
+        ratingDisplay: "stars",
+        sliderNavigation: "dots",
+      },
+      style: {
+        ...testimonialsDefaults.style,
+        spacing: "lg",
+      },
     },
     initialVariant: "spotlight",
   });
@@ -707,12 +715,6 @@ test("TestimonialsAdvancedEditor previews invalid imports, applies valid imports
       findInputsByPlaceholder(view.container, "Load more testimonials")[0],
       "More proof"
     );
-    setSelectValue(
-      findSelectByOptions(view.container, ["hide-empty", "label-empty", "stars"]),
-      "stars"
-    );
-    setSelectValue(findSelectByOptions(view.container, ["none", "dots"]), "dots");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
 
     clickButton(findButtonsByText(view.container, "Normalize list to variant baseline")[0]);
     expect(view.getLatestValue().testimonials).toHaveLength(2);
@@ -770,6 +772,38 @@ test("TestimonialsAdvancedEditor previews invalid imports, applies valid imports
     )[0];
     expect(exportArea?.value).toContain("id,quote,quoteHtml,author,role,avatar,rating,sourceLabel");
     expect(exportArea?.value).toContain("Alex");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("TestimonialsAdvancedEditor keeps shared display controls diagnostic-only", () => {
+  const view = renderEditor(TestimonialsAdvancedEditor, {
+    initialValue: {
+      ...testimonialsDefaults,
+      behavior: {
+        sliderNavigation: "dots",
+        ratingDisplay: "stars",
+      },
+      style: {
+        ...testimonialsDefaults.style,
+        spacing: "lg",
+      },
+    },
+    initialVariant: "grid",
+  });
+
+  try {
+    expect(view.container.textContent).toContain("Display diagnostics");
+    expect(view.container.textContent).toContain("Card spacing token");
+    expect(view.container.textContent).toContain("lg");
+    expect(view.container.textContent).toContain("stars");
+    expect(view.container.textContent).toContain("dots (inactive outside slider-static)");
+    expect(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])).toHaveLength(0);
+    expect(
+      findSelectsByOptions(view.container, ["hide-empty", "label-empty", "stars"])
+    ).toHaveLength(0);
+    expect(findSelectsByOptions(view.container, ["none", "dots"])).toHaveLength(0);
   } finally {
     view.cleanup();
   }

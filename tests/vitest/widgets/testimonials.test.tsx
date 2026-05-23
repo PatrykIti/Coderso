@@ -485,6 +485,31 @@ test("testimonials runtime markers keep style and shared accessibility baselines
   expect(html).toContain('loading="lazy"');
 });
 
+test("testimonials avatar alt text includes available role and source context", () => {
+  const html = renderToString(
+    <TestimonialsBlock
+      variant="grid"
+      data={{
+        ...testimonialsDefaults,
+        testimonials: [
+          {
+            id: "t-1",
+            quote: "A",
+            author: "Alice",
+            role: "Founder",
+            sourceLabel: "North Labs",
+            avatar: "/media/alice.jpg",
+            rating: 5,
+          },
+        ],
+      }}
+    />
+  );
+
+  expect(html).toContain('alt="Photo of Alice, Founder, North Labs"');
+  expect(html).toContain('loading="lazy"');
+});
+
 test("testimonials editors still render their expanded section labels in SSR smoke mode", () => {
   const wizardHtml = renderToString(
     <TestimonialsWizardEditor

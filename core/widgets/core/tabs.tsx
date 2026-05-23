@@ -65,6 +65,7 @@ export type TabsData = {
 export const tabsItemMin = 2;
 export const tabsItemMax = 6;
 const tabsIconMaxLength = 16;
+const defaultTabsTablistAriaLabel = "Content tabs";
 
 export const tabsPanelSlot = {
   id: "panel",
@@ -753,6 +754,7 @@ export function TabsBlock({
     >
       <div
         role="tablist"
+        aria-label={defaultTabsTablistAriaLabel}
         aria-orientation={orientation}
         className={joinClasses(
           orientation === "vertical"
@@ -822,6 +824,7 @@ export function TabsBlock({
             key={`${panel.slotId}-panel`}
             id={panelId}
             role="tabpanel"
+            tabIndex={0}
             data-coderso-tabs-panel
             data-coderso-tabs-id={panel.selectionId}
             data-state={isActive ? "active" : "inactive"}

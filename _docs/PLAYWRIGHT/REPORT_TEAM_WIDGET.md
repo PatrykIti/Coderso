@@ -436,7 +436,7 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 
 ---
 
-## Status po TASK-256 i TASK-289 (audit 2026-05-22)
+## Status po TASK-256, TASK-289 i TASK-332 (audit 2026-05-23)
 
 - `TASK-256-06-04`: shared Team baseline now owns the historical section label,
   heading semantics, safe-link output, spotlight columns/count truthfulness,
@@ -445,6 +445,9 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 - `TASK-289`: Team-specific product and editor scope is now closed through the
   member IA, spotlight lead, photo authoring, section presentation, and compact
   mobile density leaves below.
+- `TASK-332`: the later shared accessibility reopen is now closed with explicit
+  member-card labels, contextual avatar alt text, and unchanged decorative
+  initials fallback semantics.
 
 ### Finalny status historycznych findingow
 
@@ -458,7 +461,7 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 | BUG-04 | Zamkniete przez shared `TASK-256-06-04` | runtime `<section>` ma etykiete dostepnosciowa |
 | BUG-05 | Zamkniete przez shared `TASK-256-06-04` | Team header wyszedl z hardcoded `<h3>` na shared bounded heading baseline; `TASK-289-04` dodaje tylko align/title-size |
 | BUG-06 | Zamkniete przez shared `TASK-256-06-04` | social links i Team CTA ida przez shared safe-link attrs z `_blank` + `rel` |
-| BUG-07 | Przekierowane do shared `TASK-332` | obecny tree zachowuje initials fallback i lazy/safe media baseline, ale nie zamyka jeszcze truthy member-card naming i richer avatar identity semantics |
+| BUG-07 | Zamkniete przez shared `TASK-332` | member cards now expose explicit accessible labels while initials fallback remains decorative and lazy/safe media baseline is preserved. |
 | BUG-08 | Zamkniete przez shared `TASK-256-06-04` | runtime nie wykonuje juz zbednej podwojnej normalizacji memberow |
 
 #### UX
@@ -492,7 +495,7 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 | BF-09 | Zamkniete przez `TASK-289-04` | Team renderuje opcjonalne CTA z shared safe-link behavior |
 | BF-10 | Zamkniete przez `TASK-289-04` | Team cards maja bounded `cardBorderWidth` token |
 | BF-11 | Zamkniete decyzja produktowa przez `TASK-289-05` | Team zachowuje explicit max-12 contract; editor/docs kieruja wieksze katalogi do wielu sekcji Team lub innej listing surface |
-| BF-12 | Przekierowane do shared `TASK-332` | richer avatar alt wording pozostaje wspolnym Team accessibility follow-up, nie widget-local product field |
+| BF-12 | Zamkniete przez shared `TASK-332` | avatar images now use contextual `Photo of {name[, role]}` alt wording without adding widget-local authoring fields. |
 | BF-13 | Zamkniete przez `TASK-289-05` | `compactMobileBio` pozwala ukryc bio wizualnie na mobile w `compact-list` |
 
 #### Accessibility
@@ -501,12 +504,12 @@ Pełne wyniki w sekcji 3.8 — wszystkie zachowania są identyczne w admin canva
 |---------|--------------|----------|
 | A1 | Zamkniete przez shared `TASK-256-06-04` | Team section ma juz runtime accessible label |
 | A2 | Zamkniete przez shared `TASK-256-06-04` | header nie jest juz hardcoded `<h3>` |
-| A3 | Przekierowane do shared `TASK-332` | obecny tree nie zamyka jeszcze explicit member-card accessible naming contract |
+| A3 | Zamkniete przez shared `TASK-332` | each member card now exposes an explicit accessible label derived from the member identity. |
 | A4 | Zamkniete przez shared `TASK-256-06-04` | Team links korzystaja z shared safe-link/new-tab policy |
 | A5 | Zamkniete przez shared `TASK-256-06-04` | avatar images lazy-load zgodnie z report findingiem |
-| A6 | Przekierowane do shared `TASK-332` | initials fallback pozostaje truthy only partially; final shared contract dla article/avatar semantics jest nadal otwarty |
+| A6 | Zamkniete przez shared `TASK-332` | initials fallback stays `aria-hidden` while the member-card label carries the accessible identity contract. |
 | A7 | Zamkniete przez `TASK-289-04` | Team editor daje lokalne contrast advisories |
-| A8 | Przekierowane do shared `TASK-332` | obecny runtime dalej uzywa bare `alt={name}` zamiast finalnie uzgodnionego richer identity wording |
+| A8 | Zamkniete przez shared `TASK-332` | avatar `<img>` now uses contextual `Photo of ...` alt wording instead of bare author-only text. |
 
 #### Pozostale ustalenia raportowe
 
