@@ -183,8 +183,9 @@ renderu zamiast udawac aktywna wysylke.
   `data-form-embed-error`.
 - Contact nie wprowadza wlasnego public endpointu ani widget-owned nonce/CAPTCHA
   konfiguracji.
-- Shared busy/live-region/CAPTCHA projection pozostaje poza Contact owner scope;
-  Contact emituje tylko aktualne kompatybilne markery.
+- Shared busy/live-region/CAPTCHA projection jest juz domknieta w shared
+  Forms runtime; Contact emituje tylko kompatybilne markery i nie definiuje
+  własnego runtime/public-write kontraktu.
 
 ## Accessibility and Diagnostics
 

@@ -53,7 +53,7 @@ follow-up before marking the row deferred.
 - `TASK-261` is now closed with Contact-local product/runtime work landed under
   TASK-261-01 through TASK-261-05 and synchronized through this closure leaf.
 - Shared runtime busy/live-region/CAPTCHA behavior remains outside Contact owner
-  scope and stays routed to the existing Forms runtime/public-write owners.
+  scope and is now already closed in the existing Forms runtime/public-write owners.
 - A new shared runtime/cache drift was discovered during closure: cached public
   HTML can reuse stale Forms `submissionNonce` values for nonce-bearing widgets.
   This is now split into `TASK-301` instead of being patched locally inside

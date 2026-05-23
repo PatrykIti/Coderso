@@ -70,7 +70,7 @@ work.
 |---|---|
 | C1, C2, W1, W4, W5, R1, R5, R6, R7 | TASK-261-01 |
 | C3, C4, W2, W3, W12, R2, R3, R4 | TASK-261-02 parent; execution leaves TASK-261-02-01 through TASK-261-02-03 |
-| R10 | TASK-261-02 for Contact-side submit markers and static-safe fallback; shared busy/live-region/CAPTCHA projection routes to TASK-269-05 or a future Forms/public-write task when the generic runtime contract is missing |
+| R10 | TASK-261-02 for Contact-side submit markers and static-safe fallback; shared busy/live-region/CAPTCHA projection is now closed in TASK-269-05, so Contact only consumes that shared runtime contract |
 | C5, W8, W11, U1, U3, U4, U5, U6, U7, U8, U9, U10 | TASK-261-03; W8 is current button-ordering/future drag-and-drop classification, not required DnD implementation |
 | W9, W10, W14, W15, R8, R9 | TASK-261-04 |
 | W6, W7, W13, R11, R12 | TASK-261-05 |
