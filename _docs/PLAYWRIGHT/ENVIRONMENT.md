@@ -44,4 +44,3 @@ Tracked evidence should be sanitized Markdown or JSON:
 The TASK-336 smoke harness must distinguish environment failures, fixture gaps,
 path-metadata gaps, and widget contract failures instead of collapsing them into
 one generic failure type.
-

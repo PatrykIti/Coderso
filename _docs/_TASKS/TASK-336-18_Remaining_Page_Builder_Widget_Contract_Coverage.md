@@ -161,4 +161,3 @@ Regression-test shape:
   before closure.
 - `TASK-336-17` can require strict 38/38 validation without hidden unowned
   widgets.
-
