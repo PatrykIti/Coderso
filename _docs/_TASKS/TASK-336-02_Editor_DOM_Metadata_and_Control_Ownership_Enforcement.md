@@ -6,7 +6,7 @@
 **Category:** Admin UI + Widgets + Playwright Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01
-**Status:** To Do
+**Status:** Done (2026-05-23)
 
 ---
 
@@ -34,17 +34,17 @@ before the 38-widget smoke harness can be strict.
 
 ## Sub-Tasks
 
-- [ ] Extend the existing `WidgetEditorModeRoot` without changing its current
+- [x] Extend the existing `WidgetEditorModeRoot` without changing its current
   `data-widget-editor` / `data-widget-editor-mode` contract.
-- [ ] Extend the existing `WidgetEditorSection` `id` contract with optional
+- [x] Extend the existing `WidgetEditorSection` `id` contract with optional
   `mode` and `role` metadata; do not replace `id` with a second naming model.
-- [ ] Extend the existing `WidgetControlRow` and `data-widget-control` contract
+- [x] Extend the existing `WidgetControlRow` and `data-widget-control` contract
   with optional `path`, `ownership`, and `readOnly` metadata.
-- [ ] Add a lightweight `ReadonlyWidgetSummaryRow` for Advanced diagnostics.
-- [ ] Replace local title-derived ids in the first migrated editors.
-- [ ] Add Vitest coverage that renders sample modes and inspects the emitted
+- [x] Add a lightweight `ReadonlyWidgetSummaryRow` for Advanced diagnostics.
+- [x] Replace local title-derived ids in the first migrated editors.
+- [x] Add Vitest coverage that renders sample modes and inspects the emitted
   DOM contract.
-- [ ] Document the DOM metadata naming convention for later leaves.
+- [x] Document the DOM metadata naming convention for later leaves.
 
 ## Files to Change
 

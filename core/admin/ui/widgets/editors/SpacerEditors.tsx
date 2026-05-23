@@ -25,9 +25,13 @@ import {
   type SpacerData,
   type SpacerVariantId,
 } from "../../../../widgets/core/spacer";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SpacerVariantId;
@@ -124,18 +128,21 @@ function applyPreset(
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
-  id?: string;
+  id: string;
+  mode: EditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
-  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -410,6 +417,9 @@ export function SpacerVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="spacer.visual-variant-behavior"
+        mode="visual"
+        role="visual"
         title="Variant and responsive behavior"
         description="Choose fixed or responsive spacer mode."
       >
@@ -417,6 +427,9 @@ export function SpacerVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="spacer.visual-responsive-heights"
+        mode="visual"
+        role="layout"
         title="Responsive heights"
         description="Control spacer height per breakpoint with token, viewport, clamp, or px values."
       >
@@ -427,6 +440,9 @@ export function SpacerVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="spacer.visual-editor-guide"
+        mode="visual"
+        role="visual"
         title="Editor guide"
         description="Optional helper label visible in preview environments."
       >
@@ -457,6 +473,9 @@ export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorP
   return (
     <div className="space-y-4">
       <EditorSection
+        id="spacer.advanced-height-tokens"
+        mode="advanced"
+        role="technical"
         title="Technical height tokens"
         description="Direct token, viewport, clamp, or px editing for desktop, tablet and mobile heights."
       >
@@ -464,10 +483,17 @@ export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorP
       </EditorSection>
 
       <EditorSection
+        id="spacer.advanced-payload-snapshot"
+        mode="advanced"
+        role="diagnostics"
         title="Raw payload snapshot"
         description="Runtime-oriented JSON view of normalized data."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
     </div>
   );

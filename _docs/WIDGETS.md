@@ -99,7 +99,13 @@ Zasady:
   inputy nie nachodzily na siebie w prawym inspectorze.
 - Tryby edytora emituja stabilne metadane automatyzacyjne:
   `data-widget-editor`, `data-widget-editor-mode`,
-  `data-widget-editor-section`, i `data-widget-control`.
+  `data-widget-editor-section`, `data-widget-editor-section-role`,
+  `data-widget-control`, `data-widget-control-path`,
+  `data-widget-control-ownership`, i `data-widget-control-readonly`.
+- `data-widget-control-path` oznacza sciezke persisted danych tylko wtedy, gdy
+  row realnie ja edytuje albo pokazuje jako read-only summary. Playwright i
+  Vitest licza writable ownership po `data-widget-control-path` z
+  `data-widget-control-readonly != "true"`.
 - Widgety z `slots` lub nested content przenosza kontrole struktury do nazwanej
   sekcji `Visual` albo `Advanced`; nie wracamy do top-of-panel slot banners nad
   zakladkami.

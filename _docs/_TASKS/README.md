@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 26 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1921 tasks
+- **Done:** 1922 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-02 | Editor DOM Metadata and Control Ownership Enforcement | High | Large | Add shared mode/section/control DOM metadata so Vitest and Playwright can inspect ownership |
 | TASK-336-03 | Playwright 38 Widget Fixture and Smoke Harness | High | Large | Build repeatable admin/frontend smoke coverage for all widgets and CSS overflow checks |
 | TASK-336-04 | Template Section Mode Ownership | High | Large | Split repeated Template Section editor into setup, visual, and read-only diagnostic owners |
 | TASK-336-05 | Search Box Mode Ownership | High | Large | Split search source setup, visible copy/style, and runtime diagnostics |
@@ -80,6 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336-02 | Editor DOM Metadata and Control Ownership Enforcement | High | Large | Done (2026-05-23): shared editor roots, sections, control rows, readonly summaries, Spacer section metadata, docs, and focused DOM/Spacer coverage landed. |
 | TASK-336-01 | Editor Contract Type and Registry Validator | High | Large | Done (2026-05-23): v2 editor contract types, pure validator, soft registry diagnostics, strict helper, docs, and focused Vitest coverage landed. |
 | TASK-335 | Shared Avatar Contextual Alt and Media Accessibility Residual | High | Medium | Done (2026-05-23): Testimonials avatars keep lazy loading and now use contextual `Photo of ...` alt text sourced from the author plus any available role/source metadata. |
 | TASK-334 | Shared Visual/Advanced Mode Ownership Residual | High | Medium | Done (2026-05-23): Testimonials Advanced now keeps display diagnostics read-only while Visual is the single writable owner for spacing, slider navigation, and rating display controls. |
