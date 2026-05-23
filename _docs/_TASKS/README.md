@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 128 tasks
+- **To Do:** 121 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1887 tasks
+- **Done:** 1896 tasks
 
 ---
 
@@ -38,6 +38,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-335 | Shared Avatar Contextual Alt and Media Accessibility Residual | High | Medium | Reopened shared avatar accessibility drift from TASK-290: Testimonials still keeps lazy loading but does not yet follow the final contextual avatar-alt contract |
+| TASK-334 | Shared Visual/Advanced Mode Ownership Residual | High | Medium | Reopened shared editor-mode ownership drift from TASK-290: Testimonials still duplicates writable spacing and slider/rating display controls across Visual and Advanced |
 | TASK-333 | Shared Changelog Index Numbering Truthfulness Repair | Low | Medium | Reopened shared docs drift: TASK-289 closure audit found duplicate changelog index numbers and stale row-to-file mapping outside widget-local scope |
 | TASK-332 | Shared Team Member Identity Accessibility Truthfulness Reopen | Medium | Medium | Reopened shared Team accessibility drift: TASK-289 closure audit found member-card naming and richer avatar identity semantics still overstated in current Team runtime/report evidence |
 | TASK-331 | Shared Stats KPI Split-Highlight Secondary Grid Truthfulness | High | Medium | Reopened shared Stats KPI renderer drift: `split-highlight` still hardcodes `sm:grid-cols-2` for secondary metrics on the current branch, leaving odd-count imbalance after closed `TASK-256-06-01` |
@@ -60,15 +62,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-291-05 | Timeline Layout Typography Header and Container Controls | Medium | Large | Add title weight, bounded padding/max-width/min-height, header title/description, and dated milestone composition |
 | TASK-291-06 | Timeline Motion Presets and Reduced-Motion Policy | Low | Medium | Decide CSS-safe Timeline motion presets or keep W8 static with exact shared-runtime follow-up if needed |
 | TASK-291-07 | Timeline Report Docs Changelog and Closure | Medium | Medium | Refresh Timeline report/docs/changelog/board and final validation evidence |
-| TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Testimonials-only follow-up family for `REPORT_TESTIMONIALS_WIDGET.md`, excluding TASK-256 shared-contract scope |
-| TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Expand Wizard header and social-proof fields after TASK-256 variant/count updates are stable |
-| TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Add safer removal and explicit spotlight selection without duplicating shared editor update fixes |
-| TASK-290-03 | Testimonials Avatar Media Picker and URL Validation | High | Large | Add avatar Media Library picking and safe URL feedback while TASK-256 owns lazy/alt baseline |
-| TASK-290-04 | Testimonials Slider Navigation and Rating Semantics | High | Large | Add Testimonials-only slider product controls and rating-zero semantics after TASK-256 slider baseline |
-| TASK-290-05 | Testimonials Section Surface Typography and Card Styles | Medium | Large | Add bounded section background, header typography, card radius/border width, and contrast guidance |
-| TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Add a safe CTA and bounded rich quote formatting for Testimonials sections |
-| TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Decide large-set policy and add safe local import/export or pagination without external provider connectors |
-| TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Refresh Testimonials report/docs/changelog/board and final validation evidence |
 | TASK-267 | Feature Grid Widget Playwright Product Followups | High | Very Large | Feature Grid-only follow-up family for `REPORT_FEATURE_GRID_WIDGET.md`, excluding TASK-256 shared-contract scope |
 | TASK-267-01 | Feature Grid Variant Preview and Responsive Cards-4 Layout | High | Medium | Add variant preview affordances, repair cards-4 responsive product behavior, and keep columns truthfulness in TASK-256 |
 | TASK-267-02 | Feature Grid Card Reorder, Remove, and Item Management | High | Medium | Add drag reorder plus recoverable remove flow while preserving keyboard move fallback |
@@ -174,6 +167,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-290 | Testimonials Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Testimonials family is closed with richer Wizard/Visual/Advanced authoring, safe media and CTA contracts, owned pagination/import-export, and synchronized report/docs/changelog evidence while the remaining shared residuals now route to `TASK-334`, `TASK-335`, and `TASK-333` |
+| TASK-290-08 | Testimonials Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): final report matrix, widget docs, board rows, changelog, and validation notes now match the completed TASK-290 family on `feature/corrections` |
+| TASK-290-07 | Testimonials Large Set Import Export and Pagination | Low | Very Large | Done (2026-05-22): Testimonials now supports a local 24-item cap, owned SSR load-more disclosure, and safe local JSON/CSV import-export without external provider sync |
+| TASK-290-06 | Testimonials CTA and Rich Quote Content | Medium | Large | Done (2026-05-22): Testimonials now renders a safe section CTA and bounded sanitized rich quote HTML with legacy plain-text fallback |
+| TASK-290-05 | Testimonials Section Surface Typography and Card Styles | Medium | Large | Done (2026-05-22): Testimonials now owns section background/media/tone controls, header alignment/size, card radius/border width, and non-blocking contrast guidance |
+| TASK-290-04 | Testimonials Slider Navigation and Rating Semantics | High | Large | Done (2026-05-22): slider-static now exposes truthful SSR dot navigation and explicit rating-zero display semantics without client carousel JS |
+| TASK-290-03 | Testimonials Avatar Media Picker and URL Validation | High | Large | Done (2026-05-22): Wizard and Visual now support avatar Media Library picking, safe URL feedback, and fail-closed runtime avatar rendering |
+| TASK-290-02 | Testimonials Destructive Item Management and Spotlight Pin | High | Large | Done (2026-05-22): Visual now confirms destructive removal and uses explicit spotlight pinning through `layout.spotlightItemId` |
+| TASK-290-01 | Testimonials Wizard Header and Social Proof Authoring | High | Large | Done (2026-05-22): Wizard now owns header copy plus role/source/rating onboarding instead of leaving key social-proof fields hidden in Visual |
 | TASK-289 | Team Widget Playwright Product Followups | High | Very Large | Done (2026-05-22): the Team follow-up family is fully closed with member-panel IA improvements, explicit spotlight lead selection, media-library photo authoring, section presentation controls, the bounded max-12/mobile-density decision, and synchronized report/docs/board/changelog evidence |
 | TASK-289-06 | Team Report Docs Changelog and Closure | Medium | Medium | Done (2026-05-22): the final Team report matrix, widget docs, board rows, changelog, and validation notes now match the closed TASK-289 family |
 | TASK-289-05 | Team Large Team and Compact Mobile Presentation | Low | Large | Done (2026-05-22): Team keeps the explicit max-12 contract, adds larger-directory guidance, and ships the bounded `compactMobileBio` mobile-density control for `compact-list` |

@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-04, TASK-256-06-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -30,14 +30,15 @@ runtime truthfulness for the existing `slider-static` variant.
 
 In scope:
 
-- Decide whether the product keeps `slider-static` as a horizontal scroll strip
-  with a truthful label or adds a separate interactive carousel variant/control.
-- Add bounded Prev/Next and optional dot indicators only if they can be scoped
-  to the Testimonials widget root and respect reduced motion.
+- Keep the backward-compatible `slider-static` variant id and render it as an
+  SSR-only horizontal scroll strip with root-scoped dot navigation links. No
+  client-side carousel runtime or generic slider registry is introduced here.
+- Add bounded dot navigation only under `behavior.sliderNavigation =
+  "none" | "dots"`, defaulting to `dots` for `slider-static`.
 - Add `ratingDisplay` semantics for hiding unknown ratings or showing a
   clearly labeled "No rating" state.
 - Use explicit `TestimonialsData.behavior` schema ownership for slider and
-  rating display options, for example `behavior.sliderControls` and
+  rating display options, specifically `behavior.sliderNavigation` and
   `behavior.ratingDisplay`.
 - Preserve existing non-zero rating `aria-label` behavior.
 
@@ -51,15 +52,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Classify final `slider-static` product direction after TASK-256: rename,
-  keep as scroll strip, or add opt-in navigation.
-- [ ] Add schema/defaults/normalizer fields only for the chosen Testimonials
-  product behavior under the chosen `behavior` namespace.
-- [ ] Render navigation controls with root-scoped selectors and keyboard-safe
-  buttons when enabled.
-- [ ] Add rating-zero policy: hide stars, render "No rating", or expose an
-  explicit editor setting.
-- [ ] Add editor controls and tests for rating semantics and any slider options.
+- [x] Add `behavior.sliderNavigation` and `behavior.ratingDisplay` to the
+  Testimonials owner schema/defaults/normalizer under a local `behavior`
+  namespace.
+- [x] Render root-scoped dot navigation links for `slider-static` when
+  navigation is enabled and more than one testimonial is visible.
+- [x] Default rating-zero policy to `hide-empty`, while allowing an explicit
+  `"label-empty"` editor option for teams that want visible "No rating" copy.
+- [x] Add editor controls and tests for rating semantics and any slider options.
 
 ## Files to Change
 
@@ -88,13 +88,22 @@ Slider control flow:
 
 ```tsx
 const enableNavigation =
-  resolvedVariant === "slider-static" && normalizedData.behavior?.sliderControls === "buttons";
+  resolvedVariant === "slider-static" &&
+  normalizedData.behavior?.sliderNavigation === "dots" &&
+  items.length > 1;
 
 return (
-  <section data-testimonials-slider-controls={enableNavigation ? "buttons" : "none"}>
-    {enableNavigation ? <button type="button" data-testimonials-prev>Previous</button> : null}
+  <section data-testimonials-slider-navigation={enableNavigation ? "dots" : "none"}>
     <div data-testimonials-list>{items}</div>
-    {enableNavigation ? <button type="button" data-testimonials-next>Next</button> : null}
+    {enableNavigation ? (
+      <nav aria-label="Testimonials navigation">
+        {items.map((item, index) => (
+          <a key={item.id ?? index} href={`#${resolveTestimonialAnchorId(rootId, item, index)}`}>
+            <span className="sr-only">Jump to testimonial {index + 1}</span>
+          </a>
+        ))}
+      </nav>
+    ) : null}
   </section>
 );
 ```
@@ -102,9 +111,22 @@ return (
 Error handling:
 
 - Unknown slider option values normalize to the current static behavior.
-- Rating display unknown values normalize to the current non-zero star behavior.
-- Runtime script, if needed, must no-op when the DOM root is missing and must
-  scope all queries to the current Testimonials instance.
+- Rating display unknown values normalize to `hide-empty`.
+- Navigation remains SSR-only; no runtime script or global selector binding is
+  introduced by this leaf.
+
+Regression test shape:
+
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - `slider-static` emits dot-navigation markup only when enabled and when more
+    than one testimonial is visible.
+  - Rating `0` hides stars by default and can switch to a visible "No rating"
+    label through `behavior.ratingDisplay = "label-empty"`.
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Visual/Advanced controls update `behavior.sliderNavigation` and
+    `behavior.ratingDisplay` without mutating non-slider variants.
+- `tests/vitest/widgets/renderer.test.tsx`
+  - Run when renderer markers or root-scoped navigation attrs change.
 
 ## Security Contract
 
@@ -125,10 +147,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If runtime-kernel script binding is introduced, add/run a Bun-owned runtime
-  test selected by the final owner path.
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -147,4 +169,15 @@ No API routes are added.
 - The slider-like Testimonials variant exposes truthful navigation behavior or
   truthful non-interactive copy.
 - Rating `0` no longer reads as an accidental negative rating.
-- Runtime output remains accessible, reduced-motion safe, and instance scoped.
+- Runtime output remains accessible, reduced-motion safe, instance scoped, and
+  free of new client-side carousel JS.
+
+## Completion Notes (2026-05-22)
+
+- Testimonials now owns `behavior.sliderNavigation` and
+  `behavior.ratingDisplay`, with `slider-static` exposing truthful SSR dot
+  navigation and rating-zero output no longer defaulting to five empty stars.
+- The runtime default stays `hide-empty`, while labeled and explicit star modes
+  remain available through bounded editor controls.
+- Widget and editor tests now prove navigation markers, zero-rating semantics,
+  and the synchronized control surface for these behavior fields.

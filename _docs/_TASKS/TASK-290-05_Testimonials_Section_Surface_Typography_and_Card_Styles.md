@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Runtime Render + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-02, TASK-256-06-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -51,14 +51,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Extend `TestimonialsData.style` with bounded section/card/header style
+- [x] Extend `TestimonialsData.style` with bounded section/card/header style
   fields.
-- [ ] Add resolver helpers and class/style maps for every token.
-- [ ] Add Visual controls for section surface, header alignment/size, card
+- [x] Add resolver helpers and class/style maps for every token.
+- [x] Add Visual controls for section surface, header alignment/size, card
   radius, border width, and optional background image.
-- [ ] Add contrast warning copy near the affected controls without blocking
+- [x] Add contrast warning copy near the affected controls without blocking
   existing saved pages.
-- [ ] Add renderer and editor tests for legacy defaults and every new token.
+- [x] Add renderer and editor tests for legacy defaults and every new token.
 
 ## Files to Change
 
@@ -111,6 +111,19 @@ Error handling:
 - Background image URLs or asset IDs normalize through explicit schema fields
   and never through arbitrary CSS strings.
 
+Regression test shape:
+
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - Section background, header alignment/size, card radius, and border-width
+    tokens normalize to bounded defaults and render expected attrs/classes.
+  - Advisory contrast warnings never block legacy payload rendering.
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Visual controls patch only the Testimonials-owned style tokens and keep
+    TASK-256 clear semantics intact.
+- `tests/vitest/widgets/styleNoneTokens.test.tsx`
+  - Spacing/radius clear adjacency remains compatible with shared none-token
+    behavior.
+
 ## Security Contract
 
 No API routes are added.
@@ -133,8 +146,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -155,3 +170,13 @@ No API routes are added.
 - Header typography controls do not duplicate shared heading hierarchy repair.
 - Contrast warnings make unsafe combinations visible without breaking legacy
   pages.
+
+## Completion Notes (2026-05-22)
+
+- `TestimonialsData.style` now owns bounded section background, gradient,
+  background image, tone, header alignment/title size, and card radius/border
+  width fields with deterministic runtime markers.
+- Visual authoring now exposes these section/card controls together with
+  non-blocking contrast advisories instead of leaving the surface hardcoded.
+- Focused widget/editor coverage now protects the new style tokens, runtime
+  rendering markers, and the local contrast-guidance behavior.

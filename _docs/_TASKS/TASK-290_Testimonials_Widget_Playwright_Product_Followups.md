@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Admin UI + Runtime Render + Playwright QA
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-252, TASK-256, TASK-256-01, TASK-256-02, TASK-256-04, TASK-256-06-03, TASK-256-08
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -53,8 +53,8 @@ TASK-256 already owns them as shared widget-contract drift.
 | BUG-03 / BF-12 hardcoded heading level | `REPORT_TESTIMONIALS_WIDGET.md:148-153,248-250,260,294` | TASK-256-06-03 / TASK-256-04 | Shared runtime heading/ARIA baseline. TASK-290 may add typography controls but not baseline hierarchy repair. |
 | BUG-04 section and article accessible names | `REPORT_TESTIMONIALS_WIDGET.md:155-158,257-259,295` | TASK-256-06-03 / TASK-256-04 | Shared public runtime accessibility baseline. |
 | UX-02 text/accent clear controls | `REPORT_TESTIMONIALS_WIDGET.md:169-171,301-304` | TASK-256-02 / TASK-256-06-03 | Shared clear-control semantics and design token behavior. |
-| UX-08 duplicated spacing token in Visual and Advanced | `REPORT_TESTIMONIALS_WIDGET.md:191-193` | TASK-256-01 | Shared editor mode ownership and Advanced-mode policy. |
-| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,261-262` | TASK-256-06-03 | Shared media accessibility/performance baseline already listed in TASK-256. |
+| UX-08 duplicated spacing token in Visual and Advanced | `REPORT_TESTIMONIALS_WIDGET.md:191-193` | TASK-334 | Reopened shared editor-mode ownership residual after TASK-256-01 closure. TASK-290 records the truthful split instead of patching the shared policy locally. |
+| BF-05 / A4 avatar `loading="lazy"` and A5 avatar alt context | `REPORT_TESTIMONIALS_WIDGET.md:219-222,261-262` | TASK-335 | Reopened shared media accessibility residual: lazy-loading remains present, but contextual avatar alt naming still needs the shared owner. |
 
 If a TASK-290 implementation leaf discovers that a desired Testimonials product
 feature requires a shared editor helper, generic runtime script policy, global
@@ -70,18 +70,18 @@ back to TASK-256 instead of hiding it inside this family.
 | UX-05 Wizard lacks eyebrow and description | TASK-290-01 | Testimonials header onboarding. |
 | UX-01 remove testimonial has no confirmation/undo | TASK-290-02 | Destructive repeated-item editing. |
 | BF-04 spotlight always uses first item | TASK-290-02 | Testimonials-only spotlight pinning. |
-| UX-06 Avatar URL lacks Media Library picker | TASK-290-03 | Avatar image authoring through existing media picker seams. |
+| UX-06 Avatar URL lacks Media Library picker | TASK-290-03 | Keep persisted `avatar` as the public URL contract; editor-local media IDs resolve through existing media picker seams. |
 | UX-07 invalid avatar URL has no validation feedback | TASK-290-03 | Testimonials-local URL validation and fallback preview. |
-| BF-01 slider-static lacks product navigation | TASK-290-04 | Product carousel controls after TASK-256 makes the baseline variant truthful. |
+| BF-01 slider-static lacks product navigation | TASK-290-04 | Keep backward-compatible `slider-static` but add SSR dot navigation and explicit rating-display behavior without generic carousel runtime. |
 | UX-03 rating `0` renders as five empty stars | TASK-290-04 | Testimonials rating semantics, labels, and optional hidden-state behavior. |
 | BF-02 section background controls | TASK-290-05 | Testimonials section surface styling. |
 | BF-03 header typography align/size controls | TASK-290-05 | Product typography controls, not shared heading hierarchy. |
 | BF-06 contrast validator | TASK-290-05 | Non-blocking Testimonials-local contrast warnings only; no shared validator is created in this family. |
 | BF-08 card radius and border-width controls | TASK-290-05 | Bounded card style fields. |
-| BF-07 CTA below testimonials | TASK-290-06 | Testimonials conversion CTA using safe href behavior. |
-| BF-11 rich text for quote | TASK-290-06 | Bounded quote formatting, no raw HTML. |
-| BF-09 limit 8 without pagination/load more | TASK-290-07 | Large-set presentation and editor limits. |
-| BF-10 export/import testimonials | TASK-290-07 | Local JSON/CSV import/export; external provider connectors need a separate shared integration task. |
+| BF-07 CTA below testimonials | TASK-290-06 | Section CTA normalized through shared safe-href helpers with explicit target/style tokens. |
+| BF-11 rich text for quote | TASK-290-06 | Bounded sanitized `quoteHtml` with legacy plain-quote fallback; no unsanitized HTML. |
+| BF-09 limit 8 without pagination/load more | TASK-290-07 | Raise the local cap to 24 and add SSR `load-more` expansion with bounded page size. |
+| BF-10 export/import testimonials | TASK-290-07 | Local JSON/CSV import/export with strict field rejection; external provider connectors need a separate shared integration task. |
 | Report fixed/deferred notes, widget docs, changelog, board closure | TASK-290-08 | Final evidence pass after implementation leaves land. |
 
 ## No-Action Report Findings
@@ -95,14 +95,14 @@ back to TASK-256 instead of hiding it inside this family.
 
 ## Sub-Tasks
 
-- [ ] TASK-290-01: Testimonials Wizard Header and Social Proof Authoring
-- [ ] TASK-290-02: Testimonials Destructive Item Management and Spotlight Pin
-- [ ] TASK-290-03: Testimonials Avatar Media Picker and URL Validation
-- [ ] TASK-290-04: Testimonials Slider Navigation and Rating Semantics
-- [ ] TASK-290-05: Testimonials Section Surface Typography and Card Styles
-- [ ] TASK-290-06: Testimonials CTA and Rich Quote Content
-- [ ] TASK-290-07: Testimonials Large Set Import Export and Pagination
-- [ ] TASK-290-08: Testimonials Report Docs Changelog and Closure
+- [x] TASK-290-01: Testimonials Wizard Header and Social Proof Authoring
+- [x] TASK-290-02: Testimonials Destructive Item Management and Spotlight Pin
+- [x] TASK-290-03: Testimonials Avatar Media Picker and URL Validation
+- [x] TASK-290-04: Testimonials Slider Navigation and Rating Semantics
+- [x] TASK-290-05: Testimonials Section Surface Typography and Card Styles
+- [x] TASK-290-06: Testimonials CTA and Rich Quote Content
+- [x] TASK-290-07: Testimonials Large Set Import Export and Pagination
+- [x] TASK-290-08: Testimonials Report Docs Changelog and Closure
 
 ## Implementation Order
 
@@ -168,6 +168,7 @@ Implementation leaves:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
 - `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` when renderer
@@ -218,3 +219,17 @@ Implementation leaves:
   payloads unless the leaf documents and tests a migration/normalizer path.
 - Final closure records report evidence, task status updates, changelog, and the
   exact validation output.
+
+## Completion Notes (2026-05-22)
+
+- TASK-290 closed every Testimonials-local report owner through the shipped
+  leaf sequence while preserving the explicit TASK-256 exclusions for shared
+  editor, accessibility, scroll-snap, and hierarchy contracts.
+- The current branch now keeps runtime schema ownership, Wizard/Visual/Advanced
+  authoring parity, safe media and CTA handling, rich quote sanitization, and
+  local import/export plus SSR load-more behavior synchronized with focused
+  widget/editor regression coverage, including the follow-up hardening for
+  `quoteHtml` import rows, Visual media-picker draft sync, and the last local
+  coverage gaps called out during the post-closure drift audit.
+- Report evidence, widget docs, board rows, and changelog entry `924` now match
+  the completed implementation family, while the newly confirmed shared residuals are routed to `TASK-334`, `TASK-335`, and `TASK-333` and the final local closure evidence stays recorded in `TASK-290-08`.

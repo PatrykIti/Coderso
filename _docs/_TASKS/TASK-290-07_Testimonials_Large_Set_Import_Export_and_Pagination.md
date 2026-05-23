@@ -6,14 +6,15 @@
 **Category:** Widgets + Testimonials + Admin UI + Runtime Render + Import Export
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-290-02, TASK-290-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
 ## Overview
 
-Define the Testimonials-only path for larger testimonial sets, local
-import/export, and optional pagination/load-more behavior.
+Define the Testimonials-only path for larger testimonial sets by raising the
+local cap to 24 items, adding pure local JSON/CSV import/export, and exposing
+an SSR `load-more` expansion contract.
 
 This leaf covers:
 
@@ -26,14 +27,14 @@ This leaf covers:
 
 In scope:
 
-- Decide whether Testimonials v1 keeps the eight-item maximum or raises it with
-  explicit editor/runtime large-set behavior.
-- Add local JSON/CSV import/export for widget-owned testimonial data if the
-  product decision allows it.
+- Raise `testimonialsItemMax` from `8` to `24`.
+- Add `pagination.mode = "none" | "load-more"`, `pagination.pageSize`, and
+  `pagination.loadMoreLabel` as Testimonials-owned schema fields.
+- Add local JSON/CSV import/export for widget-owned testimonial data through a
+  dedicated Bun-free owner module `core/widgets/core/testimonialsImportExport.ts`.
 - Own `parseTestimonialsImport`, `serializeTestimonialsExport`, and
-  `TestimonialsImportError` in a Bun-free production owner:
-  `core/widgets/core/testimonials.tsx` if the helpers stay small, or a new pure
-  `core/widgets/core/testimonialsImportExport.ts` module if the parser grows.
+  `TestimonialsImportError` in that pure module. Parser policy is strict:
+  unknown fields are rejected per row and reported back to the editor.
   `TestimonialsEditors.tsx` must only orchestrate UI/file input.
 - Add optional pagination or load-more rendering for large sets.
 - Keep all imported data normalized through `normalizeTestimonialsData`.
@@ -49,22 +50,23 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Write a product decision in this task or in TASK-290-08: keep eight-item
-  max, increase with pagination, or split large testimonial libraries into a
-  future content type.
-- [ ] If local import/export lands, add a bounded parser/serializer that accepts
-  only known testimonial fields.
-- [ ] Add duplicate ID handling, count clamping, and invalid-row reporting.
-- [ ] Add optional runtime pagination/load-more controls if max count increases.
-- [ ] Add editor tests for import/export errors and renderer tests for large-set
+- [x] Raise the Testimonials item cap to 24 and add the owned `pagination`
+  schema/default/normalizer contract for `mode`, `pageSize`, and
+  `loadMoreLabel`.
+- [x] Add a bounded JSON/CSV parser/serializer that accepts only known
+  testimonial fields.
+- [x] Add duplicate ID handling, count clamping, and invalid-row reporting.
+- [x] Render an SSR `load-more` expansion that shows the first `pageSize` items
+  and reveals the remainder under a `<details>` disclosure when enabled.
+- [x] Add editor tests for import/export errors and renderer tests for large-set
   display.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/testimonials.tsx` | Adjust max/count normalization only if product decision changes the limit; add pagination fields if needed; own small import/export helpers if no separate module is required. |
-| `core/widgets/core/testimonialsImportExport.ts` | Create only if import/export helpers need a dedicated pure parser/serializer owner. |
+| `core/widgets/core/testimonials.tsx` | Raise max/count normalization to 24 and add the owned `pagination` schema/default/normalizer/render contract. |
+| `core/widgets/core/testimonialsImportExport.ts` | Create the pure parser/serializer owner for local JSON/CSV import/export. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add import/export controls and invalid-row feedback if included; do not own parser/serializer logic here. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add parser/serializer, count, and renderer tests. |
 | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Add editor tests for import/export and large-set controls. |
@@ -92,20 +94,53 @@ function parseTestimonialsImport(input: string) {
 Pagination flow:
 
 ```ts
-function resolveVisibleTestimonials(items: TestimonialItem[], pageSize: number, page: number) {
-  const safePageSize = clamp(pageSize, 2, testimonialsItemMax);
-  return items.slice(0, safePageSize * page);
+function resolveVisibleTestimonials(items: TestimonialItem[], pageSize: number) {
+  const safePageSize = clamp(pageSize, 2, 12);
+  return {
+    initial: items.slice(0, safePageSize),
+    overflow: items.slice(safePageSize),
+  };
 }
+```
+
+SSR load-more flow:
+
+```tsx
+const visible = resolveVisibleTestimonials(items, normalized.pagination?.pageSize ?? 6);
+
+return normalized.pagination?.mode === "load-more" && visible.overflow.length > 0 ? (
+  <>
+    <TestimonialsList items={visible.initial} />
+    <details data-testimonials-load-more="true">
+      <summary>{normalized.pagination?.loadMoreLabel ?? "Load more testimonials"}</summary>
+      <TestimonialsList items={visible.overflow} />
+    </details>
+  </>
+) : (
+  <TestimonialsList items={items} />
+);
 ```
 
 Error handling:
 
 - Invalid import rows are reported without mutating current widget data.
 - Duplicate imported IDs are replaced with deterministic IDs.
-- Unknown import fields are ignored or rejected according to the final parser
-  policy, but never persisted silently.
+- Unknown import fields are rejected per row and never persisted silently.
 - Parser/serializer helpers remain Bun-free and importable by Vitest without
   admin UI, DB, or runtime side effects.
+
+Regression test shape:
+
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - Parser accepts valid JSON/CSV rows, rejects rows with unknown fields, clamps
+    ratings/counts, and preserves deterministic ids.
+  - Renderer exposes all testimonials when `pagination.mode = "none"` and uses
+    SSR `<details>` expansion when `mode = "load-more"` and overflow exists.
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Import preview reports row errors without mutating current widget data.
+  - Successful import replaces the current normalized list, export emits the
+    normalized JSON/CSV shape, and `pageSize`/label controls patch only the
+    pagination contract.
 
 ## Security Contract
 
@@ -129,10 +164,12 @@ with the full route security contract before implementation.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`
 - If any route is introduced by a split child task, add route registration and
   `map*Error` tests in the correct Bun lane.
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -150,6 +187,23 @@ with the full route security contract before implementation.
 
 - The eight-item limit has an explicit product decision and no longer reads as
   an accidental dead end.
-- Local import/export, if shipped, is normalized, safe, and test-covered.
+- Local import/export is normalized, safe, rejects unknown fields, and is
+  test-covered.
+- Large sets can reveal overflow through the owned SSR `load-more` contract
+  without introducing widget-specific client-side JS.
 - External review-provider sync is either explicitly out of scope or split into
   a dedicated security-reviewed task.
+
+## Completion Notes (2026-05-22)
+
+- The local Testimonials cap is now `24`, and the widget owns explicit
+  `pagination.mode`, `pagination.pageSize`, and `pagination.loadMoreLabel`
+  fields for SSR `load-more` disclosure behavior.
+- `core/widgets/core/testimonialsImportExport.ts` now owns strict local
+  JSON/CSV parsing and serialization, rejecting unknown fields while preserving
+  deterministic ids, safe avatar URLs, sanitized quote HTML, formula-safe CSV
+  export, and the truthful `2`-`24` import row contract without fabricating
+  fallback rows during export.
+- Advanced editor coverage now proves invalid import preview, successful import
+  replacement, export generation, and the large-set pagination controls without
+  introducing any external review-provider integration.

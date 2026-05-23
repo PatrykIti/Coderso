@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Admin UI + Media
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-06-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -31,8 +31,10 @@ TASK-256-06-03 already owns those shared media accessibility/performance fixes.
 
 In scope:
 
-- Add an avatar source decision that can support external URL and Media Library
-  asset picking without breaking legacy `avatar` URL payloads.
+- Keep `testimonials[].avatar` as the persisted public URL contract for both
+  legacy and new data. Media Library picks resolve to a public URL through
+  `listMediaCached({ force: false })`, while selected media IDs stay in
+  editor-local state and are not persisted in v1.
 - Add the same safe avatar authoring path to Wizard and Visual. Wizard may keep
   the control compact, but it must not leave the UX-04 avatar gap unowned.
 - Reuse `MediaPicker` and `listMediaCached` patterns already used by Hero and
@@ -50,21 +52,21 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Decide whether to extend each item with `avatarSource`/`avatarAssetId` or
-  keep `avatar` as the normalized URL plus optional media metadata.
-- [ ] Add Wizard and Visual controls for Media Library selection and manual URL
+- [x] Add editor-local selected-media state keyed by testimonial id and map it
+  to the persisted `avatar` URL through `listMediaCached({ force: false })`.
+- [x] Add Wizard and Visual controls for Media Library selection and manual URL
   entry.
-- [ ] Add inline invalid URL feedback and preserve fallback initials when an
+- [x] Add inline invalid URL feedback and preserve fallback initials when an
   avatar cannot be used.
-- [ ] Ensure legacy `avatar` strings keep rendering.
-- [ ] Add UI tests with mocked `MediaPicker` for Wizard and Visual avatar
+- [x] Ensure legacy `avatar` strings keep rendering.
+- [x] Add UI tests with mocked `MediaPicker` for Wizard and Visual avatar
   authoring, plus renderer tests for normalized media-backed avatar data.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
-| `core/widgets/core/testimonials.tsx` | Extend item schema/types/normalizer if media metadata is added; preserve legacy `avatar`. |
+| `core/widgets/core/testimonials.tsx` | Add/export the safe avatar URL helper used by editor/runtime logic; preserve the persisted legacy `avatar` URL contract. |
 | `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` | Add MediaPicker integration and URL validation feedback. |
 | `tests/vitest/ui/testimonials-editor-wave.test.tsx` | Mock MediaPicker and test Wizard plus Visual avatar source selection, invalid URL feedback, and fallback behavior. |
 | `tests/vitest/widgets/testimonials.test.tsx` | Add normalization/render assertions for media-backed or URL-backed avatars. |
@@ -92,15 +94,30 @@ Media picker flow:
 
 ```tsx
 <MediaPicker
-  value={testimonial.avatarAssetId ?? null}
-  accept="image/*"
-  onChange={(assetId) => {
-    updateItem(value, onChange, index, {
-      avatarAssetId: String(assetId),
-      avatar: resolvedAssetUrl,
-    });
+  value={selectedAvatarMediaIds[testimonial.id ?? fallbackId] ?? null}
+  accept={["image/*"]}
+  onChange={(nextValue) => {
+    void handleAvatarMediaSelection(testimonial.id ?? fallbackId, index, nextValue);
   }}
 />
+```
+
+Resolution flow:
+
+```ts
+async function handleAvatarMediaSelection(itemId: string, index: number, nextValue: unknown) {
+  const mediaId = typeof nextValue === "string" ? nextValue : null;
+  setSelectedAvatarMediaIds((current) => ({ ...current, [itemId]: mediaId }));
+  if (!mediaId) {
+    updateItem(value, onChange, index, { avatar: undefined });
+    return;
+  }
+
+  const mediaItems = await listMediaCached({ force: false });
+  const selected = mediaItems.find((item) => item.id === mediaId);
+  if (!selected?.url) throw new Error("missing_media_url");
+  updateItem(value, onChange, index, { avatar: selected.url });
+}
 ```
 
 Error handling:
@@ -111,6 +128,21 @@ Error handling:
 - Failed media lookup keeps the previous avatar and shows a non-blocking error.
 - Runtime rendering still falls back to initials when no valid avatar URL is
   present.
+
+Regression test shape:
+
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Wizard and Visual mode both accept a picked image and persist only the
+    resolved public URL in `avatar`.
+  - Invalid manual URLs surface inline feedback while preserving the current
+    fallback initials path.
+  - Failed media lookup leaves the previous `avatar` intact and renders an
+    inline non-blocking error.
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - Runtime accepts legacy `avatar` URLs, rejects unsafe protocols, and keeps
+    initials fallback when `avatar` is absent or invalid.
+- `tests/vitest/ui/media-picker.test.tsx`
+  - Run only if shared picker props/behavior change.
 
 ## Security Contract
 
@@ -133,8 +165,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts` when schema/defaults change.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -153,3 +187,16 @@ No API routes are added.
 - Editors can pick testimonial avatars from Media Library or enter safe URLs.
 - Invalid avatar URLs get clear feedback and do not produce broken runtime UI.
 - Legacy avatar URL payloads continue to render.
+- No `avatarAssetId`/`avatarSource` metadata is persisted in v1 unless a later
+  dedicated schema task explicitly introduces it.
+
+## Completion Notes (2026-05-22)
+
+- Wizard and Visual now support both Media Library selection and manual avatar
+  URL entry while persisting the resolved public `avatar` URL contract only.
+- Invalid avatar values now surface inline feedback in the editor and fail
+  closed at runtime; legacy safe `avatar` strings continue to render without a
+  migration.
+- The editor wave suite mocks `MediaPicker` and now covers supported,
+  unsupported, missing, and cleared media selections across both authoring
+  surfaces.

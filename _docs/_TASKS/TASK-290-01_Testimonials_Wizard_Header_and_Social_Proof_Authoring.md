@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-256-06-03, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -48,14 +48,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Update Wizard header copy controls to include `eyebrow`, `title`, and
+- [x] Update Wizard header copy controls to include `eyebrow`, `title`, and
   `description` in a compact beginner-friendly order.
-- [ ] Add per-testimonial rating controls in Wizard using the existing bounded
+- [x] Add per-testimonial rating controls in Wizard using the existing bounded
   `ratingOptions` model.
-- [ ] Add per-testimonial role and source label controls.
-- [ ] Ensure every Wizard field updates the same normalized
+- [x] Add per-testimonial role and source label controls.
+- [x] Ensure every Wizard field updates the same normalized
   `TestimonialsData` model used by Visual and Advanced.
-- [ ] Keep count and item normalization backward compatible for existing pages.
+- [x] Keep count and item normalization backward compatible for existing pages.
 
 ## Files to Change
 
@@ -110,6 +110,17 @@ Error handling:
 - Empty optional strings stay empty/omitted through existing normalization.
 - Wizard changes must not truncate existing Visual-only testimonial fields.
 
+Regression test shape:
+
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Wizard updates `eyebrow`, `title`, `description`, `role`, `sourceLabel`,
+    and `rating` without dropping existing item fields.
+  - Switching Wizard count still preserves authored role/source/rating fields on
+    surviving items.
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - Wizard SSR smoke includes the expanded beginner-facing field labels and
+    preserves normalized defaults.
+
 ## Security Contract
 
 No API routes are added.
@@ -127,8 +138,10 @@ No API routes are added.
 - `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -147,3 +160,14 @@ No API routes are added.
   switching to Visual mode.
 - Existing Testimonials data is not truncated when Wizard edits run.
 - Focused UI tests prove the emitted payload for all new Wizard controls.
+
+## Completion Notes (2026-05-22)
+
+- `TestimonialsWizardEditor` now exposes `eyebrow`, `title`, `description`,
+  `role`, `sourceLabel`, and bounded `rating` controls without dropping the
+  existing normalized item model.
+- Wizard updates still flow through the same normalized `TestimonialsData`
+  helpers used by Visual and Advanced, so count changes preserve the surviving
+  authored social-proof fields.
+- Focused happy-dom coverage now proves the Wizard emits the expanded payload
+  while preserving backward-compatible item normalization for existing pages.

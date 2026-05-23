@@ -14,7 +14,7 @@
 **Typ:** Content (standalone, bez slotów)
 **Kategoria:** `content`
 **Warianty:** `grid`, `spotlight`, `slider-static`
-**Ograniczenia elementów:** min 2 / max 8
+**Ograniczenia elementów:** min 2 / max 24
 **Plik renderera:** `core/widgets/core/testimonials.tsx`
 **Plik edytora:** `core/admin/ui/widgets/editors/TestimonialsEditors.tsx`
 
@@ -29,24 +29,29 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 | Sekcja | Pola |
 |--------|------|
 | **Header** | `eyebrow`, `title`, `description` |
-| **Testimonials** | `id`, `quote`, `author`, `role`, `avatar` (URL), `rating` (0–5), `sourceLabel` |
-| **Style** | `cardSurface`, `cardBorder`, `textColor`, `accentColor`, `spacing` (none/sm/md/lg) |
+| **Testimonials** | `id`, `quote`, optional sanitized `quoteHtml`, `author`, `role`, `avatar` (safe URL), `rating` (0–5), `sourceLabel` |
+| **CTA** | `enabled`, `label`, `href`, `target`, `style` |
+| **Layout / Behavior** | `layout.spotlightItemId`, `behavior.sliderNavigation`, `behavior.ratingDisplay` |
+| **Pagination** | `mode`, `pageSize`, `loadMoreLabel` |
+| **Style** | `sectionBackground`, `sectionGradient`, `backgroundTone`, `backgroundImage`, `cardSurface`, `cardBorder`, `textColor`, `accentColor`, `spacing`, `headerAlign`, `titleSize`, `cardRadius`, `cardBorderWidth` |
 
 ### 2.2 Warianty
 
 | Wariant | Domyślna liczba kart | Opis |
 |---------|---------------------|------|
 | `grid` | 3 | Siatka 1/2/3 kolumn responsywnie (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`) |
-| `spotlight` | 2 | Wyróżnienie pierwszej karty (`col-span-2` na lg) |
-| `slider-static` | 3 | Poziomy pasek z `overflow-x-auto` (bez JS slidera) |
+| `spotlight` | 2 | Wyróżnienie wybranego testimonialu przez `layout.spotlightItemId` z zachowaniem kart wspierających |
+| `slider-static` | 3 | Poziomy pasek z `overflow-x-auto`, `snap-x snap-mandatory`, oraz SSR dot navigation bez JS karuzeli |
 
 ### 2.3 Tryby edytora
 
-- **Wizard** — szybki start: wariant (dropdown), tytuł sekcji, liczba, quote + author (2 pola per testimonial)
-- **Visual** — pełny edytor: wariant (karty), spacing, header (eyebrow/title/description), wszystkie pola testimonialów, zarządzanie listą, kolory
-- **Advanced** — diagnostyka: spacing token, normalizacja, raw payload JSON, padding/margin container, visibility
+- **Wizard** — szybki start: wariant (dropdown), `eyebrow`/`title`/`description`, liczba, `quote`, `author`, `role`, `sourceLabel`, `rating`, oraz avatar URL/Media Library per testimonial
+- **Visual** — główny edytor produktu: wariant (karty), spotlight pinning, quote/rich quote, avatar/media, header, section surface, colors/contrast, CTA, slider semantics, destrukcyjne zarządzanie listą
+- **Advanced** — diagnostyka, import/export i pozostałe niższopoziomowe tokeny display: spacing token, slider/rating display tokens, pagination, normalizacja, import/export, raw payload JSON, padding/margin container, visibility. Bieżąca duplikacja writable spacing/navigation/rating controls między Visual i Advanced pozostaje shared residualem w `TASK-334`.
 
 ---
+
+> **Uwaga po TASK-290:** Sekcje 3-7 zachowują historyczne obserwacje z sesji Playwright z `2026-05-16`. Aktualny stan branch-a po wdrożeniu follow-upów opisuje sekcja 8 i aktualna dokumentacja `_docs/_WIDGETS/TESTIMONIALS.md`.
 
 ## 3. Wyniki testów Playwright — co działa poprawnie ✓
 
@@ -81,7 +86,7 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 | Avatar URL — wstawia obraz zamiast inicjału | ✓ Działa |
 | Source label — wyświetla w kolorze accent | ✓ Działa |
 | Rating 0–5 — gwiazdki renderują poprawnie (aria-label: "Rating N out of 5") | ✓ Działa |
-| Rating 0 — pokazuje 5 szarych gwiazdek (puste) | ✓ Działa (UX-05) |
+| Rating 0 — pokazuje 5 szarych gwiazdek (puste) | ✓ Działa (UX-03) |
 
 ### 3.4 Header sekcji
 
@@ -378,3 +383,49 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 ---
 
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*
+
+## 8. Status po TASK-290 (2026-05-22)
+
+| ID | Finalny owner / status | Evidence |
+|---|---|---|
+| BUG-01 | Shared `TASK-256` owner, fixed in current branch | `core/widgets/core/testimonials.tsx` now keeps `slider-static` with `snap-x snap-mandatory`; covered by `tests/vitest/widgets/testimonials.test.tsx` and `tests/vitest/widgets/renderer.test.tsx`. |
+| BUG-02 | Shared `TASK-256` owner, fixed in current branch | Wizard and Visual variant changes still patch the synced count baseline; regression covered in `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
+| BUG-03 | Shared `TASK-256` owner, excluded from TASK-290 | TASK-290 added typography controls only; heading hierarchy ownership remains outside this family by design. |
+| BUG-04 | Shared `TASK-256` owner, fixed in current branch | Runtime section/article labels remain present and are still covered by `tests/vitest/widgets/testimonials.test.tsx`. |
+| UX-01 | Fixed by `TASK-290-02` | Visual now uses `ConfirmActionDialog` before destructive removal; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
+| UX-02 | Shared `TASK-256` owner, fixed in current branch | Shared clear-to-default color semantics remain active for text/accent colors. |
+| UX-03 | Fixed by `TASK-290-04` | `behavior.ratingDisplay` now supports `hide-empty`, `label-empty`, and `stars`; covered by `tests/vitest/widgets/testimonials.test.tsx` plus editor coverage. |
+| UX-04 | Fixed by `TASK-290-01` and `TASK-290-03` | Wizard now authors role/source/rating plus avatar URL/Media Library selection; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
+| UX-05 | Fixed by `TASK-290-01` | Wizard now owns `eyebrow`, `title`, and `description`; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
+| UX-06 | Fixed by `TASK-290-03` | Avatar authoring now supports Media Library selection while persisting only the resolved public URL; covered by `tests/vitest/ui/testimonials-editor-wave.test.tsx`. |
+| UX-07 | Fixed by `TASK-290-03` | Invalid avatar URLs now surface inline feedback and fail closed at runtime; covered by widget and editor Vitest suites. |
+| UX-08 | Shared `TASK-334` residual, excluded from TASK-290 | Visual and Advanced still duplicate writable spacing and display controls; the reopened shared mode-ownership task now owns the cleanup. |
+| BF-01 | Fixed by `TASK-290-04` on top of shared slider baseline | `slider-static` now keeps truthful SSR dot navigation without introducing client-side carousel JS; covered by `tests/vitest/widgets/testimonials.test.tsx`. |
+| BF-02 | Fixed by `TASK-290-05` | Widget now owns bounded section background color/gradient/image controls; covered by widget and editor Vitest suites. |
+| BF-03 | Fixed by `TASK-290-05` | Header alignment and title-size controls now exist as bounded Testimonials-owned tokens. |
+| BF-04 | Fixed by `TASK-290-02` | Spotlight now uses explicit `layout.spotlightItemId` instead of implicit first-item ordering; covered by widget and editor Vitest suites. |
+| BF-05 | Shared `TASK-335` residual, excluded from TASK-290 | Avatar runtime still keeps `loading="lazy"`, but contextual alt naming remains a shared media accessibility residual. |
+| BF-06 | Fixed by `TASK-290-05` | Visual now shows non-blocking contrast advisories for text/card and accent/card combinations. |
+| BF-07 | Fixed by `TASK-290-06` | Testimonials now support an optional safe CTA below the list with target/style tokens; covered by `tests/vitest/widgets/testimonials.test.tsx` and editor coverage. |
+| BF-08 | Fixed by `TASK-290-05` | Card radius and border-width are now bounded widget-owned controls with runtime markers and tests. |
+| BF-09 | Fixed by `TASK-290-07` | Local cap is now 24 with owned SSR `load-more` pagination; covered by `tests/vitest/widgets/testimonials.test.tsx` and editor import/export coverage. |
+| BF-10 | Fixed by `TASK-290-07` for local workflow; external providers remain out of scope | Widget now supports safe local JSON/CSV import-export; external review-provider sync still requires a separate security-reviewed task. |
+| BF-11 | Fixed by `TASK-290-06` | Testimonials now support bounded sanitized `quoteHtml` with plain-text fallback; covered by `tests/vitest/widgets/testimonials.test.tsx`. |
+| BF-12 | Shared `TASK-256` owner, excluded from TASK-290 | `headingLevel` remains shared hierarchy work, not a Testimonials-local closure item. |
+| A1 / A2 | Shared `TASK-256` owner, fixed in current branch | Region/article accessible names remain present in the current runtime output. |
+| A3 | Shared `TASK-256` owner, excluded from TASK-290 | TASK-290 did not claim heading hierarchy repair. |
+| A4 / A5 | Shared `TASK-335` residual, excluded from TASK-290 | Lazy-loading remains present, but contextual avatar alt naming is still owned by the reopened shared media accessibility task. |
+| A6 | Fixed by `TASK-290-04` | Rating-zero semantics now have an explicit hidden-or-labeled contract. |
+| A7 | Fixed by `TASK-290-05` | Contrast warnings now surface locally in the Visual editor. |
+| A8 | No action, preserved | Non-zero rating `aria-label` behavior remains intact in the shipped runtime output. |
+
+### Walidacja końcowa
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/testimonials.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/ui/testimonials-editor-wave.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/renderer.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+- Additional validator, registry, gates, security-scan, precommit, and `git diff --check` evidence is recorded in `TASK-290-08` after the final branch validation pass.

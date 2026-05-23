@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Documentation + Playwright QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-290-01, TASK-290-02, TASK-290-03, TASK-290-04, TASK-290-05, TASK-290-06, TASK-290-07
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -19,6 +19,15 @@ state.
 This leaf covers final status for all TASK-290-owned rows in
 `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md` and records any explicit
 deferrals that remain after implementation.
+
+## Source Findings
+
+- `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md` - source report and final
+  priority matrix.
+- `_docs/_TASKS/TASK-290_Testimonials_Widget_Playwright_Product_Followups.md` -
+  TASK-290 ownership matrix and completion umbrella.
+- `_docs/_TASKS/README.md` - board/statistics owner.
+- `_docs/_CHANGELOG/README.md` - changelog numbering/index owner.
 
 ## Scope Boundary
 
@@ -43,18 +52,7 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Build a finding-by-finding closure matrix against
-  `REPORT_TESTIMONIALS_WIDGET.md:135-250,256-304`.
-- [ ] Verify each TASK-290-owned row has code, test, and docs evidence.
-- [ ] Verify each TASK-256-owned row is still excluded and referenced to the
-  correct TASK-256 owner.
-- [ ] Update Testimonials widget docs and any pack matrix text affected by the
-  implemented leaves.
-- [ ] Replace stale `_docs/_WIDGETS/TESTIMONIALS.md` `items` examples with the
-  live `testimonials` data key and include the current `header` and `style`
-  fields before adding TASK-290-specific fields.
-- [ ] Add changelog entry and changelog index row.
-- [ ] Move task statuses and board statistics only after evidence is complete.
+- None. This is an execution leaf.
 
 ## Files to Change
 
@@ -63,7 +61,7 @@ Out of scope:
 | `_docs/PLAYWRIGHT/REPORT_TESTIMONIALS_WIDGET.md` | Add final fixed/deferred/TASK-256-owned status notes for every relevant report row. |
 | `_docs/_WIDGETS/TESTIMONIALS.md` | Document final schema, editor mode, runtime, import/export, CTA, style, and rating behavior; replace stale `items` examples with `testimonials`. |
 | `_docs/WIDGET_PACK_MATRIX.md` | Update only if engagement pack readiness/completeness changes. |
-| `_docs/_CHANGELOG/<next>-2026-05-17-task-290-testimonials-widget-product-followups.md` | Add final changelog entry when TASK-290 closes. |
+| `_docs/_CHANGELOG/<next>-YYYY-MM-DD-task-290-testimonials-widget-product-followups.md` | Add final changelog entry using the actual closure date when TASK-290 closes. |
 | `_docs/_CHANGELOG/README.md` | Add the changelog index row. |
 | `_docs/_TASKS/TASK-290*.md` | Move statuses to `Done (YYYY-MM-DD)` only after validation. |
 | `_docs/_TASKS/README.md` | Move rows from To Do to Done and recompute statistics. |
@@ -87,6 +85,7 @@ git status --short --branch
 git diff --check
 bun --cwd core lint
 bun --cwd core lint:types
+bun run lint
 bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx
 bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx
 bun run gates:coderso
@@ -120,6 +119,7 @@ No API routes are added by this closure leaf.
 - `git diff --check`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run lint`
 - `bun run test:vitest -- tests/vitest/widgets/testimonials.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx` if renderer
@@ -132,6 +132,8 @@ No API routes are added by this closure leaf.
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - `bun run precommit`
+- A final closing drift pass corrected local editor/import-export drift, refreshed the report current-state summary, renumbered the TASK-290 changelog entry to `924`, normalized the physical TASK-290 leaf files, and split the remaining shared residuals to `TASK-334`, `TASK-335`, and `TASK-333` before the follow-up commit
+- A subsequent TASK-290 drift pass then fixed `quoteHtml`-only import acceptance, synchronized the Visual avatar/background picker draft state with the persisted payload, and closed the remaining local proof gaps for rating-display branches, runtime style output, import/export branches, and Visual variant-count sync
 
 ## Documentation Updates Required
 
@@ -146,9 +148,37 @@ No API routes are added by this closure leaf.
 - This leaf creates or verifies the final TASK-290 changelog entry before the
   family moves to `Done`.
 
+## Current Audit Notes (2026-05-22)
+
+- The pre-implementation doc drift audit landed earlier in this worktree as
+  commit `96354105` (`docs(task-290): tighten testimonials followup plan`), so
+  the final closure reuses an already-correct scope split instead of closing
+  against stale report language.
+- The finished TASK-290 wave now spans runtime schema ownership,
+  Wizard/Visual/Advanced editor parity, a Bun-free import/export owner module,
+  focused Vitest coverage, report/doc sync, board movement, and changelog entry
+  `924-2026-05-22-task-290-testimonials-widget-product-followups.md`.
+- A follow-up drift pass after commit `b3371149` found three residual follow-ups and one local doc residue: unchecked done-leaf execution lists were normalized in place; the still-duplicated Visual/Advanced controls, the contextual avatar-alt accessibility gap, and the shared changelog numbering/index integrity drift were split out to `TASK-334`, `TASK-335`, and `TASK-333` instead of being patched inside TASK-290.
+
 ## Acceptance Criteria
 
 - Every Testimonials report finding is mapped to TASK-256, TASK-290 evidence,
   no-action, or explicit deferral.
 - The task board, task files, widget docs, report, and changelog agree.
 - Final validation output is recorded in the closure note.
+
+## Validation Notes
+
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run lint`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/testimonials.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/ui/testimonials-editor-wave.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/renderer.test.tsx`
+- `set -a && source .env && set +a && NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `set -a && source .env && set +a && bun test tests/unit/widgets/validator.test.ts tests/unit/widgets/registry.test.ts`
+- `bun run gates:coderso`
+- `bun run scan:security:strict` still exits non-zero only because local `semgrep`, `trivy`, and `gitleaks` tooling is unavailable or incompatible; `bun audit` ran inside the command before exit
+- `bun run precommit`
+- A final closing drift pass corrected local editor/import-export drift, refreshed the report current-state summary, renumbered the TASK-290 changelog entry to `924`, normalized the physical TASK-290 leaf files, and split the remaining shared residuals to `TASK-334`, `TASK-335`, and `TASK-333` before the follow-up commit

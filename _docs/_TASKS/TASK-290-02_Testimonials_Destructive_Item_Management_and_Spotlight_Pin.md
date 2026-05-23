@@ -6,7 +6,7 @@
 **Category:** Widgets + Testimonials + Admin UI + Runtime Render
 **Estimated Effort:** Large
 **Dependencies:** TASK-256-01, TASK-290
-**Status:** To Do
+**Status:** Done (2026-05-22)
 
 ---
 
@@ -43,14 +43,14 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] Add `layout.spotlightItemId` to schema/types/defaults and
+- [x] Add `layout.spotlightItemId` to schema/types/defaults and
   `normalizeTestimonialsData`.
-- [ ] Normalize invalid or stale spotlight references to the first visible item.
-- [ ] Add Visual controls to set a testimonial as the spotlight item when the
+- [x] Normalize invalid or stale spotlight references to the first visible item.
+- [x] Add Visual controls to set a testimonial as the spotlight item when the
   `spotlight` variant is active.
-- [ ] Add confirmation or undo for `Remove`, preserving disabled behavior at the
+- [x] Add confirmation or undo for `Remove`, preserving disabled behavior at the
   minimum count.
-- [ ] Add tests proving removal safety and spotlight rendering remain stable
+- [x] Add tests proving removal safety and spotlight rendering remain stable
   after reorder and count changes.
 
 ## Files to Change
@@ -102,6 +102,18 @@ Error handling:
 - Confirmation state clears when the editor remounts or item count reaches the
   minimum.
 
+Regression test shape:
+
+- `tests/vitest/ui/testimonials-editor-wave.test.tsx`
+  - Remove opens a confirmation flow, cancel leaves data unchanged, confirm
+    removes the selected testimonial, and the minimum-count guard still holds.
+  - Spotlight controls move with reorder and reassign deterministically after
+    spotlight deletion.
+- `tests/vitest/widgets/testimonials.test.tsx`
+  - Legacy payloads without `layout.spotlightItemId` still highlight the first
+    visible item.
+  - Stale spotlight ids normalize to the first surviving item.
+
 ## Security Contract
 
 No API routes are added.
@@ -119,8 +131,10 @@ No API routes are added.
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- If committed separately from TASK-290-08, also run root `bun run lint`,
-  `bun run scan:security:strict`, and `bun run precommit`.
+- `bun run lint`
+- `bun run gates:coderso`
+- `bun run scan:security:strict`
+- `bun run precommit`.
 
 ## Documentation Updates Required
 
@@ -139,3 +153,14 @@ No API routes are added.
 - Testimonial removal is recoverable or explicitly confirmed.
 - Spotlight selection is visible to editors and stable across reorder/remove.
 - Runtime output remains deterministic and backward compatible for legacy data.
+
+## Completion Notes (2026-05-22)
+
+- Testimonials runtime now owns explicit `layout.spotlightItemId`
+  normalization, including deterministic fallback to the first surviving item
+  when stale spotlight ids are loaded.
+- Visual authoring now exposes `Set spotlight` controls for the `spotlight`
+  variant and uses `ConfirmActionDialog` before destructive removal while still
+  respecting the minimum-count guard.
+- Widget and editor regression suites now cover spotlight reordering, stale-id
+  fallback, and confirmed removal behavior end to end.
