@@ -27,17 +27,19 @@ before the 38-widget smoke harness can be strict.
   `data-widget-editor-mode` attributes.
 - Ensure every section has an explicit non-title-derived
   `data-widget-editor-section`.
-- Ensure writable controls can expose `data-widget-editor-path`.
+- Ensure writable controls can expose `data-widget-control-path` alongside the
+  existing `data-widget-control` marker.
 - Ensure read-only summaries and diagnostics expose a non-writable marker.
 - Remove or wrap raw `div` control rows where they block ownership inspection.
 
 ## Sub-Tasks
 
-- [ ] Add `WidgetEditorModeRoot` or equivalent shared root wrapper.
-- [ ] Extend `WidgetEditorSection` with required `mode`, `sectionId`, and
-  `role` metadata.
-- [ ] Extend `WidgetControlRow` with optional `path`, `ownership`, and
-  `readOnly` metadata.
+- [ ] Extend the existing `WidgetEditorModeRoot` without changing its current
+  `data-widget-editor` / `data-widget-editor-mode` contract.
+- [ ] Extend the existing `WidgetEditorSection` `id` contract with optional
+  `mode` and `role` metadata; do not replace `id` with a second naming model.
+- [ ] Extend the existing `WidgetControlRow` and `data-widget-control` contract
+  with optional `path`, `ownership`, and `readOnly` metadata.
 - [ ] Add a lightweight `ReadonlyWidgetSummaryRow` for Advanced diagnostics.
 - [ ] Replace local title-derived ids in the first migrated editors.
 - [ ] Add Vitest coverage that renders sample modes and inspects the emitted
@@ -62,7 +64,7 @@ export function WidgetEditorModeRoot({
   children,
 }: WidgetEditorModeRootProps) {
   return (
-    <div data-widget-editor-mode={mode} data-widget-type={widgetType}>
+    <div data-widget-editor={widgetType} data-widget-editor-mode={mode}>
       {children}
     </div>
   );
@@ -70,7 +72,7 @@ export function WidgetEditorModeRoot({
 
 export function WidgetEditorSection({
   mode,
-  sectionId,
+  id,
   role,
   title,
   children,
@@ -78,7 +80,7 @@ export function WidgetEditorSection({
   return (
     <section
       data-widget-editor-mode={mode}
-      data-widget-editor-section={sectionId}
+      data-widget-editor-section={id}
       data-widget-editor-section-role={role}
     >
       <h3>{title}</h3>
@@ -90,8 +92,8 @@ export function WidgetEditorSection({
 export function WidgetControlRow({ path, readOnly, children }: WidgetControlRowProps) {
   return (
     <div
-      data-widget-editor-path={path}
-      data-widget-editor-readonly={readOnly ? "true" : undefined}
+      data-widget-control-path={path}
+      data-widget-control-readonly={readOnly ? "true" : undefined}
     >
       {children}
     </div>
@@ -104,8 +106,8 @@ Data flow:
 - Editor contract metadata and rendered DOM metadata use the same mode/section
   ids.
 - Writable controls mark the persisted path they mutate.
-- Read-only controls either omit `data-widget-editor-path` or set
-  `data-widget-editor-readonly="true"` when a path is displayed as a summary.
+- Read-only controls either omit `data-widget-control-path` or set
+  `data-widget-control-readonly="true"` when a path is displayed as a summary.
 - Playwright reads DOM metadata instead of inferring ownership from labels.
 
 Error handling:
@@ -146,6 +148,8 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update `_docs/WIDGETS.md` if contributor-facing DOM metadata rules are added.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -154,4 +158,3 @@ Regression-test shape:
   read-only summary state.
 - Playwright can inspect ownership without brittle label heuristics.
 - No user-facing editor behavior changes except improved markup consistency.
-

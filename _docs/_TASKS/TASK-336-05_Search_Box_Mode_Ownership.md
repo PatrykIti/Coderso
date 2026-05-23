@@ -29,6 +29,10 @@ which settings affect daily visual/copy work.
 - `Advanced` owns read-only resolved source, query parameter diagnostics,
   debounce/runtime notes, and technical integration summaries.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Inventory every writable path in the current Search Box editor.
@@ -39,8 +43,9 @@ which settings affect daily visual/copy work.
   unless they are truly technical-only controls.
 - [ ] Add explicit empty-state guidance for unavailable search sources.
 - [ ] Add Vitest UI tests for all three modes.
-- [ ] Add Playwright admin smoke and decide whether a public fixture page is
-  needed for frontend CSS verification.
+- [ ] Publish a public test fixture page for `search-box` or document why the
+  widget remains admin-only; record the URL or deferral in the smoke inventory.
+- [ ] Add Playwright admin smoke and frontend fixture verification.
 
 ## Files to Change
 
@@ -112,7 +117,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Search Box widget docs with final mode ownership.
-- Update Playwright report rows for Search Box P0 closure.
+- Append a dated TASK-336-05 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -120,4 +129,3 @@ Regression-test shape:
 - `search-box` mode labels match actual controls.
 - No duplicate writable source/copy/style paths remain.
 - Admin smoke can identify all Search Box sections through DOM metadata.
-

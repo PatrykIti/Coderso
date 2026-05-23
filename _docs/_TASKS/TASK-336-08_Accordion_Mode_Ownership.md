@@ -29,6 +29,10 @@ same visible controls.
 - `Advanced` owns read-only open-state diagnostics, item ids, keyboard/a11y
   summary, and runtime behavior notes.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Inventory Accordion writable paths by current mode.
@@ -45,7 +49,7 @@ same visible controls.
 |---|---|
 | `core/widgets/core/accordion.tsx` | Add/update `editorContract`; preserve schema/runtime behavior. |
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Remove/downgrade duplicate Advanced controls and use shared metadata. |
-| `tests/vitest/widgets/accordion.test.tsx` | Cover schema/runtime regressions if touched. |
+| `tests/vitest/widgets/accordionWidget.test.tsx` | Cover schema/runtime regressions if touched. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Cover mode ownership and Advanced read-only diagnostics. |
 | `_docs/_WIDGETS/ACCORDION.md` | Document final ownership if wording changes. |
 
@@ -55,7 +59,7 @@ same visible controls.
 const accordionContract: WidgetEditorContract = {
   version: 2,
   sections: [
-    { mode: "wizard", id: "accordion-setup", role: "setup", title: "Accordion setup", writablePaths: ["items", "defaultOpenItemId"] },
+    { mode: "wizard", id: "accordion-setup", role: "setup", title: "Accordion setup", writablePaths: ["defaultOpenItemId"] },
     { mode: "visual", id: "accordion-items", role: "content", title: "Items", writablePaths: ["items"] },
     { mode: "visual", id: "accordion-style", role: "visual", title: "Style", writablePaths: ["style.variant", "style.spacing", "style.iconPosition"] },
     { mode: "advanced", id: "accordion-runtime", role: "diagnostics", title: "Runtime diagnostics", writablePaths: [], readOnlyPaths: ["defaultOpenItemId", "items"] },
@@ -66,6 +70,8 @@ const accordionContract: WidgetEditorContract = {
 Data flow:
 
 - Visual owns day-to-day content and style edits after initial setup.
+- Wizard may seed starter items through a one-time setup action, but `items`
+  remains Visual-owned for the persistent writable path contract.
 - Advanced displays normalized state and technical summaries.
 - The renderer continues to consume the same normalized widget data.
 
@@ -90,7 +96,7 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/accordion.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -105,7 +111,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Accordion widget docs if ownership wording changes.
-- Update Playwright report rows for Accordion P1 closure.
+- Append a dated TASK-336-08 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -113,4 +123,3 @@ Regression-test shape:
 - Accordion Advanced is technical/read-only, not a duplicate Visual surface.
 - Widget contract and DOM metadata are present and test-backed.
 - Public rendering behavior does not regress.
-

@@ -28,6 +28,10 @@ style. Advanced must not become a second Hero design panel.
 - `Advanced` owns anchor/technical ids, read-only resolved design tokens,
   accessibility diagnostics, media diagnostics, and layout/runtime summaries.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Inventory Hero legacy controls and writable paths.
@@ -109,7 +113,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Hero widget docs.
-- Update Playwright report rows for Hero P1 closure.
+- Append a dated TASK-336-11 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -117,4 +125,3 @@ Regression-test shape:
 - Hero no longer has duplicated writable design controls in Advanced.
 - Legacy local editor markup is migrated to shared metadata where touched.
 - Tests prove the final ownership split.
-

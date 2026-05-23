@@ -30,6 +30,20 @@ recent Tabs fixes while making Advanced technical-only or read-only.
   summary, accessibility diagnostics, and read-only visual summaries where
   useful.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
+## Current Advanced Writable Paths to Remove
+
+| Current section | Current duplicated writable owner | Final owner |
+|---|---|---|
+| `tabs.variant` | `variant` via `onVariantChange` | Visual |
+| `tabs.structure` | `items`, `options.defaultItemId`, `options.activeId`, disabled/metadata fields | Visual |
+| `tabs.layout` | `options.orientation`, `options.triggerOverflow`, `options.containerPadding`, `options.triggerGap`, `options.panelGap` | Visual |
+| `tabs.trigger-style` | `options.triggerTextSize`, `options.triggerFontWeight`, `options.motion` | Visual |
+| `tabs.colors` | `style.surfaceColor`, `style.borderColor`, `style.activeBackgroundColor`, `style.activeTextColor`, `style.inactiveTextColor`, `style.panelBackgroundColor` | Visual |
+
 ## Sub-Tasks
 
 - [ ] Compare current Tabs editor against TASK-288 and TASK-330 closure claims.
@@ -111,7 +125,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Tabs widget docs if Advanced mode wording changes.
-- Update Playwright report rows for Tabs P1 closure.
+- Append a dated TASK-336-07 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -119,4 +137,3 @@ Regression-test shape:
 - Tabs Advanced is no longer a second Visual editor.
 - Recent Tabs product/accessibility fixes are preserved.
 - Tests prove the final owner mode for structure and style paths.
-

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 26 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1920 tasks
 
@@ -54,8 +54,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-336-13 | P2 Source Style and Diagnostics Cleanup | Medium | Large | Clean remaining source/style/diagnostic drift in content, booking, appointment, and product widgets |
 | TASK-336-14 | Layout Widget Advanced Technical Token Policy | Medium | Large | Define when layout Advanced may own technical tokens versus read-only summaries |
 | TASK-336-15 | Renderer Fixture Overflow and Team UX Contract | Medium | Large | Fix frontend fixture/CSS drift, overflow markers, and Team spotlight smoke coverage |
-| TASK-336-16 | One-Time Wizard and Daily Work Tabs | High | Very Large | Introduce setup-complete Wizard lifecycle only after widget owner contracts are strict |
+| TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Harden the existing `WidgetBlock.editor.wizardCompleted` lifecycle only after widget owner contracts are strict |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
+| TASK-336-18 | Remaining Page Builder Widget Contract Coverage | Medium | Large | Add explicit v2 contracts for remaining page-builder widgets before strict 38/38 closure |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

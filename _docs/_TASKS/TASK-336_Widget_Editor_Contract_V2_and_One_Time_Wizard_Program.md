@@ -38,8 +38,8 @@ duplication second, then introduce the one-time Wizard and daily-work tabs.
   semantics.
 - `core/admin/ui/widgets/editors/WidgetEditorControls.tsx` contains shared
   editor primitives, but not every widget uses them consistently.
-- `tests/README.md` states that Vitest owns admin/UI and Bun owns runtime
-  kernel behavior.
+- `tests/README.md` states that Bun owns runtime-kernel validation and Vitest
+  owns Bun-free tests, including admin/UI tests.
 
 ## External UX Research Notes
 
@@ -137,21 +137,26 @@ Recommended semantic split:
 - [ ] TASK-336-13: P2 Source Style and Diagnostics Cleanup
 - [ ] TASK-336-14: Layout Widget Advanced Technical Token Policy
 - [ ] TASK-336-15: Renderer Fixture Overflow and Team UX Contract
-- [ ] TASK-336-16: One-Time Wizard and Daily Work Tabs
+- [ ] TASK-336-16: Existing One-Time Wizard Lifecycle and Daily Work Tabs
 - [ ] TASK-336-17: Report Docs Changelog and Closure
+- [ ] TASK-336-18: Remaining Page Builder Widget Contract Coverage
+
+Numbering note: `TASK-336-18` was added after the initial closure leaf during
+task-family audit. It must land before `TASK-336-16` and `TASK-336-17`; closure
+still remains last by dependency, not by numeric order.
 
 ## Files to Change
 
 | File | Required change |
 |---|---|
 | `core/widgets/types.ts` | Add the editor contract types and attach the contract to `WidgetDefinition`. |
-| `core/widgets/editorContract.ts` | Add pure helpers that validate section ids, writable/read-only paths, duplicate ownership, and strict/soft modes. |
+| `core/widgets/editorContract.ts` | New pure helpers that validate section ids, writable/read-only paths, duplicate ownership, and strict/soft modes. |
 | `core/widgets/registry.ts` | Run the soft validator when widgets register, and expose a strict helper for tests/closure. |
 | `core/admin/ui/widgets/editors/WidgetEditorControls.tsx` | Add shared DOM metadata and ownership markers to sections and control rows. |
-| `core/admin/ui/widgets/editors/*Editors.tsx` | Migrate all widget editors to the explicit owner contract in dependency order. |
-| `tests/vitest/widgets/editorContract.test.ts` | Cover pure contract validation and all widget registry contracts. |
+| `core/admin/ui/widgets/editors/*Editors.tsx` | Migrate the 38 page-builder widget editors to the explicit owner contract in dependency order; `ScreenEditors.tsx` remains out of scope. |
+| `tests/vitest/widgets/editorContract.test.ts` | New suite covering pure contract validation and all widget registry contracts. |
 | `tests/vitest/ui/*editor*.test.tsx` | Cover per-widget mode ownership and DOM metadata. |
-| `_docs/PLAYWRIGHT/` | Add/refresh audit reports, smoke output, screenshots, and fixture notes. |
+| `_docs/PLAYWRIGHT/` | Add/refresh audit reports, smoke output, local-only screenshot notes, and fixture notes. |
 | `_docs/WIDGETS.md` and `_docs/_WIDGETS/*` | Document the final mode ownership and one-time Wizard behavior. |
 | `_docs/_CHANGELOG/` | Add closure entry when `TASK-336-17` completes. |
 
@@ -167,15 +172,19 @@ Recommended semantic split:
 5. Land P1 duplicate cleanup in `TASK-336-07` through `TASK-336-12`.
 6. Land P2 cleanup and layout policy in `TASK-336-13` and `TASK-336-14`.
 7. Land renderer fixture/frontend CSS fixes in `TASK-336-15`.
-8. Land one-time Wizard UX in `TASK-336-16` only after the owner contract is
+8. Land remaining low-risk page-builder widget contracts in `TASK-336-18`
+   before strict closure.
+9. Land one-time Wizard UX in `TASK-336-16` only after the owner contract is
    stable and test-backed.
-9. Land `TASK-336-17` last to switch the contract to strict coverage, close
+10. Land `TASK-336-17` last to switch the contract to strict coverage, close
    docs, update changelog, and preserve final evidence.
 
 ## Implementation Pseudocode
 
 ```ts
-export type WidgetEditorMode = "wizard" | "visual" | "advanced";
+import type { EditorMode } from "./types";
+
+export type WidgetEditorMode = EditorMode;
 
 export type WidgetEditorSectionRole =
   | "setup"
@@ -297,6 +306,9 @@ Family implementation validation:
 - Update `_docs/_TASKS/README.md` on every task status move.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when
   `TASK-336-17` closes the family.
+- Unless an explicit family-level exception is approved before implementation,
+  every physical leaf that moves to Done must also update changelog/index
+  records according to AGENTS.md.
 
 ## Acceptance Criteria
 

@@ -29,6 +29,10 @@ second display editor.
 - `Advanced` owns read-only resolved query, data freshness, cache/runtime
   diagnostics, and source capability summaries.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Inventory Posts Feed source, display, and runtime paths.
@@ -46,7 +50,7 @@ second display editor.
 |---|---|
 | `core/widgets/core/postsFeed.tsx` | Add/update `editorContract`; preserve runtime query behavior. |
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Split Wizard/Visual/Advanced ownership and metadata. |
-| `tests/vitest/widgets/postsFeed.test.tsx` | Cover schema/runtime behavior if touched. |
+| `tests/vitest/widgets/postsFeed.test.tsx` | New focused widget contract/runtime suite if Posts Feed needs pure widget coverage beyond existing preview/editor tests. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover mode ownership and Advanced read-only diagnostics. |
 | `_docs/_WIDGETS/POSTS_FEED.md` | Document final mode ownership. |
 
@@ -94,7 +98,12 @@ No API routes are added.
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/postsFeed.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-posts-feed-preview.test.tsx`
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx` when runtime/query
+  behavior or the existing Bun-owned widget contract changes.
+- `bun run test:vitest -- tests/vitest/widgets/postsFeed.test.tsx` if this task
+  creates the new pure widget suite listed above.
 - `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -110,7 +119,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Posts Feed widget docs.
-- Update Playwright report rows for Posts Feed P1 closure.
+- Append a dated TASK-336-09 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -118,4 +131,3 @@ Regression-test shape:
 - Posts Feed has a clear source/display/diagnostic split.
 - Advanced does not duplicate daily card/display controls.
 - Public fixture data proves frontend rendering is not empty or misleading.
-

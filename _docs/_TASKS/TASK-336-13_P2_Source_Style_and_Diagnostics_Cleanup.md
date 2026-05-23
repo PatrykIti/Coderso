@@ -26,8 +26,10 @@ daily presentation by accident.
 - `booking-calendar`
 - `appointment-form`
 - `product-table`
-- Any additional widget flagged by the smoke harness as P2 source/style drift
-  before this task starts.
+
+Scope is limited to the four named widgets. Additional P2 findings from the
+TASK-336-03 harness must become new physical leaf tasks rather than being
+silently absorbed here.
 
 ## Ownership Decision
 
@@ -125,14 +127,18 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update affected per-widget docs.
-- Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md`.
+- Append a dated TASK-336-13 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
 - Update security docs only if a security contract actually changes.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
 
-- All P2 source/style/diagnostic drift from the smoke harness is either fixed or
-  explicitly routed to a follow-up task with evidence.
+- All P2 source/style/diagnostic drift for the four in-scope widgets is fixed,
+  and any additional smoke-harness drift is routed to a new physical follow-up
+  task with evidence.
 - In-scope widgets have v2 editor contracts and focused tests.
 - No security-sensitive widget exposes private runtime details in diagnostics.
-

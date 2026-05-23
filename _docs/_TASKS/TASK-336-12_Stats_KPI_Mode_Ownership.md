@@ -29,6 +29,18 @@ diagnostics.
 - `Advanced` owns read-only resolved metric summary, split-highlight diagnostics,
   technical ids, accessibility notes, and runtime/static-animation policy.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
+## Current Advanced Writable Paths to Remove
+
+| Current section | Current duplicated writable owner | Final owner |
+|---|---|---|
+| `stats.technical-spacing` | `style.alignment`, `style.spacing`, `style.valueColor`, `style.labelColor` | Visual |
+| `stats.technical-spacing` | `style.cardBackground`, `style.cardBorderColor` | Visual |
+| `stats.diagnostics` | normalize/default reset actions that mutate the whole widget | Advanced only if reframed as explicit repair action with confirmation |
+
 ## Sub-Tasks
 
 - [ ] Compare current Stats KPI editor with TASK-287 and TASK-331 closure.
@@ -108,7 +120,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Stats KPI widget docs.
-- Update Playwright report rows for Stats KPI P1 closure.
+- Append a dated TASK-336-12 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -116,4 +132,3 @@ Regression-test shape:
 - Stats KPI Advanced is diagnostic/read-only for daily visual fields.
 - Existing Stats KPI product fixes remain green.
 - Tests prevent reintroduction of duplicated metric/style controls.
-

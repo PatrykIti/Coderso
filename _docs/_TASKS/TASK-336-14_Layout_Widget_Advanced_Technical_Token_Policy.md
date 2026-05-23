@@ -68,20 +68,33 @@ Visual controls.
 
 ## Implementation Pseudocode
 
+The helper below is illustrative only. Implementation must first inventory the
+real schema paths for the six layout widgets and classify them in a table before
+any editor code changes.
+
+Required first-pass classification table:
+
+| Widget | Candidate Visual owner paths | Candidate Advanced technical/read-only paths |
+|---|---|---|
+| `section` | `layout.containerWidth`, `layout.maxWidth`, `layout.paddingBlock`, `layout.paddingInline`, `style.backgroundColor`, `style.gradientFrom`, `style.gradientTo`, `style.borderColor`, `style.radius`, `style.shadow`, `style.overlayOpacity`, `style.backgroundMedia` | read-only resolved layout/style summary unless a path is explicitly technical-only |
+| `grid-columns` | `columns`, `layout.gapX`, `layout.gapY`, `layout.align`, `layout.reverseOnMobile`, `style.cardizeColumns`, column surface paths | read-only span/slot/cardize diagnostics and any explicitly justified technical token |
+| `split-layout` | slot/layout/style paths discovered from `splitLayout.tsx` | read-only resolved split diagnostics |
+| `stack` | `direction`, `gap`, `align`, `justify`, `wrap` | read-only responsive-resolution summary |
+| `spacer` | `height`, `showGuideInEditor` | read-only computed height summary |
+| `divider` | `label`, `labelColor`, `labelSize`, `labelWeight`, `labelTransform`, `labelLetterSpacing`, `labelGap`, `thickness`, `color`, `width`, `containerWidth`, `customWidth`, `align`, `lineStyle`, `opacity`, `dashPattern`, `visibility`, `marginTop`, `marginBottom` | read-only computed divider summary |
+
 ```ts
 type LayoutPathClassification =
   | { owner: "visual"; path: string; reason: string }
   | { owner: "advanced"; path: string; reason: string }
   | { owner: "advanced-readonly"; path: string; reason: string };
 
-function classifyLayoutEditorPath(path: string): LayoutPathClassification {
-  if (path.startsWith("style.") || path.startsWith("layout.daily")) {
-    return { owner: "visual", path, reason: "Daily design control" };
+function classifyLayoutEditorPath(widgetType: string, path: string): LayoutPathClassification {
+  const classification = layoutPathPolicyByWidget[widgetType]?.[path];
+  if (!classification) {
+    return { owner: "advanced-readonly", path, reason: "Unclassified paths stay read-only until audited" };
   }
-  if (path.startsWith("technical.") || path.endsWith("Token")) {
-    return { owner: "advanced", path, reason: "Technical layout token" };
-  }
-  return { owner: "advanced-readonly", path, reason: "Resolved layout summary" };
+  return classification;
 }
 ```
 
@@ -130,7 +143,11 @@ Regression-test shape:
 
 - Update `_docs/WIDGETS.md` with the layout Advanced policy.
 - Update affected `_docs/_WIDGETS/*` files.
-- Update Playwright report rows for layout widgets.
+- Append a dated TASK-336-14 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -139,4 +156,3 @@ Regression-test shape:
 - Any duplicate writable path is explicitly allowlisted, justified, and
   temporary.
 - Existing layout truthfulness fixes are preserved.
-

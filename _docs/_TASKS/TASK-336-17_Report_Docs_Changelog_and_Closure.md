@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Documentation + QA + Closure
 **Estimated Effort:** Medium
-**Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12, TASK-336-13, TASK-336-14, TASK-336-15, TASK-336-16
+**Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12, TASK-336-13, TASK-336-14, TASK-336-15, TASK-336-16, TASK-336-18
 **Status:** To Do
 
 ---
@@ -27,6 +27,8 @@ specific implementation task before closing this leaf.
 - [ ] Run the full 38-widget Playwright CLI admin smoke.
 - [ ] Run the frontend CSS/overflow smoke for all available fixture pages.
 - [ ] Confirm every widget has a documented mode ownership contract.
+- [ ] Confirm TASK-336-18 covered every remaining page-builder widget not owned
+  by earlier implementation leaves.
 - [ ] Confirm every temporary duplicate writable allowlist entry is removed or
   has a new follow-up task.
 - [ ] Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md`
@@ -34,6 +36,8 @@ specific implementation task before closing this leaf.
 - [ ] Update `_docs/WIDGETS.md` and affected `_docs/_WIDGETS/*` files.
 - [ ] Update `_docs/_TASKS/README.md` board rows and statistics.
 - [ ] Add changelog entry in `_docs/_CHANGELOG/` and update changelog index.
+- [ ] Confirm each completed physical leaf has changelog/index coverage unless
+  an approved family-level changelog policy is recorded.
 - [ ] Record Claude consultation summary used during the family.
 - [ ] Run final validation commands and record exact results.
 
@@ -53,8 +57,10 @@ specific implementation task before closing this leaf.
 ## Implementation Pseudocode
 
 ```ts
+import { listWidgetsForSurface } from "core/widgets/registry";
+
 test("all registered page-builder widgets satisfy editor contract v2", () => {
-  const definitions = getRegisteredWidgetDefinitions();
+  const definitions = listWidgetsForSurface("page-builder");
   expect(definitions).toHaveLength(38);
   for (const definition of definitions) {
     const result = validateWidgetEditorContract(definition, { requireContract: true });
@@ -106,6 +112,7 @@ Minimum final commands:
 - All focused widget/runtime suites touched by TASK-336.
 - Playwright CLI 38-widget admin smoke.
 - Playwright CLI frontend CSS/overflow smoke.
+- `bun run gates:coderso`
 - `git diff --check`
 - `bun run precommit` before a manual commit.
 
@@ -116,6 +123,8 @@ Regression-test shape:
 - No unallowlisted duplicate writable path remains.
 - Frontend CSS smoke has no unintentional body overflow.
 - One-time Wizard lifecycle passes representative smoke.
+- `bun run gates:coderso` passes, or any unrelated gate failure is isolated
+  with exact failing gate evidence.
 
 ## Documentation Updates Required
 
@@ -135,4 +144,3 @@ Regression-test shape:
 - No unresolved widget editor owner drift remains hidden in the closure task.
 - The family leaves a repeatable path for future widgets to satisfy the v2
   editor contract before they ship.
-

@@ -29,3 +29,4 @@ hp-*.yaml
 hp-*.yml
 hp*.yaml
 hp*.yml
+_docs/PLAYWRIGHT/**/_raw/

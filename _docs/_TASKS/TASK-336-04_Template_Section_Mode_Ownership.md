@@ -29,6 +29,10 @@ technical diagnostics separate.
 - `Advanced` owns resolved template diagnostics, internal ids, version/source
   summaries, and read-only payload previews.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Audit the current `TemplateSectionEditor` and all paths it mutates.
@@ -39,8 +43,11 @@ technical diagnostics separate.
 - [ ] Convert Advanced duplicate controls into read-only summaries.
 - [ ] Add empty/missing template state copy that explains the next action.
 - [ ] Add Vitest UI assertions for mode-specific ownership.
-- [ ] Add Playwright smoke coverage or mark the frontend fixture gap explicitly
-  until a public fixture page exists.
+- [ ] Publish a public test fixture page for `template-section` or document why
+  the widget remains admin-only; record the URL or deferral in the smoke
+  inventory.
+- [ ] Add Playwright smoke coverage for admin modes and the public fixture
+  decision.
 
 ## Files to Change
 
@@ -121,8 +128,12 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update the Template Section widget doc with mode ownership.
-- Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md` when
-  the P0 finding is fixed.
+- Append a dated TASK-336-04 status note to
+  `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md` or leave the
+  source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -130,4 +141,3 @@ Regression-test shape:
 - `template-section` no longer renders the same editor in all three modes.
 - Every section/control uses the shared DOM metadata contract.
 - Tests prove Wizard setup ownership and Advanced read-only diagnostics.
-

@@ -29,6 +29,10 @@ all appear to configure the same thing.
 - `Advanced` owns read-only resolved query shape, collection binding summary,
   URL parameter diagnostics, and runtime compatibility notes.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Inventory current Listing Filters writable paths.
@@ -113,7 +117,11 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Listing Filters widget docs with final mode ownership.
-- Update Playwright report rows for Listing Filters P0 closure.
+- Append a dated TASK-336-06 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -121,4 +129,3 @@ Regression-test shape:
 - `listing-filters` no longer presents one repeated editor in all modes.
 - Source, presentation, and query diagnostics have separate owners.
 - Tests prove duplicate writable paths are removed.
-

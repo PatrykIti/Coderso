@@ -72,7 +72,12 @@ spotlight layout behavior.
 ```ts
 function assertNoUnexpectedBodyOverflow(page: Page) {
   return page.evaluate(() => {
-    const overflowing = [...document.querySelectorAll<HTMLElement>("body *")]
+    const roots = document.querySelectorAll<HTMLElement>("[data-widget-renderer], main > *");
+    const candidates = [...roots].flatMap((root) => [
+      root,
+      ...root.querySelectorAll<HTMLElement>("*"),
+    ]);
+    const overflowing = candidates
       .filter((element) => element.scrollWidth > element.clientWidth)
       .filter((element) => element.dataset.overflowIntentional !== "true");
     return overflowing.map((element) => ({
@@ -99,6 +104,9 @@ Error handling:
 - Do not create oversized fixture data that exceeds the widget's product
   contract.
 - Do not hide frontend bugs by clipping the page globally.
+- Scope overflow scanning to known page/widget roots and use a Playwright
+  timeout guard so dense overlays or unrelated browser chrome do not create
+  flaky false positives.
 
 ## Security Contract
 
@@ -131,9 +139,12 @@ Regression-test shape:
 
 ## Documentation Updates Required
 
-- Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md` with
-  final frontend CSS/fixture evidence.
+- Append a dated TASK-336-15 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
 - Update affected widget docs if product overflow behavior is intentional.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -142,4 +153,3 @@ Regression-test shape:
 - Unintentional body overflow is fixed.
 - Intentional overflow is marked and documented.
 - Team spotlight and representative complex layouts pass smoke checks.
-

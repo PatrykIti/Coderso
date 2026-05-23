@@ -10,12 +10,39 @@ wave and its follow-up task implementation.
 - Registry scope: 38 page-builder widgets from `core/widgets/core/index.ts`
   plus 4 screen-only widgets excluded from this pass.
 - Public page coverage found: 35 published widget pages.
-- Screenshot artifacts: `.tmp/playwright-widget-audit/front-desktop/` and
-  `.tmp/playwright-widget-audit/front-mobile/` contain 70 screenshots.
+- Local screenshot artifacts were written to
+  `.tmp/playwright-widget-audit/front-desktop/` and
+  `.tmp/playwright-widget-audit/front-mobile/`. These are ignored scratch
+  artifacts, not tracked evidence.
 - Claude CLI and two helper agents were used as secondary review inputs. Their
   findings were treated as review input, not as executable proof.
 
 No secrets are included in this report.
+
+Admin editor findings below are source-backed static analysis plus partial
+Playwright session evidence. Full 38-widget admin traversal was not completed
+because current editor tab changes can trigger unsaved-change dialogs.
+
+## Status and Schema of Record
+
+This report is source evidence from the 2026-05-23 re-audit. The executable
+contract of record is the `TASK-336` family, especially
+`TASK-336-01_Editor_Contract_Type_and_Registry_Validator.md`.
+
+If this report contains illustrative implementation shapes, the TASK-336
+contract supersedes them. In particular:
+
+- Use `WidgetEditorSectionRole` values from TASK-336:
+  `setup`, `source`, `content`, `visual`, `layout`, `technical`,
+  `diagnostics`, and `summary`.
+- Use structured duplicate ownership entries:
+  `allowedDuplicateWritablePaths: Array<{ path; reason; expiresWithTask }>`
+  instead of a boolean duplicate flag.
+
+Report maintenance convention: keep the original audit findings stable as
+evidence. TASK-336 implementation waves should append dated status notes or
+write a final superseding closure report instead of rewriting source-evidence
+sections in place.
 
 ## Executive Summary
 
@@ -107,7 +134,8 @@ Observed:
 
 - 35/35 published pages returned HTTP 200 on desktop.
 - 35/35 published pages returned HTTP 200 on mobile.
-- No console errors or warnings were captured during the smoke pass.
+- No console errors or warnings were captured during the public frontend smoke
+  pass.
 - `tabs` selected the second tab correctly.
 - `toggle-block` toggled to the secondary state correctly.
 - `accordion` and `faq-accordion` opened the clicked item correctly.
@@ -125,6 +153,10 @@ CSS / UX findings:
 | `grid-columns` | Partial pass, fixture too shallow | Two visible blocks prove basic layout, but not asymmetric spans, 4-6 columns, overflow behavior, cardized surfaces, reverse-on-mobile, images, or long text. | Add Playwright fixtures for dense columns, long content, `reverseOnMobile`, and overflow modes; assert no public helper labels leak. |
 
 ## Admin Editor Contract Findings
+
+Evidence caveat: this section is source-backed static analysis. It identifies
+real code paths and likely UX drift, but each finding still requires the
+repeatable TASK-336 Playwright admin smoke before implementation closure.
 
 The shell-level panels are mostly aligned:
 
@@ -231,23 +263,28 @@ render a second writable copy of Visual fields.
 
 Add an executable editor contract next to widget definitions or editor bundles.
 
-Suggested shape:
+Illustrative shape, superseded by the stricter TASK-336 schema of record:
 
 ```ts
 type WidgetEditorSectionContract = {
   mode: "wizard" | "visual" | "advanced";
   id: string;
   role:
-    | "onboarding"
-    | "daily-edit"
-    | "style"
+    | "setup"
     | "source"
+    | "content"
+    | "visual"
+    | "layout"
     | "technical"
     | "diagnostics"
-    | "repair";
+    | "summary";
   writablePaths: string[];
   readOnlyPaths?: string[];
-  allowDuplicateWritablePaths?: boolean;
+  allowedDuplicateWritablePaths?: Array<{
+    path: string;
+    reason: string;
+    expiresWithTask: string;
+  }>;
 };
 ```
 
@@ -286,15 +323,27 @@ Validation rules:
 ## Validation Performed
 
 - `playwright-cli` login to admin succeeded.
-- `playwright-cli` public smoke produced 70 screenshots for 35 published pages.
+- `playwright-cli` public smoke produced 70 local-only screenshots for 35
+  published pages.
 - Frontend desktop and mobile status checks passed for 35/35 published pages.
-- Console smoke found no captured frontend errors or warnings.
+- Public frontend console smoke found no captured errors or warnings.
 - Interactive smoke passed for tabs, toggle block, accordion, FAQ accordion, and
   booking calendar.
 - Static source audit was performed for editor contracts and renderer overflow.
 - Claude CLI was used as an independent review input.
 - Two helper agents were spawned: one for editor-contract source review and one
   for frontend fixture/CSS review.
+
+## Claude and Helper Agent Review Summary
+
+- Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract
+  until the one-time Wizard migration is test-backed.
+- Accepted: add a soft validator before strict 38-widget enforcement so current
+  widgets can migrate in dependency order.
+- Accepted: treat Advanced as read-only diagnostics for Visual-owned values
+  unless a path is explicitly technical-only.
+- Rejected: using Claude or helper-agent findings as executable proof without
+  local code/test/Playwright validation.
 
 ## Validation Not Performed
 

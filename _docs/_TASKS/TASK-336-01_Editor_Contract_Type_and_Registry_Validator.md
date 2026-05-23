@@ -31,10 +31,14 @@ Wizard toward one-time setup.
 
 ## Sub-Tasks
 
-- [ ] Define `WidgetEditorMode`, `WidgetEditorSectionRole`,
+- [ ] Reuse the existing `EditorMode` type as `WidgetEditorMode` instead of
+  creating a second source of truth, then define `WidgetEditorSectionRole`,
   `WidgetEditorSectionContract`, `WidgetEditorContract`, and
   `WidgetEditorContractError`.
 - [ ] Add `editorContract?: WidgetEditorContract` to `WidgetDefinition`.
+- [ ] Document the relationship between the existing `WidgetDefinition.editor`
+  render callbacks and the new `editorContract` metadata. The callbacks remain
+  the rendering mechanism; `editorContract` is the ownership/test contract.
 - [ ] Implement `validateWidgetEditorContract(definition, options)`.
 - [ ] Implement `assertValidWidgetEditorContract(definition, options)` for
   strict tests.
@@ -85,6 +89,8 @@ export function validateWidgetEditorContract(
 Data flow:
 
 - `WidgetDefinition` owns the metadata.
+- Existing `WidgetDefinition.editor.wizard/visual/advanced` components continue
+  to render the UI; `editorContract` describes and validates their ownership.
 - `registerWidget` calls `validateWidgetEditorContract` in soft mode.
 - Vitest imports only `core/widgets/*` pure modules.
 - Later tasks populate `editorContract` widget by widget.
@@ -129,6 +135,10 @@ Regression-test shape:
 
 - Update `_docs/WIDGETS.md` only if production contract terms are exposed in
   this task.
+- Document that `editor` and `editorContract` are semantically distinct until
+  strict enforcement lands in `TASK-336-17`.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -137,4 +147,3 @@ Regression-test shape:
 - The validator can run in Vitest without Bun/runtime side effects.
 - Registry registration can report contract drift without blocking migration.
 - Strict validation is available for final 38-widget closure.
-

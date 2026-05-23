@@ -28,6 +28,10 @@ nonce, CSRF, captcha, rate-limit, or validation rules.
 - `Advanced` owns read-only resolved form id, endpoint/security summary,
   submission mode diagnostics, and runtime compatibility notes.
 
+Evidence caveat: the re-audit finding is source-backed, not a completed
+38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
+before the task can move to Done.
+
 ## Sub-Tasks
 
 - [ ] Audit current Form Embed editor paths and public form dependencies.
@@ -37,7 +41,8 @@ nonce, CSRF, captcha, rate-limit, or validation rules.
 - [ ] Convert Advanced form/source/style duplicates into read-only diagnostics.
 - [ ] Preserve all existing public write protections.
 - [ ] Add Vitest UI tests for mode ownership.
-- [ ] Add or explicitly defer a public fixture page for Form Embed rendering.
+- [ ] Publish a public test fixture page for `form-embed` or explicitly defer
+  it with a follow-up task before TASK-336-17 closure.
 
 ## Files to Change
 
@@ -60,7 +65,7 @@ function FormEmbedAdvancedEditor({ value }: WidgetEditorProps<FormEmbedData>) {
       <WidgetEditorSection mode="advanced" sectionId="form-security" role="diagnostics" title="Submission security">
         <ReadonlyWidgetSummaryRow label="Form id" value={securitySummary.formId} />
         <ReadonlyWidgetSummaryRow label="Nonce" value={securitySummary.noncePolicy} />
-        <ReadonlyWidgetSummaryRow label="Rate limit" value={securitySummary.rateLimitBucket} />
+        <ReadonlyWidgetSummaryRow label="Submission protection" value="Rate limited" />
       </WidgetEditorSection>
     </WidgetEditorModeRoot>
   );
@@ -118,8 +123,12 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - Update Form Embed widget docs.
-- Update Playwright report rows for Form Embed P1 closure.
+- Append a dated TASK-336-10 status note to the Playwright re-audit report or
+  leave source evidence stable and link the final superseding report from
+  TASK-336-17.
 - Update security docs only if the task unexpectedly changes security behavior.
+- Add changelog/index updates when this leaf is marked Done, unless the family
+  has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
 
 ## Acceptance Criteria
@@ -127,4 +136,3 @@ Regression-test shape:
 - Form Embed mode ownership is clear and test-backed.
 - Advanced does not duplicate form selection or visual wrapper controls.
 - Existing public form security contract remains intact.
-
