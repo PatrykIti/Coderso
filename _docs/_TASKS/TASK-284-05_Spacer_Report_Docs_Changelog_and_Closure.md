@@ -19,7 +19,7 @@ Resolution (2026-05-21): the Spacer family is now closed. The report ends
 with explicit final classifications for every BUG/UX/BF/A row, shared rows
 stay attributed to `TASK-256-05-03` or `TASK-303`, Spacer-owned product rows
 stay attributed to `TASK-284-01` through `TASK-284-04`, `UX-04`/`A1`/`A3`
-are recorded as `no-action`, and BF-05 remains deferred to `TASK-328`.
+are recorded as `no-action`, and BF-05 remains deferred after the shared `TASK-328` prerequisite landed.
 
 ## Scope Boundary
 
@@ -183,7 +183,7 @@ No API routes are added.
   `deferred`.
 - `UX-04`, `A1`, and `A3` are intentionally `no-action` under the current
   vertical-only, decorative Spacer contract.
-- BF-05 remains deferred to `TASK-328` because a truthful horizontal Spacer
-  still needs shared nested row-flow rendering ownership.
+- BF-05 remains deferred after `TASK-328` landed because a truthful horizontal Spacer
+  still needs its own widget-local product contract on top of the shared row-flow child shell.
 - `TASK-284` and `TASK-284-05` are now closed with final validation,
   changelog, and board sync.

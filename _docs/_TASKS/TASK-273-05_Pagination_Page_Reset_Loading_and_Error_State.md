@@ -32,9 +32,9 @@ target.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:92` - report claims no
   pagination control is rendered, but the live linked-results owner already
   exists in Content List/TASK-262-03 rather than inside Listing Filters.
-- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:98-101` - no loading state,
-  and no inline network error are still open shared refresh concerns; the
-  page-reset part is stale against the current live script.
+- `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:98-101` - the original
+  shared refresh concerns are now closed by TASK-315; only the historical
+  page-reset part was stale against the current live script.
 - `_docs/PLAYWRIGHT/REPORT_LISTING_FILTERS_WIDGET.md:133` - page-reset claim is
   stale: the live runtime client already clears the `lq.<queryId>.*` namespace
   before rebuilding current control values.

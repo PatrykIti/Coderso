@@ -18,8 +18,9 @@ per-column visibility, and wide-screen span behavior.
 This leaf owns report findings W3, W4, and W6.
 
 Residual span-truthfulness and overflow fallout discovered during this audit are
-shared structural follow-up scope in TASK-325. This leaf does not add a second
-overflow guard while that shared work remains open.
+shared structural follow-up scope in TASK-325. That shared work is now closed,
+so this leaf keeps the historical routing note without adding a second local
+overflow guard.
 
 ## Scope
 

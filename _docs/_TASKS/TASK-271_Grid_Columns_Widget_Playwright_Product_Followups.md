@@ -67,13 +67,13 @@ TASK-256 already owns them as shared widget-contract drift.
 | Report finding | Evidence | Owner task | Reason |
 |---|---|---|---|
 | C1 slot/config desync and manual synchronization | `REPORT_GRID_COLUMNS_WIDGET.md:63,150-160,217` | TASK-256-03, TASK-256-05-01 | Shared repeatable-slot/config contract. |
-| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:64,132,218` | TASK-325 | Residual shared color-control truthfulness still open after TASK-256 closeout; do not patch it widget-locally here. |
+| C2 CSS-variable color picker fallback | `REPORT_GRID_COLUMNS_WIDGET.md:64,132,218` | TASK-325 | Shared color-control truthfulness was closed in TASK-325; do not patch the historical shared seam widget-locally here. |
 | C4/C5/U4 span preview, sum validation, and current-sum indicator | `REPORT_GRID_COLUMNS_WIDGET.md:66-67,91,224-225` | TASK-325 | Residual structural truthfulness for current span controls. TASK-271 must not silently absorb it after TASK-256 closed. |
 | U3 Advanced cardize controls visible when inactive | `REPORT_GRID_COLUMNS_WIDGET.md:90,173,227` | TASK-325 | Residual inactive-control truthfulness stays in the shared structural follow-up. |
 | U6 masonry-lite forces cardize while switch stays off | `REPORT_GRID_COLUMNS_WIDGET.md:93,121-133,216` | TASK-256-05-01 | Existing control/renderer truthfulness. |
 | U7/P1 public column labels | `REPORT_GRID_COLUMNS_WIDGET.md:94,190,214,250` | TASK-256-03, TASK-256-05-01 | Public runtime must not leak editor metadata. |
 | P2 public `Empty column.` placeholder | `REPORT_GRID_COLUMNS_WIDGET.md:104,191,215` | TASK-256-03, TASK-256-05-01 | Public placeholder safety. |
-| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:105` | TASK-325 | Residual runtime fallout from unresolved shared span-truthfulness work. TASK-271-03 does not add a second guard while TASK-325 is open. |
+| P3 overflow caused by invalid span sums | `REPORT_GRID_COLUMNS_WIDGET.md:105` | TASK-325 | Shared span-truthfulness work is now closed in TASK-325, so TASK-271 keeps the historical routing note without adding a second local guard. |
 | Asymmetric variant has no effect with explicit spans | `REPORT_GRID_COLUMNS_WIDGET.md:121,124,246` | TASK-325 | Residual existing-variant truthfulness stays with the shared structural follow-up, not the product-expansion family. |
 
 TASK-271 may depend on the TASK-256 result, but it must not restage those repairs
