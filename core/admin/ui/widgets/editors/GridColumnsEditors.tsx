@@ -41,9 +41,13 @@ import {
   type GridColumnsVariantId,
 } from "../../../../widgets/core/gridColumns";
 import { parseRepeatableSlotId } from "../../../../widgets/slots";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import { SharedColorControl } from "./SharedColorControl";
 
 const variantOptions: Array<{
   id: GridColumnsVariantId;
@@ -257,18 +261,28 @@ function normalizeValue(value: GridColumnsData): GridColumnsData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -354,20 +368,16 @@ function ColorField({
   onClear?: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
-        label={label}
-        value={value}
-        onClear={onClear}
-        onRestoreValue={onChange}
-      />
-      <SharedColorFieldInputs
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        pickerFallback={pickerFallback}
-      />
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onSwatchChange={onChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+      showValueInput={false}
+    />
   );
 }
 
@@ -701,9 +711,7 @@ function DiagnosticsSnapshot({ value }: { value: GridColumnsData }) {
   );
 }
 
-function resolveGridColumnsSlotTargets(
-  context?: WidgetEditorProps<GridColumnsData>["context"]
-) {
+function resolveGridColumnsSlotTargets(context?: WidgetEditorProps<GridColumnsData>["context"]) {
   return (
     context?.slotTargets?.flatMap((target) => {
       if (target.definitionId !== "column") return [];
@@ -780,8 +788,7 @@ function resolveGridColumnsSlotDriftState(
     slotIdByInstanceId,
     missingLiveInstanceIds,
     phantomSavedInstanceIds,
-    hasLiveSlotDrift:
-      missingLiveInstanceIds.length > 0 || phantomSavedInstanceIds.length > 0,
+    hasLiveSlotDrift: missingLiveInstanceIds.length > 0 || phantomSavedInstanceIds.length > 0,
   };
 }
 
@@ -825,7 +832,8 @@ function resolveOrderedGridColumnsRows(
 
   if (slotDriftState.orderedInstanceIds?.length) {
     return editableColumns.map((column, rowIndex) => {
-      const instanceId = slotDriftState.orderedInstanceIds?.[rowIndex] ?? column.id ?? String(rowIndex + 1);
+      const instanceId =
+        slotDriftState.orderedInstanceIds?.[rowIndex] ?? column.id ?? String(rowIndex + 1);
       return {
         column,
         rowIndex,
@@ -964,9 +972,17 @@ function ColumnSizingGrid({
             <Input
               value={row.column.label ?? ""}
               onChange={(event) =>
-                updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                  label: event.target.value,
-                })
+                updateEditableGridColumnsRow(
+                  value,
+                  onChange,
+                  variant,
+                  context,
+                  row.instanceId,
+                  row.rowIndex,
+                  {
+                    label: event.target.value,
+                  }
+                )
               }
               placeholder={`Column ${index + 1}`}
             />
@@ -980,9 +996,17 @@ function ColumnSizingGrid({
               <Select
                 value={row.column.desktopSpan ?? "6"}
                 onValueChange={(next) =>
-                  updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                    desktopSpan: next as GridColumnsSpan,
-                  })
+                  updateEditableGridColumnsRow(
+                    value,
+                    onChange,
+                    variant,
+                    context,
+                    row.instanceId,
+                    row.rowIndex,
+                    {
+                      desktopSpan: next as GridColumnsSpan,
+                    }
+                  )
                 }
               >
                 <SelectTrigger>
@@ -1005,9 +1029,17 @@ function ColumnSizingGrid({
               <Select
                 value={row.column.tabletSpan ?? "6"}
                 onValueChange={(next) =>
-                  updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                    tabletSpan: next as GridColumnsSpan,
-                  })
+                  updateEditableGridColumnsRow(
+                    value,
+                    onChange,
+                    variant,
+                    context,
+                    row.instanceId,
+                    row.rowIndex,
+                    {
+                      tabletSpan: next as GridColumnsSpan,
+                    }
+                  )
                 }
               >
                 <SelectTrigger>
@@ -1030,9 +1062,17 @@ function ColumnSizingGrid({
               <Select
                 value={row.column.mobileSpan ?? "12"}
                 onValueChange={(next) =>
-                  updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                    mobileSpan: next as GridColumnsSpan,
-                  })
+                  updateEditableGridColumnsRow(
+                    value,
+                    onChange,
+                    variant,
+                    context,
+                    row.instanceId,
+                    row.rowIndex,
+                    {
+                      mobileSpan: next as GridColumnsSpan,
+                    }
+                  )
                 }
               >
                 <SelectTrigger>
@@ -1057,9 +1097,17 @@ function ColumnSizingGrid({
               <Select
                 value={row.column.xlSpan ?? "auto"}
                 onValueChange={(next) =>
-                  updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                    xlSpan: next === "auto" ? undefined : (next as GridColumnsSpan),
-                  })
+                  updateEditableGridColumnsRow(
+                    value,
+                    onChange,
+                    variant,
+                    context,
+                    row.instanceId,
+                    row.rowIndex,
+                    {
+                      xlSpan: next === "auto" ? undefined : (next as GridColumnsSpan),
+                    }
+                  )
                 }
               >
                 <SelectTrigger>
@@ -1082,9 +1130,17 @@ function ColumnSizingGrid({
               <Select
                 value={row.column.twoXlSpan ?? "auto"}
                 onValueChange={(next) =>
-                  updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                    twoXlSpan: next === "auto" ? undefined : (next as GridColumnsSpan),
-                  })
+                  updateEditableGridColumnsRow(
+                    value,
+                    onChange,
+                    variant,
+                    context,
+                    row.instanceId,
+                    row.rowIndex,
+                    {
+                      twoXlSpan: next === "auto" ? undefined : (next as GridColumnsSpan),
+                    }
+                  )
                 }
               >
                 <SelectTrigger>
@@ -1111,9 +1167,17 @@ function ColumnSizingGrid({
                 <Switch
                   checked={Boolean(row.column.hideOnMobile)}
                   onCheckedChange={(checked) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      hideOnMobile: checked,
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        hideOnMobile: checked,
+                      }
+                    )
                   }
                 />
               </div>
@@ -1128,9 +1192,17 @@ function ColumnSizingGrid({
                 <Switch
                   checked={Boolean(row.column.hideOnTablet)}
                   onCheckedChange={(checked) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      hideOnTablet: checked,
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        hideOnTablet: checked,
+                      }
+                    )
                   }
                 />
               </div>
@@ -1145,9 +1217,17 @@ function ColumnSizingGrid({
                 <Switch
                   checked={Boolean(row.column.hideOnDesktop)}
                   onCheckedChange={(checked) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      hideOnDesktop: checked,
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        hideOnDesktop: checked,
+                      }
+                    )
                   }
                 />
               </div>
@@ -1382,8 +1462,7 @@ function ColumnBehaviorGrid({
                           row.instanceId,
                           row.rowIndex,
                           {
-                            padding:
-                              next === "inherit" ? undefined : (next as GridColumnsPadding),
+                            padding: next === "inherit" ? undefined : (next as GridColumnsPadding),
                           }
                         )
                       }
@@ -1439,9 +1518,17 @@ function ColumnBehaviorGrid({
                 <Select
                   value={row.column.minHeight ?? "md"}
                   onValueChange={(next) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      minHeight: next as GridColumnsMinHeight,
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        minHeight: next as GridColumnsMinHeight,
+                      }
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -1462,10 +1549,18 @@ function ColumnBehaviorGrid({
                 <Select
                   value={row.column.mobileMinHeight ?? "inherit"}
                   onValueChange={(next) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      mobileMinHeight:
-                        next === "inherit" ? undefined : (next as GridColumnsMinHeight),
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        mobileMinHeight:
+                          next === "inherit" ? undefined : (next as GridColumnsMinHeight),
+                      }
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -1486,9 +1581,17 @@ function ColumnBehaviorGrid({
                 <Select
                   value={row.column.alignSelf ?? "inherit"}
                   onValueChange={(next) =>
-                    updateEditableGridColumnsRow(value, onChange, variant, context, row.instanceId, row.rowIndex, {
-                      alignSelf: next as GridColumnsSelfAlign,
-                    })
+                    updateEditableGridColumnsRow(
+                      value,
+                      onChange,
+                      variant,
+                      context,
+                      row.instanceId,
+                      row.rowIndex,
+                      {
+                        alignSelf: next as GridColumnsSelfAlign,
+                      }
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -1649,7 +1752,9 @@ function resolveGridColumnsCardizeControlsState(
 function resolveGridColumnsOrderedInstanceIds(
   context?: WidgetEditorProps<GridColumnsData>["context"]
 ): string[] | undefined {
-  const orderedInstanceIds = resolveGridColumnsSlotTargets(context).map((target) => target.instanceId);
+  const orderedInstanceIds = resolveGridColumnsSlotTargets(context).map(
+    (target) => target.instanceId
+  );
 
   return orderedInstanceIds.length > 0 ? orderedInstanceIds : undefined;
 }
@@ -1715,7 +1820,9 @@ function handleGridColumnsVariantSelection({
 
   const resolvedVariant = resolveGridColumnsVariant(nextVariant);
   if (resolvedVariant === "asymmetric") {
-    onChange(applyGridColumnsAsymmetricPreset(value, resolveGridColumnsOrderedInstanceIds(context)));
+    onChange(
+      applyGridColumnsAsymmetricPreset(value, resolveGridColumnsOrderedInstanceIds(context))
+    );
   }
   onVariantChange(resolvedVariant);
 }
@@ -1879,101 +1986,115 @@ export function GridColumnsWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Grid style</p>
-        <Select
-          value={resolveGridColumnsVariant(variant)}
-          onValueChange={(next) =>
-            handleGridColumnsVariantSelection({
-              nextVariant: next,
-              value,
-              onChange,
-              onVariantChange,
-              context,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <EditorSection
+        id="grid-columns.wizard.quick-start"
+        mode="wizard"
+        role="setup"
+        title="Grid quick start"
+        description="Choose a safe starting grid. Visual owns ongoing layout and surface editing."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Grid style</p>
+          <Select
+            value={resolveGridColumnsVariant(variant)}
+            onValueChange={(next) =>
+              handleGridColumnsVariantSelection({
+                nextVariant: next,
+                value,
+                onChange,
+                onVariantChange,
+                context,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <AsymmetricVariantNotice
-        value={value}
-        onChange={onChange}
-        variant={variant}
-        context={context}
-      />
+        <AsymmetricVariantNotice
+          value={value}
+          onChange={onChange}
+          variant={variant}
+          context={context}
+        />
 
-      <ColumnsCountControl value={value} onChange={onChange} context={context} />
+        <ColumnsCountControl value={value} onChange={onChange} context={context} />
 
-      <LayoutPresetButtons value={value} onChange={onChange} variant={variant} context={context} />
+        <LayoutPresetButtons
+          value={value}
+          onChange={onChange}
+          variant={variant}
+          context={context}
+        />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {wizardColumns.map((column, index) => (
-          <div key={column.id ?? `wizard-column-${index + 1}`} className="space-y-2">
-            <p className="text-sm font-medium">Column {index + 1} label</p>
-            <Input
-              value={column.label ?? ""}
-              onChange={(event) =>
-                updateColumn(value, onChange, index, { label: event.target.value })
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {wizardColumns.map((column, index) => (
+            <div key={column.id ?? `wizard-column-${index + 1}`} className="space-y-2">
+              <p className="text-sm font-medium">Column {index + 1} label</p>
+              <Input
+                value={column.label ?? ""}
+                onChange={(event) =>
+                  updateColumn(value, onChange, index, { label: event.target.value })
+                }
+                placeholder={`Column ${index + 1}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Horizontal gap</p>
+            <Select
+              value={normalized.layout?.gapX ?? gridColumnsDefaults.layout?.gapX ?? "6"}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapX: next as GridColumnsGap })
               }
-              placeholder={`Column ${index + 1}`}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Horizontal gap" />
+              </SelectTrigger>
+              <SelectContent>
+                {gapOptions.map((option) => (
+                  <SelectItem key={`wizard-gap-x-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Horizontal gap</p>
-          <Select
-            value={normalized.layout?.gapX ?? gridColumnsDefaults.layout?.gapX ?? "6"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, { gapX: next as GridColumnsGap })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Horizontal gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={`wizard-gap-x-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Vertical gap</p>
+            <Select
+              value={normalized.layout?.gapY ?? gridColumnsDefaults.layout?.gapY ?? "6"}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, { gapY: next as GridColumnsGap })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Vertical gap" />
+              </SelectTrigger>
+              <SelectContent>
+                {gapOptions.map((option) => (
+                  <SelectItem key={`wizard-gap-y-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Vertical gap</p>
-          <Select
-            value={normalized.layout?.gapY ?? gridColumnsDefaults.layout?.gapY ?? "6"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, { gapY: next as GridColumnsGap })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Vertical gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={`wizard-gap-y-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </EditorSection>
     </div>
   );
 }
@@ -1998,6 +2119,9 @@ export function GridColumnsVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="grid-columns.visual.variant-layout"
+        mode="visual"
+        role="layout"
         title="Variant and layout structure"
         description="Choose grid behavior, alignment, and column-count guidance."
       >
@@ -2063,6 +2187,9 @@ export function GridColumnsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="grid-columns.visual.column-sizing"
+        mode="visual"
+        role="layout"
         title="Column sizing and labels"
         description="Set responsive span tokens and labels for each configured column."
       >
@@ -2125,6 +2252,9 @@ export function GridColumnsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="grid-columns.visual.column-surface"
+        mode="visual"
+        role="visual"
         title="Gap and column surface"
         description="Control spacing between columns and optional cardized wrappers."
       >
@@ -2284,6 +2414,9 @@ export function GridColumnsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="grid-columns.visual.column-overrides"
+        mode="visual"
+        role="layout"
         title="Per-column surfaces and behavior"
         description="Highlight a single column, clamp overflow, and tune per-column height or alignment."
       >
@@ -2291,6 +2424,9 @@ export function GridColumnsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="grid-columns.visual.slot-guidance"
+        mode="visual"
+        role="summary"
         title="Slots and runtime behavior"
         description="`grid-columns` uses repeatable `column` slots (`column:1`, `column:2`, ...)."
       >
@@ -2312,7 +2448,10 @@ export function GridColumnsAdvancedEditor({
   const normalized = normalizeValue(value);
   const style = normalized.style ?? gridColumnsDefaults.style!;
   const resolvedVariant = resolveGridColumnsVariant(variant);
-  const cardizeControlsState = resolveGridColumnsCardizeControlsState(
+  const effectiveColumns = resolveGridColumnsEditableColumns({ value, variant, context });
+  const totals = calculateGridColumnsSpanTotals(effectiveColumns);
+  const slotDriftState = resolveGridColumnsSlotDriftState(value, context);
+  const cardizeState = resolveGridColumnsCardizeControlsState(
     resolvedVariant,
     Boolean(style.cardizeColumns)
   );
@@ -2320,12 +2459,48 @@ export function GridColumnsAdvancedEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="grid-columns.advanced.resolved-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Technical layout tokens"
-        description="Direct control over alignment, gaps, and per-column span tokens."
+        description="Visual owns grid editing. Advanced summarizes spans, slot drift, and cardized state."
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Align</p>
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.variant"
+          label="Variant"
+          path="variant"
+          value={resolvedVariant}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.layout"
+          label="Layout"
+          path="layout"
+          value={`Align ${normalized.layout?.align ?? "start"}, gap X ${normalized.layout?.gapX ?? "6"}, gap Y ${normalized.layout?.gapY ?? "6"}, mobile order ${normalized.layout?.reverseOnMobile ? "reversed" : "normal"}.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.spans"
+          label="Span totals"
+          path="columns"
+          value={`Desktop ${totals.desktop}/12, tablet ${totals.tablet}/12, mobile ${totals.mobile}/12 across ${effectiveColumns.length} columns.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.cardize"
+          label="Cardized columns"
+          path="style"
+          value={`${cardizeState.active ? "On" : "Off"}${cardizeState.helperCopy ? ` - ${cardizeState.helperCopy}` : ""}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.slot-drift"
+          label="Slot drift"
+          value={
+            slotDriftState.hasLiveSlotDrift
+              ? `${slotDriftState.missingLiveInstanceIds.length} live slots missing metadata, ${slotDriftState.phantomSavedInstanceIds.length} saved metadata rows without live slots.`
+              : "Saved column metadata matches the live slot order."
+          }
+        />
+        <div hidden className="hidden" aria-hidden="true">
+          <div>
+            <p>Align</p>
             <Select
               value={normalized.layout?.align ?? "start"}
               onValueChange={(next) =>
@@ -2344,9 +2519,8 @@ export function GridColumnsAdvancedEditor({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap X</p>
+          <div>
+            <p>Gap X</p>
             <Select
               value={normalized.layout?.gapX ?? "6"}
               onValueChange={(next) =>
@@ -2365,9 +2539,8 @@ export function GridColumnsAdvancedEditor({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap Y</p>
+          <div>
+            <p>Gap Y</p>
             <Select
               value={normalized.layout?.gapY ?? "6"}
               onValueChange={(next) =>
@@ -2386,32 +2559,25 @@ export function GridColumnsAdvancedEditor({
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="space-y-2 rounded-md border p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Cardized columns</p>
+          <div>
+            <p>Cardized columns</p>
             <Switch
-              checked={cardizeControlsState.active}
-              disabled={cardizeControlsState.toggleLocked}
+              checked={cardizeState.active}
+              disabled={cardizeState.toggleLocked}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { cardizeColumns: checked })
               }
             />
           </div>
-        </div>
-        {cardizeControlsState.helperCopy ? (
-          <p className="text-xs text-muted-foreground">{cardizeControlsState.helperCopy}</p>
-        ) : null}
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border width</p>
+          <div>
+            <p>Border width</p>
             <Select
               value={style.columnBorderWidth ?? "1"}
-              disabled={!cardizeControlsState.active}
+              disabled={!cardizeState.active}
               onValueChange={(next) =>
-                updateStyle(value, onChange, { columnBorderWidth: next as GridColumnsBorderWidth })
+                updateStyle(value, onChange, {
+                  columnBorderWidth: next as GridColumnsBorderWidth,
+                })
               }
             >
               <SelectTrigger>
@@ -2426,12 +2592,11 @@ export function GridColumnsAdvancedEditor({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Column padding</p>
+          <div>
+            <p>Column padding</p>
             <Select
               value={style.columnPadding ?? "4"}
-              disabled={!cardizeControlsState.active}
+              disabled={!cardizeState.active}
               onValueChange={(next) =>
                 updateStyle(value, onChange, { columnPadding: next as GridColumnsPadding })
               }
@@ -2448,38 +2613,53 @@ export function GridColumnsAdvancedEditor({
               </SelectContent>
             </Select>
           </div>
+          <ColumnBehaviorGrid
+            value={value}
+            onChange={onChange}
+            variant={variant}
+            context={context}
+          />
         </div>
-
-        <div className="rounded-md border p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Reverse on mobile</p>
-              <p className="text-xs text-muted-foreground">
-                Technical toggle for responsive column order.
-              </p>
-            </div>
-            <Switch
-              checked={Boolean(normalized.layout?.reverseOnMobile)}
-              onCheckedChange={(checked) =>
-                updateLayout(value, onChange, { reverseOnMobile: checked })
-              }
-            />
-          </div>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
-
       <EditorSection
+        id="grid-columns.advanced.column-overrides"
+        mode="advanced"
+        role="diagnostics"
         title="Per-column override tokens"
-        description="Advanced fallback path for per-column surface, height, overflow, and alignment overrides."
+        description="Visual owns column override editing. Advanced keeps the resolved override state inspectable."
       >
-        <ColumnBehaviorGrid value={value} onChange={onChange} variant={variant} context={context} />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.column-overrides-summary"
+          label="Column overrides"
+          path="columns[].style"
+          value={`${effectiveColumns.filter((column) => isColumnSurfaceOverrideEnabled(column)).length} of ${effectiveColumns.length} columns use per-column surface overrides.`}
+        />
+        <div hidden className="hidden" aria-hidden="true">
+          <ColumnBehaviorGrid
+            value={value}
+            onChange={onChange}
+            variant={variant}
+            context={context}
+          />
+        </div>
       </EditorSection>
-
       <EditorSection
+        id="grid-columns.advanced.payload"
+        mode="advanced"
+        role="diagnostics"
         title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized data."
+        description="Normalized read-only payload for debugging migrations and saved data."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.raw-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
     </div>
   );

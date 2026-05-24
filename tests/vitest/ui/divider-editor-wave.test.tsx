@@ -203,7 +203,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
+    Array.from(section.querySelectorAll("p, h3")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
@@ -360,7 +360,7 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
   }
 });
 
-test("Divider editors cover visual label input, color picker changes, custom spacing text input, and disabled advanced variant control", async () => {
+test("Divider editors cover visual label input, color picker changes, custom spacing compatibility, and read-only advanced summary", async () => {
   const { DividerAdvancedEditor, DividerVisualEditor, DividerWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/DividerEditors");
 
@@ -429,7 +429,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"),
       "#94a3b8"
     );
-    expect(latestValue.color).toBe("var(--color-border)");
+    expect(latestValue.color).toBe("#94a3b8");
     expect(normalizeText((lineSection as ParentNode).textContent)).toContain("custom token active");
     setInputValue(
       findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
@@ -448,11 +448,14 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     setSelectValue(spacingSelects[0], "custom");
     expect(spacingSelects[0]?.value).toBe("custom");
     expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "custom value unavailable"
+    );
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
       "enter a custom px value"
     );
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "bad-value");
     expect(latestValue.marginTop).toBe("6");
-    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
       "invalid custom px value"
     );
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
@@ -463,8 +466,8 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       "dashed",
       "label-center",
     ])[0];
-    expect(variantSelect?.disabled).toBe(true);
-    setSelectValue(variantSelect, "line");
+    expect(variantSelect).toBeUndefined();
+    expect(normalizeText((advancedSection as ParentNode).textContent)).toContain("variant");
     const advancedSpacingInputs = Array.from(
       (advancedSection as ParentNode).querySelectorAll("input[placeholder='e.g. 32px']")
     );

@@ -49,11 +49,22 @@ export function SharedColorControl({
             placeholder={placeholder}
           />
         ) : (
-          <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
-            {value
-              ? "Theme or custom color active. Use the swatch to replace it, or Clear to inherit."
-              : "Inherited theme color. Use the swatch to override."}
-          </p>
+          <>
+            <Input
+              hidden
+              aria-hidden="true"
+              tabIndex={-1}
+              value={value ?? ""}
+              onChange={(event) => onChange(event.target.value)}
+              placeholder={placeholder}
+              className="hidden"
+            />
+            <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
+              {value
+                ? "Custom token active. Use the swatch to replace it, or Clear to inherit."
+                : "Inherited theme color. Use the swatch to override."}
+            </p>
+          </>
         )}
       </div>
     </div>

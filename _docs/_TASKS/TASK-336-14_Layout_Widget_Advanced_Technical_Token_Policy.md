@@ -6,7 +6,7 @@
 **Category:** Widgets + Layout + Advanced Mode Policy
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-13
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -42,15 +42,15 @@ Visual controls.
 
 ## Sub-Tasks
 
-- [ ] Audit current Advanced controls in all layout widgets.
-- [ ] Classify each path as daily Visual, technical Advanced, read-only
+- [x] Audit current Advanced controls in all layout widgets.
+- [x] Classify each path as daily Visual, technical Advanced, read-only
   summary, or temporary duplicate.
-- [ ] Add/update `editorContract` metadata for all layout widgets.
-- [ ] Remove or downgrade duplicate Advanced controls.
-- [ ] Preserve existing shared truthfulness fixes for Section and Grid Columns.
-- [ ] Add Vitest UI tests for the policy.
-- [ ] Add Playwright smoke evidence for representative layout widgets.
-- [ ] Document the final policy in `_docs/WIDGETS.md`.
+- [x] Add/update `editorContract` metadata for all layout widgets.
+- [x] Remove or downgrade duplicate Advanced controls.
+- [x] Preserve existing shared truthfulness fixes for Section and Grid Columns.
+- [x] Add Vitest UI tests for the policy.
+- [x] Add Playwright smoke evidence for representative layout widgets.
+- [x] Document the final policy in `_docs/WIDGETS.md`.
 
 ## Files to Change
 
@@ -156,3 +156,33 @@ Regression-test shape:
 - Any duplicate writable path is explicitly allowlisted, justified, and
   temporary.
 - Existing layout truthfulness fixes are preserved.
+
+## Completion Notes
+
+- `section`, `grid-columns`, `split-layout`, `stack`, `spacer`, and `divider`
+  now declare v2 editor contracts with setup-only Wizard ownership, Visual-owned
+  daily layout/style controls, and read-only Advanced diagnostics.
+- Visible Visual controls avoid raw CSS/code/token text authoring for
+  nontechnical users; legacy compatibility controls are hidden, aria-hidden, and
+  removed from the tab order.
+- Advanced tabs keep normalized payload snapshots and technical summaries for
+  debugging without duplicating Visual-owned writable paths.
+
+## Validation Notes
+
+- `bun --cwd core lint:types`
+- `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/section.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/stack.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- Playwright CLI targeted reports:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-section-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-grid-columns-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-grid-columns-advanced-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-split-layout-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-stack-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-spacer-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-divider-2026-05-24.md`,
+  `_docs/PLAYWRIGHT/widget-contract-smoke-divider-advanced-2026-05-24.md`.
+- Known fixture debt remains outside this leaf: Stack public route
+  `/test-stack-0516` still renders the historical empty fixture; full-mode
+  Grid/Divider harnas reruns can lose block selection on the third mode reload,
+  but dedicated Advanced-mode reruns pass with zero admin/public/fixture/metadata
+  gaps.

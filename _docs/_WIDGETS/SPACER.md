@@ -23,7 +23,7 @@ None.
 ### Wizard
 - spacer mode (fixed/responsive)
 - named rhythm presets for quick vertical spacing choices
-- desktop height with explicit fixed-mode guidance when `fixed` is active
+- desktop height token preset with explicit fixed-mode guidance when `fixed` is active
 - editor guide toggle
 
 ### Visual
@@ -38,8 +38,9 @@ Notes:
 - Height controls explain the active Tailwind breakpoint ranges for desktop, tablet, and mobile.
 
 ### Advanced
-- direct token, viewport, bounded `clamp()`, or px height editing with the same breakpoint help as Visual
-- normalized payload snapshot
+- read-only computed desktop/tablet/mobile height summaries
+- raw payload snapshot
+- no visible custom CSS/length text entry; Visual owns daily height presets/tokens
 
 ## Runtime Behavior Notes
 
@@ -49,7 +50,7 @@ Notes:
   Spacer still has no widget-local horizontal authoring contract and therefore
   stays a vertical rhythm primitive in v1.
 - Named presets are editor-only shortcuts that write concrete `height` values; Spacer does not persist a separate `preset` field or emit preset-specific DOM markers.
-- Supports token-based heights (`0..32`) plus bounded custom lengths: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
+- Runtime still normalizes legacy/custom height payloads for backward compatibility: bare numbers such as `48` normalize to `48px`, explicit `48px` remains valid, viewport values accept `vh`, `dvh`, `svh`, and `vw`, and fluid values accept canonical `clamp(min, preferred, max)` with `px|rem` boundaries and a viewport-unit preferred segment.
 - Rejects unsafe custom strings such as standalone `rem`, `calc(...)`, CSS variables, URLs, semicolons, malformed `clamp()`, and unsupported units like `lvh` by falling back to deterministic defaults before runtime output.
 - Shows optional guide label only in preview and editor-preview contexts.
 - The guide remains decorative inside the `aria-hidden` Spacer shell and does not expose a separate ARIA role or label.

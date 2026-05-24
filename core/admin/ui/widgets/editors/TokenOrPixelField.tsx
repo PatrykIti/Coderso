@@ -107,6 +107,7 @@ export function TokenOrPixelField({
   fieldDescription,
   customInputLabel,
   customInputHelp,
+  allowCustom = true,
 }: {
   label: string;
   value: string;
@@ -122,6 +123,7 @@ export function TokenOrPixelField({
   fieldDescription?: string;
   customInputLabel?: string;
   customInputHelp?: string;
+  allowCustom?: boolean;
 }) {
   const valueIsToken = isToken(value);
   const fieldId = useId();
@@ -153,6 +155,11 @@ export function TokenOrPixelField({
       : value === "0" && tokenOptions.some((option) => option.id === "none")
         ? "none"
         : value;
+  const tokenOnlyCustomMessage = !allowCustom
+    ? valueIsToken
+      ? `Resolved from token: ${savedResolvedValue}`
+      : `Saved custom value resolves to ${savedResolvedValue}. Pick a preset to replace it.`
+    : null;
 
   return (
     <div className="space-y-2 rounded-md border p-3">
@@ -182,33 +189,70 @@ export function TokenOrPixelField({
               {option.label}
             </SelectItem>
           ))}
-          <SelectItem value={customOptionValue}>{customOptionLabel}</SelectItem>
+          {allowCustom ? (
+            <SelectItem value={customOptionValue}>{customOptionLabel}</SelectItem>
+          ) : (
+            <SelectItem value={customOptionValue} disabled>
+              {valueIsToken ? "Custom value unavailable" : "Saved custom value"}
+            </SelectItem>
+          )}
         </SelectContent>
       </Select>
-      <Input
-        value={customDraft ?? ""}
-        onChange={(event) => {
-          const nextDraft = event.target.value;
-          setCustomDraft(nextDraft);
-          const normalized = normalizeCustomValue(nextDraft);
-          if (normalized) onChange(normalized);
-        }}
-        aria-label={customInputLabel ?? `${label} custom value`}
-        aria-describedby={customInputDescribedBy}
-        placeholder={inputPlaceholder}
-      />
-      {customInputHelp ? (
-        <p id={customInputHelpId} className="text-xs text-muted-foreground">
-          {customInputHelp}
-        </p>
-      ) : null}
-      <p
-        id={validationId}
-        role={validation.status === "custom-invalid" ? "alert" : undefined}
-        className="text-xs text-muted-foreground"
-      >
-        {validation.message}
-      </p>
+      {allowCustom ? (
+        <>
+          <Input
+            value={customDraft ?? ""}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              setCustomDraft(nextDraft);
+              const normalized = normalizeCustomValue(nextDraft);
+              if (normalized) onChange(normalized);
+            }}
+            aria-label={customInputLabel ?? `${label} custom value`}
+            aria-describedby={customInputDescribedBy}
+            placeholder={inputPlaceholder}
+          />
+          {customInputHelp ? (
+            <p id={customInputHelpId} className="text-xs text-muted-foreground">
+              {customInputHelp}
+            </p>
+          ) : null}
+          <p
+            id={validationId}
+            role={validation.status === "custom-invalid" ? "alert" : undefined}
+            className="text-xs text-muted-foreground"
+          >
+            {validation.message}
+          </p>
+        </>
+      ) : (
+        <>
+          <Input
+            hidden
+            aria-label={customInputLabel ?? `${label} custom value`}
+            aria-describedby={customInputDescribedBy}
+            aria-hidden="true"
+            tabIndex={-1}
+            value={customDraft ?? ""}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              setCustomDraft(nextDraft);
+              const normalized = normalizeCustomValue(nextDraft);
+              if (normalized) onChange(normalized);
+            }}
+            placeholder={inputPlaceholder}
+            className="hidden"
+          />
+          {customInputHelp ? (
+            <p id={customInputHelpId} hidden className="hidden">
+              {customInputHelp}
+            </p>
+          ) : null}
+          <p id={validationId} className="text-xs text-muted-foreground">
+            {tokenOnlyCustomMessage}
+          </p>
+        </>
+      )}
     </div>
   );
 }

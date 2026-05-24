@@ -31,8 +31,12 @@ import {
   type StackResolvedResponsiveValue,
   type StackVariantId,
 } from "../../../../widgets/core/stack";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: StackVariantId;
@@ -305,18 +309,28 @@ function applyVariantDataPatch(
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -599,140 +613,154 @@ export function StackWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Stack style</p>
-        <Select
-          value={resolveStackVariant(variant)}
-          onValueChange={(next) =>
-            applyVariantDataPatch(
-              next as StackVariantId,
-              buildVariantSyncedStackData(value, next as StackVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <EditorSection
+        id="stack.wizard.quick-start"
+        mode="wizard"
+        role="setup"
+        title="Stack quick start"
+        description="Pick a safe starting flow. Visual owns ongoing responsive layout editing."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Stack style</p>
+          <Select
+            value={resolveStackVariant(variant)}
+            onValueChange={(next) =>
+              applyVariantDataPatch(
+                next as StackVariantId,
+                buildVariantSyncedStackData(value, next as StackVariantId),
+                onChange,
+                onVariantChange,
+                onBlockPatch
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Mobile direction</p>
-        <Select
-          value={direction.mobile}
-          onValueChange={(next) =>
-            updateDirection(value, variant, onChange, { mobile: next as StackDirection })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Mobile direction" />
-          </SelectTrigger>
-          <SelectContent>
-            {directionOptions.map((option) => (
-              <SelectItem key={`wizard-mobile-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Mobile direction</p>
+          <Select
+            value={direction.mobile}
+            onValueChange={(next) =>
+              updateDirection(value, variant, onChange, { mobile: next as StackDirection })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Mobile direction" />
+            </SelectTrigger>
+            <SelectContent>
+              {directionOptions.map((option) => (
+                <SelectItem key={`wizard-mobile-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Gap on all breakpoints</p>
-        <p className="text-xs text-muted-foreground">
-          Writes desktop, tablet, and mobile spacing together. Use Visual for per-breakpoint gaps.
-        </p>
-        <Select
-          value={gap.mobile}
-          onValueChange={(next) => {
-            const resolvedGap = next as StackGap;
-            updateGap(value, variant, onChange, {
-              desktop: resolvedGap,
-              tablet: resolvedGap,
-              mobile: resolvedGap,
-            });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Gap on all breakpoints" />
-          </SelectTrigger>
-          <SelectContent>
-            {gapOptions.map((option) => (
-              <SelectItem key={`wizard-gap-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Gap on all breakpoints</p>
+          <p className="text-xs text-muted-foreground">
+            Writes desktop, tablet, and mobile spacing together. Use Visual for per-breakpoint gaps.
+          </p>
+          <Select
+            value={gap.mobile}
+            onValueChange={(next) => {
+              const resolvedGap = next as StackGap;
+              updateGap(value, variant, onChange, {
+                desktop: resolvedGap,
+                tablet: resolvedGap,
+                mobile: resolvedGap,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Gap on all breakpoints" />
+            </SelectTrigger>
+            <SelectContent>
+              {gapOptions.map((option) => (
+                <SelectItem key={`wizard-gap-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Align on all breakpoints</p>
-        <p className="text-xs text-muted-foreground">
-          Writes desktop, tablet, and mobile alignment together. Use Visual for per-breakpoint axis
-          control.
-        </p>
-        <Select
-          value={align.mobile}
-          onValueChange={(next) =>
-            writeResponsiveMetaAllBreakpoints(value, variant, onChange, "align", next as StackAlign)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Align on all breakpoints" />
-          </SelectTrigger>
-          <SelectContent>
-            {alignOptions.map((option) => (
-              <SelectItem key={`wizard-align-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Align on all breakpoints</p>
+          <p className="text-xs text-muted-foreground">
+            Writes desktop, tablet, and mobile alignment together. Use Visual for per-breakpoint
+            axis control.
+          </p>
+          <Select
+            value={align.mobile}
+            onValueChange={(next) =>
+              writeResponsiveMetaAllBreakpoints(
+                value,
+                variant,
+                onChange,
+                "align",
+                next as StackAlign
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Align on all breakpoints" />
+            </SelectTrigger>
+            <SelectContent>
+              {alignOptions.map((option) => (
+                <SelectItem key={`wizard-align-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Justify on all breakpoints</p>
-        <p className="text-xs text-muted-foreground">
-          Writes desktop, tablet, and mobile distribution together. Use Visual for per-breakpoint
-          distribution and wrap.
-        </p>
-        <Select
-          value={justify.mobile}
-          onValueChange={(next) =>
-            writeResponsiveMetaAllBreakpoints(
-              value,
-              variant,
-              onChange,
-              "justify",
-              next as StackJustify
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Justify on all breakpoints" />
-          </SelectTrigger>
-          <SelectContent>
-            {justifyOptions.map((option) => (
-              <SelectItem key={`wizard-justify-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Justify on all breakpoints</p>
+          <p className="text-xs text-muted-foreground">
+            Writes desktop, tablet, and mobile distribution together. Use Visual for per-breakpoint
+            distribution and wrap.
+          </p>
+          <Select
+            value={justify.mobile}
+            onValueChange={(next) =>
+              writeResponsiveMetaAllBreakpoints(
+                value,
+                variant,
+                onChange,
+                "justify",
+                next as StackJustify
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Justify on all breakpoints" />
+            </SelectTrigger>
+            <SelectContent>
+              {justifyOptions.map((option) => (
+                <SelectItem key={`wizard-justify-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <SlotGuidanceCard />
+        <SlotGuidanceCard />
+      </EditorSection>
     </div>
   );
 }
@@ -747,6 +775,9 @@ export function StackVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="stack.visual.variant-flow"
+        mode="visual"
+        role="layout"
         title="Variant and flow"
         description="Choose the starting preset and inspect the resulting flow miniature."
       >
@@ -765,6 +796,9 @@ export function StackVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="stack.visual.responsive-direction"
+        mode="visual"
+        role="layout"
         title="Responsive direction"
         description="Control flow direction and gap independently per breakpoint."
       >
@@ -772,6 +806,9 @@ export function StackVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="stack.visual.responsive-axis-wrap"
+        mode="visual"
+        role="layout"
         title="Responsive alignment and wrap"
         description="Tune align, justify, and wrap for each breakpoint."
       >
@@ -779,6 +816,9 @@ export function StackVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="stack.visual.slot-guidance"
+        mode="visual"
+        role="summary"
         title="Slot guidance"
         description="Stack keeps one fixed content slot for child widgets."
       >
@@ -789,23 +829,43 @@ export function StackVisualEditor({
 }
 
 export function StackAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<StackData>) {
-  const { normalized } = resolveEditorState(value, variant);
+  const { normalized, direction, gap, align, justify, wrap } = resolveEditorState(value, variant);
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="stack.advanced.responsive-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Technical flow tokens"
-        description="Direct token-level control for direction, spacing, responsive alignment, and wrap."
+        description="Visual owns responsive flow editing. Advanced shows the resolved breakpoint contract."
       >
-        <DirectionAndGapGrid value={value} variant={variant} onChange={onChange} />
-        <ResponsiveAxisAndWrapGrid value={value} variant={variant} onChange={onChange} />
+        {stackBreakpoints.map((breakpoint) => (
+          <ReadonlyWidgetSummaryRow
+            key={breakpoint}
+            id={`stack.advanced.${breakpoint}`}
+            label={breakpointLabels[breakpoint]}
+            path="direction"
+            value={`${direction[breakpoint]} flow, ${gapScaleLabels[gap[breakpoint]]}, align ${align[breakpoint]}, justify ${justify[breakpoint]}, wrap ${wrap[breakpoint] ? "on" : "off"}.`}
+          />
+        ))}
+        <div hidden className="hidden" aria-hidden="true">
+          <DirectionAndGapGrid value={value} variant={variant} onChange={onChange} />
+          <ResponsiveAxisAndWrapGrid value={value} variant={variant} onChange={onChange} />
+        </div>
       </EditorSection>
-
       <EditorSection
+        id="stack.advanced.payload-snapshot"
+        mode="advanced"
+        role="diagnostics"
         title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized data."
+        description="Normalized read-only payload for debugging migrations and saved data."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="stack.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
     </div>
   );

@@ -26,7 +26,7 @@ repeatable internal regions.
 ### Wizard
 - quick preset cards and matching variant cards
 - label/title/description onboarding
-- basic background color
+- no visible surface, CSS, or token text entry; surface authoring starts in Visual
 
 ### Visual
 Sections:
@@ -74,9 +74,10 @@ Notes:
   metadata without widening Section into interactive media.
 
 ### Advanced
-- semantics tokens (`anchorId`, `ariaLabel`)
-- normalized payload snapshot for diagnostics
+- read-only layout, surface, and semantics summaries
+- raw payload snapshot for diagnostics
 - no duplicated surface numeric controls; `gradientAngle` and `overlayOpacity` stay in Visual
+- semantics/anchor editing is Visual-owned so Advanced stays diagnostic
 
 ## Local Presets
 

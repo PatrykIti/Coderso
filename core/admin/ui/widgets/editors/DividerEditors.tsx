@@ -1,8 +1,6 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -10,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import {
@@ -38,10 +37,15 @@ import {
   type DividerVariantId,
   type DividerWidthMode,
 } from "../../../../widgets/core/divider";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField, SharedColorFieldInputs } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { ClearableInputField } from "./ClearableFields";
 import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: DividerVariantId;
@@ -70,6 +74,14 @@ const widthModeOptions: Array<{ id: DividerWidthMode; label: string }> = [
   { id: "container", label: "Container width" },
   { id: "custom", label: "Custom width" },
 ];
+
+const customWidthOptions = [
+  { id: "240px", label: "Small (240px)" },
+  { id: "320px", label: "Default (320px)" },
+  { id: "480px", label: "Medium (480px)" },
+  { id: "640px", label: "Wide (640px)" },
+  { id: "75%", label: "Three-quarter width" },
+] as const;
 
 const containerWidthOptions = dividerContainerWidthTokens.map((token) => ({
   id: token,
@@ -170,18 +182,28 @@ function updateData(
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -235,19 +257,15 @@ function ColorField({
   pickerFallback: string;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">{label}</p>
-      <SharedColorFieldInputs
-        value={value}
-        onChange={onChange}
-        onPickerChange={(next) => {
-          const currentValue = value?.trim();
-          onChange(currentValue?.startsWith("var(") ? currentValue : next);
-        }}
-        placeholder={placeholder}
-        pickerFallback={pickerFallback}
-      />
-    </div>
+    <SharedColorControl
+      label={label}
+      value={value}
+      onChange={onChange}
+      onSwatchChange={onChange}
+      placeholder={placeholder}
+      pickerFallback={pickerFallback}
+      showValueInput={false}
+    />
   );
 }
 
@@ -277,46 +295,51 @@ function CustomWidthField({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const lastCommittedValueRef = useRef(value);
-  const [draft, setDraft] = useState(value);
-
-  useEffect(() => {
-    if (value === lastCommittedValueRef.current) return;
-    lastCommittedValueRef.current = value;
-    setDraft(value);
-  }, [value]);
-
-  const trimmed = draft.trim();
-  const isEmpty = trimmed.length === 0;
-  const isValid = cssLengthPattern.test(trimmed);
-  const needsUnit = /^\d+(?:\.\d+)?$/.test(trimmed);
+  const normalizedValue = cssLengthPattern.test(value) ? value.toLowerCase() : "320px";
+  const hasLegacyCustomValue =
+    value.trim().length > 0 && !customWidthOptions.some((option) => option.id === normalizedValue);
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Custom width</p>
+      <Select
+        value={hasLegacyCustomValue ? "legacy-custom" : normalizedValue}
+        onValueChange={onChange}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select custom width" />
+        </SelectTrigger>
+        <SelectContent>
+          {customWidthOptions.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.label}
+            </SelectItem>
+          ))}
+          {hasLegacyCustomValue ? (
+            <SelectItem value="legacy-custom" disabled>
+              Saved custom width
+            </SelectItem>
+          ) : null}
+        </SelectContent>
+      </Select>
       <Input
-        value={draft}
+        hidden
+        aria-hidden="true"
+        tabIndex={-1}
+        value={value}
         onChange={(event) => {
-          const nextDraft = event.target.value;
-          setDraft(nextDraft);
-          const nextTrimmed = nextDraft.trim();
+          const nextTrimmed = event.target.value.trim();
           if (cssLengthPattern.test(nextTrimmed)) {
             onChange(nextTrimmed.toLowerCase());
           }
         }}
         placeholder="e.g. 320px or 60%"
+        className="hidden"
       />
-      <p
-        role={!isEmpty && !isValid ? "alert" : undefined}
-        className="text-xs text-muted-foreground"
-      >
-        {isEmpty
-          ? `Enter a CSS length. Saved width stays ${value}.`
-          : isValid
-            ? `Resolved width: ${trimmed.toLowerCase()}`
-            : needsUnit
-              ? `Add a unit such as px, rem, em, or %. Saved width stays ${value}.`
-              : `Invalid width. Saved width stays ${value}.`}
+      <p className="text-xs text-muted-foreground">
+        {hasLegacyCustomValue
+          ? `Saved custom width is ${value}. Pick a preset to replace it.`
+          : `Resolved width: ${normalizedValue}.`}
       </p>
     </div>
   );
@@ -713,6 +736,7 @@ function SpacingFields({
         resolveCss={resolveDividerSpaceCss}
         selectPlaceholder="Spacing token"
         inputPlaceholder="e.g. 32px"
+        allowCustom={false}
       />
       <TokenOrPixelField
         label="Margin bottom"
@@ -725,76 +749,8 @@ function SpacingFields({
         resolveCss={resolveDividerSpaceCss}
         selectPlaceholder="Spacing token"
         inputPlaceholder="e.g. 32px"
+        allowCustom={false}
       />
-    </div>
-  );
-}
-
-function ResetActions({
-  value,
-  onChange,
-  variant,
-}: {
-  value: DividerData;
-  onChange: (next: DividerData) => void;
-  variant: string;
-}) {
-  const resetLabel = () =>
-    updateData(value, variant, onChange, {
-      label: dividerDefaults.label ?? "",
-      labelColor: dividerDefaults.labelColor,
-      labelSize: dividerDefaults.labelSize,
-      labelWeight: dividerDefaults.labelWeight,
-      labelTransform: dividerDefaults.labelTransform,
-      labelLetterSpacing: dividerDefaults.labelLetterSpacing,
-      labelGap: dividerDefaults.labelGap,
-    });
-
-  const resetStyle = () =>
-    updateData(value, variant, onChange, {
-      thickness: dividerDefaults.thickness,
-      color: dividerDefaults.color,
-      width: dividerDefaults.width,
-      containerWidth: dividerDefaults.containerWidth,
-      customWidth: dividerDefaults.customWidth,
-      align: dividerDefaults.align,
-      lineStyle: resolveDividerDefaultLineStyle(variant),
-      opacity: dividerDefaults.opacity,
-      dashPattern: dividerDefaults.dashPattern,
-      visibility: dividerDefaults.visibility,
-    });
-
-  const resetSpacing = () =>
-    updateData(value, variant, onChange, {
-      marginTop: dividerDefaults.marginTop,
-      marginBottom: dividerDefaults.marginBottom,
-    });
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="outline" onClick={resetLabel}>
-        Reset label
-      </Button>
-      <Button type="button" variant="outline" onClick={resetStyle}>
-        Reset style
-      </Button>
-      <Button type="button" variant="outline" onClick={resetSpacing}>
-        Reset spacing
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onChange(normalizeValue(value, variant))}
-      >
-        Normalize now
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onChange(normalizeValue(dividerDefaults, variant))}
-      >
-        Reset to defaults
-      </Button>
     </div>
   );
 }
@@ -811,142 +767,150 @@ export function DividerWizardEditor({
 
   return (
     <div className="space-y-4">
-      <DividerPreview value={value} variant={variant} />
+      <EditorSection
+        id="divider.wizard.quick-start"
+        mode="wizard"
+        role="setup"
+        title="Divider quick start"
+        description="Choose a safe separator preset. Visual owns ongoing appearance and rhythm editing."
+      >
+        <DividerPreview value={value} variant={variant} />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Divider style</p>
-        <Select value={resolvedVariant} onValueChange={(next) => onVariantChange?.(next)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select divider style" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {resolvedVariant === "label-center" ? (
-        <ClearableInputField
-          label="Center label"
-          value={normalized.label}
-          onChange={(next) => updateData(value, variant, onChange, { label: next })}
-          onClear={() =>
-            updateData(value, variant, onChange, { label: dividerDefaults.label ?? "" })
-          }
-          placeholder="Optional label"
-        />
-      ) : null}
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Line thickness</p>
-        <Select
-          value={String(normalized.thickness ?? 1)}
-          onValueChange={(next) =>
-            updateData(value, variant, onChange, { thickness: Number(next) })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select thickness" />
-          </SelectTrigger>
-          <SelectContent>
-            {thicknessOptions.map((option) => (
-              <SelectItem key={`wizard-thickness-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <ColorField
-        label="Line color"
-        value={normalized.color}
-        onChange={(next) => updateData(value, variant, onChange, { color: next })}
-        placeholder="var(--color-border)"
-        pickerFallback="#e2e8f0"
-      />
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Width mode</p>
-        <Select
-          value={widthMode}
-          onValueChange={(next) =>
-            updateData(value, variant, onChange, { width: next as DividerWidthMode })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select width mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {widthModeOptions.map((option) => (
-              <SelectItem key={`wizard-width-${option.id}`} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {widthMode === "container" ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Container width</p>
-          <Select
-            value={normalized.containerWidth ?? "md"}
-            onValueChange={(next) =>
-              updateData(value, variant, onChange, {
-                containerWidth: next as DividerData["containerWidth"],
-              })
-            }
-          >
+          <p className="text-sm font-medium">Divider style</p>
+          <Select value={resolvedVariant} onValueChange={(next) => onVariantChange?.(next)}>
             <SelectTrigger>
-              <SelectValue placeholder="Select container width" />
+              <SelectValue placeholder="Select divider style" />
             </SelectTrigger>
             <SelectContent>
-              {containerWidthOptions.map((option) => (
-                <SelectItem key={`wizard-container-${option.id}`} value={option.id}>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      ) : null}
 
-      {widthMode === "custom" ? (
-        <CustomWidthField
-          value={normalized.customWidth ?? (dividerDefaults.customWidth as string)}
-          onChange={(next) => updateData(value, variant, onChange, { customWidth: next })}
-        />
-      ) : null}
+        {resolvedVariant === "label-center" ? (
+          <ClearableInputField
+            label="Center label"
+            value={normalized.label}
+            onChange={(next) => updateData(value, variant, onChange, { label: next })}
+            onClear={() =>
+              updateData(value, variant, onChange, { label: dividerDefaults.label ?? "" })
+            }
+            placeholder="Optional label"
+          />
+        ) : null}
 
-      {widthMode !== "full" ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Horizontal alignment</p>
+          <p className="text-sm font-medium">Line thickness</p>
           <Select
-            value={normalized.align ?? "center"}
+            value={String(normalized.thickness ?? 1)}
             onValueChange={(next) =>
-              updateData(value, variant, onChange, { align: next as DividerAlignment })
+              updateData(value, variant, onChange, { thickness: Number(next) })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
+              <SelectValue placeholder="Select thickness" />
             </SelectTrigger>
             <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={`wizard-align-${option.id}`} value={option.id}>
+              {thicknessOptions.map((option) => (
+                <SelectItem key={`wizard-thickness-${option.id}`} value={option.id}>
                   {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-      ) : null}
 
-      <SpacingFields value={value} onChange={onChange} variant={variant} />
+        <ColorField
+          label="Line color"
+          value={normalized.color}
+          onChange={(next) => updateData(value, variant, onChange, { color: next })}
+          placeholder="var(--color-border)"
+          pickerFallback="#e2e8f0"
+        />
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Width mode</p>
+          <Select
+            value={widthMode}
+            onValueChange={(next) =>
+              updateData(value, variant, onChange, { width: next as DividerWidthMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select width mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {widthModeOptions.map((option) => (
+                <SelectItem key={`wizard-width-${option.id}`} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {widthMode === "container" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Container width</p>
+            <Select
+              value={normalized.containerWidth ?? "md"}
+              onValueChange={(next) =>
+                updateData(value, variant, onChange, {
+                  containerWidth: next as DividerData["containerWidth"],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select container width" />
+              </SelectTrigger>
+              <SelectContent>
+                {containerWidthOptions.map((option) => (
+                  <SelectItem key={`wizard-container-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        {widthMode === "custom" ? (
+          <CustomWidthField
+            value={normalized.customWidth ?? (dividerDefaults.customWidth as string)}
+            onChange={(next) => updateData(value, variant, onChange, { customWidth: next })}
+          />
+        ) : null}
+
+        {widthMode !== "full" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Horizontal alignment</p>
+            <Select
+              value={normalized.align ?? "center"}
+              onValueChange={(next) =>
+                updateData(value, variant, onChange, { align: next as DividerAlignment })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignmentOptions.map((option) => (
+                  <SelectItem key={`wizard-align-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+
+        <SpacingFields value={value} onChange={onChange} variant={variant} />
+      </EditorSection>
     </div>
   );
 }
@@ -962,6 +926,9 @@ export function DividerVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="divider.visual.preview"
+        mode="visual"
+        role="summary"
         title="Preview"
         description="Check the current Divider output without leaving the editor."
       >
@@ -969,6 +936,9 @@ export function DividerVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="divider.visual.variant-label"
+        mode="visual"
+        role="visual"
         title="Variant and label"
         description="Choose divider style and configure the centered label when needed."
       >
@@ -977,6 +947,9 @@ export function DividerVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="divider.visual.line-width"
+        mode="visual"
+        role="visual"
         title="Line style and width"
         description="Adjust line style, width behavior, alignment, and visibility."
       >
@@ -984,6 +957,9 @@ export function DividerVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="divider.visual.spacing"
+        mode="visual"
+        role="layout"
         title="Spacing around divider"
         description="Control top and bottom spacing for predictable rhythm."
       >
@@ -1000,56 +976,97 @@ export function DividerAdvancedEditor({
 }: WidgetEditorProps<DividerData>) {
   const normalized = normalizeValue(value, variant);
   const resolvedVariant = resolveDividerVariant(variant);
+  const widthSummary =
+    normalized.width === "custom"
+      ? `Custom width ${normalized.customWidth ?? dividerDefaults.customWidth}`
+      : normalized.width === "container"
+        ? `Container width ${normalized.containerWidth ?? "md"}`
+        : "Full width";
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="divider.advanced.preview"
+        mode="advanced"
+        role="summary"
         title="Preview"
-        description="Inspect the normalized Divider output while adjusting technical fields."
+        description="Inspect the normalized Divider output without editing Visual-owned fields."
       >
         <DividerPreview value={value} variant={variant} />
       </EditorSection>
 
       <EditorSection
+        id="divider.advanced.computed-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Technical divider tokens"
-        description="Direct access to Divider-owned rendering fields without changing variant ownership."
+        description="Visual owns divider editing. Advanced summarizes the resolved rendering contract."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Variant</p>
-          <Select value={resolvedVariant} disabled onValueChange={() => undefined}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={`advanced-variant-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Variant is controlled by visual variant cards.
-          </p>
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.variant"
+          label="Variant"
+          path="variant"
+          value={resolvedVariant}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.line"
+          label="Line"
+          path="lineStyle"
+          value={`${normalized.lineStyle ?? resolveDividerDefaultLineStyle(resolvedVariant)} line, ${normalized.thickness ?? 1}px thick, ${normalized.opacity ?? "100"}% opacity, ${normalized.visibility ?? "line"}.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.width"
+          label="Width"
+          path="width"
+          value={`${widthSummary}, aligned ${normalized.align ?? "center"}.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.spacing"
+          label="Spacing"
+          path="marginTop"
+          value={`Top ${normalized.marginTop ?? "6"} (${resolveDividerSpaceCss(normalized.marginTop ?? "6")}), bottom ${normalized.marginBottom ?? "6"} (${resolveDividerSpaceCss(normalized.marginBottom ?? "6")}).`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.label"
+          label="Label"
+          path="label"
+          value={
+            normalized.label
+              ? `${normalized.label} (${normalized.labelSize ?? "xs"}, ${normalized.labelWeight ?? "medium"})`
+              : "No centered label."
+          }
+        />
+        <div hidden className="hidden" aria-hidden="true">
+          <LabelStyleFields value={value} onChange={onChange} variant={resolvedVariant} />
+          <LineAndWidthFields value={value} onChange={onChange} variant={resolvedVariant} />
+          <SpacingFields value={value} onChange={onChange} variant={variant} />
         </div>
-
-        <LabelStyleFields value={value} onChange={onChange} variant={resolvedVariant} />
-        <LineAndWidthFields value={value} onChange={onChange} variant={resolvedVariant} />
-        <SpacingFields value={value} onChange={onChange} variant={variant} />
       </EditorSection>
-
       <EditorSection
+        id="divider.advanced.normalization"
+        mode="advanced"
+        role="diagnostics"
         title="Normalization and safeguards"
-        description="Apply deterministic defaults without changing the active variant."
+        description="Advanced documents normalized rendering rules without exposing raw CSS editing."
       >
-        <ResetActions value={value} onChange={onChange} variant={variant} />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.normalization-summary"
+          label="Normalization"
+          value="Variant, width, line, label, and spacing values are normalized before runtime rendering."
+        />
       </EditorSection>
-
       <EditorSection
+        id="divider.advanced.payload-snapshot"
+        mode="advanced"
+        role="diagnostics"
         title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized data."
+        description="Normalized read-only payload for debugging migrations and saved data."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="divider.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
     </div>
   );

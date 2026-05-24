@@ -47,9 +47,9 @@ Notes:
   `responsive`.
 
 ### Advanced
-- token-level direction and gap control
-- responsive align/justify/wrap control per breakpoint
-- normalized payload snapshot
+- read-only responsive flow summaries for direction, gap, align, justify, and wrap
+- raw payload snapshot
+- no duplicate editable direction/gap/alignment controls; Visual owns daily flow editing
 
 ## Runtime Behavior Notes
 

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1933 tasks
+- **Done:** 1934 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-14 | Layout Widget Advanced Technical Token Policy | Medium | Large | Define when layout Advanced may own technical tokens versus read-only summaries |
 | TASK-336-15 | Renderer Fixture Overflow and Team UX Contract | Medium | Large | Fix frontend fixture/CSS drift, overflow markers, and Team spotlight smoke coverage |
 | TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Harden the existing `WidgetBlock.editor.wizardCompleted` lifecycle only after widget owner contracts are strict |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -68,6 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336-14 | Layout Widget Advanced Technical Token Policy | Medium | Large | Done (2026-05-24): section, grid-columns, split-layout, stack, spacer, and divider now have strict v2 contracts, setup-only Wizard ownership, Visual preset/swatch controls, read-only Advanced diagnostics, and targeted Vitest plus Playwright smoke coverage. |
 | TASK-336-13 | P2 Source Style and Diagnostics Cleanup | Medium | Large | Done (2026-05-24): content-list, booking-calendar, appointment-form, and product-table now have strict v2 contracts, setup-only Wizard ownership, Visual swatch/preset controls, read-only Advanced diagnostics, and targeted Vitest/Bun coverage. |
 | TASK-336-12 | Stats KPI Mode Ownership | High | Large | Done (2026-05-24): Stats KPI now has a v2 editor contract, Visual owns daily KPI content/style/layout, Advanced is read-only diagnostics plus confirmed repair actions, and targeted Vitest plus Playwright smoke passed. |
 | TASK-336-11 | Hero Mode Ownership and Legacy Control Migration | High | Large | Done (2026-05-24): Wizard owns one-time layout/headline/primary CTA seeds, Visual owns Hero presentation, Advanced is read-only layout/style/media diagnostics/runtime payload, and targeted Vitest plus Playwright smoke passed. |

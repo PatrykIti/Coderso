@@ -3,6 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type {
   DeviceTarget,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -40,6 +41,34 @@ export type SpacerData = {
     mobile?: string;
   };
   showGuideInEditor?: boolean;
+};
+
+export const spacerEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "spacer.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "spacer.visual.rhythm",
+      title: "Rhythm and guide",
+      role: "layout",
+      writablePaths: ["variant", "height", "showGuideInEditor"],
+    },
+    {
+      mode: "advanced",
+      id: "spacer.advanced.computed-height",
+      title: "Computed height summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["height", "showGuideInEditor"],
+    },
+  ],
 };
 
 export const spacerSchema = {
@@ -331,6 +360,7 @@ export function createSpacerWidget(editors: {
     schema: spacerSchema,
     defaults: spacerDefaults,
     editor: editors,
+    editorContract: spacerEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

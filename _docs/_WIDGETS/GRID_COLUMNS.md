@@ -61,14 +61,13 @@ Notes:
 
 ### Advanced
 
-- technical layout tokens (`align`, `gapX`, `gapY`, global cardized tokens,
-  reverse-on-mobile)
-- per-column override tokens for surface, overflow, height, and alignment
-- normalized payload snapshot
-- `masonry-lite` keeps the global cardize toggle locked on here as well so the
-  advanced editor does not drift from Visual/runtime truthfulness
-- border-width and column-padding controls stay disabled until cardized
-  styling is active, with explicit helper copy when they are inactive
+- read-only technical layout token summary for alignment, gaps, span totals,
+  cardized state, and live slot drift
+- read-only per-column override summary for surface/overflow/height/alignment
+- raw payload snapshot for diagnostics
+- `masonry-lite` cardized state is summarized here; writable cardize/surface
+  controls stay Visual-owned so Advanced does not duplicate Visual/runtime
+  truthfulness
 
 ## Runtime Behavior
 

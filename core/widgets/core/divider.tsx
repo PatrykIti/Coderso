@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 
 export const dividerSpaceTokens = [
   "none",
@@ -66,6 +66,76 @@ export type DividerData = {
   visibility?: DividerVisibility;
   marginTop?: string;
   marginBottom?: string;
+};
+
+export const dividerEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "divider.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "divider.visual.appearance",
+      title: "Appearance and rhythm",
+      role: "visual",
+      writablePaths: [
+        "variant",
+        "label",
+        "labelColor",
+        "labelSize",
+        "labelWeight",
+        "labelTransform",
+        "labelLetterSpacing",
+        "labelGap",
+        "thickness",
+        "color",
+        "width",
+        "containerWidth",
+        "customWidth",
+        "align",
+        "lineStyle",
+        "opacity",
+        "dashPattern",
+        "visibility",
+        "marginTop",
+        "marginBottom",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "divider.advanced.computed-summary",
+      title: "Computed divider summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "variant",
+        "label",
+        "labelColor",
+        "labelSize",
+        "labelWeight",
+        "labelTransform",
+        "labelLetterSpacing",
+        "labelGap",
+        "thickness",
+        "color",
+        "width",
+        "containerWidth",
+        "customWidth",
+        "align",
+        "lineStyle",
+        "opacity",
+        "dashPattern",
+        "visibility",
+        "marginTop",
+        "marginBottom",
+      ],
+    },
+  ],
 };
 
 export const dividerSchema = {
@@ -493,6 +563,7 @@ export function createDividerWidget(editors: {
     schema: dividerSchema,
     defaults: dividerDefaults,
     editor: editors,
+    editorContract: dividerEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

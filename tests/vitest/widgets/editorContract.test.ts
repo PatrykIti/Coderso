@@ -16,7 +16,13 @@ import {
 import { appointmentFormEditorContract } from "../../../core/widgets/core/appointmentForm";
 import { bookingCalendarEditorContract } from "../../../core/widgets/core/bookingCalendar";
 import { contentListEditorContract } from "../../../core/widgets/core/contentList";
+import { dividerEditorContract } from "../../../core/widgets/core/divider";
+import { gridColumnsEditorContract } from "../../../core/widgets/core/gridColumns";
 import { productTableEditorContract } from "../../../core/widgets/core/productTable";
+import { sectionEditorContract } from "../../../core/widgets/core/section";
+import { spacerEditorContract } from "../../../core/widgets/core/spacer";
+import { splitLayoutEditorContract } from "../../../core/widgets/core/splitLayout";
+import { stackEditorContract } from "../../../core/widgets/core/stack";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
@@ -380,6 +386,32 @@ describe("widget editor contract validation", () => {
       const validation = validateWidgetEditorContract(definition, { requireContract: true });
       expect(validation.errors).toEqual([]);
       expect(validation.valid).toBe(true);
+    }
+  });
+
+  test("accepts TASK-336-14 layout widget contracts in strict mode", () => {
+    const contracts = [
+      { type: "section", editorContract: sectionEditorContract },
+      { type: "grid-columns", editorContract: gridColumnsEditorContract },
+      { type: "split-layout", editorContract: splitLayoutEditorContract },
+      { type: "stack", editorContract: stackEditorContract },
+      { type: "spacer", editorContract: spacerEditorContract },
+      { type: "divider", editorContract: dividerEditorContract },
+    ];
+
+    for (const definition of contracts) {
+      const validation = validateWidgetEditorContract(definition, { requireContract: true });
+      expect(validation.errors).toEqual([]);
+      expect(validation.valid).toBe(true);
+      expect(
+        definition.editorContract.sections.filter((section) => section.mode === "advanced")
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            writablePaths: [],
+          }),
+        ])
+      );
     }
   });
 });

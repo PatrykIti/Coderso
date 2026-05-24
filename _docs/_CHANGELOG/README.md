@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 942 | 2026-05-24 | Layout widget Advanced token policy | CMS Widgets/Admin UI/Layout/QA/Docs |
 | 941 | 2026-05-24 | P2 widget editor ownership | CMS Widgets/Admin UI/Forms/Security/QA/Docs |
 | 940 | 2026-05-24 | Stats KPI editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 939 | 2026-05-24 | Hero editor ownership | CMS Widgets/Admin UI/QA/Docs |

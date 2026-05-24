@@ -28,8 +28,12 @@ import {
   type SplitLayoutVariantId,
   type SplitLayoutVerticalAlign,
 } from "../../../../widgets/core/splitLayout";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SplitLayoutVariantId;
@@ -164,18 +168,28 @@ function buildVariantSyncedSplitLayoutData(
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -277,15 +291,6 @@ function DiagnosticsSnapshot({ value }: { value: SplitLayoutData }) {
   );
 }
 
-function DiagnosticRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border bg-muted/20 px-3 py-2" data-split-diagnostic-row={label}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm">{value}</p>
-    </div>
-  );
-}
-
 function getCollapseModeCopy(
   collapseMobile: SplitLayoutCollapseMobile,
   mobileRatio: SplitLayoutRatio
@@ -323,81 +328,89 @@ export function SplitLayoutWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Split preset</p>
-        <Select
-          value={resolveSplitLayoutVariant(variant)}
-          onValueChange={(next) =>
-            applyVariantDataPatch(
-              next as SplitLayoutVariantId,
-              buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select split preset" />
-          </SelectTrigger>
-          <SelectContent>
-            {ratioOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <EditorSection
+        id="split-layout.wizard.quick-start"
+        mode="wizard"
+        role="setup"
+        title="Split quick start"
+        description="Choose a safe starting split. Visual owns ongoing ratio and behavior editing."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Split preset</p>
+          <Select
+            value={resolveSplitLayoutVariant(variant)}
+            onValueChange={(next) =>
+              applyVariantDataPatch(
+                next as SplitLayoutVariantId,
+                buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+                onChange,
+                onVariantChange,
+                onBlockPatch
+              )
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select split preset" />
+            </SelectTrigger>
+            <SelectContent>
+              {ratioOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Mobile behavior</p>
-        <Select
-          value={normalized.collapseMobile ?? "stack"}
-          onValueChange={(next) =>
-            updateMeta(value, variant, onChange, {
-              collapseMobile: next as SplitLayoutCollapseMobile,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Mobile behavior" />
-          </SelectTrigger>
-          <SelectContent>
-            {collapseOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Mobile behavior</p>
+          <Select
+            value={normalized.collapseMobile ?? "stack"}
+            onValueChange={(next) =>
+              updateMeta(value, variant, onChange, {
+                collapseMobile: next as SplitLayoutCollapseMobile,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Mobile behavior" />
+            </SelectTrigger>
+            <SelectContent>
+              {collapseOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Base gap</p>
-        <Select
-          value={getSplitLayoutGapControlValue(normalized.gap)}
-          onValueChange={(next) =>
-            updateMeta(value, variant, onChange, { gap: next as SplitLayoutGapControlValue })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Gap" />
-          </SelectTrigger>
-          <SelectContent>
-            {gapOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Base gap</p>
+          <Select
+            value={getSplitLayoutGapControlValue(normalized.gap)}
+            onValueChange={(next) =>
+              updateMeta(value, variant, onChange, { gap: next as SplitLayoutGapControlValue })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Gap" />
+            </SelectTrigger>
+            <SelectContent>
+              {gapOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-        After choosing the split, add widgets to the left and right panes from Structure or the
-        insert controls.
-      </div>
+        <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          After choosing the split, add widgets to the left and right panes from Structure or the
+          insert controls.
+        </div>
+      </EditorSection>
     </div>
   );
 }
@@ -418,6 +431,9 @@ export function SplitLayoutVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="split-layout.visual.variant-ratio"
+        mode="visual"
+        role="layout"
         title="Variant and pane ratio"
         description="Pick the split preset, then confirm the effective ratios across breakpoints."
       >
@@ -485,6 +501,9 @@ export function SplitLayoutVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="split-layout.visual.mobile-behavior"
+        mode="visual"
+        role="layout"
         title="Mobile collapse behavior"
         description="Define how the split behaves on phones and how reverse ordering applies."
       >
@@ -572,6 +591,9 @@ export function SplitLayoutVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="split-layout.visual.spacing-alignment"
+        mode="visual"
+        role="layout"
         title="Spacing and vertical alignment"
         description="Control the space between panes and how their content aligns in the row."
       >
@@ -626,6 +648,9 @@ export function SplitLayoutVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="split-layout.visual.pane-guidance"
+        mode="visual"
+        role="summary"
         title="Pane content"
         description="Use Structure and the insert controls to place widgets into each pane."
       >
@@ -652,12 +677,17 @@ export function SplitLayoutAdvancedEditor({ value, variant }: WidgetEditorProps<
   return (
     <div className="space-y-4">
       <EditorSection
+        id="split-layout.advanced.responsive-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Responsive diagnostics"
         description="Visual owns editing. Advanced stays read-only and explains the resolved breakpoint contract."
       >
         <div className="space-y-2" data-split-advanced-diagnostics>
-          <DiagnosticRow
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.preset"
             label="Preset"
+            path="variant"
             value={
               diagnostics.ratios.desktop === diagnostics.variant &&
               diagnostics.ratios.tablet === diagnostics.variant &&
@@ -666,31 +696,51 @@ export function SplitLayoutAdvancedEditor({ value, variant }: WidgetEditorProps<
                 : `${formatSplitLayoutRatioLabel(diagnostics.variant)} preset with breakpoint overrides.`
             }
           />
-          <DiagnosticRow
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.desktop"
             label="Desktop"
+            path="ratio.desktop"
             value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.desktop)} (${diagnostics.desktop.leftSpan}/${diagnostics.desktop.rightSpan} columns)`}
           />
-          <DiagnosticRow
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.tablet"
             label="Tablet"
+            path="ratio.tablet"
             value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.tablet)} (${diagnostics.tablet.leftSpan}/${diagnostics.tablet.rightSpan} columns)`}
           />
-          <DiagnosticRow label="Mobile" value={mobileSummary} />
-          <DiagnosticRow
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.mobile"
+            label="Mobile"
+            path="ratio.mobile"
+            value={mobileSummary}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.gap"
             label="Gap"
+            path="gap"
             value={`${diagnostics.gap.label} using ${diagnostics.gap.className}. ${diagnostics.gap.description}`}
           />
-          <DiagnosticRow
+          <ReadonlyWidgetSummaryRow
+            id="split-layout.advanced.vertical-align"
             label="Vertical align"
+            path="verticalAlign"
             value={`${diagnostics.verticalAlign.label} using ${diagnostics.verticalAlign.className}.`}
           />
         </div>
       </EditorSection>
 
       <EditorSection
+        id="split-layout.advanced.payload"
+        mode="advanced"
+        role="diagnostics"
         title="Raw payload snapshot"
         description="Runtime-oriented JSON view of normalized Split Layout data."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="split-layout.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </EditorSection>
     </div>
   );

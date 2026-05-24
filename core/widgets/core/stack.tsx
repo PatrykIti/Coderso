@@ -5,6 +5,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -36,6 +37,34 @@ export type StackData = {
   align?: StackResponsiveValue<StackAlign>;
   justify?: StackResponsiveValue<StackJustify>;
   wrap?: StackResponsiveValue<boolean>;
+};
+
+export const stackEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "stack.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "stack.visual.responsive-flow",
+      title: "Responsive flow",
+      role: "layout",
+      writablePaths: ["variant", "direction", "gap", "align", "justify", "wrap"],
+    },
+    {
+      mode: "advanced",
+      id: "stack.advanced.responsive-summary",
+      title: "Responsive summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["direction", "gap", "align", "justify", "wrap"],
+    },
+  ],
 };
 
 export type NormalizedStackData = {
@@ -404,6 +433,7 @@ export function createStackWidget(editors: {
     schema: stackSchema,
     defaults: stackDefaults,
     editor: editors,
+    editorContract: stackEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

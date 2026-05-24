@@ -27,9 +27,9 @@ None.
 - optional center label
 - line thickness
 - line color
-- width mode plus container/custom width support
+- width mode plus preset width support
 - horizontal alignment for non-full widths
-- top and bottom spacing
+- top and bottom spacing tokens
 
 ### Visual
 Sections:
@@ -41,6 +41,8 @@ Sections:
 Notes:
 - Divider owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - `label-center` adds label color, typography, letter-spacing, gap, and clear-label controls.
+- Line color uses a swatch-first control and spacing uses token presets; Visual
+  does not expose raw CSS/token text entry for nontechnical authoring.
 
 ### Advanced
 Sections:
@@ -50,16 +52,18 @@ Sections:
 4. `Raw payload snapshot`
 
 Notes:
-- Advanced keeps the variant field disabled/read-only and routes variant changes
-  back to Visual.
-- Reset actions are data-only and never mutate the active variant.
+- Advanced is read-only diagnostics; variant, line, width, color, and spacing
+  edits are Visual-owned.
+- Raw payload and normalization sections are for support/debugging, not daily
+  authoring.
 
 ## Runtime Behavior Notes
 
 - Width modes:
   - `full`: `100%`
   - `container`: bounded token width (`sm`, `md`, `lg`)
-  - `custom`: validated CSS length from the editor
+  - `custom`: legacy/runtime-compatible saved CSS length; new Visual authoring
+    offers bounded width presets instead of a raw CSS length textbox
 - Non-full dividers support `left`, `center`, and `right` alignment.
 - `label-center` renders label text only when the label is non-empty and
   `visibility="line"`.

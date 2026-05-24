@@ -6,6 +6,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -43,6 +44,52 @@ export type SplitLayoutData = {
   reverseOnMobile?: boolean;
   gap?: SplitLayoutGap;
   verticalAlign?: SplitLayoutVerticalAlign;
+};
+
+export const splitLayoutEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "split-layout.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "split-layout.visual.ratio-behavior",
+      title: "Ratio and behavior",
+      role: "layout",
+      writablePaths: [
+        "variant",
+        "ratio.desktop",
+        "ratio.tablet",
+        "ratio.mobile",
+        "collapseMobile",
+        "reverseOnMobile",
+        "gap",
+        "verticalAlign",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "split-layout.advanced.responsive-diagnostics",
+      title: "Responsive diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "variant",
+        "ratio.desktop",
+        "ratio.tablet",
+        "ratio.mobile",
+        "collapseMobile",
+        "reverseOnMobile",
+        "gap",
+        "verticalAlign",
+      ],
+    },
+  ],
 };
 
 export type SplitLayoutResolvedRatios = {
@@ -592,6 +639,7 @@ export function createSplitLayoutWidget(editors: {
     schema: splitLayoutSchema,
     defaults: splitLayoutDefaults,
     editor: editors,
+    editorContract: splitLayoutEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

@@ -284,6 +284,7 @@ function HeightField({
       normalizeCustomValue={normalizeSpacerCustomHeightInput}
       customInputLabel={`${label} custom height`}
       customInputHelp={spacerCustomHeightHelp}
+      allowCustom={false}
     />
   );
 }
@@ -345,63 +346,71 @@ export function SpacerWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Spacer mode</p>
-        <Select
-          value={resolveSpacerVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="rounded-md border p-3 space-y-3">
-        <div>
-          <p className="text-sm font-medium">Rhythm presets</p>
-          <p className="text-xs text-muted-foreground">
-            Apply a named vertical rhythm preset. Manual height editing stays available below.
-          </p>
+      <EditorSection
+        id="spacer.wizard.quick-start"
+        mode="wizard"
+        role="setup"
+        title="Spacer quick start"
+        description="Pick a safe rhythm preset. Visual owns ongoing responsive height editing."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Spacer mode</p>
+          <Select
+            value={resolveSpacerVariant(variant)}
+            onValueChange={(next) => onVariantChange?.(next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
-      </div>
 
-      <HeightField
-        label="Desktop height"
-        breakpoint="desktop"
-        value={height.desktop ?? "16"}
-        onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
-      />
-      {resolvedVariant === "fixed" ? (
-        <p className="text-xs text-muted-foreground">
-          Fixed mode reuses the desktop height for tablet and mobile.
-        </p>
-      ) : null}
-
-      <div className="rounded-md border p-3">
-        <div className="flex items-center justify-between">
+        <div className="space-y-3 rounded-md border p-3">
           <div>
-            <p className="text-sm font-medium">Show guide in editor</p>
+            <p className="text-sm font-medium">Rhythm presets</p>
             <p className="text-xs text-muted-foreground">
-              Displays spacer label overlay in runtime preview only.
+              Apply a named vertical rhythm preset without typing CSS lengths.
             </p>
           </div>
-          <Switch
-            checked={Boolean(normalized.showGuideInEditor)}
-            onCheckedChange={(checked) =>
-              updateMeta(value, variant, onChange, { showGuideInEditor: checked })
-            }
-          />
+          <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
         </div>
-      </div>
+
+        <HeightField
+          label="Desktop height"
+          breakpoint="desktop"
+          value={height.desktop ?? "16"}
+          onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
+        />
+        {resolvedVariant === "fixed" ? (
+          <p className="text-xs text-muted-foreground">
+            Fixed mode reuses the desktop height for tablet and mobile.
+          </p>
+        ) : null}
+
+        <div className="rounded-md border p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Show guide in editor</p>
+              <p className="text-xs text-muted-foreground">
+                Displays spacer label overlay in runtime preview only.
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(normalized.showGuideInEditor)}
+              onCheckedChange={(checked) =>
+                updateMeta(value, variant, onChange, { showGuideInEditor: checked })
+              }
+            />
+          </div>
+        </div>
+      </EditorSection>
     </div>
   );
 }
@@ -431,7 +440,7 @@ export function SpacerVisualEditor({
         mode="visual"
         role="layout"
         title="Responsive heights"
-        description="Control spacer height per breakpoint with token, viewport, clamp, or px values."
+        description="Control spacer height per breakpoint with safe rhythm tokens."
       >
         <div className="space-y-4">
           <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
@@ -469,25 +478,53 @@ export function SpacerVisualEditor({
 
 export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<SpacerData>) {
   const normalized = normalizeValue(value, variant);
+  const height = normalized.height ?? spacerDefaults.height!;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        id="spacer.advanced-height-tokens"
+        id="spacer.advanced.computed-height"
         mode="advanced"
-        role="technical"
+        role="diagnostics"
         title="Technical height tokens"
-        description="Direct token, viewport, clamp, or px editing for desktop, tablet and mobile heights."
+        description="Visual owns height editing. Advanced shows resolved spacing for diagnostics."
       >
-        <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.desktop-height"
+          label="Desktop height"
+          path="height.desktop"
+          value={`${height.desktop ?? "16"} resolves to ${resolveSpacerCssHeight(height.desktop ?? "16")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.tablet-height"
+          label="Tablet height"
+          path="height.tablet"
+          value={`${height.tablet ?? "12"} resolves to ${resolveSpacerCssHeight(height.tablet ?? "12")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.mobile-height"
+          label="Mobile height"
+          path="height.mobile"
+          value={`${height.mobile ?? "8"} resolves to ${resolveSpacerCssHeight(height.mobile ?? "8")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.guide"
+          label="Editor guide"
+          path="showGuideInEditor"
+          value={
+            normalized.showGuideInEditor ? "Shown in editor previews" : "Hidden in editor previews"
+          }
+        />
+        <div hidden className="hidden" aria-hidden="true">
+          <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
+        </div>
       </EditorSection>
-
       <EditorSection
         id="spacer.advanced-payload-snapshot"
         mode="advanced"
         role="diagnostics"
         title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized data."
+        description="Normalized read-only payload for debugging migrations and saved data."
       >
         <ReadonlyWidgetSummaryRow
           id="spacer.advanced.normalized-payload"

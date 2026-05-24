@@ -56,7 +56,7 @@ Notes:
 
 - read-only responsive diagnostics for preset, desktop, tablet, mobile, gap,
   and vertical alignment
-- normalized payload snapshot
+- raw payload snapshot
 - no duplicate editable ratio/gap/align controls
 
 ## Runtime Behavior

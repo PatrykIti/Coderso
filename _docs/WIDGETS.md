@@ -82,9 +82,10 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
 
 3) Advanced
 - Tryb ekspercki/techniczny:
-  - spacing, marginesy, alignment, layout, responsywnosc
-  - surowe pola techniczne
-  - bez duplikowania podstawowych pol content/style z Visual.
+  - diagnostyka, znormalizowany payload i techniczne podsumowania
+  - bez widocznego proszenia nietechnicznego uzytkownika o CSS, klasy, tokeny
+    albo inne webdeveloperskie wartosci tekstowe
+  - bez duplikowania podstawowych pol content/style/layout z Visual.
 - Tryb zaawansowany dostepny zawsze po wstepnej konfiguracji.
 
 Zasady:
@@ -119,6 +120,24 @@ Zasady:
   wlada contentem i wygladem, a `Advanced` ogranicza sie do technicznych,
   layoutowych i diagnostycznych ustawien. Sekcje diagnostyczne w `Advanced` sa
   read-only.
+- Layout widgets (`section`, `grid-columns`, `split-layout`, `stack`, `spacer`,
+  `divider`) stosuja po TASK-336-14 zaostrzona polityke: `Wizard` jest
+  setup-only, `Visual` wlada codziennymi layout/style controls przez presety,
+  swatche, selecty i slidery, a `Advanced` pokazuje read-only summaries oraz
+  `Raw payload snapshot`. Dopuszczalne legacy compatibility hooks musza byc
+  `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
+  UX.
+
+### Layout widget Advanced token policy
+
+| Widget | Visual owns | Advanced shows |
+|---|---|---|
+| `section` | variant, heading, semantics/anchor, width, spacing, surface, borders, background media | read-only layout/surface/semantics summaries and normalized payload |
+| `grid-columns` | variant, column structure/labels/spans, gaps, cardized surface, per-column behavior | read-only span totals, slot drift, cardized state, override summary, normalized payload |
+| `split-layout` | pane ratio, mobile collapse, gap, alignment, slot guidance | read-only split/collapse/gap/alignment diagnostics and normalized payload |
+| `stack` | responsive direction, gap, align, justify, wrap | read-only breakpoint flow summaries and normalized payload |
+| `spacer` | height presets/tokens and editor guide | read-only computed desktop/tablet/mobile heights and normalized payload |
+| `divider` | variant/label, line, width presets, color swatch, spacing tokens | read-only line/width/spacing/label summaries, normalization note, normalized payload |
 
 ## Detail Template Content Bindings
 

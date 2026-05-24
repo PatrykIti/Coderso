@@ -13,6 +13,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -110,6 +111,55 @@ export type GridColumnsData = {
     columnRadius?: GridColumnsRadius;
     columnPadding?: GridColumnsPadding;
   };
+};
+
+export const gridColumnsEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "grid-columns.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "grid-columns.visual.variant-layout",
+      title: "Variant and layout structure",
+      role: "layout",
+      writablePaths: [
+        "variant",
+        "columns",
+        "layout.gapX",
+        "layout.gapY",
+        "layout.align",
+        "layout.reverseOnMobile",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "grid-columns.visual.column-surface",
+      title: "Column surface",
+      role: "visual",
+      writablePaths: [
+        "style.cardizeColumns",
+        "style.columnBackground",
+        "style.columnBorderColor",
+        "style.columnBorderWidth",
+        "style.columnRadius",
+        "style.columnPadding",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "grid-columns.advanced.resolved-diagnostics",
+      title: "Resolved grid diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "columns", "layout", "style"],
+    },
+  ],
 };
 
 export type GridColumnsSpanTotals = {
@@ -547,30 +597,33 @@ export function calculateGridColumnsSpanTotals(
   columns: GridColumnsColumn[] | undefined
 ): GridColumnsSpanTotals {
   const source = Array.isArray(columns) ? columns : [];
-  return source.reduce<GridColumnsSpanTotals>((totals, column) => {
-    const visibility = normalizeColumnVisibility(column);
-    return {
-      desktop:
-        totals.desktop +
-        (visibility.hideOnDesktop
-          ? 0
-          : parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6"))),
-      tablet:
-        totals.tablet +
-        (visibility.hideOnTablet
-          ? 0
-          : parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6"))),
-      mobile:
-        totals.mobile +
-        (visibility.hideOnMobile
-          ? 0
-          : parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12"))),
-    };
-  }, {
-    desktop: 0,
-    tablet: 0,
-    mobile: 0,
-  });
+  return source.reduce<GridColumnsSpanTotals>(
+    (totals, column) => {
+      const visibility = normalizeColumnVisibility(column);
+      return {
+        desktop:
+          totals.desktop +
+          (visibility.hideOnDesktop
+            ? 0
+            : parseGridColumnsSpan(resolveSpanToken(column.desktopSpan, "6"))),
+        tablet:
+          totals.tablet +
+          (visibility.hideOnTablet
+            ? 0
+            : parseGridColumnsSpan(resolveSpanToken(column.tabletSpan, "6"))),
+        mobile:
+          totals.mobile +
+          (visibility.hideOnMobile
+            ? 0
+            : parseGridColumnsSpan(resolveSpanToken(column.mobileSpan, "12"))),
+      };
+    },
+    {
+      desktop: 0,
+      tablet: 0,
+      mobile: 0,
+    }
+  );
 }
 
 export function resolveGridColumnsAsymmetricVariantState(
@@ -1200,6 +1253,7 @@ export function createGridColumnsWidget(editors: {
     schema: gridColumnsSchema,
     defaults: gridColumnsDefaults,
     editor: editors,
+    editorContract: gridColumnsEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

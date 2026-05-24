@@ -262,7 +262,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
+    Array.from(candidate.querySelectorAll("p, h3")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
@@ -394,7 +394,8 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
     expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
-    expect(normalizeText(view.container.textContent)).toContain("enter a custom length");
+    expect(normalizeText(view.container.textContent)).toContain("custom value unavailable");
+    expect(normalizeText(view.container.textContent)).not.toContain("enter a custom length");
 
     setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "20");
     expect(view.getValue()).toEqual({
@@ -419,7 +420,7 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
       },
       showGuideInEditor: true,
     });
-    expect(normalizeText(view.container.textContent)).toContain("invalid custom length");
+    expect(normalizeText(view.container.textContent)).not.toContain("invalid custom length");
 
     setInputValue(findInputByPlaceholder(view.container, customHeightPlaceholder), "48");
     expect(view.getValue()).toEqual({

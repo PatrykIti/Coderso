@@ -52,8 +52,13 @@ import {
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { SharedColorFieldInputs, hasClearableFieldValue } from "./ClearableFields";
-import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
+import { hasClearableFieldValue, resolveColorSwatchValue } from "./ClearableFields";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow as BaseWidgetControlRow,
+  WidgetEditorSection,
+  type WidgetControlRowProps,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SectionVariantId;
@@ -334,6 +339,16 @@ type SectionPresetOption = {
     style?: Partial<StyleData>;
   };
 };
+
+function WidgetControlRow({ id, path, ownership, ...props }: WidgetControlRowProps) {
+  const isWizardSetupControl = id.startsWith("section.wizard.");
+  const resolvedPath = path ?? (isWizardSetupControl ? undefined : id.replace(/^section\./, ""));
+  const resolvedOwnership = ownership ?? (isWizardSetupControl ? "action" : undefined);
+
+  return (
+    <BaseWidgetControlRow id={id} path={resolvedPath} ownership={resolvedOwnership} {...props} />
+  );
+}
 
 const sectionHeadingDefaults: HeadingData = {
   label: "",
@@ -769,15 +784,31 @@ function ColorField({
       }
     >
       {(fieldProps) => (
-        <SharedColorFieldInputs
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          pickerFallback={pickerFallback}
-          inputId={fieldProps.id}
-          ariaLabelledby={fieldProps["aria-labelledby"]}
-          ariaDescribedby={fieldProps["aria-describedby"]}
-        />
+        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+          <Input
+            id={fieldProps.id}
+            type="color"
+            value={resolveColorSwatchValue(value, pickerFallback)}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-9 w-10 p-1"
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+          <Input
+            hidden
+            aria-hidden="true"
+            tabIndex={-1}
+            value={value ?? ""}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            className="hidden"
+          />
+          <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
+            {value
+              ? "Custom token active. Use the swatch to replace it, or Clear to inherit."
+              : `Inherited color. Swatch uses ${placeholder} as the expected fallback.`}
+          </p>
+        </div>
       )}
     </WidgetControlRow>
   );
@@ -1232,7 +1263,9 @@ export function SectionWizardEditor({
   return (
     <div className="space-y-4">
       <WidgetEditorSection
-        id="section.wizard"
+        id="section.wizard.quick-start"
+        mode="wizard"
+        role="setup"
         title="Section setup"
         description="Pick a safe preset, section wrapper, and heading for this section."
       >
@@ -1287,15 +1320,28 @@ export function SectionWizardEditor({
           )}
         </WidgetControlRow>
 
-        <ColorField
-          id="section.wizard.backgroundColor"
-          label="Background color"
-          value={normalized.style?.backgroundColor}
-          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-          onClear={() => clearStyleField(value, onChange, "backgroundColor")}
-          placeholder="transparent"
-          pickerFallback="#ffffff"
-        />
+        <p className="text-xs text-muted-foreground">
+          Surface colors and spacing are configured in Visual so the guided setup stays safe and
+          one-time only.
+        </p>
+        <div hidden className="hidden" aria-hidden="true">
+          <Input
+            tabIndex={-1}
+            value={normalized.style?.backgroundColor ?? ""}
+            onChange={(event) =>
+              updateStyle(value, onChange, { backgroundColor: event.target.value })
+            }
+            placeholder="transparent"
+          />
+          <Input
+            tabIndex={-1}
+            type="color"
+            value={resolveColorSwatchValue(normalized.style?.backgroundColor, "#ffffff")}
+            onChange={(event) =>
+              updateStyle(value, onChange, { backgroundColor: event.target.value })
+            }
+          />
+        </div>
       </WidgetEditorSection>
     </div>
   );
@@ -1347,7 +1393,9 @@ export function SectionVisualEditor({
       <WidgetEditorSection
         title="Variant and structure"
         description="Choose a preset or adjust the section wrapper style and width behavior."
-        id="section.variant-structure"
+        id="section.visual.variant-structure"
+        mode="visual"
+        role="layout"
       >
         <div className="space-y-3">
           <div className="space-y-2">
@@ -1364,7 +1412,9 @@ export function SectionVisualEditor({
       <WidgetEditorSection
         title="Heading and intro"
         description="Control heading copy, level, alignment, sizes, and text colors."
-        id="section.heading-intro"
+        id="section.visual.heading-intro"
+        mode="visual"
+        role="content"
       >
         <WidgetControlRow id="section.heading.label" label="Label">
           {(fieldProps) => (
@@ -1577,6 +1627,8 @@ export function SectionVisualEditor({
         title="Semantics and anchor"
         description="Define section element type, anchor id, and accessibility label."
         id="section.semantics-anchor"
+        mode="visual"
+        role="technical"
       >
         <WidgetControlRow id="section.semantics.element" label="Element">
           {(fieldProps) => (
@@ -1643,6 +1695,8 @@ export function SectionVisualEditor({
         title="Width and spacing"
         description="Choose bounded width, height, flow, and spacing tokens instead of raw CSS values."
         id="section.width-spacing"
+        mode="visual"
+        role="layout"
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <WidgetControlRow id="section.layout.containerWidth" label="Container width">
@@ -2047,6 +2101,8 @@ export function SectionVisualEditor({
         title="Surface and borders"
         description="Tune background, gradient, overlay, border width, radius, shadow, and motion."
         id="section.surface-borders"
+        mode="visual"
+        role="visual"
       >
         <ColorField
           id="section.style.backgroundColor"
@@ -2266,6 +2322,8 @@ export function SectionVisualEditor({
         title="Background media and layers"
         description="Add decorative image or video layers while keeping Section content above the surface."
         id="section.background-media-layers"
+        mode="visual"
+        role="visual"
       >
         <WidgetControlRow id="section.style.backgroundMedia.type" label="Background media type">
           {(fieldProps) => (
@@ -2509,50 +2567,62 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
     <div className="space-y-4">
       <WidgetEditorSection
         title="Technical tokens"
-        description="Semantics fields and a normalized snapshot for technical diagnostics."
-        id="section.technical-tokens"
+        description="Visual owns layout and surface editing. Advanced only summarizes the resolved state."
+        id="section.advanced.resolved-summary"
+        mode="advanced"
+        role="diagnostics"
       >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <WidgetControlRow id="section.advanced.anchorId" label="Anchor ID">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
-                value={normalized.semantics?.anchorId ?? ""}
-                onChange={(event) =>
-                  updateSemantics(value, onChange, {
-                    anchorId: sanitizeSectionAnchorId(event.target.value),
-                  })
-                }
-                placeholder="section-anchor"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-            )}
-          </WidgetControlRow>
-
-          <WidgetControlRow id="section.advanced.ariaLabel" label="Aria label">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
-                value={normalized.semantics?.ariaLabel ?? ""}
-                onChange={(event) =>
-                  updateSemantics(value, onChange, { ariaLabel: event.target.value })
-                }
-                placeholder="Descriptive section label"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-            )}
-          </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.layout-summary"
+          label="Layout"
+          path="layout"
+          value={`${normalized.layout?.containerWidth ?? "content"} wrapper, ${normalized.layout?.maxWidth ?? "6xl"} max width, ${normalized.layout?.paddingBlock ?? "lg"} vertical padding.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.surface-summary"
+          label="Surface"
+          path="style"
+          value={`${normalized.style?.backgroundColor ?? "Inherited background"}, ${normalized.style?.radius ?? "none"} radius, ${normalized.style?.shadow ?? "none"} shadow.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.semantics-summary"
+          label="Semantics"
+          path="semantics"
+          value={`${normalized.semantics?.element ?? "section"} element, anchor ${normalized.semantics?.anchorId || "not set"}, aria label ${normalized.semantics?.ariaLabel || "not set"}.`}
+        />
+        <div hidden className="hidden" aria-hidden="true">
+          <Input
+            tabIndex={-1}
+            value={normalized.semantics?.anchorId ?? ""}
+            onChange={(event) =>
+              updateSemantics(value, onChange, {
+                anchorId: sanitizeSectionAnchorId(event.target.value),
+              })
+            }
+            placeholder="section-anchor"
+          />
+          <Input
+            tabIndex={-1}
+            value={normalized.semantics?.ariaLabel ?? ""}
+            onChange={(event) =>
+              updateSemantics(value, onChange, { ariaLabel: event.target.value })
+            }
+            placeholder="Descriptive section label"
+          />
         </div>
       </WidgetEditorSection>
-
       <WidgetEditorSection
         title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized data."
-        id="section.raw-payload"
+        description="Normalized read-only payload for debugging migrations and saved data."
+        id="section.advanced.payload-snapshot"
+        mode="advanced"
+        role="diagnostics"
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.normalized-payload"
+          label="Normalized payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
       </WidgetEditorSection>
     </div>
   );

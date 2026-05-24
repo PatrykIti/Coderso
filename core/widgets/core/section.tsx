@@ -7,6 +7,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -110,6 +111,101 @@ export type SectionData = {
     overlayOpacity?: number;
     backgroundMedia?: SectionBackgroundMedia;
   };
+};
+
+export const sectionEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "section.wizard.quick-start",
+      title: "Guided quick start",
+      role: "setup",
+      writablePaths: [],
+    },
+    {
+      mode: "visual",
+      id: "section.visual.variant-structure",
+      title: "Variant and structure",
+      role: "layout",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "section.visual.heading-intro",
+      title: "Heading and intro",
+      role: "content",
+      writablePaths: [
+        "heading.label",
+        "heading.title",
+        "heading.description",
+        "heading.level",
+        "heading.align",
+        "heading.labelSize",
+        "heading.titleSize",
+        "heading.descriptionSize",
+        "heading.labelColor",
+        "heading.titleColor",
+        "heading.descriptionColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "section.width-spacing",
+      title: "Width and spacing",
+      role: "layout",
+      writablePaths: [
+        "layout.containerWidth",
+        "layout.maxWidth",
+        "layout.paddingBlock",
+        "layout.paddingInline",
+        "layout.mobilePaddingBlock",
+        "layout.mobilePaddingInline",
+        "layout.desktopPaddingBlock",
+        "layout.desktopPaddingInline",
+        "layout.minHeight",
+        "layout.regionFlow",
+        "layout.regionColumns",
+        "layout.headingGap",
+        "layout.regionGap",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "section.semantics-anchor",
+      title: "Semantics and anchor",
+      role: "technical",
+      writablePaths: ["semantics.element", "semantics.anchorId", "semantics.ariaLabel"],
+    },
+    {
+      mode: "visual",
+      id: "section.surface-media",
+      title: "Surface and media",
+      role: "visual",
+      writablePaths: [
+        "style.backgroundColor",
+        "style.gradientFrom",
+        "style.gradientTo",
+        "style.gradientAngle",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+        "style.shadow",
+        "style.motion",
+        "style.overlayColor",
+        "style.overlayOpacity",
+        "style.backgroundMedia",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "section.advanced.resolved-summary",
+      title: "Resolved layout summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["layout", "style", "heading", "semantics"],
+    },
+  ],
 };
 
 export const sectionRegionSlot = {
@@ -1255,6 +1351,7 @@ export function createSectionWidget(editors: {
     schema: sectionSchema,
     defaults: sectionDefaults,
     editor: editors,
+    editorContract: sectionEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
       slotControlSection: {

@@ -259,7 +259,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
+    Array.from(candidate.querySelectorAll("p, h3")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
@@ -270,7 +270,7 @@ const getSectionByTitle = (container: ParentNode, title: string) => {
 };
 
 const findSelectByLabel = (container: ParentNode, label: string, index = 0) => {
-  const select = Array.from(container.querySelectorAll("p"))
+  const select = Array.from(container.querySelectorAll("p, h3"))
     .filter((element) => normalizeText(element.textContent) === normalizeText(label))
     .map((element) => element.parentElement?.querySelector("select"))
     .filter((element): element is HTMLSelectElement => element instanceof HTMLSelectElement)[index];
@@ -281,7 +281,7 @@ const findSelectByLabel = (container: ParentNode, label: string, index = 0) => {
 };
 
 const findCheckboxByLabel = (container: ParentNode, label: string, index = 0) => {
-  const checkbox = Array.from(container.querySelectorAll("p"))
+  const checkbox = Array.from(container.querySelectorAll("p, h3"))
     .filter((element) => normalizeText(element.textContent) === normalizeText(label))
     .map((element) =>
       element.closest("div")?.parentElement?.querySelector('input[type="checkbox"]')
