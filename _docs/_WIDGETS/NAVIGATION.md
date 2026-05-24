@@ -24,9 +24,11 @@ Primary CTA jest renderowane tylko dla:
 
 ### Wizard
 
-- onboarding dla wariantu, source mode, szybkich linkow, typu logo i CTA
+- onboarding dla wariantu, szybkich linkow, typu logo i CTA
 - pokazuje pierwsze 3 quick links oraz overflow summary, gdy linkow jest wiecej
 - ma widoczne etykiety dla logo link i quick-link URL fields
+- obraz logo wybierany jest przez Media Library; istniejace zewnetrzne obrazy
+  pozostaja jako read-only replace/clear state
 - przy `linksSource = menu` pokazuje read-only synced preview zamiast edytowalnych rows
 
 ### Visual
@@ -41,7 +43,7 @@ Primary CTA jest renderowane tylko dla:
   6. Colors, Borders, Typography
   7. Surface and Runtime Behavior
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
-  mobile copy, and bounded style/brand controls
+  mobile copy, Media Library logo replacement, and bounded style/brand controls
 
 ### Advanced
 

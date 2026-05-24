@@ -357,8 +357,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
     )
   );
 
@@ -462,19 +462,9 @@ test("TestimonialsWizardEditor covers header copy, social proof fields, and avat
     setInputValue(findInputsByPlaceholder(view.container, "Acme Studio")[0], "North Labs");
     setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"]), "4");
 
-    const avatarInput = findInputsByPlaceholder(
-      view.container,
-      "https://cdn.example.com/avatar.jpg"
-    )[0];
-    setInputValue(avatarInput, "javascript:alert(1)");
-    expect(view.container.textContent).toContain("Unsafe avatar URLs are not rendered publicly");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBeUndefined();
-
-    setInputValue(avatarInput, "/media/safe-avatar.jpg");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBe("/media/safe-avatar.jpg");
-
-    setInputValue(avatarInput, "//cdn.example.com/avatar.jpg");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBe("/media/safe-avatar.jpg");
+    expect(
+      findInputsByPlaceholder(view.container, "https://cdn.example.com/avatar.jpg")
+    ).toHaveLength(0);
 
     const firstPicker = findMediaPickers(view.container)[0];
     clickButton(findButtonsByText(firstPicker ?? view.container, "pick-avatar-media")[0]);
@@ -536,25 +526,16 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     const contentSection = findSectionByTitle(view.container, "Testimonials content and ratings");
     if (!(contentSection instanceof HTMLElement)) throw new Error("Missing content section");
 
-    const avatarInput = findInputsByPlaceholder(
-      contentSection,
-      "https://cdn.example.com/avatar.jpg"
-    )[0];
-    setInputValue(avatarInput, "data:text/plain;base64,Zm9v");
-    expect(view.container.textContent).toContain("Unsafe avatar URLs are not rendered publicly");
+    expect(
+      findInputsByPlaceholder(contentSection, "https://cdn.example.com/avatar.jpg")
+    ).toHaveLength(0);
     expect(view.getLatestValue().testimonials[0]?.avatar).toBeUndefined();
-
-    setInputValue(avatarInput, "/media/visual-avatar.jpg");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBe("/media/visual-avatar.jpg");
-
-    setInputValue(avatarInput, "//cdn.example.com/avatar.jpg");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBe("/media/visual-avatar.jpg");
 
     const avatarPicker = findMediaPickers(contentSection)[0];
     clickButton(findButtonsByText(avatarPicker ?? contentSection, "pick-unsupported-media")[0]);
     await flushPromises();
     expect(view.container.textContent).toContain("selected media must be an image asset");
-    expect(view.getLatestValue().testimonials[0]?.avatar).toBe("/media/visual-avatar.jpg");
+    expect(view.getLatestValue().testimonials[0]?.avatar).toBeUndefined();
 
     clickButton(findButtonsByText(avatarPicker ?? contentSection, "pick-missing-media")[0]);
     await flushPromises();
@@ -565,14 +546,10 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     expect(view.getLatestValue().testimonials[0]?.avatar).toBe(
       "https://cdn.example.com/avatar-picked.jpg"
     );
-    expect((avatarInput as HTMLInputElement).value).toBe(
-      "https://cdn.example.com/avatar-picked.jpg"
-    );
 
     clickButton(findButtonsByText(avatarPicker ?? contentSection, "clear-media")[0]);
     await flushPromises();
     expect(view.getLatestValue().testimonials[0]?.avatar).toBeUndefined();
-    expect((avatarInput as HTMLInputElement).value).toBe("");
 
     clickButton(findButtonsByText(contentSection, "Set spotlight")[0]);
     expect(view.getLatestValue().layout?.spotlightItemId).toBe("t-2");
@@ -585,12 +562,9 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     const surfaceSection = findSectionByTitle(view.container, "Section surface and typography");
     if (!(surfaceSection instanceof HTMLElement)) throw new Error("Missing surface section");
 
-    const backgroundUrlInput = findInputsByPlaceholder(
-      surfaceSection,
-      "https://cdn.example.com/section-bg.jpg"
-    )[0];
-    setInputValue(backgroundUrlInput, "data:text/plain,hello");
-    expect(view.container.textContent).toContain("Unsafe background URLs are ignored at runtime");
+    expect(
+      findInputsByPlaceholder(surfaceSection, "https://cdn.example.com/section-bg.jpg")
+    ).toHaveLength(0);
 
     const backgroundPicker = view.container.querySelector(
       '[data-testimonials-background-picker="true"]'
@@ -600,10 +574,6 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     await flushPromises();
     expect(view.getLatestValue().style?.backgroundImage).toBe("/media/testimonials-bg.jpg");
     expect(backgroundPickerState?.getAttribute("data-media-picker-value")).toBe("media-background");
-
-    setInputValue(backgroundUrlInput, "/media/manual-bg.jpg");
-    expect(view.getLatestValue().style?.backgroundImage).toBe("/media/manual-bg.jpg");
-    expect(backgroundPickerState?.getAttribute("data-media-picker-value")).toBe("");
 
     setSelectValue(findSelectByOptions(surfaceSection, ["none", "soft", "warm", "cool"]), "cool");
     setSelectValue(findSelectByOptions(surfaceSection, ["plain", "soft", "contrast"]), "contrast");
@@ -644,7 +614,7 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
       quoteHtml: '<p><strong>Proof</strong> <a href="/story">more</a></p>',
     });
     expect(view.getLatestValue().style).toMatchObject({
-      backgroundImage: "/media/manual-bg.jpg",
+      backgroundImage: "/media/testimonials-bg.jpg",
       sectionGradient: "cool",
       backgroundTone: "contrast",
       headerAlign: "right",

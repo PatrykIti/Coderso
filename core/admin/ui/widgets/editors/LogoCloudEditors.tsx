@@ -471,12 +471,6 @@ function useLogoMediaSelection({
   const getLogoMediaError = (index: number, logo: LogoCloudLogo) =>
     mediaPickerErrorsByLogoKey[resolveLogoRowKey(index, logo)] ?? null;
 
-  const handleManualImageChange = (index: number, logo: LogoCloudLogo, nextImage: string) => {
-    invalidateLogoMediaRequest(index, logo);
-    clearTransientAssetSelection(index, logo);
-    commitLogoPatch(index, { image: nextImage });
-  };
-
   const clearLogoImage = (index: number, logo: LogoCloudLogo) => {
     invalidateLogoMediaRequest(index, logo);
     clearTransientAssetSelection(index, logo);
@@ -534,7 +528,6 @@ function useLogoMediaSelection({
     getLogoMediaError,
     getLogoPickerValue,
     handleLogoAssetChange,
-    handleManualImageChange,
     clearLogoImage,
     invalidateAllLogoMediaRequests,
   };
@@ -807,15 +800,22 @@ function LogoImageControl({
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Image URL</p>
-        <Input
-          value={logo.image ?? ""}
-          onChange={(event) =>
-            mediaSelection.handleManualImageChange(index, logo, event.target.value)
-          }
-          placeholder="https://cdn.example.com/logo.svg"
-        />
-        {imageFeedback ? <p className="text-xs text-amber-700">{imageFeedback}</p> : null}
+        <p className="text-sm font-medium">Current image</p>
+        {(logo.image ?? "").trim().length > 0 ? (
+          <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            A logo image is already configured. Pick an image from the Media Library to replace it.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Pick a logo image from the Media Library. Existing external images stay read-only.
+          </p>
+        )}
+        {imageFeedback ? (
+          <p className="text-xs text-amber-700">
+            Saved logo image is not public-safe and will not render. Clear it or pick a Media
+            Library image.
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">

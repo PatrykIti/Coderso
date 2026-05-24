@@ -42,6 +42,9 @@ Notes:
 - Shared block full-width stays in the block Layout panel (`WidgetBlock.layout.container`).
   CTA Banner no longer hardcodes an inner `max-w-6xl`.
 - Generic Visual variant selector is suppressed.
+- Background images are selected through Media Library. Legacy external
+  background URLs stay as read-only replace/clear state and are not editable as
+  raw URL text in Visual.
 
 ### Advanced
 
@@ -66,7 +69,8 @@ Notes:
   through the shared widget safe-link helper.
 - Button radius and size are CTA-owned controls; when not configured, existing
   saved pages keep the legacy `rounded-md` / `text-sm` behavior.
-- Background color, gradient, image, and motion are optional and bounded.
+- Background color, gradient, Media Library image, and motion are optional and
+  bounded.
 - The renderer emits deterministic markers:
   - `data-cta-banner-variant`
   - `data-cta-banner-padding`

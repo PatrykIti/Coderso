@@ -110,6 +110,18 @@ read-only diagnostics. It added these concrete cleanup requirements:
   stopped after the unchanged `spacer` advanced probe hung without producing a
   report. Targeted widget evidence is recorded under
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-*-2026-05-24.*`.
+- In Progress (2026-05-24): second implementation family removes editable raw
+  image/media URL fields from normal Wizard/Visual flows in `navigation`,
+  `cta-banner`, `testimonials`, `feature-grid`, and `logo-cloud`. The editors
+  now use existing `MediaPicker` controls and keep legacy external image values
+  as read-only replace/clear notices without changing the persisted widget
+  schema. General CTA/navigation/link URL fields remain queued for a separate
+  link/page-picker family.
+- In Progress (2026-05-24): targeted authenticated Playwright admin smoke for
+  the five raw-media cleanup widgets reports `adminFailures=0` and
+  `metadataGaps=0` for every widget. `navigation`, `testimonials`, and
+  `logo-cloud` have `fixtureGaps=0`; `cta-banner` and `feature-grid` still show
+  unchanged Advanced fixture-selection gaps (`block_select_missing`).
 
 ## Files to Change
 

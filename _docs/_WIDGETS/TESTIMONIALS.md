@@ -30,7 +30,8 @@ Wizard covers the beginner-facing first-pass content flow:
 - testimonial count
 - section `eyebrow`, `title`, and `description`
 - per-testimonial `quote`, `author`, `role`, `sourceLabel`, `rating`
-- avatar URL entry plus Media Library image picking
+- avatar Media Library image picking; legacy external avatar URLs are read-only
+  replace/clear state
 
 ### Visual
 
@@ -39,8 +40,9 @@ Visual owns the full product authoring surface:
 - variant cards and count
 - spotlight pinning for the `spotlight` variant
 - per-testimonial rich quote formatting (`quoteHtml`) with plain-text fallback
-- avatar URL validation plus Media Library selection
-- section background color, gradient preset, tone, and optional background image
+- avatar Media Library selection with read-only legacy external URL state
+- section background color, gradient preset, tone, and optional Media Library
+  background image
 - header alignment and title size
 - card spacing, radius, border width, and bounded color tokens
 - contrast advisories for text/card and accent/card combinations
@@ -72,8 +74,8 @@ Visual-owned spacing and display controls.
   - `stars`: render five empty stars.
 - `pagination.mode = "load-more"` keeps the first `pageSize` testimonials
   visible and reveals the remainder through SSR `<details>` disclosure.
-- Avatar URLs, CTA hrefs, and background image URLs fail closed at runtime when
-  they are not safe relative or `http/https` values.
+- Legacy avatar URLs, CTA hrefs, and background image URLs fail closed at
+  runtime when they are not safe relative or `http/https` values.
 - Avatar images lazy-load and use contextual `Photo of ...` alt text derived
   from the author plus any available role/source metadata.
 - `quoteHtml` is sanitized to bounded paragraph/line-break/emphasis/link markup

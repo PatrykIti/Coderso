@@ -564,13 +564,8 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "Automates repeatable delivery tasks."
     );
     setInputValue(findInputByPlaceholder(featureCardsSection as ParentNode, "⚡"), "🤖");
-    setInputValue(
-      findInputByPlaceholder(
-        featureCardsSection as ParentNode,
-        "https://cdn.example.com/feature.jpg"
-      ),
-      "https://cdn.example.com/automation.jpg"
-    );
+    clickByText(featureCardsSection as ParentNode, "pick-media");
+    await flush();
     setInputValue(
       findInputByPlaceholder(featureCardsSection as ParentNode, "Learn more"),
       "See automation"
@@ -707,7 +702,8 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
           title: "Automation",
           description: "Automates repeatable delivery tasks.",
           icon: "🤖",
-          image: "https://cdn.example.com/automation.jpg",
+          image: "/media/feature.jpg",
+          imageAlt: "Feature media alt",
           ctaLabel: "See automation",
           ctaHref: "/automation",
         }),
@@ -1147,7 +1143,7 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   }
 });
 
-test("FeatureGrid editor shows invalid image and CTA feedback while keeping raw values", async () => {
+test("FeatureGrid editor hides raw image URL editing while keeping CTA feedback", async () => {
   const { FeatureGridVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
@@ -1157,7 +1153,7 @@ test("FeatureGrid editor shows invalid image and CTA feedback while keeping raw 
       {
         id: "feature-1",
         title: "Security",
-        image: "",
+        image: "javascript:alert(1)",
         ctaLabel: "Open",
         ctaHref: "",
       },
@@ -1184,20 +1180,19 @@ test("FeatureGrid editor shows invalid image and CTA feedback while keeping raw 
 
   try {
     const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
-    setInputValue(
+    expect(
       findInputByPlaceholder(
         featureCardsSection as ParentNode,
         "https://cdn.example.com/feature.jpg"
-      ),
-      "javascript:alert(1)"
-    );
+      )
+    ).toBeUndefined();
     setInputValue(
       findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
       "ftp://blocked.invalid"
     );
 
     expect(featureCardsSection?.textContent).toContain(
-      "Use a relative path or full URL. Unsafe media URLs are not rendered publicly."
+      "Saved feature image is not public-safe and will not render. Clear it or pick a Media Library image."
     );
     expect(featureCardsSection?.textContent).toContain(
       "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."

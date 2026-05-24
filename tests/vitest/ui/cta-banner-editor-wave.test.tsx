@@ -171,6 +171,17 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(async () => [
+    {
+      id: "asset-1",
+      url: "/media/cta-background.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
     <button
@@ -236,6 +247,12 @@ const clickButton = (element: Element | null | undefined) => {
   if (!(element instanceof HTMLButtonElement)) return;
   React.act(() => {
     element.click();
+  });
+};
+
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
   });
 };
 
@@ -542,12 +559,8 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     setInputValue(colorInputs[0], "#101820");
     const mediaTypeSelect = getSelectByOptions(backgroundSection, ["none", "image"]);
     setSelectValue(mediaTypeSelect, "image");
-    const mediaSourceSelect = getSelectByOptions(backgroundSection, ["external", "library"]);
-    setSelectValue(mediaSourceSelect, "external");
-    setInputValue(
-      getInputByPlaceholder(backgroundSection, "https://images.unsplash.com/..."),
-      "/hero.png"
-    );
+    clickButton(getButtonsByText(backgroundSection, "media-picker")[0]);
+    await flush();
     const fitSelect = getSelectByOptions(backgroundSection, ["cover", "contain"]);
     setSelectValue(fitSelect, "contain");
     const positionSelect = getSelectByOptions(backgroundSection, ["center", "top", "bottom"]);
@@ -586,8 +599,9 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
         color: "#101820",
         media: {
           type: "image",
-          source: "external",
-          src: "/hero.png",
+          source: "library",
+          assetId: "asset-1",
+          src: "/media/cta-background.jpg",
           fit: "contain",
           position: "top",
         },

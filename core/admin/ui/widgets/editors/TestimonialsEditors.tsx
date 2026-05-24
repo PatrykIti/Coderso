@@ -21,7 +21,6 @@ import {
   isValidTestimonialsAvatarUrl,
   isValidTestimonialsBackgroundImageUrl,
   isValidTestimonialsCtaHref,
-  normalizeTestimonialsAvatarUrl,
   normalizeTestimonialsCount,
   normalizeTestimonialsData,
   normalizeTestimonialsItems,
@@ -54,11 +53,7 @@ import {
   type TestimonialsImportFormat,
 } from "../../../../widgets/core/testimonialsImportExport";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import {
-  ColorContrastNotice,
-  ClearableInputField,
-  resolveColorContrastAdvisory,
-} from "./ClearableFields";
+import { ColorContrastNotice, resolveColorContrastAdvisory } from "./ClearableFields";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -560,13 +555,13 @@ function resolveMediaPickerChange(value: unknown): MediaPickerChange {
 function getAvatarFeedback(value: string | undefined) {
   if (!(value ?? "").trim()) return null;
   if (isValidTestimonialsAvatarUrl(value)) return null;
-  return "Use a relative path or full http/https URL. Unsafe avatar URLs are not rendered publicly.";
+  return "Saved avatar image is not public-safe and will not render. Clear it or pick a Media Library image.";
 }
 
 function getBackgroundImageFeedback(value: string | undefined) {
   if (!(value ?? "").trim()) return null;
   if (isValidTestimonialsBackgroundImageUrl(value)) return null;
-  return "Use a relative path or full http/https URL. Unsafe background URLs are ignored at runtime.";
+  return "Saved background image is not public-safe and will not render. Clear it or pick a Media Library image.";
 }
 
 function getCtaHrefFeedback(value: string | undefined) {
@@ -603,7 +598,6 @@ function AvatarPickerField({
   rowKey,
   mediaPickerValue,
   mediaError,
-  onManualChange,
   onClear,
   onAssetChange,
 }: {
@@ -612,31 +606,20 @@ function AvatarPickerField({
   rowKey: string;
   mediaPickerValue: string | null;
   mediaError?: string;
-  onManualChange: (next: string) => void;
   onClear: () => void;
   onAssetChange: (next: unknown) => void;
 }) {
   const feedback = getAvatarFeedback(avatarValue);
+  const hasAvatar = avatarValue.trim().length > 0;
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{label}</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onClear}
-          disabled={!avatarValue.trim()}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onClear} disabled={!hasAvatar}>
           Clear avatar
         </Button>
       </div>
-      <Input
-        value={avatarValue}
-        onChange={(event) => onManualChange(event.target.value)}
-        placeholder="https://cdn.example.com/avatar.jpg"
-      />
       <div data-testimonials-avatar-picker={rowKey}>
         <MediaPicker
           value={mediaPickerValue}
@@ -645,8 +628,13 @@ function AvatarPickerField({
           accept={["image/*"]}
         />
       </div>
+      {hasAvatar ? (
+        <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          An avatar image is already configured. Pick an image from the Media Library to replace it.
+        </p>
+      ) : null}
       <FieldNote>
-        Selecting a media asset stores only the resolved public URL in the testimonial.
+        Pick an avatar image from the Media Library. Existing external avatars stay read-only.
       </FieldNote>
       {feedback ? <p className="text-xs text-amber-700">{feedback}</p> : null}
       {mediaError ? <p className="text-xs text-destructive">{mediaError}</p> : null}
@@ -665,7 +653,6 @@ function TestimonialContentCard({
   selectedAvatarMediaIds,
   mediaPickerErrorsByRowKey,
   onAvatarAssetChange,
-  onAvatarManualChange,
   onClearAvatar,
   onRequestRemove,
 }: {
@@ -679,7 +666,6 @@ function TestimonialContentCard({
   selectedAvatarMediaIds: Record<string, string | null>;
   mediaPickerErrorsByRowKey: Record<string, string>;
   onAvatarAssetChange: (testimonialId: string, index: number, nextValue: unknown) => void;
-  onAvatarManualChange: (testimonialId: string, rowKey: string, next: string) => void;
   onClearAvatar: (testimonialId: string, index: number) => void;
   onRequestRemove: (index: number) => void;
 }) {
@@ -782,12 +768,11 @@ function TestimonialContentCard({
         </div>
 
         <AvatarPickerField
-          label="Avatar URL"
+          label="Avatar image"
           avatarValue={avatarValue}
           rowKey={rowKey}
           mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
           mediaError={mediaPickerErrorsByRowKey[rowKey]}
-          onManualChange={(next) => onAvatarManualChange(testimonial.id ?? rowKey, rowKey, next)}
           onClear={() => onClearAvatar(testimonial.id ?? rowKey, index)}
           onAssetChange={(next) => onAvatarAssetChange(testimonial.id ?? rowKey, index, next)}
         />
@@ -876,26 +861,6 @@ export function TestimonialsWizardEditor({
       }
       return { ...current, [rowKey]: nextValue };
     });
-  };
-
-  const handleAvatarManualChange = (rowKey: string, index: number, nextValue: string) => {
-    setAvatarInputValue(rowKey, nextValue);
-    setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
-
-    const trimmed = nextValue.trim();
-    if (!trimmed) {
-      setAvatarError(rowKey);
-      setAvatarInputValue(rowKey, undefined);
-      updateItem(value, onChange, index, { avatar: undefined });
-      return;
-    }
-
-    const normalizedAvatarUrl = normalizeTestimonialsAvatarUrl(nextValue);
-    if (!normalizedAvatarUrl) return;
-
-    setAvatarError(rowKey);
-    setAvatarInputValue(rowKey, normalizedAvatarUrl);
-    updateItem(value, onChange, index, { avatar: normalizedAvatarUrl });
   };
 
   const handleAvatarAssetChange = async (
@@ -1072,12 +1037,11 @@ export function TestimonialsWizardEditor({
                 </SelectContent>
               </Select>
               <AvatarPickerField
-                label="Avatar URL"
+                label="Avatar image"
                 avatarValue={avatarValue}
                 rowKey={rowKey}
                 mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
                 mediaError={mediaPickerErrorsByRowKey[rowKey]}
-                onManualChange={(next) => handleAvatarManualChange(rowKey, index, next)}
                 onClear={() => {
                   setAvatarInputValue(rowKey, undefined);
                   setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
@@ -1150,26 +1114,6 @@ export function TestimonialsVisualEditor({
       }
       return { ...current, [rowKey]: nextValue };
     });
-  };
-
-  const handleAvatarManualChange = (testimonialId: string, rowKey: string, nextValue: string) => {
-    setAvatarInputValue(rowKey, nextValue);
-    setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
-
-    const trimmed = nextValue.trim();
-    if (!trimmed) {
-      setAvatarError(rowKey);
-      setAvatarInputValue(rowKey, undefined);
-      updateItemById(value, onChange, testimonialId, { avatar: undefined });
-      return;
-    }
-
-    const normalizedAvatarUrl = normalizeTestimonialsAvatarUrl(nextValue);
-    if (!normalizedAvatarUrl) return;
-
-    setAvatarError(rowKey);
-    setAvatarInputValue(rowKey, normalizedAvatarUrl);
-    updateItemById(value, onChange, testimonialId, { avatar: normalizedAvatarUrl });
   };
 
   const handleAvatarAssetChange = async (
@@ -1248,12 +1192,6 @@ export function TestimonialsVisualEditor({
           : "Failed to resolve selected background image."
       );
     }
-  };
-
-  const handleBackgroundManualChange = (nextValue: string) => {
-    setBackgroundMediaPickerValue(null);
-    setBackgroundMediaError(null);
-    updateStyle(value, onChange, { backgroundImage: nextValue });
   };
 
   const handleClearBackgroundImage = () => {
@@ -1428,7 +1366,6 @@ export function TestimonialsVisualEditor({
             onAvatarAssetChange={(testimonialId, itemIndex, next) =>
               void handleAvatarAssetChange(testimonialId, itemIndex, next)
             }
-            onAvatarManualChange={handleAvatarManualChange}
             onClearAvatar={(testimonialId) => {
               const rowKey = testimonialId;
               setAvatarInputValue(rowKey, undefined);
@@ -1595,26 +1532,39 @@ export function TestimonialsVisualEditor({
           </div>
         </div>
 
-        <ClearableInputField
-          label="Background image URL"
-          value={normalized.style?.backgroundImage}
-          onChange={handleBackgroundManualChange}
-          onClear={handleClearBackgroundImage}
-          placeholder="https://cdn.example.com/section-bg.jpg"
-        />
-        <div data-testimonials-background-picker="true">
-          <MediaPicker
-            value={backgroundMediaPickerValue}
-            onChange={(next) => {
-              void handleBackgroundAssetChange(next);
-            }}
-            multiple={false}
-            accept={["image/*"]}
-          />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Background image</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClearBackgroundImage}
+              disabled={!(normalized.style?.backgroundImage ?? "").trim()}
+            >
+              Clear image
+            </Button>
+          </div>
+          <div data-testimonials-background-picker="true">
+            <MediaPicker
+              value={backgroundMediaPickerValue}
+              onChange={(next) => {
+                void handleBackgroundAssetChange(next);
+              }}
+              multiple={false}
+              accept={["image/*"]}
+            />
+          </div>
+          {(normalized.style?.backgroundImage ?? "").trim().length > 0 ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              A background image is already configured. Pick an image from the Media Library to
+              replace it.
+            </p>
+          ) : null}
         </div>
         <FieldNote>
-          Background media uses the resolved public image URL and does not persist the selected
-          asset id.
+          Pick a background image from the Media Library. Existing external backgrounds stay
+          read-only.
         </FieldNote>
         {getBackgroundImageFeedback(normalized.style?.backgroundImage) ? (
           <p className="text-xs text-amber-700">

@@ -137,6 +137,11 @@ Zasady:
   Advanced diagnostics are read-only. Known UI drift where legacy editors still
   expose raw CSS/JSON/HTML/IDs/technical URLs or writable Advanced controls is
   routed to TASK-336-19 rather than hidden behind broad allowlists.
+- Normal media/image authoring in Wizard/Visual uses asset pickers instead of
+  raw image URL text inputs. Legacy external image URLs may remain in persisted
+  data for backward compatibility, but the editor presents them as read-only
+  replace/clear state and asks the user to pick a Media Library asset for
+  future changes.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

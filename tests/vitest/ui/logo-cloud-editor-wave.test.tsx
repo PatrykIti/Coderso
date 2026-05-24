@@ -375,6 +375,12 @@ const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
   return inputs;
 };
 
+const queryInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
+
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
@@ -559,15 +565,11 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
 
   setInputValue(getInputByPlaceholder(container, "Logo 2"), "North Ridge");
   setInputValue(getInputsByPlaceholder(container, "Accessible logo name")[1]!, "North Ridge logo");
-  setInputValue(
-    getInputsByPlaceholder(container, "https://cdn.example.com/logo.svg")[1]!,
-    "/media/north-ridge.svg"
-  );
   setInputValue(getInputsByPlaceholder(container, "#")[1]!, "/partners/north-ridge");
 
   expect(getLatestValue().logos[1]?.name).toBe("North Ridge");
   expect(getLatestValue().logos[1]?.alt).toBe("North Ridge logo");
-  expect(getLatestValue().logos[1]?.image).toBe("/media/north-ridge.svg");
+  expect(queryInputsByPlaceholder(container, "https://cdn.example.com/logo.svg")).toHaveLength(0);
   expect(getLatestValue().logos[1]?.href).toBe("/partners/north-ridge");
 
   clickButton(getButtonsByText(getMediaPickers(container)[1]!, "pick-secondary-media")[0]!);
@@ -585,7 +587,7 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
   cleanup();
 });
 
-test("LogoCloud visual keeps the latest media selection when an older request resolves later", async () => {
+test("LogoCloud visual ignores stale media selection after a user clears the image", async () => {
   const { LogoCloudVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
@@ -645,17 +647,14 @@ test("LogoCloud visual preserves a manual image URL when an in-flight media requ
   const picker = getMediaPickers(logosSection)[0]!;
 
   clickButton(getButtonsByText(picker, "pick-logo-media")[0]!);
-  setInputValue(
-    getInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")[0]!,
-    "/media/manual-override.svg"
-  );
+  clickButton(getButtonsByText(picker, "clear-media")[0]!);
 
-  expect(getLatestValue().logos[0]?.image).toBe("/media/manual-override.svg");
+  expect(getLatestValue().logos[0]?.image).toBe("");
 
   deferredRequest.resolve(defaultLogoCloudMediaItems);
   await flushPromises();
 
-  expect(getLatestValue().logos[0]?.image).toBe("/media/manual-override.svg");
+  expect(getLatestValue().logos[0]?.image).toBe("");
   expect(getLatestValue().logos[0]?.alt).toBeUndefined();
 
   cleanup();
@@ -784,29 +783,21 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
 
   setInputValue(getInputByPlaceholder(logosSection, "Logo 1"), "Solo updated");
   setInputValue(
-    getInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")[0],
-    "/media/solo.svg"
-  );
-  setInputValue(
     getInputsByPlaceholder(logosSection, "Accessible logo name")[0]!,
     "Solo partner logo"
   );
   setInputValue(getInputsByPlaceholder(logosSection, "#")[2], "/partners/logo-3");
 
   expect(getLatestValue().logos[0]?.name).toBe("Solo updated");
-  expect(getLatestValue().logos[0]?.image).toBe("/media/solo.svg");
+  expect(queryInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")).toHaveLength(
+    0
+  );
+  clickButton(getButtonsByText(getMediaPickers(logosSection)[0]!, "pick-logo-media")[0]!);
+  await flushPromises();
+  expect(getLatestValue().logos[0]?.image).toBe("/media/acme.svg");
   expect(getLatestValue().logos[0]?.alt).toBe("Solo partner logo");
   expect(getLatestValue().logos[2]?.href).toBe("/partners/logo-3");
   expect(logosSection.textContent).toContain("Image preview");
-
-  setInputValue(
-    getInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")[1]!,
-    "javascript:alert(1)"
-  );
-  expect(logosSection.textContent).toContain(
-    "Use a relative path or http/https image URL. Invalid values do not render a logo preview."
-  );
-  expect(logosSection.textContent).toContain("Preview unavailable");
 
   setInputValue(getInputsByPlaceholder(logosSection, "#")[0], "javascript:alert(1)");
   expect(logosSection.textContent).toContain(
@@ -816,7 +807,7 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   const mediaPickers = getMediaPickers(logosSection);
   clickButton(getButtonsByText(mediaPickers[0]!, "pick-invalid-payload")[0]!);
   await flushPromises();
-  expect(getLatestValue().logos[0]?.image).toBe("/media/solo.svg");
+  expect(getLatestValue().logos[0]?.image).toBe("/media/acme.svg");
 
   clickButton(getButtonsByText(mediaPickers[1]!, "pick-unsupported-media")[0]!);
   await flushPromises();
@@ -1137,8 +1128,8 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
     ).toBe(logoCloudDefaults.header?.description);
     expect(getInputByPlaceholder(visualHarness.container, "Logo 1").value).toBe("Acme");
     expect(
-      getInputByPlaceholder(visualHarness.container, "https://cdn.example.com/logo.svg").value
-    ).toBe("");
+      queryInputsByPlaceholder(visualHarness.container, "https://cdn.example.com/logo.svg")
+    ).toHaveLength(0);
     expect(getInputByPlaceholder(visualHarness.container, "Accessible logo name").value).toBe("");
     expect(getInputByPlaceholder(visualHarness.container, "#").value).toBe("");
     expect(getMediaPickers(visualHarness.container)).toHaveLength(1);

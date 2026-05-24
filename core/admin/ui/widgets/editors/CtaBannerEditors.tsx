@@ -24,7 +24,6 @@ import {
   type CtaActionIcon,
   type CtaBackgroundMediaFit,
   type CtaBackgroundMediaPosition,
-  type CtaBackgroundMediaSource,
   type CtaBackgroundMediaType,
   type CtaBannerAction,
   type CtaBannerBorderWidth,
@@ -115,11 +114,6 @@ const actionIconOptions: Array<{ id: CtaActionIcon; label: string }> = [
 const mediaTypeOptions: Array<{ id: CtaBackgroundMediaType; label: string }> = [
   { id: "none", label: "None" },
   { id: "image", label: "Image" },
-];
-
-const mediaSourceOptions: Array<{ id: CtaBackgroundMediaSource; label: string }> = [
-  { id: "external", label: "External URL" },
-  { id: "library", label: "Media library" },
 ];
 
 const mediaFitOptions: Array<{ id: CtaBackgroundMediaFit; label: string }> = [
@@ -431,6 +425,17 @@ function getCtaHrefWarning(rawHref: string | undefined) {
     : "Use a relative path, hash, or http/https URL.";
 }
 
+function getBackgroundImageWarning(rawSrc: string | undefined) {
+  const raw = (rawSrc ?? "").trim();
+  if (!raw) return null;
+  return normalizeWidgetSafeHref(raw, {
+    allowRelative: true,
+    allowHttp: true,
+  })
+    ? null
+    : "Saved background image is not public-safe and will not render. Clear it or pick a Media Library image.";
+}
+
 function DiagnosticsSnapshot({ value }: { value: CtaBannerData }) {
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -556,24 +561,16 @@ function BackgroundMediaFields({
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const source: CtaBackgroundMediaSource = media.source ?? "external";
-
-  const handleSourceChange = (next: CtaBackgroundMediaSource) => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    if (next === "library") {
-      onChange({ source: next, assetId: undefined, src: undefined });
-    } else {
-      onChange({ source: next, assetId: undefined, src: "" });
-    }
-  };
+  const source = media.source ?? "external";
+  const hasSavedImage = (media.src ?? "").trim().length > 0;
+  const backgroundImageWarning = getBackgroundImageWarning(media.src);
 
   const handleAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
     if (!assetId) {
-      onChange({ assetId: undefined, src: undefined });
+      onChange({ assetId: undefined, source: "external", src: undefined });
       return;
     }
     onChange({ assetId, source: "library" });
@@ -600,44 +597,39 @@ function BackgroundMediaFields({
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="space-y-2">
-        <p className="text-sm font-medium">Background media source</p>
-        <Select
-          value={source}
-          onValueChange={(next) => handleSourceChange(next as CtaBackgroundMediaSource)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {mediaSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {source === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={media.assetId ?? null}
-            onChange={(value) => void handleAssetChange(value)}
-            multiple={false}
-            accept={["image/*"]}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Background image</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onChange({ assetId: undefined, source: "external", src: undefined })}
+            disabled={!hasSavedImage}
+          >
+            Clear image
+          </Button>
         </div>
-      ) : (
-        <label className="space-y-1">
-          <span className="text-sm font-medium">Background image URL</span>
-          <Input
-            value={media.src ?? ""}
-            onChange={(event) => onChange({ src: event.target.value })}
-            placeholder="https://images.unsplash.com/..."
-          />
-        </label>
-      )}
+        <MediaPicker
+          value={source === "library" ? (media.assetId ?? null) : null}
+          onChange={(value) => void handleAssetChange(value)}
+          multiple={false}
+          accept={["image/*"]}
+        />
+        {hasSavedImage ? (
+          <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            A background image is already configured. Pick an image from the Media Library to
+            replace it.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Pick a background image from the Media Library. Existing external images stay read-only.
+          </p>
+        )}
+        {backgroundImageWarning ? (
+          <p className="text-xs text-amber-700">{backgroundImageWarning}</p>
+        ) : null}
+        {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">

@@ -558,6 +558,33 @@ not the full raw-input or one-time Wizard lifecycle cleanup.
 - A full 38-widget admin smoke rerun was attempted but stopped after the
   unchanged `spacer` advanced probe hung without writing a final report.
 
+## TASK-336-19 Raw Media URL Cleanup Evidence (2026-05-24)
+
+The second TASK-336-19 implementation family targets nontechnical media
+authoring drift, not the remaining link/page picker or one-time Wizard
+lifecycle work.
+
+- `navigation`, `cta-banner`, `testimonials`, `feature-grid`, and `logo-cloud`
+  no longer expose editable raw image URL text inputs in normal Wizard/Visual
+  editor flows.
+- Existing external image values remain backward-compatible persisted data and
+  are shown as read-only replace/clear notices. Picking a Media Library asset
+  still writes the schema-owned public URL paths (`logo.value`,
+  `background.media.src`, `testimonials.avatar`, `style.backgroundImage`,
+  `items.image`, and `logos.image`) without adding schema churn.
+- Targeted Vitest editor coverage now asserts that the legacy raw URL
+  placeholders are absent and that media picker selection/clear/error paths keep
+  the same runtime-safe data contract.
+- Targeted authenticated Playwright admin evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-media-admin-*-2026-05-24.*`.
+  `navigation`, `testimonials`, and `logo-cloud` report `adminFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. `cta-banner` and `feature-grid` report
+  `adminFailures=0` and `metadataGaps=0`, with unchanged Advanced
+  `block_select_missing` fixture gaps.
+- Remaining explicit raw-link work (`cta.href`, navigation item URLs,
+  logo-cloud partner links, map embed paste flow, and page/link pickers) stays
+  routed to TASK-336-19 follow-up families.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

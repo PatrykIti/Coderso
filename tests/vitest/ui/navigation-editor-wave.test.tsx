@@ -715,14 +715,7 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
 
     const logoTypeSelect = findSelectByOptions(view.container, ["text", "image"]);
     setSelectValue(logoTypeSelect, "image");
-    setInputValue(findInputByPlaceholder(view.container, "https://..."), "logo.svg");
-
-    expect(normalizeText(view.container.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
-    );
-
-    const logoSourceSelect = findSelectByOptions(view.container, ["external", "library"]);
-    setSelectValue(logoSourceSelect, "library");
+    expect(findInputByPlaceholder(view.container, "https://...")).toBeUndefined();
 
     navigationClientState.mediaPickerValue = "missing-asset";
     clickByText(view.container, "pick-media");
@@ -746,14 +739,9 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
 
     clickByText(view.container, "clear-media");
     expect(latestValue.logo).toMatchObject({
-      assetId: undefined,
-      value: "",
-    });
-
-    setSelectValue(findSelectByOptions(view.container, ["external", "library"]), "external");
-    expect(latestValue.logo).toMatchObject({
       source: "external",
       assetId: undefined,
+      value: "",
     });
 
     clickElement(findCheckboxes(view.container)[0]);
@@ -879,12 +867,15 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
     const logoTypeSelect = findSelectByOptions(view.container, ["text", "image"]);
     setSelectValue(logoTypeSelect, "image");
 
-    setInputValue(findInputByPlaceholder(view.container, "https://..."), "/brand/logo.svg");
+    clickByText(view.container, "pick-media");
+    await flush();
     setInputValue(findInputByPlaceholder(view.container, "Logo alt text"), "Northwind mark");
 
     expect(latestValue.logo).toMatchObject({
       type: "image",
-      value: "/brand/logo.svg",
+      source: "library",
+      assetId: "logo-1",
+      value: "https://cdn.example.com/logo.png",
       href: "/home",
       alt: "Northwind mark",
     });
@@ -1247,10 +1238,8 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(normalizeText(linksSection?.textContent)).toContain(normalizeText("/support"));
 
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
-    setInputValue(
-      findInputByPlaceholder(brandSection ?? view.container, "https://..."),
-      "/brand/logo.svg"
-    );
+    clickByText(brandSection ?? view.container, "pick-media");
+    await flush();
     setInputValue(
       findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"),
       "/brand"
@@ -1270,6 +1259,8 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       value: "Northwind OS",
       href: "/brand",
       alt: "Brand mark",
+      source: "library",
+      assetId: "logo-1",
     });
 
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "CTA label"), "Contact");

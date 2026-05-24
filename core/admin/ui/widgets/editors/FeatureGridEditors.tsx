@@ -902,20 +902,24 @@ export function FeatureGridVisualEditor({
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Image URL</p>
-                  <Input
-                    value={item.image ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { image: event.target.value })
-                    }
-                    placeholder="https://cdn.example.com/feature.jpg"
-                  />
-                  {(item.image ?? "").trim().length > 0 &&
-                  !isValidFeatureGridImageUrl(item.image) ? (
-                    <p className="text-xs text-amber-700">
-                      Use a relative path or full URL. Unsafe media URLs are not rendered publicly.
-                    </p>
-                  ) : null}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Feature image</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedMediaIds((current) => {
+                          const { [itemMediaSelectionKey]: _removed, ...next } = current;
+                          return next;
+                        });
+                        updateItem(value, onChange, index, { image: undefined });
+                      }}
+                      disabled={!(item.image ?? "").trim()}
+                    >
+                      Clear image
+                    </Button>
+                  </div>
                   <MediaPicker
                     value={selectedMediaIds[itemMediaSelectionKey] ?? null}
                     onChange={(next) => {
@@ -924,6 +928,23 @@ export function FeatureGridVisualEditor({
                     multiple={false}
                     accept={["image/*"]}
                   />
+                  {(item.image ?? "").trim().length > 0 ? (
+                    <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                      A feature image is already configured. Pick an image from the Media Library to
+                      replace it.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Pick an image from the Media Library. Existing external images stay read-only.
+                    </p>
+                  )}
+                  {(item.image ?? "").trim().length > 0 &&
+                  !isValidFeatureGridImageUrl(item.image) ? (
+                    <p className="text-xs text-amber-700">
+                      Saved feature image is not public-safe and will not render. Clear it or pick a
+                      Media Library image.
+                    </p>
+                  ) : null}
                   {mediaPickerError?.startsWith(`Card ${index + 1}:`) ? (
                     <p className="text-xs text-destructive">{mediaPickerError}</p>
                   ) : null}

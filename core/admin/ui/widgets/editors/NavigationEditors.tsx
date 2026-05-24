@@ -72,11 +72,6 @@ const linkSourceOptions = [
   { id: "pages", label: "Pages index" },
 ] as const;
 
-const logoSourceOptions = [
-  { id: "external", label: "External URL" },
-  { id: "library", label: "Media library" },
-] as const;
-
 const alignmentOptions = ["left", "center", "right"] as const;
 const maxWidthOptions = ["none", "5xl", "6xl", "7xl"] as const;
 const paddingYOptions = ["none", "2", "3", "4", "5"] as const;
@@ -560,23 +555,15 @@ function NavigationLogoSourceFields({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const source = logo.source ?? "external";
-
-  const handleSourceChange = (next: "external" | "library") => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    if (next === "library") {
-      onChange({ source: next, assetId: undefined, value: "" });
-      return;
-    }
-    onChange({ source: next, assetId: undefined });
-  };
+  const hasSavedImage = (logo.value ?? "").trim().length > 0;
+  const hasUnsafeSavedImage = hasSavedImage && !isValidImageUrl(logo.value);
 
   const handleAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
     if (!assetId) {
-      onChange({ assetId: undefined, value: "" });
+      onChange({ assetId: undefined, source: "external", value: "" });
       return;
     }
     onChange({ assetId, source: "library" });
@@ -611,47 +598,41 @@ function NavigationLogoSourceFields({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <p className="text-sm font-medium">Logo source</p>
-        <Select
-          value={source}
-          onValueChange={(next) => handleSourceChange(next as "external" | "library")}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {logoSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Logo image</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onChange({ assetId: undefined, source: "external", value: "" })}
+            disabled={!hasSavedImage}
+          >
+            Clear image
+          </Button>
+        </div>
+        <MediaPicker
+          value={source === "library" ? (logo.assetId ?? null) : null}
+          onChange={(value) => void handleAssetChange(value)}
+          multiple={false}
+          accept={["image/*"]}
+        />
+        {hasSavedImage ? (
+          <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            A logo image is already configured. Pick an image from the Media Library to replace it.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Pick a logo image from the Media Library. Existing external images stay read-only.
+          </p>
+        )}
+        {hasUnsafeSavedImage ? (
+          <p className="text-xs text-destructive">
+            Saved logo image is not public-safe and will not render. Clear it or pick a Media
+            Library image.
+          </p>
+        ) : null}
+        {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
       </div>
-
-      {source === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={logo.assetId ?? null}
-            onChange={(value) => void handleAssetChange(value)}
-            multiple={false}
-            accept={["image/*"]}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Logo image URL</p>
-          <Input
-            value={logo.value ?? ""}
-            onChange={(event) => onChange({ value: event.target.value })}
-            placeholder="https://..."
-          />
-          {!isValidImageUrl(logo.value) ? (
-            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-          ) : null}
-        </div>
-      )}
     </div>
   );
 }

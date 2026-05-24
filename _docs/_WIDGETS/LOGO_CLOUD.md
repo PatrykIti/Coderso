@@ -20,8 +20,8 @@ Trust-focused section that displays partner/client logos with optional links.
 - Logo cloud layout variant
 - Section title
 - Logo count
-- Compact starter-logo rows with Name, Image URL, Alt text, Link URL, bounded
-  preview, and Media Library picking for the visible wizard count
+- Compact starter-logo rows with Name, Media Library image picking, Alt text,
+  Link URL, and bounded preview for the visible wizard count
 
 The wizard count selector and rendered logo-name inputs must stay synchronized.
 
@@ -42,8 +42,8 @@ Notes:
 - `Display style` now includes `Section background`, `Header alignment`, and
   `Header size` controls.
 - Visual repeated-logo cards now expose bounded previews, Media Library image
-  picking, explicit `Alt text`, and an editor-local unavailable-preview state
-  for invalid/broken image URLs.
+  picking, explicit `Alt text`, and read-only replace/clear guidance for legacy
+  invalid/broken image URLs.
 - Visual repeated-logo cards now support drag-handle reorder plus inline Undo
   after removal, while retaining Move up / Move down as deterministic fallback
   controls.
@@ -95,7 +95,7 @@ plus normalize/reset and raw payload diagnostics.
 - Logo cards render as links only when `href` is provided.
 - Logo images render explicit `logos[].alt` when present and fall back to
   `logos[].name` for legacy payloads.
-- Missing image URL falls back to text logo label.
+- Missing image falls back to text logo label.
 - `logoHeight: "none"` keeps the visible token in normalized data, but runtime
   image output is still capped with `max-h-16` so tall assets stay bounded.
 
@@ -158,5 +158,5 @@ plus normalize/reset and raw payload diagnostics.
 - Exports `logoCloudEditorContract` with `version: 2`.
 - Contract target: Wizard seeds starter logos and copy; Visual owns logo list,
   links, CTA, motion, and style; Advanced is read-only runtime diagnostics.
-- Image URL fallback copy and reset/normalize support actions are routed to
-  `TASK-336-19`.
+- Remaining link URL fallback copy and reset/normalize support actions are
+  routed to `TASK-336-19`.
