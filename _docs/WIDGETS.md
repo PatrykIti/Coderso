@@ -142,6 +142,12 @@ Zasady:
   data for backward compatibility, but the editor presents them as read-only
   replace/clear state and asks the user to pick a Media Library asset for
   future changes.
+- Normal link destination authoring in Wizard/Visual is page-first. Navigation,
+  CTA Banner, Logo Cloud, Feature Grid, and Testimonials use the shared
+  destination picker to select published CMS pages while preserving existing
+  `href` strings. Legacy custom, hash, or external destinations remain
+  backward-compatible read-only replace/clear state in beginner modes instead
+  of editable raw URL/path inputs.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

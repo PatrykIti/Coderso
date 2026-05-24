@@ -21,9 +21,9 @@ Compact conversion strip between sections with clear CTA actions.
 - Variant cards
 - Headline
 - Primary CTA label
-- Primary CTA URL
+- Primary CTA destination via published-page picker
 - Secondary CTA enable toggle
-- Secondary CTA label and URL
+- Secondary CTA label and destination via published-page picker
 
 ### Visual
 
@@ -45,6 +45,10 @@ Notes:
 - Background images are selected through Media Library. Legacy external
   background URLs stay as read-only replace/clear state and are not editable as
   raw URL text in Visual.
+- CTA destinations are selected through the shared published-page destination
+  picker in Wizard/Visual. Legacy custom/hash/external `href` values stay
+  backward-compatible as read-only replace/clear state instead of raw URL text
+  inputs.
 
 ### Advanced
 
@@ -64,7 +68,7 @@ Notes:
 - Primary, secondary, and tertiary CTA links render only when:
   - `enabled !== false`
   - label text is non-empty
-  - the URL resolves through the safe CTA href allowlist
+  - the destination resolves through the safe CTA href allowlist
 - `openInNewTab` derives safe `target="_blank"` and `rel="noopener noreferrer"`
   through the shared widget safe-link helper.
 - Button radius and size are CTA-owned controls; when not configured, existing

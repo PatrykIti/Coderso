@@ -35,7 +35,7 @@ media-first cards, CTA actions, and bounded layout/style controls.
 - per-card title, description mode (`plain` / `rich`), and rich-text card copy
 - icon input plus bounded emoji presets
 - Media Library image picker, image alt text, and image-over-icon guidance
-- explicit CTA enablement, URL, and target selection
+- explicit CTA enablement, published-page destination, and target selection
 - card layout, text alignment, padding, media sizing, and horizontal layout
 - surface/border colors
 - section background, width, header size, card title size, and hover behavior
@@ -100,7 +100,8 @@ media-first cards, CTA actions, and bounded layout/style controls.
   replace/clear state, but runtime output skips unsafe image URLs
 - invalid `items[].ctaHref` values stay visible in admin with inline feedback,
   while runtime output rejects unsafe links
-- external CTA links reuse shared safe-link attributes
+- existing custom/hash/external CTA links remain backward-compatible read-only
+  replace/clear state in Visual and reuse shared safe-link attributes at runtime
 - decorative emoji output is marked `aria-hidden="true"`
 - rich descriptions are sanitized before runtime HTML output
 
@@ -120,5 +121,4 @@ media-first cards, CTA actions, and bounded layout/style controls.
 - Contract target: Wizard seeds starter layout/count/copy; Visual owns daily
   card content, CTA, media, layout, and styling; Advanced is read-only runtime
   diagnostics.
-- Remaining link URL and normalization-action UX drift is routed to
-  `TASK-336-19`.
+- Remaining normalization-action UX drift is routed to `TASK-336-19`.

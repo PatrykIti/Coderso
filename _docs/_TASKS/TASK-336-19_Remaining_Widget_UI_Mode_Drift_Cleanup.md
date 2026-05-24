@@ -122,6 +122,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `metadataGaps=0` for every widget. `navigation`, `testimonials`, and
   `logo-cloud` have `fixtureGaps=0`; `cta-banner` and `feature-grid` still show
   unchanged Advanced fixture-selection gaps (`block_select_missing`).
+- In Progress (2026-05-24): third implementation family replaces editable raw
+  `href`/URL/path fields in normal Wizard/Visual flows for `navigation`,
+  `cta-banner`, `logo-cloud`, `testimonials`, and `feature-grid` with the
+  shared `LinkDestinationField`. The field loads published pages, writes back
+  the existing string `href` contract, and preserves legacy custom/hash/external
+  destinations as read-only replace/clear state. Claude read-only UI/UX review
+  accepted the page-first/read-only-legacy approach for this slice and required
+  filtering page options to `published` plus removing the new-logo `href: "#"`
+  seed, both of which are included.
+- In Progress (2026-05-24): targeted authenticated Playwright admin smoke for
+  the five link-destination widgets reports `adminFailures=0`,
+  `metadataGaps=0`, and authenticated admin reachability for every widget.
+  `navigation`, `logo-cloud`, and `feature-grid` have `fixtureGaps=0`;
+  `cta-banner` and `testimonials` still show unchanged Advanced
+  fixture-selection gaps (`block_select_missing`).
 
 ## Files to Change
 

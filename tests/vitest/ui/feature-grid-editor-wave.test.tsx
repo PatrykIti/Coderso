@@ -176,6 +176,27 @@ vi.mock("@/services/mediaClient", () => ({
   ]),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-features",
+      title: "Features",
+      slug: "features",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-automation",
+      title: "Automation",
+      slug: "automation",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
     <div>
@@ -337,6 +358,14 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
 
 const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
@@ -570,9 +599,12 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       findInputByPlaceholder(featureCardsSection as ParentNode, "Learn more"),
       "See automation"
     );
-    setInputValue(
-      findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
-      "/automation"
+    setSelectValue(
+      getDestinationSelect(
+        featureCardsSection as ParentNode,
+        "feature-grid-card-1-cta-destination"
+      ),
+      "page-automation"
     );
 
     clickByText(featureCardsSection as ParentNode, "Add card");
@@ -1143,7 +1175,7 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   }
 });
 
-test("FeatureGrid editor hides raw image URL editing while keeping CTA feedback", async () => {
+test("FeatureGrid editor hides raw image URL and CTA URL editing while keeping destination feedback", async () => {
   const { FeatureGridVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
@@ -1155,7 +1187,7 @@ test("FeatureGrid editor hides raw image URL editing while keeping CTA feedback"
         title: "Security",
         image: "javascript:alert(1)",
         ctaLabel: "Open",
-        ctaHref: "",
+        ctaHref: "ftp://blocked.invalid",
       },
     ],
   };
@@ -1186,19 +1218,25 @@ test("FeatureGrid editor hides raw image URL editing while keeping CTA feedback"
         "https://cdn.example.com/feature.jpg"
       )
     ).toBeUndefined();
-    setInputValue(
-      findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
-      "ftp://blocked.invalid"
-    );
+    expect(findInputByPlaceholder(featureCardsSection as ParentNode, "/features")).toBeUndefined();
 
     expect(featureCardsSection?.textContent).toContain(
       "Saved feature image is not public-safe and will not render. Clear it or pick a Media Library image."
     );
     expect(featureCardsSection?.textContent).toContain(
-      "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
+      "Saved destination is not public-safe and will not render publicly."
     );
+    await flush();
+    setSelectValue(
+      getDestinationSelect(
+        featureCardsSection as ParentNode,
+        "feature-grid-card-1-cta-destination"
+      ),
+      "page-features"
+    );
+
     expect(latestValue.items[0]?.image).toBe("javascript:alert(1)");
-    expect(latestValue.items[0]?.ctaHref).toBe("ftp://blocked.invalid");
+    expect(latestValue.items[0]?.ctaHref).toBe("/features");
   } finally {
     view.cleanup();
   }

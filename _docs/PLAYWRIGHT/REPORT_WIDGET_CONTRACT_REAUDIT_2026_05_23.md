@@ -585,6 +585,30 @@ lifecycle work.
   logo-cloud partner links, map embed paste flow, and page/link pickers) stays
   routed to TASK-336-19 follow-up families.
 
+## TASK-336-19 Link Destination Cleanup Evidence (2026-05-24)
+
+The third TASK-336-19 implementation family targets raw link/path/URL drift in
+normal Wizard/Visual flows while preserving existing runtime schemas.
+
+- `navigation`, `cta-banner`, `logo-cloud`, `testimonials`, and `feature-grid`
+  now use the shared `LinkDestinationField` for normal beginner-mode
+  destinations.
+- The shared field loads only published CMS pages, writes back the existing
+  string `href` fields, and does not introduce `pageId` schema churn.
+- Legacy custom/hash/external `href` values remain backward-compatible as
+  read-only replace/clear state in Wizard/Visual instead of editable raw URL or
+  path inputs.
+- Claude post-implementation review accepted the page-first/read-only-legacy
+  approach for this slice. Its required follow-ups are included here:
+  unpublished pages are filtered out of picker options, and newly added Logo
+  Cloud rows no longer seed `href: "#"`.
+- Targeted authenticated Playwright admin evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-link-destination-admin-*-2026-05-24.*`.
+  `navigation`, `logo-cloud`, and `feature-grid` report `adminFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. `cta-banner` and `testimonials`
+  report `adminFailures=0` and `metadataGaps=0`, with unchanged Advanced
+  `block_select_missing` fixture gaps.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

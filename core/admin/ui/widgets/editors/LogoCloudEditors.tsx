@@ -40,6 +40,7 @@ import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 import { ClearableInputField } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 
 const variantOptions: Array<{
   id: LogoCloudVariantId;
@@ -352,7 +353,7 @@ function addLogoToData(current: LogoCloudData) {
   return {
     ...current,
     logos: normalizeLogoCloudLogos(
-      [...logos, { name: `Logo ${logos.length + 1}`, href: "#" }],
+      [...logos, { name: `Logo ${logos.length + 1}` }],
       logos.length + 1
     ),
   };
@@ -827,15 +828,13 @@ function LogoImageControl({
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Link URL</p>
-        <Input
-          value={logo.href ?? ""}
-          onChange={(event) => mediaSelection.commitLogoPatch(index, { href: event.target.value })}
-          placeholder="#"
-        />
-        {linkFeedback ? <p className="text-xs text-amber-700">{linkFeedback}</p> : null}
-      </div>
+      <LinkDestinationField
+        fieldId={`logo-cloud-logo-${index + 1}-destination`}
+        label="Logo destination"
+        value={logo.href ?? ""}
+        onChange={(next) => mediaSelection.commitLogoPatch(index, { href: next })}
+        feedback={linkFeedback}
+      />
     </div>
   );
 }
@@ -1192,19 +1191,14 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">CTA href</p>
-          <Input
-            value={cta.href ?? ""}
-            onChange={(event) => updateCta(value, onChange, { href: event.target.value })}
-            placeholder="#"
-          />
-          {getLogoCloudLinkFeedback(cta.href ?? undefined) ? (
-            <p className="text-xs text-amber-700">
-              {getLogoCloudLinkFeedback(cta.href ?? undefined)}
-            </p>
-          ) : null}
-        </div>
+        <LinkDestinationField
+          fieldId="logo-cloud-cta-destination"
+          label="CTA destination"
+          value={cta.href ?? ""}
+          disabled={!cta.enabled}
+          onChange={(next) => updateCta(value, onChange, { href: next })}
+          feedback={getLogoCloudLinkFeedback(cta.href ?? undefined)}
+        />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">CTA target</p>

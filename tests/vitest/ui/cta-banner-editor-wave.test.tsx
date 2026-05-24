@@ -182,6 +182,35 @@ vi.mock("@/services/mediaClient", () => ({
   ]),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-demo",
+      title: "Demo",
+      slug: "demo",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-sales",
+      title: "Sales",
+      slug: "sales",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-later",
+      title: "Later",
+      slug: "later",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
     <button
@@ -266,6 +295,16 @@ const getInputByPlaceholder = (container: ParentNode, placeholder: string, index
     throw new Error(`Missing input with placeholder "${placeholder}" at index ${index}`);
   }
   return input;
+};
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = (container as ParentNode).querySelector(
+    `[data-link-destination-field="${fieldId}"] select`
+  );
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
 };
 
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
@@ -395,7 +434,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("CtaBanner wizard covers variant cards, URLs, and secondary toggle preservation", async () => {
+test("CtaBanner wizard covers variant cards, destinations, and secondary toggle preservation", async () => {
   const { CtaBannerWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
@@ -419,6 +458,7 @@ test("CtaBanner wizard covers variant cards, URLs, and secondary toggle preserva
     });
 
   try {
+    await flush();
     expect(getButtonsByText(container, "Selected")).toHaveLength(1);
     clickButton(getButtonsByText(container, "Split")[0]);
     expect(getLatestVariant()).toBe("split");
@@ -429,7 +469,10 @@ test("CtaBanner wizard covers variant cards, URLs, and secondary toggle preserva
       "Ship campaigns faster"
     );
     setInputValue(getInputByPlaceholder(container, "Get started"), "Start free trial");
-    setInputValue(getInputByPlaceholder(container, "/start"), "/try-now");
+    setSelectValue(
+      getDestinationSelect(container, "cta-banner-wizard-primary-destination"),
+      "page-demo"
+    );
 
     const secondarySwitch = getSwitchByLabel(container, "Enable secondary CTA");
     clickButton(secondarySwitch);
@@ -441,7 +484,11 @@ test("CtaBanner wizard covers variant cards, URLs, and secondary toggle preserva
 
     clickButton(getSwitchByLabel(container, "Enable secondary CTA"));
     setInputValue(getInputByPlaceholder(container, "Contact sales"), "Talk with team");
-    setInputValue(getInputByPlaceholder(container, "/contact"), "/sales");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(container, "cta-banner-wizard-secondary-destination"),
+      "page-sales"
+    );
 
     expect(getLatestValue().content).toMatchObject({
       title: "Ship campaigns faster",
@@ -449,7 +496,7 @@ test("CtaBanner wizard covers variant cards, URLs, and secondary toggle preserva
     expect(getLatestValue().actions).toMatchObject({
       primaryCta: {
         label: "Start free trial",
-        href: "/try-now",
+        href: "/demo",
       },
       secondaryCta: {
         label: "Talk with team",
@@ -474,7 +521,7 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
       showDescription: true,
     },
     actions: {
-      primaryCta: { label: "Join now", href: "/join", enabled: true },
+      primaryCta: { label: "Join now", href: "javascript:alert(1)", enabled: true },
       secondaryCta: { label: "Talk", href: "/contact", enabled: true },
       tertiaryCta: { label: "", href: "", enabled: false },
     },
@@ -507,6 +554,7 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
   });
 
   try {
+    await flush();
     const layoutSection = getSectionByTitle(container, "Variant and layout structure");
     const actionsSection = getSectionByTitle(container, "Actions");
     const colorsSection = getSectionByTitle(container, "Colors and button styles");
@@ -517,11 +565,13 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     expect(getLatestVariant()).toBe("with-badge");
 
     const primaryCard = getActionCard(actionsSection, "primary");
-    setInputValue(getInputByPlaceholder(primaryCard, "#"), "javascript:alert(1)");
-    expect(primaryCard.textContent).toContain("Use a relative path, hash, or http/https URL.");
-    expect(getLatestValue().actions?.primaryCta?.href).toBe("/join");
+    expect(primaryCard.textContent).toContain("Saved custom destination");
+    expect(getLatestValue().actions?.primaryCta?.href).toBe("javascript:alert(1)");
 
-    setInputValue(getInputByPlaceholder(primaryCard, "#"), "/demo");
+    setSelectValue(
+      getDestinationSelect(primaryCard, "cta-banner-primary-destination"),
+      "page-demo"
+    );
     expect(getLatestValue().actions?.primaryCta?.href).toBe("/demo");
 
     const secondaryCard = getActionCard(actionsSection, "secondary");
@@ -534,14 +584,22 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
 
     clickButton(getSwitchByLabel(secondaryCard, "Enabled"));
     setInputValue(getInputByPlaceholder(secondaryCard, "Contact sales"), "Talk with team");
-    setInputValue(getInputByPlaceholder(secondaryCard, "#"), "/contact-sales");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(secondaryCard, "cta-banner-secondary-destination"),
+      "page-sales"
+    );
     const secondaryCardAfterHref = getActionCard(actionsSection, "secondary");
     clickButton(getSwitchByLabel(secondaryCardAfterHref, "Open in new tab"));
 
     const tertiaryCard = getActionCard(actionsSection, "tertiary");
     clickButton(getSwitchByLabel(tertiaryCard, "Enabled"));
     setInputValue(getInputByPlaceholder(tertiaryCard, "No thanks"), "Maybe later");
-    setInputValue(getInputByPlaceholder(tertiaryCard, "/dismiss"), "/later");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(tertiaryCard, "cta-banner-tertiary-destination"),
+      "page-later"
+    );
     const tertiaryCardAfterHref = getActionCard(actionsSection, "tertiary");
     const tertiaryIconSelect = getSelectByOptions(tertiaryCardAfterHref, [
       "none",
@@ -581,7 +639,7 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
         },
         secondaryCta: {
           label: "Talk with team",
-          href: "/contact-sales",
+          href: "/sales",
           enabled: true,
           openInNewTab: true,
         },

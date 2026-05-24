@@ -46,7 +46,7 @@ Visual owns the full product authoring surface:
 - header alignment and title size
 - card spacing, radius, border width, and bounded color tokens
 - contrast advisories for text/card and accent/card combinations
-- optional CTA label, href, target, and style
+- optional CTA label, published-page destination, target, and style
 - slider dot navigation and zero-rating semantics
 
 ### Advanced
@@ -74,8 +74,10 @@ Visual-owned spacing and display controls.
   - `stars`: render five empty stars.
 - `pagination.mode = "load-more"` keeps the first `pageSize` testimonials
   visible and reveals the remainder through SSR `<details>` disclosure.
-- Legacy avatar URLs, CTA hrefs, and background image URLs fail closed at
-  runtime when they are not safe relative or `http/https` values.
+- Legacy avatar URLs and background image URLs fail closed at runtime when they
+  are not safe relative or `http/https` values. Legacy custom/hash/external CTA
+  `href` values stay read-only replace/clear state in Visual and continue to
+  render only through the shared safe-link allowlist.
 - Avatar images lazy-load and use contextual `Photo of ...` alt text derived
   from the author plus any available role/source metadata.
 - `quoteHtml` is sanitized to bounded paragraph/line-break/emphasis/link markup

@@ -184,6 +184,19 @@ vi.mock("@/services/mediaClient", () => ({
   ]),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-stories",
+      title: "Stories",
+      slug: "stories",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({ value, onChange }: { value: unknown; onChange: (value: unknown) => void }) => (
     <div data-media-picker-value={String(value ?? "")}>
@@ -336,6 +349,14 @@ const findTextareasByPlaceholder = (container: ParentNode, placeholder: string) 
     (element) =>
       element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
@@ -590,7 +611,12 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
 
     const ctaVisibilitySelect = findSelectByOptions(view.container, ["disabled", "enabled"]);
     setSelectValue(ctaVisibilitySelect, "enabled");
-    setInputValue(findInputsByPlaceholder(view.container, "/case-studies")[0], "/stories");
+    await flushPromises();
+    expect(findInputsByPlaceholder(view.container, "/case-studies")).toHaveLength(0);
+    setSelectValue(
+      getDestinationSelect(view.container, "testimonials-cta-destination"),
+      "page-stories"
+    );
     setInputValue(findInputsByPlaceholder(view.container, "Read more stories")[0], "Read proof");
     setSelectValue(findSelectByOptions(view.container, ["same-tab", "new-tab"]), "new-tab");
     setSelectValue(findSelectByOptions(view.container, ["primary", "secondary", "link"]), "link");

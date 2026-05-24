@@ -231,6 +231,35 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-partner",
+      title: "Partner logo",
+      slug: "partners/logo-3",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-contact",
+      title: "Contact",
+      slug: "contact",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-north-ridge",
+      title: "North Ridge",
+      slug: "partners/north-ridge",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     value,
@@ -380,6 +409,14 @@ const queryInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
+
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
 
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
@@ -565,7 +602,11 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
 
   setInputValue(getInputByPlaceholder(container, "Logo 2"), "North Ridge");
   setInputValue(getInputsByPlaceholder(container, "Accessible logo name")[1]!, "North Ridge logo");
-  setInputValue(getInputsByPlaceholder(container, "#")[1]!, "/partners/north-ridge");
+  await flushPromises();
+  setSelectValue(
+    getDestinationSelect(container, "logo-cloud-logo-2-destination"),
+    "page-north-ridge"
+  );
 
   expect(getLatestValue().logos[1]?.name).toBe("North Ridge");
   expect(getLatestValue().logos[1]?.alt).toBe("North Ridge logo");
@@ -779,14 +820,19 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   clickButton(getButtonsByText(logosSection, "Add logo")[0]);
   expect(getLatestValue().logos).toHaveLength(3);
   expect(getLatestValue().logos[2]?.name).toBe("Logo 3");
-  expect(getLatestValue().logos[2]?.href).toBe("#");
+  expect(getLatestValue().logos[2]?.href).toBeUndefined();
 
   setInputValue(getInputByPlaceholder(logosSection, "Logo 1"), "Solo updated");
   setInputValue(
     getInputsByPlaceholder(logosSection, "Accessible logo name")[0]!,
     "Solo partner logo"
   );
-  setInputValue(getInputsByPlaceholder(logosSection, "#")[2], "/partners/logo-3");
+  expect(queryInputsByPlaceholder(logosSection, "#")).toHaveLength(0);
+  await flushPromises();
+  setSelectValue(
+    getDestinationSelect(logosSection, "logo-cloud-logo-3-destination"),
+    "page-partner"
+  );
 
   expect(getLatestValue().logos[0]?.name).toBe("Solo updated");
   expect(queryInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")).toHaveLength(
@@ -799,10 +845,7 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   expect(getLatestValue().logos[2]?.href).toBe("/partners/logo-3");
   expect(logosSection.textContent).toContain("Image preview");
 
-  setInputValue(getInputsByPlaceholder(logosSection, "#")[0], "javascript:alert(1)");
-  expect(logosSection.textContent).toContain(
-    "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
-  );
+  expect(logosSection.textContent).toContain("Saved custom destination");
 
   const mediaPickers = getMediaPickers(logosSection);
   clickButton(getButtonsByText(mediaPickers[0]!, "pick-invalid-payload")[0]!);
@@ -1004,14 +1047,15 @@ test("LogoCloud visual controls tile shape, global new-tab links, and section CT
   expect(getLatestValue().cta?.enabled).toBe(true);
 
   setInputValue(getInputByPlaceholder(ctaSection, "Get started"), "Talk to sales");
-  setInputValue(getInputByPlaceholder(ctaSection, "#"), "https://example.com/contact");
+  await flushPromises();
+  setSelectValue(getDestinationSelect(ctaSection, "logo-cloud-cta-destination"), "page-contact");
   const ctaTargetSelect = getSelectByOptions(ctaSection, ["same-tab", "new-tab"]);
   setSelectValue(ctaTargetSelect, "new-tab");
 
   expect(getLatestValue().cta).toMatchObject({
     enabled: true,
     label: "Talk to sales",
-    href: "https://example.com/contact",
+    href: "/contact",
     target: "new-tab",
   });
 
@@ -1031,10 +1075,7 @@ test("LogoCloud visual controls tile shape, global new-tab links, and section CT
     openLinksInNewTab: true,
   });
 
-  setInputValue(getInputByPlaceholder(ctaSection, "#"), "javascript:alert(1)");
-  expect(ctaSection.textContent).toContain(
-    "Use a relative path, hash, or full URL. Unsafe links are not rendered publicly."
-  );
+  expect(queryInputsByPlaceholder(ctaSection, "#")).toHaveLength(0);
 
   cleanup();
 });
@@ -1131,7 +1172,7 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
       queryInputsByPlaceholder(visualHarness.container, "https://cdn.example.com/logo.svg")
     ).toHaveLength(0);
     expect(getInputByPlaceholder(visualHarness.container, "Accessible logo name").value).toBe("");
-    expect(getInputByPlaceholder(visualHarness.container, "#").value).toBe("");
+    expect(queryInputsByPlaceholder(visualHarness.container, "#")).toHaveLength(0);
     expect(getMediaPickers(visualHarness.container)).toHaveLength(1);
 
     const styleSection = getSectionByTitle(visualHarness.container, "Display style");

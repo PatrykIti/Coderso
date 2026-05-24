@@ -37,6 +37,7 @@ import {
 } from "../../../../widgets/core/navigation";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -747,14 +748,16 @@ export function NavigationWizardEditor({
                       placeholder={`Item ${index + 1} label`}
                     />
                   </label>
-                  <label className="space-y-1 text-sm">
-                    <span className="font-medium text-foreground">Link {index + 1} URL</span>
-                    <Input
-                      value={item.href}
-                      onChange={(event) => updateItem(index, { href: event.target.value })}
-                      placeholder="/path"
-                    />
-                  </label>
+                  <LinkDestinationField
+                    fieldId={`navigation-wizard-link-${index + 1}-destination`}
+                    label={`Link ${index + 1} destination`}
+                    value={item.href}
+                    onChange={(next) => updateItem(index, { href: next })}
+                    feedback={
+                      !isValidHref(item.href) ? "Saved destination is not public-safe." : null
+                    }
+                    feedbackTone="destructive"
+                  />
                 </div>
               ))}
             </div>
@@ -801,14 +804,14 @@ export function NavigationWizardEditor({
           ) : (
             <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
           )}
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">Logo link</span>
-            <Input
-              value={logo.href ?? ""}
-              onChange={(event) => updateLogo({ href: event.target.value })}
-              placeholder="Logo link (e.g. /)"
-            />
-          </label>
+          <LinkDestinationField
+            fieldId="navigation-wizard-logo-destination"
+            label="Logo destination"
+            value={logo.href ?? ""}
+            onChange={(next) => updateLogo({ href: next })}
+            feedback={!isValidHref(logo.href) ? "Saved destination is not public-safe." : null}
+            feedbackTone="destructive"
+          />
           {logo.type === "image" ? (
             <Input
               value={logo.alt ?? ""}
@@ -855,17 +858,22 @@ export function NavigationWizardEditor({
               }
               placeholder="Get started"
             />
-            <Input
+            <LinkDestinationField
+              fieldId="navigation-wizard-cta-destination"
+              label="Primary CTA destination"
               value={value.cta?.href ?? ""}
-              onChange={(event) =>
+              onChange={(next) =>
                 update({
                   cta: {
                     label: value.cta?.label ?? "",
-                    href: event.target.value,
+                    href: next,
                   },
                 })
               }
-              placeholder="/start"
+              feedback={
+                !isValidHref(value.cta?.href) ? "Saved destination is not public-safe." : null
+              }
+              feedbackTone="destructive"
             />
           </div>
         ) : (
@@ -1097,14 +1105,14 @@ export function NavigationVisualEditor({
           <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
         )}
 
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Logo link</span>
-          <Input
-            value={logo.href ?? ""}
-            onChange={(event) => updateLogo({ href: event.target.value })}
-            placeholder="Logo link (e.g. /)"
-          />
-        </label>
+        <LinkDestinationField
+          fieldId="navigation-visual-logo-destination"
+          label="Logo destination"
+          value={logo.href ?? ""}
+          onChange={(next) => updateLogo({ href: next })}
+          feedback={!isValidHref(logo.href) ? "Saved destination is not public-safe." : null}
+          feedbackTone="destructive"
+        />
         {logo.type === "image" ? (
           <Input
             value={logo.alt ?? ""}
@@ -1219,20 +1227,17 @@ export function NavigationVisualEditor({
                         placeholder={`Item ${index + 1} label`}
                       />
                     </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="font-medium text-foreground">URL</span>
-                      <Input
-                        value={item.href}
-                        onChange={(event) => updateItem(index, { href: event.target.value })}
-                        placeholder="/path"
-                      />
-                    </label>
+                    <LinkDestinationField
+                      fieldId={`navigation-visual-link-${index + 1}-destination`}
+                      label="Destination"
+                      value={item.href}
+                      onChange={(next) => updateItem(index, { href: next })}
+                      feedback={
+                        !isValidHref(item.href) ? "Saved destination is not public-safe." : null
+                      }
+                      feedbackTone="destructive"
+                    />
                   </div>
-                  {!isValidHref(item.href) ? (
-                    <p className="mt-2 text-xs text-destructive">
-                      Use a relative path, `#`, or full URL.
-                    </p>
-                  ) : null}
                   <NavigationMetadataFields
                     item={item}
                     onChange={(patch) => updateItem(index, patch)}
@@ -1313,24 +1318,23 @@ export function NavigationVisualEditor({
                                   placeholder="Sub-link label"
                                 />
                               </label>
-                              <label className="space-y-1 text-sm">
-                                <span className="font-medium text-foreground">URL</span>
-                                <Input
-                                  value={child.href}
-                                  onChange={(event) =>
-                                    updateChild(index, childIndex, {
-                                      href: event.target.value,
-                                    })
-                                  }
-                                  placeholder="/path"
-                                />
-                              </label>
+                              <LinkDestinationField
+                                fieldId={`navigation-visual-link-${index + 1}-child-${childIndex + 1}-destination`}
+                                label="Destination"
+                                value={child.href}
+                                onChange={(next) =>
+                                  updateChild(index, childIndex, {
+                                    href: next,
+                                  })
+                                }
+                                feedback={
+                                  !isValidHref(child.href)
+                                    ? "Saved destination is not public-safe."
+                                    : null
+                                }
+                                feedbackTone="destructive"
+                              />
                             </div>
-                            {!isValidHref(child.href) ? (
-                              <p className="mt-2 text-xs text-destructive">
-                                Use a relative path, `#`, or full URL.
-                              </p>
-                            ) : null}
                             <NavigationMetadataFields
                               item={child}
                               onChange={(patch) => updateChild(index, childIndex, patch)}
@@ -1379,21 +1383,23 @@ export function NavigationVisualEditor({
               }
               placeholder="CTA label"
             />
-            <Input
+            <LinkDestinationField
+              fieldId="navigation-visual-cta-destination"
+              label="Primary CTA destination"
               value={value.cta?.href ?? ""}
-              onChange={(event) =>
+              onChange={(next) =>
                 update({
                   cta: {
                     label: value.cta?.label ?? "",
-                    href: event.target.value,
+                    href: next,
                   },
                 })
               }
-              placeholder="/start"
+              feedback={
+                !isValidHref(value.cta?.href) ? "Saved destination is not public-safe." : null
+              }
+              feedbackTone="destructive"
             />
-            {!isValidHref(value.cta?.href) ? (
-              <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-            ) : null}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>

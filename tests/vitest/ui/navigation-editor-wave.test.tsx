@@ -148,6 +148,54 @@ function createPages(): TestPageSummary[] {
       updatedAt: "2026-03-08T10:00:00.000Z",
       author: null,
     },
+    {
+      id: "page-contact",
+      title: "Contact",
+      slug: "contact",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-platform",
+      title: "Platform",
+      slug: "platform",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-api",
+      title: "API",
+      slug: "api",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-brand",
+      title: "Brand",
+      slug: "brand",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-root",
+      title: "Root",
+      slug: "",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-home",
+      title: "Home",
+      slug: "home",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
   ];
 }
 
@@ -511,6 +559,14 @@ const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
       element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
   );
 
+const getDestinationSelect = (container: ParentNode, fieldId: string) => {
+  const select = container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing destination select "${fieldId}"`);
+  }
+  return select;
+};
+
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -637,6 +693,7 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
   const view = mount(<Harness />);
 
   try {
+    await flush();
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Quick links"));
 
     const linksSourceSelect = findSelectByOptions(view.container, ["manual", "menu", "pages"]);
@@ -654,9 +711,13 @@ test("NavigationWizardEditor covers links-source branching, menu sync, logo libr
 
     clickElement(findCheckboxes(view.container)[0]);
     expect(latestVariant).toBe("with-cta");
+    await flush();
 
     setInputValue(findInputByPlaceholder(view.container, "Get started"), "Talk to sales");
-    setInputValue(findInputByPlaceholder(view.container, "/start"), "/contact");
+    setSelectValue(
+      getDestinationSelect(view.container, "navigation-wizard-cta-destination"),
+      "page-contact"
+    );
     expect(latestValue.cta).toEqual({
       label: "Talk to sales",
       href: "/contact",
@@ -839,11 +900,14 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
   const view = mount(<Harness />);
 
   try {
+    await flush();
     setSelectValue(findSelectByOptions(view.container, ["simple", "with-cta", "split"]), "split");
 
-    const quickLinkInputs = findInputsByPlaceholder(view.container, "/path");
     setInputValue(findInputByPlaceholder(view.container, "Item 1 label"), "Platform");
-    setInputValue(quickLinkInputs[0], "/platform");
+    setSelectValue(
+      getDestinationSelect(view.container, "navigation-wizard-link-1-destination"),
+      "page-platform"
+    );
 
     expect(latestValue.items[0]).toMatchObject({
       label: "Platform",
@@ -851,7 +915,11 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
     });
 
     setInputValue(findInputByPlaceholder(view.container, "Coderso"), "Northwind");
-    setInputValue(findInputByPlaceholder(view.container, "Logo link (e.g. /)"), "/home");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(view.container, "navigation-wizard-logo-destination"),
+      "page-home"
+    );
 
     expect(latestValue.logo).toMatchObject({
       type: "text",
@@ -1013,6 +1081,7 @@ test("NavigationVisualEditor covers API menu resolver fallback and color picker 
   const view = mount(<Harness />);
 
   try {
+    await flush();
     const structureSection = findSectionByTitle(view.container, "Variant and Structure");
     if (!(structureSection instanceof HTMLElement)) {
       throw new Error("Missing structure section");
@@ -1104,25 +1173,19 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 
     clickByText(structureSection ?? view.container, "Split");
     expect(latestVariant).toBe("split");
+    await flush();
 
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Item 1 label"), "Docs");
-    setInputValue(
-      findInputsByPlaceholder(linksSection ?? view.container, "/path")[0],
-      "ftp://invalid"
+    setSelectValue(
+      getDestinationSelect(linksSection ?? view.container, "navigation-visual-link-1-destination"),
+      "page-platform"
     );
 
-    expect(normalizeText(linksSection?.textContent)).toContain(
-      normalizeText("Use a relative path, `#`, or full URL.")
-    );
     expect(latestValue.items[0]).toMatchObject({
       label: "Docs",
-      href: "ftp://invalid",
+      href: "/platform",
     });
-
-    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[0], "#overview");
-    expect(normalizeText(linksSection?.textContent ?? "")).not.toContain(
-      normalizeText("Use a relative path, `#`, or full URL.")
-    );
+    expect(findInputsByPlaceholder(linksSection ?? view.container, "/path")).toHaveLength(0);
 
     setSelectValue(
       findSelectByOptions(linksSection ?? view.container, ["none", "pathname", "exact"]),
@@ -1149,17 +1212,16 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       },
     });
 
-    setInputValue(
-      findInputsByPlaceholder(linksSection ?? view.container, "/path")[0],
-      "httpx://broken"
-    );
-    expect(normalizeText(linksSection?.textContent)).toContain(
-      normalizeText("Use a relative path, `#`, or full URL.")
-    );
-
     clickByText(linksSection ?? view.container, "Add sub-link", 0);
     setInputValue(findInputByPlaceholder(linksSection ?? view.container, "Sub-link label"), "API");
-    setInputValue(findInputsByPlaceholder(linksSection ?? view.container, "/path")[1], "/api");
+    await flush();
+    setSelectValue(
+      getDestinationSelect(
+        linksSection ?? view.container,
+        "navigation-visual-link-1-child-1-destination"
+      ),
+      "page-api"
+    );
 
     expect(latestValue.items[0].children).toEqual([
       {
@@ -1240,9 +1302,9 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
     clickByText(brandSection ?? view.container, "pick-media");
     await flush();
-    setInputValue(
-      findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"),
-      "/brand"
+    setSelectValue(
+      getDestinationSelect(brandSection ?? view.container, "navigation-visual-logo-destination"),
+      "page-brand"
     );
     setInputValue(
       findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"),
@@ -1264,17 +1326,14 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     });
 
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "CTA label"), "Contact");
-    setInputValue(
-      findInputByPlaceholder(ctaSection ?? view.container, "/start"),
-      "mailto:test@example.com"
+    setSelectValue(
+      getDestinationSelect(ctaSection ?? view.container, "navigation-visual-cta-destination"),
+      "page-contact"
     );
 
-    expect(normalizeText(ctaSection?.textContent)).toContain(
-      normalizeText("Use a relative path or full URL.")
-    );
     expect(latestValue.cta).toEqual({
       label: "Contact",
-      href: "mailto:test@example.com",
+      href: "/contact",
     });
 
     setSelectValue(
@@ -1498,6 +1557,7 @@ test("Navigation editors fall back to default source, items, behavior, and layou
   );
 
   try {
+    await flush();
     expect(
       (
         findSelectByOptions(wizardView.container, ["manual", "menu", "pages"]) as
@@ -1514,9 +1574,8 @@ test("Navigation editors fall back to default source, items, behavior, and layou
       )?.value
     ).toBe("Home");
     expect(
-      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe("/");
+      getDestinationSelect(wizardView.container, "navigation-wizard-link-1-destination").value
+    ).toBe("page-root");
     expect(
       (
         findInputByPlaceholder(wizardView.container, "Coderso") as

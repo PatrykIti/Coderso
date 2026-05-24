@@ -54,6 +54,7 @@ import {
 } from "../../../../widgets/core/testimonialsImportExport";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ColorContrastNotice, resolveColorContrastAdvisory } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -1650,16 +1651,15 @@ export function TestimonialsVisualEditor({
             />
           </div>
 
-          <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm font-medium">CTA href</p>
-            <Input
+          <div className="sm:col-span-2">
+            <LinkDestinationField
+              fieldId="testimonials-cta-destination"
+              label="CTA destination"
               value={normalized.cta?.href ?? ""}
-              onChange={(event) => updateCta(value, onChange, { href: event.target.value })}
-              placeholder="/case-studies"
+              disabled={!normalized.cta?.enabled}
+              onChange={(next) => updateCta(value, onChange, { href: next })}
+              feedback={getCtaHrefFeedback(normalized.cta?.href)}
             />
-            {getCtaHrefFeedback(normalized.cta?.href) ? (
-              <p className="text-xs text-amber-700">{getCtaHrefFeedback(normalized.cta?.href)}</p>
-            ) : null}
           </div>
 
           <div className="space-y-2">

@@ -38,6 +38,7 @@ import {
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader, resolveColorPickerValue } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -464,8 +465,7 @@ function ActionFields({
     openInNewTab: false,
     icon: "none",
   };
-  const [draftHref, setDraftHref] = useState(resolvedAction.href ?? "");
-  const warning = getCtaHrefWarning(draftHref);
+  const warning = getCtaHrefWarning(resolvedAction.href);
   const isEnabled = resolvedAction.enabled !== false;
 
   return (
@@ -501,22 +501,15 @@ function ActionFields({
         />
       </label>
 
-      <label className="space-y-1">
-        <span className="text-sm font-medium">URL</span>
-        <Input
-          value={draftHref}
-          aria-invalid={Boolean(warning)}
-          onChange={(event) => {
-            const next = event.target.value;
-            setDraftHref(next);
-            if (!getCtaHrefWarning(next)) {
-              onPatch({ href: next });
-            }
-          }}
-          placeholder={title === "Tertiary CTA" ? "/dismiss" : "#"}
-        />
-        {warning ? <p className="text-xs text-destructive">{warning}</p> : null}
-      </label>
+      <LinkDestinationField
+        fieldId={`cta-banner-${kind}-destination`}
+        label="Destination"
+        value={resolvedAction.href ?? ""}
+        disabled={showToggle && !isEnabled}
+        onChange={(next) => onPatch({ href: next })}
+        feedback={warning}
+        feedbackTone="destructive"
+      />
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1">
@@ -722,24 +715,21 @@ export function CtaBannerWizardEditor({
           />
         </label>
 
-        <label className="space-y-1">
-          <span className="text-sm font-medium">Primary CTA URL</span>
-          <Input
-            value={primary?.href ?? ""}
-            onChange={(event) =>
-              updateActions(value, onChange, {
-                primaryCta: {
-                  ...primary,
-                  href: event.target.value,
-                },
-              })
-            }
-            placeholder="/start"
-          />
-          {getCtaHrefWarning(primary?.href) ? (
-            <p className="text-xs text-destructive">{getCtaHrefWarning(primary?.href)}</p>
-          ) : null}
-        </label>
+        <LinkDestinationField
+          fieldId="cta-banner-wizard-primary-destination"
+          label="Primary CTA destination"
+          value={primary?.href ?? ""}
+          onChange={(next) =>
+            updateActions(value, onChange, {
+              primaryCta: {
+                ...primary,
+                href: next,
+              },
+            })
+          }
+          feedback={getCtaHrefWarning(primary?.href)}
+          feedbackTone="destructive"
+        />
 
         <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
           <span>Enable secondary CTA</span>
@@ -773,24 +763,21 @@ export function CtaBannerWizardEditor({
                 placeholder="Contact sales"
               />
             </label>
-            <label className="space-y-1">
-              <span className="text-sm font-medium">Secondary CTA URL</span>
-              <Input
-                value={secondary?.href ?? ""}
-                onChange={(event) =>
-                  updateActions(value, onChange, {
-                    secondaryCta: {
-                      ...secondary,
-                      href: event.target.value,
-                    },
-                  })
-                }
-                placeholder="/contact"
-              />
-              {getCtaHrefWarning(secondary?.href) ? (
-                <p className="text-xs text-destructive">{getCtaHrefWarning(secondary?.href)}</p>
-              ) : null}
-            </label>
+            <LinkDestinationField
+              fieldId="cta-banner-wizard-secondary-destination"
+              label="Secondary CTA destination"
+              value={secondary?.href ?? ""}
+              onChange={(next) =>
+                updateActions(value, onChange, {
+                  secondaryCta: {
+                    ...secondary,
+                    href: next,
+                  },
+                })
+              }
+              feedback={getCtaHrefWarning(secondary?.href)}
+              feedbackTone="destructive"
+            />
           </>
         ) : (
           <p className="text-xs text-muted-foreground">

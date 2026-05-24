@@ -21,7 +21,8 @@ Trust-focused section that displays partner/client logos with optional links.
 - Section title
 - Logo count
 - Compact starter-logo rows with Name, Media Library image picking, Alt text,
-  Link URL, and bounded preview for the visible wizard count
+  published-page destination picking, and bounded preview for the visible
+  wizard count
 
 The wizard count selector and rendered logo-name inputs must stay synchronized.
 
@@ -35,9 +36,9 @@ Sections:
 Notes:
 - Logo Cloud owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Generic Visual variant selector is suppressed.
-- `Link URL` inputs surface shared safe-link feedback for invalid values while
-  widget-local image preview/media picking stay owned by the `TASK-274` product
-  family.
+- Logo and CTA destinations use the shared published-page destination picker.
+  Existing custom/hash/external `href` values stay read-only replace/clear
+  state in Wizard/Visual.
 - `Header copy` now includes an optional `Eyebrow` field.
 - `Display style` now includes `Section background`, `Header alignment`, and
   `Header size` controls.
@@ -50,7 +51,7 @@ Notes:
 - `Display style` now also exposes Strip-only `Row behavior` and `Motion`
   controls for wrapped rows, single-row overflow, and marquee gating.
 - `Section CTA` now owns one optional CTA below the logo list with enable
-  toggle, label, href, and target controls.
+  toggle, label, published-page destination, and target controls.
 - `Display style` now also owns bounded `Tile radius`, `Tile border width`, and
   one global `Open logo links in new tab` toggle for logo tiles.
 
@@ -158,5 +159,4 @@ plus normalize/reset and raw payload diagnostics.
 - Exports `logoCloudEditorContract` with `version: 2`.
 - Contract target: Wizard seeds starter logos and copy; Visual owns logo list,
   links, CTA, motion, and style; Advanced is read-only runtime diagnostics.
-- Remaining link URL fallback copy and reset/normalize support actions are
-  routed to `TASK-336-19`.
+- Remaining reset/normalize support actions are routed to `TASK-336-19`.

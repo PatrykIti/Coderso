@@ -26,7 +26,8 @@ Primary CTA jest renderowane tylko dla:
 
 - onboarding dla wariantu, szybkich linkow, typu logo i CTA
 - pokazuje pierwsze 3 quick links oraz overflow summary, gdy linkow jest wiecej
-- ma widoczne etykiety dla logo link i quick-link URL fields
+- logo, quick links i CTA wybieraja destination przez published-page picker
+  zamiast raw URL/path inputow
 - obraz logo wybierany jest przez Media Library; istniejace zewnetrzne obrazy
   pozostaja jako read-only replace/clear state
 - przy `linksSource = menu` pokazuje read-only synced preview zamiast edytowalnych rows
@@ -44,6 +45,9 @@ Primary CTA jest renderowane tylko dla:
   7. Surface and Runtime Behavior
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
   mobile copy, Media Library logo replacement, and bounded style/brand controls
+- manual link, child link, logo and CTA destinations use the shared
+  published-page destination picker. Existing custom/hash/external `href`
+  values remain read-only replace/clear state in Visual.
 
 ### Advanced
 

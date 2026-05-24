@@ -46,6 +46,7 @@ import {
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -983,24 +984,19 @@ export function FeatureGridVisualEditor({
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">CTA URL</p>
-                      <Input
-                        value={item.ctaHref ?? ""}
-                        disabled={item.ctaEnabled === false}
-                        onChange={(event) =>
-                          updateItem(value, onChange, index, { ctaHref: event.target.value })
-                        }
-                        placeholder="/features"
-                      />
-                      {(item.ctaHref ?? "").trim().length > 0 &&
-                      !isValidFeatureGridCtaUrl(item.ctaHref) ? (
-                        <p className="text-xs text-amber-700">
-                          Use a relative path, hash, or full URL. Unsafe links are not rendered
-                          publicly.
-                        </p>
-                      ) : null}
-                    </div>
+                    <LinkDestinationField
+                      fieldId={`feature-grid-card-${index + 1}-cta-destination`}
+                      label="CTA destination"
+                      value={item.ctaHref ?? ""}
+                      disabled={item.ctaEnabled === false}
+                      onChange={(next) => updateItem(value, onChange, index, { ctaHref: next })}
+                      feedback={
+                        (item.ctaHref ?? "").trim().length > 0 &&
+                        !isValidFeatureGridCtaUrl(item.ctaHref)
+                          ? "Saved destination is not public-safe and will not render publicly."
+                          : null
+                      }
+                    />
 
                     <div className="space-y-2">
                       <p className="text-sm font-medium">CTA target</p>
