@@ -19,6 +19,7 @@
 | 2 | `Header copy` | Section header |
 | 3 | `Primary metric content` | Items and order (Wizard seed) |
 | 4 | `Spacing guidance` | Layout (width, padding, alignment) |
+| 5 | `Title` | (ignore — likely subsection of metric) |
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -29,6 +30,7 @@
 | 4 | `Text and value styling` | Typography |
 | 5 | `Card and icon surfaces` | Surface (per-item subsection) |
 | 6 | `Section layout and spacing` | Layout (width, padding, alignment) |
+| 7 | `Title` | (ignore — likely subsection of metric) |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |

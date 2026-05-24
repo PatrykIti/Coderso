@@ -65,23 +65,27 @@ Render a ready-to-use feed of posts without building a custom listing query.
 
 ### Wizard
 
-- step 1: source setup
-- step 2: display + section header
-- step 3: layout/style + empty state + runtime status
+- source setup only: source mode, category/tag filter, manual post order,
+  author/date filters, featured-first ordering, initial item count, and sort.
+- the content type is fixed to Posts and is shown as read-only setup context.
+- lifecycle caveat: Wizard is still visible as a normal editor tab until
+  `TASK-336-16` ships one-time setup completion and `Run setup again`.
 
 ### Visual
 
-- source setup
-- runtime status
-- display
-- section header
-- layout/style
-- empty state
+- daily presentation: field visibility, section title/description, variant,
+  columns, gap, card style, image aspect, CTA label, colors, and motion.
+- pagination presentation: mode, page size, view-all href/label, and load-more
+  label.
+- empty-state copy.
+- Visual keeps the transient preview bridge active without owning source
+  controls.
 
 ### Advanced
 
-- Visual sections
-- runtime payload snapshot
+- read-only resolved query summary, route/list-path capability, runtime
+  pagination/freshness status, normalized runtime payload, and contract summary.
+- Advanced has no writable Posts Feed controls.
 
 ## Manual Selection UX
 

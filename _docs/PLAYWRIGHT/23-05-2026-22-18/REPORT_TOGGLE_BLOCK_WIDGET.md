@@ -23,11 +23,19 @@
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Variant` | Variant and structure |
+| 2 | `Experience` | Behavior |
+| 3 | `Theme` | Surface (+ split Colors) |
+| 4 | `Pane authoring` | Items and order |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Diagnostics` | Runtime payload |
+| 2 | `Accessibility` | Behavior (+ split Semantics and SEO) |
+| 3 | `Advanced tools` | Technical tokens |
+| 4 | `Pane cards` | Items and order |
+| 5 | `Primary pane` | Items and order (subsection) |
+| 6 | `Secondary pane` | Items and order (subsection) |
 
 ## 3. Krytyczne uwagi kontraktu
 

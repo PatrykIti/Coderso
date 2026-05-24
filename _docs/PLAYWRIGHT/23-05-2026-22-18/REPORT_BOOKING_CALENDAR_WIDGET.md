@@ -18,6 +18,8 @@
 | 1 | `Flow` | (unmapped — propose canonical) |
 | 2 | `Availability behavior` | Behavior |
 | 3 | `Date policy` | Behavior |
+| 4 | `Surface` | Surface (border, radius, shadow) |
+| 5 | `Copy` | Section header |
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -26,6 +28,8 @@
 | 2 | `Status messages` | Behavior (+ split Section body) |
 | 3 | `Service context` | Behavior |
 | 4 | `Date picker` | Behavior |
+| 5 | `Surface` | Surface (border, radius, shadow) |
+| 6 | `Copy` | Section header |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -38,8 +42,9 @@
 
 1. Tytuły nieobjęte mapowaniem kanonicznym — wymagają decyzji: `Flow`.
 2. Przemianować `Variant` → `Variant and structure` (CONTRACT-01).
-3. Przemianować `Runtime endpoints` → `Runtime payload` (CONTRACT-05).
-4. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+3. Przemianować `Copy` → `Section header` (CONTRACT-02).
+4. Przemianować `Runtime endpoints` → `Runtime payload` (CONTRACT-05).
+5. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 

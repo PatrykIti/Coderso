@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,11 @@ import type {
 } from "../../../../widgets/types";
 import { resolvePostsFeedResolvedData } from "../../../../services/content/postsFeedRuntime";
 import { ClearableInputField } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const sourceModeOptions: Array<{ id: PostsFeedSourceMode; label: string; hint: string }> = [
   {
@@ -114,17 +118,35 @@ const NO_AUTHOR_VALUE = "__posts-feed-no-author__";
 function EditorSection({
   id,
   title,
+  mode,
+  role,
   description,
   children,
 }: {
   id?: string;
   title: string;
+  mode: "wizard" | "visual" | "advanced";
+  role:
+    | "setup"
+    | "source"
+    | "content"
+    | "visual"
+    | "layout"
+    | "technical"
+    | "diagnostics"
+    | "summary";
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      title={title}
+      mode={mode}
+      role={role}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -440,28 +462,36 @@ function usePostsFeedAdminPreview({
   setPreviewState?: (state: WidgetPreviewState | null) => void;
   blockId?: string;
 }) {
-  const previewKey = buildPostsFeedPreviewKey(normalizePostsFeedData(value));
+  const previewInput = useMemo(() => normalizePostsFeedData(value), [value]);
+  const previewKey = buildPostsFeedPreviewKey(previewInput);
+  const lastPreviewStateKeyRef = useRef("");
 
   useEffect(() => {
     if (!active || !setPreviewState) return;
 
     let activeRequest = true;
+    const emitPreviewState = (state: WidgetPreviewState) => {
+      const stateKey = JSON.stringify(state);
+      if (lastPreviewStateKeyRef.current === stateKey) return;
+      lastPreviewStateKeyRef.current = stateKey;
+      setPreviewState(state);
+    };
 
     if (loading) {
-      setPreviewState({ status: "loading" });
+      emitPreviewState({ status: "loading" });
       return () => {
         activeRequest = false;
       };
     }
     if (resourcesLoading) {
-      setPreviewState({ status: "loading" });
+      emitPreviewState({ status: "loading" });
       return () => {
         activeRequest = false;
       };
     }
 
     if (error) {
-      setPreviewState({
+      emitPreviewState({
         status: "error",
         message: error,
       });
@@ -469,11 +499,11 @@ function usePostsFeedAdminPreview({
         activeRequest = false;
       };
     }
-    setPreviewState({ status: "loading" });
+    emitPreviewState({ status: "loading" });
 
     const mediaById = new Map(mediaItems.map((item) => [item.id, item]));
     resolvePostsFeedResolvedData(
-      normalizePostsFeedData(value),
+      previewInput,
       {
         preview: true,
         contentRoutes,
@@ -486,7 +516,7 @@ function usePostsFeedAdminPreview({
     )
       .then((resolved) => {
         if (!activeRequest) return;
-        setPreviewState({
+        emitPreviewState({
           status: "ready",
           ...(resourcesWarning ? { message: resourcesWarning } : {}),
           dataPatch: {
@@ -496,7 +526,7 @@ function usePostsFeedAdminPreview({
       })
       .catch(() => {
         if (!activeRequest) return;
-        setPreviewState({
+        emitPreviewState({
           status: "error",
           message: "Preview sync is unavailable right now.",
         });
@@ -513,11 +543,11 @@ function usePostsFeedAdminPreview({
     loading,
     mediaItems,
     posts,
+    previewInput,
     previewKey,
     resourcesLoading,
     resourcesWarning,
     setPreviewState,
-    value,
   ]);
 }
 
@@ -581,12 +611,21 @@ function ManualPostPicker({
 
   return (
     <div className="space-y-3">
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search posts"
-        aria-label="Search posts for manual selection"
-      />
+      <WidgetControlRow
+        id="posts-feed.wizard.manual-search"
+        label="Search posts"
+        ownership="action"
+      >
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search posts"
+            aria-label="Search posts for manual selection"
+          />
+        )}
+      </WidgetControlRow>
 
       <div className="space-y-2" aria-live="polite">
         {loading ? <p className="text-xs text-muted-foreground">Loading posts...</p> : null}
@@ -632,6 +671,9 @@ function ManualPostPicker({
                       variant="outline"
                       size="sm"
                       disabled={index === 0}
+                      data-widget-control={`posts-feed.wizard.manual-post.${entry.id}.move-up`}
+                      data-widget-control-path="source.manualPostIds"
+                      data-widget-control-ownership="writable"
                       aria-label={`Move ${title} earlier`}
                       onClick={() =>
                         onSelectedIdsChange(moveArrayItem(selectedIds, index, index - 1))
@@ -644,6 +686,9 @@ function ManualPostPicker({
                       variant="outline"
                       size="sm"
                       disabled={index === selectedRows.length - 1}
+                      data-widget-control={`posts-feed.wizard.manual-post.${entry.id}.move-down`}
+                      data-widget-control-path="source.manualPostIds"
+                      data-widget-control-ownership="writable"
                       aria-label={`Move ${title} later`}
                       onClick={() =>
                         onSelectedIdsChange(moveArrayItem(selectedIds, index, index + 1))
@@ -672,6 +717,9 @@ function ManualPostPicker({
               <label
                 key={post.id}
                 className="flex cursor-pointer items-start gap-2 rounded-md border border-border/60 px-2 py-2 text-sm"
+                data-widget-control={`posts-feed.wizard.manual-post.${post.id}.selected`}
+                data-widget-control-path="source.manualPostIds"
+                data-widget-control-ownership="writable"
               >
                 <input
                   type="checkbox"
@@ -724,28 +772,44 @@ function AuthorFilterSelect({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Author filter</p>
-      <Input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search authors"
-      />
-      <Select
-        value={selectValue}
-        onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+      <WidgetControlRow
+        id="posts-feed.wizard.author-search"
+        label="Search authors"
+        ownership="action"
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select author" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
-          {filteredOptions.map((entry) => (
-            <SelectItem key={entry.id} value={entry.id}>
-              {entry.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search authors"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="posts-feed.wizard.author-filter"
+        label="Author filter"
+        path="source.authorId"
+      >
+        {(fieldProps) => (
+          <Select
+            value={selectValue}
+            onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select author" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
+              {filteredOptions.map((entry) => (
+                <SelectItem key={entry.id} value={entry.id}>
+                  {entry.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {loading ? <p className="text-xs text-muted-foreground">Loading authors...</p> : null}
       {error ? (
         <p className="text-xs text-destructive">Author filter is unavailable: {error}</p>
@@ -788,7 +852,10 @@ function RuntimeStatusCard({
 
   return (
     <EditorSection
+      id="posts-feed.advanced.runtime-status"
       title="Runtime status"
+      mode="advanced"
+      role="diagnostics"
       description="Preview and runtime sync stay read-only in the editor."
     >
       <div className="rounded-lg border border-border/70 bg-muted/10 p-3">
@@ -808,24 +875,14 @@ function RuntimeStatusCard({
 function SourceSetup({
   value,
   onChange,
-  context,
 }: {
   value: PostsFeedData;
   onChange: (next: PostsFeedData) => void;
-  context?: WidgetEditorContext;
 }) {
   const normalized = normalizePostsFeedData(value);
   const mode = normalized.source?.mode ?? "latest";
   const { items: posts, loading, error, needsAuth, retry } = usePostOptions();
-  const {
-    contentRoutes,
-    mediaItems,
-    loading: previewResourcesLoading,
-    warning: previewResourcesWarning,
-  } = usePostsFeedPreviewResources(typeof context?.setPreviewState === "function");
   const selectedManualIds = normalized.source?.manualPostIds ?? [];
-  const paginationMode = normalized.pagination?.mode ?? "none";
-  const paginationActive = paginationMode !== "none";
   const showSortControl = mode !== "manual";
   const showCategoryFilter = mode === "category";
   const showAuthorAndDateFilters = mode !== "manual";
@@ -841,59 +898,66 @@ function SourceSetup({
     "Date to"
   );
 
-  usePostsFeedAdminPreview({
-    value,
-    posts,
-    loading,
-    error,
-    contentRoutes,
-    mediaItems,
-    resourcesLoading: previewResourcesLoading,
-    resourcesWarning: previewResourcesWarning,
-    active: typeof context?.setPreviewState === "function",
-    setPreviewState: context?.setPreviewState,
-    blockId: context?.blockId,
-  });
-
   return (
     <EditorSection
+      id="posts-feed.wizard.source-setup"
       title="Source setup"
+      mode="wizard"
+      role="source"
       description="Choose how posts are selected for this widget."
     >
-      <Select
-        value={mode}
-        onValueChange={(next) =>
-          updateSource(value, onChange, {
-            mode: sourceModeOptions.some((item) => item.id === next)
-              ? (next as PostsFeedSourceMode)
-              : "latest",
-          })
-        }
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select source mode" />
-        </SelectTrigger>
-        <SelectContent>
-          {sourceModeOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.wizard.fixed-content-type"
+        label="Content type"
+        value="Posts"
+        path="source.contentType"
+        help="Posts Feed always queries the posts catalog; source mode controls which posts are selected."
+      />
+
+      <WidgetControlRow id="posts-feed.wizard.source-mode" label="Source mode" path="source.mode">
+        {(fieldProps) => (
+          <Select
+            value={mode}
+            onValueChange={(next) =>
+              updateSource(value, onChange, {
+                mode: sourceModeOptions.some((item) => item.id === next)
+                  ? (next as PostsFeedSourceMode)
+                  : "latest",
+              })
+            }
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       <p className="text-xs text-muted-foreground">
         {sourceModeOptions.find((item) => item.id === mode)?.hint}
       </p>
 
       {showCategoryFilter ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Category/tag filter</p>
-          <Input
-            value={normalized.source?.category ?? ""}
-            onChange={(event) => updateSource(value, onChange, { category: event.target.value })}
-            placeholder="e.g. news"
-          />
-        </div>
+        <WidgetControlRow
+          id="posts-feed.wizard.category-filter"
+          label="Category/tag filter"
+          path="source.category"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.source?.category ?? ""}
+              onChange={(event) => updateSource(value, onChange, { category: event.target.value })}
+              placeholder="e.g. news"
+            />
+          )}
+        </WidgetControlRow>
       ) : null}
 
       {mode === "manual" ? (
@@ -911,54 +975,61 @@ function SourceSetup({
       ) : null}
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Limit</p>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={String(normalized.source?.limit ?? postsFeedDefaults.source?.limit ?? 6)}
-            onChange={(event) =>
-              updateSource(value, onChange, {
-                limit: Number.isFinite(Number(event.target.value))
-                  ? Number(event.target.value)
-                  : (postsFeedDefaults.source?.limit ?? 6),
-              })
-            }
-          />
-        </div>
-        {showSortControl ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Sort</p>
-            <Select
-              value={normalized.source?.sort ?? "published-desc"}
-              onValueChange={(next) =>
+        <WidgetControlRow
+          id="posts-feed.wizard.source-limit"
+          label="Initial item count"
+          path="source.limit"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              type="number"
+              min={1}
+              max={24}
+              value={String(normalized.source?.limit ?? postsFeedDefaults.source?.limit ?? 6)}
+              onChange={(event) =>
                 updateSource(value, onChange, {
-                  sort: sortOptions.some((item) => item.id === next)
-                    ? (next as (typeof sortOptions)[number]["id"])
-                    : "published-desc",
+                  limit: Number.isFinite(Number(event.target.value))
+                    ? Number(event.target.value)
+                    : (postsFeedDefaults.source?.limit ?? 6),
                 })
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select sort" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            />
+          )}
+        </WidgetControlRow>
+        {showSortControl ? (
+          <WidgetControlRow id="posts-feed.wizard.source-sort" label="Sort" path="source.sort">
+            {(fieldProps) => (
+              <Select
+                value={normalized.source?.sort ?? "published-desc"}
+                onValueChange={(next) =>
+                  updateSource(value, onChange, {
+                    sort: sortOptions.some((item) => item.id === next)
+                      ? (next as (typeof sortOptions)[number]["id"])
+                      : "published-desc",
+                  })
+                }
+              >
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Select sort" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         ) : (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Sort</p>
-            <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
-              Order is determined by your selection.
-            </div>
-          </div>
+          <ReadonlyWidgetSummaryRow
+            id="posts-feed.wizard.manual-sort-summary"
+            label="Sort"
+            path="source.sort"
+            value="Order is determined by your selection."
+          />
         )}
       </div>
 
@@ -973,36 +1044,48 @@ function SourceSetup({
           />
 
           <div className="grid gap-2 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Date from</p>
-              <Input
-                type="date"
-                value={normalized.source?.dateRange?.from ?? ""}
-                onChange={(event) =>
-                  updateSource(value, onChange, {
-                    dateRange: {
-                      ...(normalized.source?.dateRange ?? {}),
-                      from: event.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Date to</p>
-              <Input
-                type="date"
-                value={normalized.source?.dateRange?.to ?? ""}
-                onChange={(event) =>
-                  updateSource(value, onChange, {
-                    dateRange: {
-                      ...(normalized.source?.dateRange ?? {}),
-                      to: event.target.value,
-                    },
-                  })
-                }
-              />
-            </div>
+            <WidgetControlRow
+              id="posts-feed.wizard.date-from"
+              label="Date from"
+              path="source.dateRange.from"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  type="date"
+                  value={normalized.source?.dateRange?.from ?? ""}
+                  onChange={(event) =>
+                    updateSource(value, onChange, {
+                      dateRange: {
+                        ...(normalized.source?.dateRange ?? {}),
+                        from: event.target.value,
+                      },
+                    })
+                  }
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="posts-feed.wizard.date-to"
+              label="Date to"
+              path="source.dateRange.to"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  type="date"
+                  value={normalized.source?.dateRange?.to ?? ""}
+                  onChange={(event) =>
+                    updateSource(value, onChange, {
+                      dateRange: {
+                        ...(normalized.source?.dateRange ?? {}),
+                        to: event.target.value,
+                      },
+                    })
+                  }
+                />
+              )}
+            </WidgetControlRow>
           </div>
           {invalidDateFromNotice || invalidDateToNotice ? (
             <div className="space-y-1">
@@ -1018,102 +1101,55 @@ function SourceSetup({
       ) : null}
 
       {showFeaturedFirst ? (
-        <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
-          <span>Featured posts first</span>
-          <Switch
-            checked={Boolean(normalized.source?.featuredFirst)}
-            onCheckedChange={(next) => updateSource(value, onChange, { featuredFirst: next })}
-          />
-        </label>
-      ) : null}
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Pagination mode</p>
-        <Select
-          value={paginationMode}
-          onValueChange={(next) =>
-            updatePagination(value, onChange, {
-              mode: paginationModeOptions.some((item) => item.id === next)
-                ? (next as NonNullable<PostsFeedData["pagination"]>["mode"])
-                : "none",
-            })
-          }
+        <WidgetControlRow
+          id="posts-feed.wizard.featured-first"
+          label="Featured posts first"
+          path="source.featuredFirst"
         >
-          <SelectTrigger>
-            <SelectValue placeholder="Select pagination mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {paginationModeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {paginationActive ? (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              {paginationMode === "view-all" ? "Initial items" : "Page size"}
-            </p>
-            <Input
-              type="number"
-              min={1}
-              max={24}
-              value={String(
-                normalized.pagination?.pageSize ?? postsFeedDefaults.pagination?.pageSize ?? 6
-              )}
-              onChange={(event) =>
-                updatePagination(value, onChange, {
-                  pageSize: Number.isFinite(Number(event.target.value))
-                    ? Number(event.target.value)
-                    : (postsFeedDefaults.pagination?.pageSize ?? 6),
-                })
-              }
+          {(fieldProps) => (
+            <Switch
+              checked={Boolean(normalized.source?.featuredFirst)}
+              onCheckedChange={(next) => updateSource(value, onChange, { featuredFirst: next })}
+              aria-labelledby={fieldProps["aria-labelledby"]}
             />
-          </div>
-          {paginationMode === "load-more" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Load more label</p>
-              <Input
-                value={normalized.pagination?.loadMoreLabel ?? ""}
-                onChange={(event) =>
-                  updatePagination(value, onChange, { loadMoreLabel: event.target.value })
-                }
-                placeholder="Load more"
-              />
-            </div>
-          ) : null}
-          {paginationMode === "view-all" ? (
-            <>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">View all label</p>
-                <Input
-                  value={normalized.pagination?.viewAllLabel ?? ""}
-                  onChange={(event) =>
-                    updatePagination(value, onChange, { viewAllLabel: event.target.value })
-                  }
-                  placeholder="View all posts"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">View all href</p>
-                <Input
-                  value={normalized.pagination?.viewAllHref ?? ""}
-                  onChange={(event) =>
-                    updatePagination(value, onChange, { viewAllHref: event.target.value })
-                  }
-                  placeholder="Leave empty to use the posts list route"
-                />
-              </div>
-            </>
-          ) : null}
-        </div>
+          )}
+        </WidgetControlRow>
       ) : null}
     </EditorSection>
   );
+}
+
+function PostsFeedPreviewBridge({
+  value,
+  context,
+}: {
+  value: PostsFeedData;
+  context?: WidgetEditorContext;
+}) {
+  const active = typeof context?.setPreviewState === "function";
+  const { items: posts, loading, error } = usePostOptions();
+  const {
+    contentRoutes,
+    mediaItems,
+    loading: previewResourcesLoading,
+    warning: previewResourcesWarning,
+  } = usePostsFeedPreviewResources(active);
+
+  usePostsFeedAdminPreview({
+    value,
+    posts,
+    loading,
+    error,
+    contentRoutes,
+    mediaItems,
+    resourcesLoading: previewResourcesLoading,
+    resourcesWarning: previewResourcesWarning,
+    active,
+    setPreviewState: context?.setPreviewState,
+    blockId: context?.blockId,
+  });
+
+  return null;
 }
 
 function DisplayOptions({
@@ -1131,17 +1167,25 @@ function DisplayOptions({
     checked: boolean,
     key: keyof NonNullable<PostsFeedData["fields"]>
   ) => (
-    <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
-      <span>{label}</span>
-      <Switch
-        checked={checked}
-        onCheckedChange={(next) => updateFields(value, onChange, { [key]: next })}
-      />
-    </label>
+    <WidgetControlRow id={`posts-feed.visual.fields.${key}`} label={label} path={`fields.${key}`}>
+      {(fieldProps) => (
+        <Switch
+          checked={checked}
+          onCheckedChange={(next) => updateFields(value, onChange, { [key]: next })}
+          aria-labelledby={fieldProps["aria-labelledby"]}
+        />
+      )}
+    </WidgetControlRow>
   );
 
   return (
-    <EditorSection title="Display" description="Toggle visible post metadata and actions.">
+    <EditorSection
+      id="posts-feed.visual.display"
+      title="Display"
+      mode="visual"
+      role="content"
+      description="Toggle visible post metadata and actions."
+    >
       {renderToggle("Show image", Boolean(fields.showImage), "showImage")}
       {renderToggle("Show excerpt", Boolean(fields.showExcerpt), "showExcerpt")}
       {renderToggle("Show author", Boolean(fields.showAuthor), "showAuthor")}
@@ -1162,30 +1206,43 @@ function SectionChromeOptions({
 
   return (
     <EditorSection
+      id="posts-feed.visual.section-header"
       title="Section header"
+      mode="visual"
+      role="content"
       description="Optional heading and description above the posts feed."
     >
-      <Input
-        value={normalized.title ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            title: event.target.value,
-          }))
-        }
-        placeholder="Latest articles"
-      />
-      <Textarea
-        value={normalized.description ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            description: event.target.value,
-          }))
-        }
-        rows={3}
-        placeholder="Optional section description."
-      />
+      <WidgetControlRow id="posts-feed.visual.title" label="Title" path="title">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Latest articles"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="posts-feed.visual.description" label="Description" path="description">
+        {(fieldProps) => (
+          <Textarea
+            {...fieldProps}
+            value={normalized.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            rows={3}
+            placeholder="Optional section description."
+          />
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
@@ -1206,219 +1263,400 @@ function LayoutOptions({
   const supportsColumns = resolvedVariant === "cards";
 
   return (
-    <EditorSection title="Layout and style" description="Card density and basic style tokens.">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Variant</p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {variantOptions.map((option) => {
-            const active = option.id === resolvedVariant;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                className={`rounded-lg border px-3 py-3 text-left ${
-                  active ? "border-primary bg-primary/5" : "border-border/70 bg-background/60"
-                }`}
-                aria-pressed={active}
-                onClick={() => onVariantChange?.(option.id)}
-              >
-                <div className="mb-3 flex h-10 items-end gap-1">
-                  {option.id === "cards" ? (
-                    <>
-                      <span className="h-5 flex-1 rounded bg-muted-foreground/20" />
-                      <span className="h-8 flex-1 rounded bg-muted-foreground/30" />
-                      <span className="h-6 flex-1 rounded bg-muted-foreground/20" />
-                    </>
-                  ) : option.id === "list" ? (
-                    <span className="h-6 w-full rounded bg-muted-foreground/20" />
-                  ) : (
-                    <>
-                      <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
-                      <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
-                      <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
-                    </>
-                  )}
-                </div>
-                <p className="text-sm font-medium">{option.label}</p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <EditorSection
+      id="posts-feed.visual.layout-style"
+      title="Layout and style"
+      mode="visual"
+      role="visual"
+      description="Card density and basic style tokens."
+    >
+      <WidgetControlRow id="posts-feed.visual.variant" label="Variant" path="variant">
+        {() => (
+          <div className="grid gap-2 sm:grid-cols-3">
+            {variantOptions.map((option) => {
+              const active = option.id === resolvedVariant;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`rounded-lg border px-3 py-3 text-left ${
+                    active ? "border-primary bg-primary/5" : "border-border/70 bg-background/60"
+                  }`}
+                  aria-pressed={active}
+                  onClick={() => onVariantChange?.(option.id)}
+                >
+                  <div className="mb-3 flex h-10 items-end gap-1">
+                    {option.id === "cards" ? (
+                      <>
+                        <span className="h-5 flex-1 rounded bg-muted-foreground/20" />
+                        <span className="h-8 flex-1 rounded bg-muted-foreground/30" />
+                        <span className="h-6 flex-1 rounded bg-muted-foreground/20" />
+                      </>
+                    ) : option.id === "list" ? (
+                      <span className="h-6 w-full rounded bg-muted-foreground/20" />
+                    ) : (
+                      <>
+                        <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
+                        <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
+                        <span className="h-3 flex-1 rounded bg-muted-foreground/20" />
+                      </>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium">{option.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </WidgetControlRow>
 
       <div className="grid gap-2 sm:grid-cols-2">
         {supportsColumns ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Columns</p>
+          <WidgetControlRow id="posts-feed.visual.columns" label="Columns" path="style.columns">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.columns ?? "3"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    columns: columnsOptions.some((item) => item.id === next)
+                      ? (next as (typeof columnsOptions)[number]["id"])
+                      : "3",
+                  })
+                }
+              >
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Select columns" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnsOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        ) : (
+          <ReadonlyWidgetSummaryRow
+            id="posts-feed.visual.columns-summary"
+            label="Columns"
+            path="style.columns"
+            value="Columns only affect the cards variant."
+          />
+        )}
+
+        <WidgetControlRow id="posts-feed.visual.gap" label="Gap" path="style.gap">
+          {(fieldProps) => (
             <Select
-              value={normalized.style?.columns ?? "3"}
+              value={normalized.style?.gap ?? "md"}
               onValueChange={(next) =>
                 updateStyle(value, onChange, {
-                  columns: columnsOptions.some((item) => item.id === next)
-                    ? (next as (typeof columnsOptions)[number]["id"])
-                    : "3",
+                  gap: gapOptions.some((item) => item.id === next)
+                    ? (next as (typeof gapOptions)[number]["id"])
+                    : "md",
                 })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select columns" />
+              <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                <SelectValue placeholder="Select gap" />
               </SelectTrigger>
               <SelectContent>
-                {columnsOptions.map((option) => (
+                {gapOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Columns</p>
-            <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
-              Columns only affect the cards variant.
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap</p>
-          <Select
-            value={normalized.style?.gap ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                gap: gapOptions.some((item) => item.id === next)
-                  ? (next as (typeof gapOptions)[number]["id"])
-                  : "md",
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          )}
+        </WidgetControlRow>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Card style</p>
-          <Select
-            value={normalized.style?.cardStyle ?? "outlined"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                cardStyle: cardStyleOptions.some((item) => item.id === next)
-                  ? (next as (typeof cardStyleOptions)[number]["id"])
-                  : "outlined",
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select card style" />
-            </SelectTrigger>
-            <SelectContent>
-              {cardStyleOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="posts-feed.visual.card-style"
+          label="Card style"
+          path="style.cardStyle"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.cardStyle ?? "outlined"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  cardStyle: cardStyleOptions.some((item) => item.id === next)
+                    ? (next as (typeof cardStyleOptions)[number]["id"])
+                    : "outlined",
+                })
+              }
+            >
+              <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                <SelectValue placeholder="Select card style" />
+              </SelectTrigger>
+              <SelectContent>
+                {cardStyleOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Image aspect</p>
-          <Select
-            value={normalized.style?.imageAspect ?? "standard"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                imageAspect: imageAspectOptions.some((item) => item.id === next)
-                  ? (next as NonNullable<PostsFeedData["style"]>["imageAspect"])
-                  : "standard",
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select image aspect" />
-            </SelectTrigger>
-            <SelectContent>
-              {imageAspectOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="posts-feed.visual.image-aspect"
+          label="Image aspect"
+          path="style.imageAspect"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.imageAspect ?? "standard"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  imageAspect: imageAspectOptions.some((item) => item.id === next)
+                    ? (next as NonNullable<PostsFeedData["style"]>["imageAspect"])
+                    : "standard",
+                })
+              }
+            >
+              <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                <SelectValue placeholder="Select image aspect" />
+              </SelectTrigger>
+              <SelectContent>
+                {imageAspectOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">CTA label</p>
-        <Input
-          value={normalized.style?.ctaLabel ?? ""}
-          onChange={(event) => updateStyle(value, onChange, { ctaLabel: event.target.value })}
-          placeholder="Read more"
-        />
-      </div>
+      <WidgetControlRow id="posts-feed.visual.cta-label" label="CTA label" path="style.ctaLabel">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.style?.ctaLabel ?? ""}
+            onChange={(event) => updateStyle(value, onChange, { ctaLabel: event.target.value })}
+            placeholder="Read more"
+          />
+        )}
+      </WidgetControlRow>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <ClearableInputField
+        <WidgetControlRow
+          id="posts-feed.visual.background-color"
           label="Card background"
-          value={normalized.style?.backgroundColor}
-          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-          onClear={() => clearStyle(value, onChange, "backgroundColor")}
-          placeholder="var(--color-bg)"
-        />
-        <ClearableInputField
+          path="style.backgroundColor"
+        >
+          {() => (
+            <ClearableInputField
+              label="Card background"
+              value={normalized.style?.backgroundColor}
+              onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+              onClear={() => clearStyle(value, onChange, "backgroundColor")}
+              placeholder="var(--color-bg)"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="posts-feed.visual.border-color"
           label="Card border"
-          value={normalized.style?.borderColor}
-          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          onClear={() => clearStyle(value, onChange, "borderColor")}
-          placeholder="var(--color-border)"
-        />
-        <ClearableInputField
+          path="style.borderColor"
+        >
+          {() => (
+            <ClearableInputField
+              label="Card border"
+              value={normalized.style?.borderColor}
+              onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+              onClear={() => clearStyle(value, onChange, "borderColor")}
+              placeholder="var(--color-border)"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="posts-feed.visual.text-color"
           label="Text color"
-          value={normalized.style?.textColor}
-          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          onClear={() => clearStyle(value, onChange, "textColor")}
-          placeholder="var(--color-text)"
-        />
+          path="style.textColor"
+        >
+          {() => (
+            <ClearableInputField
+              label="Text color"
+              value={normalized.style?.textColor}
+              onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+              onClear={() => clearStyle(value, onChange, "textColor")}
+              placeholder="var(--color-text)"
+            />
+          )}
+        </WidgetControlRow>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Entry motion</p>
-        <Select
-          value={normalized.style?.motion ?? "none"}
-          onValueChange={(next) =>
-            updateStyle(value, onChange, {
-              motion: motionOptions.some((item) => item.id === next)
-                ? (next as PostsFeedMotion)
-                : "none",
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select motion" />
-          </SelectTrigger>
-          <SelectContent>
-            {motionOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          {motionOptions.find((option) => option.id === (normalized.style?.motion ?? "none"))?.hint}
-        </p>
-      </div>
+      <WidgetControlRow id="posts-feed.visual.motion" label="Entry motion" path="style.motion">
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.motion ?? "none"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, {
+                motion: motionOptions.some((item) => item.id === next)
+                  ? (next as PostsFeedMotion)
+                  : "none",
+              })
+            }
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select motion" />
+            </SelectTrigger>
+            <SelectContent>
+              {motionOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <p className="text-xs text-muted-foreground">
+        {motionOptions.find((option) => option.id === (normalized.style?.motion ?? "none"))?.hint}
+      </p>
+    </EditorSection>
+  );
+}
+
+function PaginationOptions({
+  value,
+  onChange,
+}: {
+  value: PostsFeedData;
+  onChange: (next: PostsFeedData) => void;
+}) {
+  const normalized = normalizePostsFeedData(value);
+  const paginationMode = normalized.pagination?.mode ?? "none";
+  const paginationActive = paginationMode !== "none";
+
+  return (
+    <EditorSection
+      id="posts-feed.visual.pagination"
+      title="Pagination presentation"
+      mode="visual"
+      role="visual"
+      description="Configure visitor navigation labels and page sizing."
+    >
+      <WidgetControlRow
+        id="posts-feed.visual.pagination-mode"
+        label="Pagination mode"
+        path="pagination.mode"
+      >
+        {(fieldProps) => (
+          <Select
+            value={paginationMode}
+            onValueChange={(next) =>
+              updatePagination(value, onChange, {
+                mode: paginationModeOptions.some((item) => item.id === next)
+                  ? (next as NonNullable<PostsFeedData["pagination"]>["mode"])
+                  : "none",
+              })
+            }
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select pagination mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {paginationModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+
+      {paginationActive ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <WidgetControlRow
+            id="posts-feed.visual.pagination-page-size"
+            label={paginationMode === "view-all" ? "Initial items" : "Page size"}
+            path="pagination.pageSize"
+          >
+            {(fieldProps) => (
+              <Input
+                {...fieldProps}
+                type="number"
+                min={1}
+                max={24}
+                value={String(
+                  normalized.pagination?.pageSize ?? postsFeedDefaults.pagination?.pageSize ?? 6
+                )}
+                onChange={(event) =>
+                  updatePagination(value, onChange, {
+                    pageSize: Number.isFinite(Number(event.target.value))
+                      ? Number(event.target.value)
+                      : (postsFeedDefaults.pagination?.pageSize ?? 6),
+                  })
+                }
+              />
+            )}
+          </WidgetControlRow>
+          {paginationMode === "load-more" ? (
+            <WidgetControlRow
+              id="posts-feed.visual.load-more-label"
+              label="Load more label"
+              path="pagination.loadMoreLabel"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={normalized.pagination?.loadMoreLabel ?? ""}
+                  onChange={(event) =>
+                    updatePagination(value, onChange, { loadMoreLabel: event.target.value })
+                  }
+                  placeholder="Load more"
+                />
+              )}
+            </WidgetControlRow>
+          ) : null}
+          {paginationMode === "view-all" ? (
+            <>
+              <WidgetControlRow
+                id="posts-feed.visual.view-all-label"
+                label="View all label"
+                path="pagination.viewAllLabel"
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={normalized.pagination?.viewAllLabel ?? ""}
+                    onChange={(event) =>
+                      updatePagination(value, onChange, { viewAllLabel: event.target.value })
+                    }
+                    placeholder="View all posts"
+                  />
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow
+                id="posts-feed.visual.view-all-href"
+                label="View all href"
+                path="pagination.viewAllHref"
+              >
+                {(fieldProps) => (
+                  <Input
+                    {...fieldProps}
+                    value={normalized.pagination?.viewAllHref ?? ""}
+                    onChange={(event) =>
+                      updatePagination(value, onChange, { viewAllHref: event.target.value })
+                    }
+                    placeholder="Leave empty to use the posts list route"
+                  />
+                )}
+              </WidgetControlRow>
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </EditorSection>
   );
 }
@@ -1433,33 +1671,186 @@ function EmptyStateOptions({
   const normalized = normalizePostsFeedData(value);
 
   return (
-    <EditorSection title="Empty state" description="Message shown when no posts match source.">
-      <Input
-        value={normalized.emptyState?.title ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            emptyState: {
-              ...current.emptyState,
-              title: event.target.value,
-            },
-          }))
-        }
-        placeholder="No posts found"
+    <EditorSection
+      id="posts-feed.visual.empty-state"
+      title="Empty state"
+      mode="visual"
+      role="content"
+      description="Message shown when no posts match source."
+    >
+      <WidgetControlRow
+        id="posts-feed.visual.empty-state-title"
+        label="Empty state title"
+        path="emptyState.title"
+      >
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.emptyState?.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                emptyState: {
+                  ...current.emptyState,
+                  title: event.target.value,
+                },
+              }))
+            }
+            placeholder="No posts found"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="posts-feed.visual.empty-state-description"
+        label="Empty state description"
+        path="emptyState.description"
+      >
+        {(fieldProps) => (
+          <Textarea
+            {...fieldProps}
+            value={normalized.emptyState?.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                emptyState: {
+                  ...current.emptyState,
+                  description: event.target.value,
+                },
+              }))
+            }
+            rows={3}
+            placeholder="Adjust source settings or publish posts to show content here."
+          />
+        )}
+      </WidgetControlRow>
+    </EditorSection>
+  );
+}
+
+function formatListValue(items: string[] | undefined) {
+  if (!items || items.length === 0) return "None";
+  return items.join(", ");
+}
+
+function ResolvedQueryDiagnostics({
+  value,
+  context,
+}: {
+  value: PostsFeedData;
+  context?: WidgetEditorContext;
+}) {
+  const normalized = normalizePostsFeedData(value);
+  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
+  const source = normalized.source ?? postsFeedDefaults.source!;
+  const pagination = normalized.pagination ?? postsFeedDefaults.pagination!;
+  const resolvedItems = typeof resolved.total === "number" ? resolved.total : 0;
+  const runtime = resolved.runtime ?? {};
+  const sourceLabel =
+    sourceModeOptions.find((option) => option.id === source.mode)?.label ?? source.mode ?? "Latest";
+
+  return (
+    <EditorSection
+      id="posts-feed.advanced.resolved-query"
+      title="Resolved query"
+      mode="advanced"
+      role="diagnostics"
+      description="Read-only source and pagination summary used by runtime hydration."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.source-mode"
+        label="Source mode"
+        path="source.mode"
+        value={sourceLabel}
       />
-      <Textarea
-        value={normalized.emptyState?.description ?? ""}
-        onChange={(event) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            emptyState: {
-              ...current.emptyState,
-              description: event.target.value,
-            },
-          }))
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.source-limit"
+        label="Initial item count"
+        path="source.limit"
+        value={String(source.limit ?? postsFeedDefaults.source?.limit ?? 6)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.source-sort"
+        label="Sort"
+        path="source.sort"
+        value={source.mode === "manual" ? "Manual order" : source.sort}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.source-filters"
+        label="Source filters"
+        path="source"
+        value={
+          [
+            source.category ? `Category: ${source.category}` : null,
+            source.authorId ? `Author: ${source.authorId}` : null,
+            source.dateRange?.from ? `From: ${source.dateRange.from}` : null,
+            source.dateRange?.to ? `To: ${source.dateRange.to}` : null,
+            source.featuredFirst ? "Featured first" : null,
+          ]
+            .filter(Boolean)
+            .join(" | ") || "No filters"
         }
-        rows={3}
-        placeholder="Adjust source settings or publish posts to show content here."
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.manual-posts"
+        label="Manual posts"
+        path="source.manualPostIds"
+        value={formatListValue(source.manualPostIds)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.pagination-mode"
+        label="Pagination mode"
+        path="pagination.mode"
+        value={pagination.mode ?? "none"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.pagination-runtime"
+        label="Runtime pagination"
+        path="resolved.runtime"
+        value={`page ${runtime.page ?? 1} of ${runtime.totalPages ?? 1}, page size ${
+          runtime.pageSize ?? pagination.pageSize ?? source.limit ?? 6
+        }`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.route-capability"
+        label="Route capability"
+        path="resolved.listPath"
+        value={
+          resolved.listPath?.trim() ? `List route: ${resolved.listPath}` : "No list route resolved"
+        }
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.resolved-items"
+        label="Resolved items"
+        path="resolved.items"
+        value={String(resolvedItems)}
+      />
+    </EditorSection>
+  );
+}
+
+function ContractSummary() {
+  return (
+    <EditorSection
+      id="posts-feed.advanced.contract-summary"
+      title="Contract summary"
+      mode="advanced"
+      role="summary"
+      description="Mode ownership for the Posts Feed editor contract."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.contract-wizard"
+        label="Wizard"
+        value="Source mode, filters, manual order, initial count, and sort."
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.contract-visual"
+        label="Visual"
+        value="Display fields, section header, variant, layout, style, pagination labels, and empty state."
+      />
+      <ReadonlyWidgetSummaryRow
+        id="posts-feed.advanced.contract-advanced"
+        label="Advanced"
+        value="Read-only query, runtime, route, payload, and ownership diagnostics."
       />
     </EditorSection>
   );
@@ -1477,7 +1868,10 @@ function RuntimeSnapshot({
 
   return (
     <EditorSection
+      id="posts-feed.advanced.runtime-payload"
       title="Runtime payload"
+      mode="advanced"
+      role="technical"
       description="Read-only snapshot of resolved runtime data."
     >
       <pre className="max-h-64 overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs">
@@ -1488,80 +1882,18 @@ function RuntimeSnapshot({
 }
 
 function PostsFeedWizardBody(props: WidgetEditorProps<PostsFeedData>) {
-  const [step, setStep] = useState<"source" | "display" | "layout">("source");
-  const stepOrder: Array<"source" | "display" | "layout"> = ["source", "display", "layout"];
-  const currentIndex = stepOrder.indexOf(step);
-
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {stepOrder.map((item, index) => (
-          <button
-            key={item}
-            type="button"
-            className={`rounded-full border px-3 py-1 ${
-              index === currentIndex
-                ? "border-primary bg-primary/5 text-foreground"
-                : "border-border/70"
-            }`}
-            onClick={() => setStep(item)}
-          >
-            {index + 1}. {item === "source" ? "Source" : item === "display" ? "Display" : "Layout"}
-          </button>
-        ))}
-      </div>
-      {step === "source" ? (
-        <SourceSetup value={props.value} onChange={props.onChange} context={props.context} />
-      ) : null}
-      {step === "display" ? (
-        <>
-          <DisplayOptions value={props.value} onChange={props.onChange} />
-          <SectionChromeOptions value={props.value} onChange={props.onChange} />
-        </>
-      ) : null}
-      {step === "layout" ? (
-        <>
-          <LayoutOptions
-            value={props.value}
-            onChange={props.onChange}
-            variant={props.variant}
-            onVariantChange={props.onVariantChange}
-          />
-          <EmptyStateOptions value={props.value} onChange={props.onChange} />
-          <RuntimeStatusCard value={props.value} context={props.context} />
-        </>
-      ) : null}
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={currentIndex === 0}
-          onClick={() => setStep(stepOrder[Math.max(0, currentIndex - 1)] ?? "source")}
-        >
-          Back
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={currentIndex === stepOrder.length - 1}
-          onClick={() =>
-            setStep(stepOrder[Math.min(stepOrder.length - 1, currentIndex + 1)] ?? "layout")
-          }
-        >
-          Next
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <PostsFeedPreviewBridge value={props.value} context={props.context} />
+      <SourceSetup value={props.value} onChange={props.onChange} />
     </div>
   );
 }
 
 function PostsFeedVisualBody(props: WidgetEditorProps<PostsFeedData>) {
   return (
-    <div className="space-y-3">
-      <SourceSetup value={props.value} onChange={props.onChange} context={props.context} />
-      <RuntimeStatusCard value={props.value} context={props.context} />
+    <div className="space-y-4">
+      <PostsFeedPreviewBridge value={props.value} context={props.context} />
       <DisplayOptions value={props.value} onChange={props.onChange} />
       <SectionChromeOptions value={props.value} onChange={props.onChange} />
       <LayoutOptions
@@ -1570,6 +1902,7 @@ function PostsFeedVisualBody(props: WidgetEditorProps<PostsFeedData>) {
         variant={props.variant}
         onVariantChange={props.onVariantChange}
       />
+      <PaginationOptions value={props.value} onChange={props.onChange} />
       <EmptyStateOptions value={props.value} onChange={props.onChange} />
     </div>
   );
@@ -1577,19 +1910,12 @@ function PostsFeedVisualBody(props: WidgetEditorProps<PostsFeedData>) {
 
 function PostsFeedAdvancedBody(props: WidgetEditorProps<PostsFeedData>) {
   return (
-    <div className="space-y-3">
-      <SourceSetup value={props.value} onChange={props.onChange} context={props.context} />
+    <div className="space-y-4">
+      <PostsFeedPreviewBridge value={props.value} context={props.context} />
+      <ResolvedQueryDiagnostics value={props.value} context={props.context} />
       <RuntimeStatusCard value={props.value} context={props.context} />
-      <DisplayOptions value={props.value} onChange={props.onChange} />
-      <SectionChromeOptions value={props.value} onChange={props.onChange} />
-      <LayoutOptions
-        value={props.value}
-        onChange={props.onChange}
-        variant={props.variant}
-        onVariantChange={props.onVariantChange}
-      />
-      <EmptyStateOptions value={props.value} onChange={props.onChange} />
       <RuntimeSnapshot value={props.value} context={props.context} />
+      <ContractSummary />
     </div>
   );
 }

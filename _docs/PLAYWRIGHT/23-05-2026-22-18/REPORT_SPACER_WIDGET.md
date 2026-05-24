@@ -2,7 +2,7 @@
 
 > **Data:** 2026-05-23 22:18 → 2026-05-24
 > **Widget ID:** `spacer`
-> **Edytor:** `core/admin/ui/widgets/editors/SpacerEditors.tsx` (474 linii)
+> **Edytor:** `core/admin/ui/widgets/editors/SpacerEditors.tsx` (500 linii)
 > **Strona testowa:** `/admin/pages/719cca9b-25fe-43ba-a17c-24407f3f2d36` (slug `/ctr-spacer-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
 > **Screenshoty:** `screenshots/spacer-visual.png`, `spacer-advanced.png`, `spacer-wizard.png`

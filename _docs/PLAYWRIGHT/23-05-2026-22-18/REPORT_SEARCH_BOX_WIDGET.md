@@ -13,24 +13,34 @@
 ## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
 
 ### Wizard
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3) — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Mode` | Data source / behavior selector |
+| 2 | `Surface` | Surface (border, radius, shadow) |
+| 3 | `Copy and behavior` | (unmapped — propose canonical) |
 
 ### Visual
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Mode` | Data source / behavior selector |
+| 2 | `Surface` | Surface (border, radius, shadow) |
+| 3 | `Copy and behavior` | (unmapped — propose canonical) |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Contract` | Runtime payload |
+| 2 | `Runtime payload` | Runtime payload |
+| 3 | `Copy and behavior` | (unmapped — propose canonical) |
 
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
 Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych komponentów, nie w głównej funkcji editora — przez to parser top-level nie znalazł ich w §1, ale renderują się w UI:
 
-- `Mode` → **(unmapped — propose canonical)**
+- `Mode` → **Data source / behavior selector**
 - `Copy and behavior` → **(unmapped — propose canonical)**
 - `Runtime payload` → **Runtime payload**
-- `Surface` → **(unmapped — propose canonical)**
+- `Surface` → **Surface (border, radius, shadow)**
 - `Contract` → **Runtime payload**
 
 ## 3. Krytyczne uwagi kontraktu
@@ -39,7 +49,8 @@ Identycznie jak listing-filters — Visual pusty, jedyna `Contract` w Advanced.
 
 ## 5. Rekomendacje per widget
 
-1. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
+1. Tytuły nieobjęte mapowaniem kanonicznym — wymagają decyzji: `Copy and behavior`.
+2. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
 
 ---
 

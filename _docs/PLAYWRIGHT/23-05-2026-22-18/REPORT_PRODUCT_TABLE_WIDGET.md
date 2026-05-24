@@ -16,6 +16,7 @@
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Table source` | Data source |
+| 2 | `Surfaces` | Surface (border, radius, shadow) |
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -26,6 +27,10 @@
 | 4 | `Stock presentation` | Behavior |
 | 5 | `Links and actions` | Actions (+ split Behavior) |
 | 6 | `Empty state` | Empty state |
+| 7 | `Layout and style` | Layout (+ split Surface) |
+| 8 | `Surfaces` | Surface (border, radius, shadow) |
+| 9 | `Export and currency` | (unmapped — propose canonical) |
+| 10 | `Public controls` | Behavior |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -35,8 +40,9 @@
 
 ## 5. Rekomendacje per widget
 
-1. Przemianować `Query preview` → `Runtime payload` (CONTRACT-05).
-2. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+1. Tytuły nieobjęte mapowaniem kanonicznym — wymagają decyzji: `Export and currency`.
+2. Przemianować `Query preview` → `Runtime payload` (CONTRACT-05).
+3. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 

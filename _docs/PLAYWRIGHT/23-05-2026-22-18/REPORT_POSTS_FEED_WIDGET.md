@@ -13,13 +13,35 @@
 ## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
 
 ### Wizard
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3) — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Runtime status` | Runtime payload |
+| 2 | `Section header` | Section header |
+| 3 | `Layout and style` | Layout (+ split Surface) |
+| 4 | `Display` | Behavior |
+| 5 | `Source setup` | Data source |
+| 6 | `Empty state` | Empty state |
 
 ### Visual
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Runtime status` | Runtime payload |
+| 2 | `Section header` | Section header |
+| 3 | `Layout and style` | Layout (+ split Surface) |
+| 4 | `Display` | Behavior |
+| 5 | `Source setup` | Data source |
+| 6 | `Empty state` | Empty state |
 
 ### Advanced
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Runtime status` | Runtime payload |
+| 2 | `Section header` | Section header |
+| 3 | `Layout and style` | Layout (+ split Surface) |
+| 4 | `Display` | Behavior |
+| 5 | `Runtime payload` | Runtime payload |
+| 6 | `Source setup` | Data source |
+| 7 | `Empty state` | Empty state |
 
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
@@ -27,9 +49,9 @@ Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych kompone
 
 - `Runtime status` → **Runtime payload**
 - `Source setup` → **Data source**
-- `Display` → **(unmapped — propose canonical)**
+- `Display` → **Behavior**
 - `Section header` → **Section header**
-- `Layout and style` → **(unmapped — propose canonical)**
+- `Layout and style` → **Layout (+ split Surface)**
 - `Empty state` → **Empty state**
 - `Runtime payload` → **Runtime payload**
 
@@ -39,8 +61,22 @@ Wszystkie 3 zakładki mają pustą main funkcję — sekcje w helperach. Należy
 
 ## 5. Rekomendacje per widget
 
-1. Brak rekomendacji wykraczających poza wspólny kontrakt — widget zgodny.
+1. Przemianować `Runtime status` → `Runtime payload` (CONTRACT-05).
 
 ---
 
 > Raport powiązany: `REPORT_COMMON_CONTRACT.md` (pełna lista kanonów i TASK-336+).
+
+## 2026-05-24 TASK-336-09 status
+
+Ten raport jest zastąpiony przez implementację TASK-336-09:
+
+- `Wizard` renderuje tylko `Source setup` i posiada `source.*` ownership.
+- `Visual` renderuje `Display`, `Section header`, `Layout and style`,
+  `Pagination presentation` oraz `Empty state`.
+- `Advanced` renderuje wyłącznie read-only diagnostics: `Resolved query`,
+  `Runtime status`, `Runtime payload`, `Contract summary`.
+- `posts-feed` ma teraz v2 `editorContract`, a targetowane testy Vitest/Bun
+  sprawdzają brak zduplikowanych writable paths.
+- Targetowany smoke Playwright na `/posts-feed-test-page` przeszedł z
+  `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`, `publicFailures=0`.

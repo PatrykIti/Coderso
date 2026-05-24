@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -35,14 +35,28 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Inventory Posts Feed source, display, and runtime paths.
-- [ ] Add or update `posts-feed` `editorContract` metadata.
-- [ ] Move feed source setup into Wizard.
-- [ ] Keep card/display presentation in Visual.
-- [ ] Convert Advanced source/display duplicates into read-only diagnostics.
-- [ ] Preserve preview behavior and empty-feed guidance.
-- [ ] Add Vitest UI coverage for source/display split.
-- [ ] Add Playwright admin/public smoke coverage with non-empty fixture data.
+- [x] Inventory Posts Feed source, display, and runtime paths.
+- [x] Add or update `posts-feed` `editorContract` metadata.
+- [x] Move feed source setup into Wizard.
+- [x] Keep card/display presentation in Visual.
+- [x] Convert Advanced source/display duplicates into read-only diagnostics.
+- [x] Preserve preview behavior and empty-feed guidance.
+- [x] Add Vitest UI coverage for source/display split.
+- [x] Add Playwright admin/public smoke coverage with non-empty fixture data.
+
+## Status Notes
+
+- 2026-05-24: Completed. `posts-feed` now exposes a strict v2
+  `editorContract`, Wizard owns source/query setup, Visual owns display,
+  section chrome, layout/style, pagination presentation, and empty state, and
+  Advanced is read-only query/runtime/payload diagnostics plus contract summary.
+- 2026-05-24: Preview hydration was moved behind a non-writable preview bridge
+  so Visual keeps live preview updates without re-owning `source.*` controls.
+- 2026-05-24: Lifecycle caveat: this task is an ownership cleanup only. Wizard
+  remains visible as a normal editor tab until `TASK-336-16` ships the one-time
+  Wizard lifecycle and `Run setup again` affordance.
+- 2026-05-24: Targeted Vitest UI/contract and Bun widget/runtime coverage passed
+  locally before Playwright smoke.
 
 ## Files to Change
 

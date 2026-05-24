@@ -26,6 +26,7 @@
 | 2 | `Card content` | Items and order (Card content subsection) |
 | 3 | `Product links` | Actions |
 | 4 | `Empty state` | Empty state |
+| 5 | `Surfaces` | Surface (border, radius, shadow) |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |

@@ -35,15 +35,14 @@
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Layout tokens` | Technical tokens |
-| 2 | `Raw metadata fields` | (unmapped — propose canonical) |
+| 2 | `Raw metadata fields` | Raw payload snapshot |
 | 3 | `Data normalization` | Normalization and safeguards |
 
 ## 5. Rekomendacje per widget
 
-1. Tytuły nieobjęte mapowaniem kanonicznym — wymagają decyzji: `Raw metadata fields`.
-2. Przemianować `Variant and compare structure` → `Variant and structure` (CONTRACT-01).
-3. Przemianować `Colors and typography` → `Colors` (CONTRACT-03), wyodrębniając Surface/Typography do osobnych sekcji jeżeli były razem.
-4. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+1. Przemianować `Variant and compare structure` → `Variant and structure` (CONTRACT-01).
+2. Przemianować `Colors and typography` → `Colors` (CONTRACT-03), wyodrębniając Surface/Typography do osobnych sekcji jeżeli były razem.
+3. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 

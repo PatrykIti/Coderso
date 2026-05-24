@@ -30,6 +30,7 @@
 | 5 | `Map source and display behavior` | Data source (+ Behavior) |
 | 6 | `Colors, borders, and surface styling` | Colors (+ split Surface) |
 | 7 | `Section layout and spacing` | Layout (width, padding, alignment) |
+| 8 | `Submission runtime binding` | Runtime payload |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |

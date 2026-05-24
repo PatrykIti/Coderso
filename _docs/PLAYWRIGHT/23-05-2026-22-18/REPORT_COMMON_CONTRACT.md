@@ -186,17 +186,38 @@ Dokładnie ten sam koncept (eyebrow + title + description sekcji) ma **4 różne
 
 ## 4. Zidentyfikowane kolizje (duplikaty tytułów w obrębie jednego widgetu)
 
-Dane z parsera kodu:
+Pełna lista z parsera **rekursywnego** (obejmuje sekcje renderowane także przez helpery, nie tylko top-level funkcje):
+
+### 4.1 Krytyczne — sekcja powiela się w **wszystkich trzech** zakładkach (Wizard + Visual + Advanced)
+
+| Widget | Sekcje | Skutek |
+|--------|--------|--------|
+| `posts-feed` | `Runtime status`, `Section header`, `Layout and style`, `Display`, `Source setup`, `Empty state` (6 sekcji × 3 zakładki) | Edytor jest praktycznie tożsamy w trzech zakładkach — Wizard/Visual/Advanced wyglądają tak samo. Tabs są dekoracyjne, nie funkcjonalne. |
+| `tabs` | `Variant`, `Layout`, `Tabs Structure` (3 sekcje × 3 zakładki) + dodatkowo `Trigger style`, `Colors` w Visual+Advanced | jw. |
+| `accordion` | `Variant`, `Items` (2 sekcje × 3 zakładki) + `Behavior and Style` w Visual+Advanced | jw. |
+| `listing-filters` | `Listing query`, `Diagnostics`, `Facet controls`, `Surface`, `Runtime behavior` | Wizard/Visual praktycznie identyczne; jedyna unikalność to `Variant and layout` w Visual + `Contract`/`Runtime payload` w Advanced. |
+| `search-box` | `Mode`, `Surface`, `Copy and behavior` × 3 zakładki | Wizard i Visual mają **dokładnie** te same 3 sekcje. |
+| `form-embed` | `Form selection`, `Layout`, `Field labels` × wiele zakładek | Wizard ma 4 sekcje, Visual ma te same + dodatkowe; Advanced re-renderuje `Form selection`. |
+| `template-section` | `Preview and metadata`, `Runtime behavior` w 3 zakładkach + meta-labele `Wizard`/`Visual`/`Advanced` jako tytuły sekcji | Sekcje `Wizard`/`Visual`/`Advanced` to literalnie meta-labele trybu, nie prawdziwe sekcje. |
+
+### 4.2 Kolizje w dwóch zakładkach
 
 | Widget | Tytuł | Występuje w |
 |--------|-------|--------------|
-| `tabs` | `Variant` | Wizard, Visual, **i** Advanced (3×!) |
-| `accordion` | `Variant` | Wizard, Visual, **i** Advanced (3×!) |
-| `divider` | `Preview` | Visual **i** Advanced |
-| `hero` | `Background` | Visual **i** Advanced |
-| `stats-kpi` | `Header copy` | Wizard **i** Visual |
+| `hero` | `Background` | Visual + Advanced |
+| `divider` | `Preview` | Visual + Advanced |
+| `stats-kpi` | `Header copy`, `Title` | Wizard + Visual |
+| `booking-calendar` | `Surface`, `Copy` | Wizard + Visual |
+| `appointment-form` | `Surface` | Wizard + Visual |
+| `product-table` | `Surfaces` | Wizard + Visual |
 
-Powyższe są **prawdziwymi naruszeniami kontraktu**: ten sam tytuł sekcji w wielu zakładkach prowadzi redaktora w błąd („czy konfigurując Background w Visual wpływam też na to w Advanced?"). Każda z tych kolizji powinna albo zostać scalona, albo jednoznacznie odróżniona nazwą (np. `Background (decorative)` vs `Background runtime tokens`).
+### 4.3 Wnioski z §4
+
+Trzy klasy problemów:
+
+1. **„Shared helpers"** (posts-feed, tabs, accordion, listing-filters, search-box, form-embed) — autor wpisał pojedynczy komponent renderujący wszystkie sekcje, a Wizard/Visual/Advanced wszystkie ten komponent renderują. Skutek: rozróżnienie trybów jest fikcyjne, redaktor klikając Wizard/Visual/Advanced widzi to samo. To podważa cały sens tabs i wymaga decyzji projektowej (TASK-339).
+2. **„Cross-tab duplicate"** (hero, divider, stats-kpi, booking-calendar, appointment-form, product-table) — ta sama sekcja zdefiniowana świadomie w dwóch trybach. To jest do scalenia.
+3. **„Meta-label"** (template-section) — sekcja nazwana literalnie jak tryb. To jest do usunięcia.
 
 ---
 

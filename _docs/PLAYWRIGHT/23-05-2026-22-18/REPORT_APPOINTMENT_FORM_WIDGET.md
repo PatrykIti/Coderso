@@ -17,6 +17,7 @@
 |---|----------------|--------------------|
 | 1 | `Flow` | (unmapped — propose canonical) |
 | 2 | `Copy` | Section header |
+| 3 | `Surface` | Surface (border, radius, shadow) |
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -25,6 +26,7 @@
 | 2 | `Fields` | Items and order (form fields) |
 | 3 | `Custom fields` | Items and order (form fields subsection) |
 | 4 | `Consent and protection` | Behavior |
+| 5 | `Surface` | Surface (border, radius, shadow) |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |

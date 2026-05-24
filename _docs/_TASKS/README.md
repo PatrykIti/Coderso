@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 19 tasks
+- **To Do:** 18 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1928 tasks
+- **Done:** 1929 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-09 | Posts Feed Mode Ownership | High | Large | Split feed source setup, card display, and resolved-query diagnostics |
 | TASK-336-10 | Form Embed Mode Ownership | High | Large | Split form setup, wrapper presentation, and read-only security/runtime diagnostics |
 | TASK-336-11 | Hero Mode Ownership and Legacy Control Migration | High | Large | Move Hero copy/media/surface controls to Visual and keep Advanced technical/read-only |
 | TASK-336-12 | Stats KPI Mode Ownership | High | Large | Remove Advanced metric/style duplicates while preserving TASK-287/TASK-331 fixes |
@@ -73,6 +72,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336-09 | Posts Feed Mode Ownership | High | Large | Done (2026-05-24): Wizard owns source/query setup, Visual owns display, layout/style, pagination, and empty-state presentation, Advanced is read-only diagnostics, and targeted Vitest/Bun plus Playwright smoke passed. |
 | TASK-336-08 | Accordion Mode Ownership | High | Large | Done (2026-05-24): Wizard owns starter setup, Visual owns variant/item content/behavior/layout/style, Advanced is read-only diagnostics, and targeted Vitest plus Playwright smoke passed. |
 | TASK-336-07 | Tabs Mode Ownership | High | Large | Done (2026-05-24): Wizard owns starter tab setup, Visual owns variant/content/layout/trigger style/colors, Advanced is read-only diagnostics, and targeted Vitest plus Playwright smoke passed. |
 | TASK-336-06 | Listing Filters Mode Ownership | High | Large | Done (2026-05-24): Wizard owns listing source and facet structure/value setup, Visual owns copy/layout/surface and facet presentation, Advanced is read-only diagnostics, and targeted Vitest plus Playwright smoke passed. |

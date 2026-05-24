@@ -13,15 +13,31 @@
 ## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
 
 ### Wizard
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3) — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Listing query` | Data source |
+| 2 | `Diagnostics` | Runtime payload |
+| 3 | `Facet controls` | Items and order (facet subsection) |
+| 4 | `Surface` | Surface (border, radius, shadow) |
+| 5 | `Runtime behavior` | Runtime payload |
 
 ### Visual
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Listing query` | Data source |
+| 2 | `Diagnostics` | Runtime payload |
+| 3 | `Variant and layout` | Variant and structure |
+| 4 | `Facet controls` | Items and order (facet subsection) |
+| 5 | `Surface` | Surface (border, radius, shadow) |
+| 6 | `Runtime behavior` | Runtime payload |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Contract` | Runtime payload |
+| 2 | `Diagnostics` | Runtime payload |
+| 3 | `Runtime payload` | Runtime payload |
+| 4 | `Facet controls` | Items and order (facet subsection) |
 
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
@@ -31,7 +47,7 @@ Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych kompone
 - `Facet controls` → **Items and order (facet subsection)**
 - `Runtime behavior` → **Runtime payload**
 - `Variant and layout` → **Variant and structure**
-- `Surface` → **(unmapped — propose canonical)**
+- `Surface` → **Surface (border, radius, shadow)**
 - `Diagnostics` → **Runtime payload**
 - `Runtime payload` → **Runtime payload**
 
@@ -41,7 +57,8 @@ Visual top-level pusty; jedyna `Contract` w Advanced. Wymaga pełnego odświeże
 
 ## 5. Rekomendacje per widget
 
-1. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
+1. Przemianować `Variant and layout` → `Variant and structure` (CONTRACT-01).
+2. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
 
 ---
 

@@ -28,7 +28,12 @@ _(brak sekcji top-level (sekcje istnieją w helperach — patrz §3) — Wizard 
 | 8 | `Reduce structured block count` | (ignore — confirm dialog) |
 
 ### Advanced
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Output mode and source diagnostics` | Runtime payload |
+| 2 | `Raw HTML technical editor` | Technical tokens |
+| 3 | `Normalization and safeguards` | Normalization and safeguards |
+| 4 | `Raw payload snapshot` | Raw payload snapshot |
 
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
@@ -40,8 +45,8 @@ Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych kompone
 - `Structured content blocks` → **Items and order**
 - `Reader options` → **Behavior**
 - `Typography and colors` → **Typography (+ split Colors)**
-- `Output mode and source diagnostics` → **(unmapped — propose canonical)**
-- `Raw HTML technical editor` → **(unmapped — propose canonical)**
+- `Output mode and source diagnostics` → **Runtime payload**
+- `Raw HTML technical editor` → **Technical tokens**
 - `Normalization and safeguards` → **Normalization and safeguards**
 - `Raw payload snapshot` → **Raw payload snapshot**
 

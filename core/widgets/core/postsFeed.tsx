@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { resolveClearableStyleValue } from "./clearableStyle";
 import {
   ContentListBlock,
@@ -675,6 +675,134 @@ export function PostsFeedBlock({
   );
 }
 
+export const postsFeedEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "posts-feed.wizard.source-setup",
+      title: "Source setup",
+      role: "source",
+      writablePaths: [
+        "source.mode",
+        "source.category",
+        "source.manualPostIds",
+        "source.authorId",
+        "source.featuredFirst",
+        "source.dateRange.from",
+        "source.dateRange.to",
+        "source.limit",
+        "source.sort",
+      ],
+      readOnlyPaths: ["source.contentType"],
+    },
+    {
+      mode: "visual",
+      id: "posts-feed.visual.display",
+      title: "Display",
+      role: "content",
+      writablePaths: [
+        "fields.showImage",
+        "fields.showExcerpt",
+        "fields.showAuthor",
+        "fields.showDate",
+        "fields.showCta",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "posts-feed.visual.section-header",
+      title: "Section header",
+      role: "content",
+      writablePaths: ["title", "description"],
+    },
+    {
+      mode: "visual",
+      id: "posts-feed.visual.layout-style",
+      title: "Layout and style",
+      role: "visual",
+      writablePaths: [
+        "variant",
+        "style.columns",
+        "style.gap",
+        "style.cardStyle",
+        "style.imageAspect",
+        "style.ctaLabel",
+        "style.backgroundColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.motion",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "posts-feed.visual.pagination",
+      title: "Pagination presentation",
+      role: "visual",
+      writablePaths: [
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.viewAllHref",
+        "pagination.viewAllLabel",
+        "pagination.loadMoreLabel",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "posts-feed.visual.empty-state",
+      title: "Empty state",
+      role: "content",
+      writablePaths: ["emptyState.title", "emptyState.description"],
+    },
+    {
+      mode: "advanced",
+      id: "posts-feed.advanced.resolved-query",
+      title: "Resolved query",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "source",
+        "source.mode",
+        "source.limit",
+        "source.sort",
+        "source.manualPostIds",
+        "pagination.mode",
+        "resolved.items",
+        "resolved.runtime",
+        "resolved.listPath",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "posts-feed.advanced.runtime-status",
+      title: "Runtime status",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "resolved.total",
+        "resolved.sourceMode",
+        "resolved.resolvedAt",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "posts-feed.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "technical",
+      writablePaths: [],
+      readOnlyPaths: ["resolved"],
+    },
+    {
+      mode: "advanced",
+      id: "posts-feed.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
+};
+
 export function createPostsFeedWidget(editors: {
   wizard: ComponentType<WidgetEditorProps<PostsFeedData>>;
   visual: ComponentType<WidgetEditorProps<PostsFeedData>>;
@@ -708,6 +836,7 @@ export function createPostsFeedWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
+    editorContract: postsFeedEditorContract,
     render: PostsFeedBlock,
   };
 }

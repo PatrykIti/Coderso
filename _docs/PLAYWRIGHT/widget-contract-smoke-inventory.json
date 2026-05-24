@@ -240,7 +240,7 @@
       "widgetType": "posts-feed",
       "title": "Posts Feed",
       "adminInsertLabel": "Posts Feed",
-      "adminFixtureSlug": "/ctr-posts-feed-2305",
+      "adminFixtureSlug": "/posts-feed-test-page",
       "publicPath": "/posts-feed-test-page",
       "publicFixtureStatus": "published",
       "requiredModes": ["wizard", "visual", "advanced"],

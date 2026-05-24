@@ -137,6 +137,24 @@ Targeted smoke evidence:
 - `accordion`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
   `publicFailures=0` (`.tmp/widget-smoke-accordion.json`).
 
+## 2026-05-24 TASK-336-09 Ownership Update
+
+`posts-feed` now has an explicit v2 editor contract and no longer treats
+Visual/Advanced as duplicate source editors:
+
+- Wizard owns source mode, filters, manual post order, initial item count, and
+  sort setup.
+- Visual owns field visibility, section header, variant/layout/style,
+  pagination presentation, and empty-state copy while keeping preview sync
+  non-writable.
+- Advanced is read-only resolved query, runtime status, runtime payload, and
+  contract summary diagnostics.
+
+Targeted smoke evidence:
+
+- `posts-feed`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
+  `publicFailures=0` (`.tmp/widget-smoke-posts-feed.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

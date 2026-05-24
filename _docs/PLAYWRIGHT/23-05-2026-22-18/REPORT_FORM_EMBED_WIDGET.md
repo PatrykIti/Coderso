@@ -13,13 +13,29 @@
 ## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
 
 ### Wizard
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3) — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Content` | (ignore — screen widget label) |
+| 2 | `Form selection` | Data source |
+| 3 | `Layout` | Layout (width, padding, alignment) |
+| 4 | `Field labels` | Items and order (form fields subsection) |
 
 ### Visual
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Form selection` | Data source |
+| 2 | `Submit behavior` | Behavior |
+| 3 | `Multi-step navigation` | Behavior |
+| 4 | `Layout` | Layout (width, padding, alignment) |
+| 5 | `Style` | Surface (border, radius, shadow) |
+| 6 | `Field labels` | Items and order (form fields subsection) |
 
 ### Advanced
-_(brak sekcji top-level (sekcje istnieją w helperach — patrz §3))_
+| # | Tytuł (obecny) | Proponowany kanon |
+|---|----------------|--------------------|
+| 1 | `Diagnostics` | Runtime payload |
+| 2 | `Normalized payload snapshot` | Raw payload snapshot |
+| 3 | `Form selection` | Data source |
 
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
@@ -29,7 +45,7 @@ Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych kompone
 - `Content` → **(ignore — screen widget label)**
 - `Layout` → **Layout (width, padding, alignment)**
 - `Field labels` → **Items and order (form fields subsection)**
-- `Style` → **(unmapped — propose canonical)**
+- `Style` → **Surface (border, radius, shadow)**
 - `Multi-step navigation` → **Behavior**
 - `Submit behavior` → **Behavior**
 - `Diagnostics` → **Runtime payload**
@@ -41,7 +57,8 @@ Jw. — wszystkie 3 zakładki puste na poziomie main funkcji.
 
 ## 5. Rekomendacje per widget
 
-1. Brak rekomendacji wykraczających poza wspólny kontrakt — widget zgodny.
+1. Przemianować `Normalized payload snapshot` → `Normalization and safeguards` (CONTRACT-04).
+2. Przemianować `Diagnostics` → `Runtime payload` (CONTRACT-05).
 
 ---
 

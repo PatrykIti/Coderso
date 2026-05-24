@@ -28,17 +28,20 @@
 | 5 | `Formatting` | (unmapped — propose canonical) |
 | 6 | `Layout` | Layout (width, padding, alignment) |
 | 7 | `Empty state` | Empty state |
+| 8 | `Surfaces` | Surface (border, radius, shadow) |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Runtime payload` | Runtime payload |
+| 2 | `Query preview` | Runtime payload |
 
 ## 5. Rekomendacje per widget
 
 1. Tytuły nieobjęte mapowaniem kanonicznym — wymagają decyzji: `Formatting`, `Labels`.
 2. Przemianować `Section copy` → `Section header` (CONTRACT-02).
-3. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+3. Przemianować `Query preview` → `Runtime payload` (CONTRACT-05).
+4. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 

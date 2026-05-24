@@ -363,6 +363,15 @@ const clickElement = (element: Element | null | undefined) => {
   });
 };
 
+const writablePathsForMode = (container: ParentNode, mode: "wizard" | "visual" | "advanced") =>
+  Array.from(
+    container.querySelectorAll(
+      `[data-widget-editor-section][data-widget-editor-mode='${mode}'] [data-widget-control-ownership='writable']`
+    )
+  )
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
+
 afterEach(() => {
   vi.restoreAllMocks();
   toastInfo.mockReset();
@@ -371,7 +380,7 @@ afterEach(() => {
 });
 
 test("PostsFeed editors cover manual source truthfulness, section chrome, style controls, and runtime snapshot", async () => {
-  const { PostsFeedAdvancedEditor } =
+  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const onChangeSpy = vi.fn();
@@ -381,18 +390,33 @@ test("PostsFeed editors cover manual source truthfulness, section chrome, style 
     const [value, setValue] = useState<PostsFeedData>({} as PostsFeedData);
     const [variant, setVariant] = useState("cards");
     return (
-      <PostsFeedAdvancedEditor
-        value={value}
-        onChange={(next) => {
-          onChangeSpy(next);
-          setValue(next);
-        }}
-        variant={variant}
-        onVariantChange={(next) => {
-          onVariantChangeSpy(next);
-          setVariant(next);
-        }}
-      />
+      <>
+        <PostsFeedWizardEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            onVariantChangeSpy(next);
+            setVariant(next);
+          }}
+        />
+        <PostsFeedVisualEditor
+          value={value}
+          onChange={(next) => {
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            onVariantChangeSpy(next);
+            setVariant(next);
+          }}
+        />
+        <PostsFeedAdvancedEditor value={value} onChange={setValue} variant={variant} />
+      </>
     );
   };
 
@@ -405,6 +429,23 @@ test("PostsFeed editors cover manual source truthfulness, section chrome, style 
     expect(view.container.textContent).toContain("Section header");
     expect(view.container.textContent).toContain("Runtime status");
     expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Contract summary");
+
+    expect(writablePathsForMode(view.container, "wizard")).toContain("source.mode");
+    expect(writablePathsForMode(view.container, "wizard")).not.toContain("style.cardStyle");
+    expect(writablePathsForMode(view.container, "visual")).toContain("style.cardStyle");
+    expect(writablePathsForMode(view.container, "visual")).toContain("pagination.mode");
+    expect(writablePathsForMode(view.container, "visual")).not.toContain("source.mode");
+    const advancedSections = view.container.querySelectorAll(
+      "[data-widget-editor-section][data-widget-editor-mode='advanced']"
+    );
+    expect(advancedSections.length).toBeGreaterThan(0);
+    expect(
+      Array.from(advancedSections).some((section) =>
+        Boolean(section.querySelector("input, textarea, select, button"))
+      )
+    ).toBe(false);
+    expect(writablePathsForMode(view.container, "advanced")).toEqual([]);
 
     React.act(() => {
       setSelectValue(
@@ -787,7 +828,7 @@ test("PostsFeed editors fall back for invalid numeric/select values and sparse d
 });
 
 test("PostsFeed editors derive author filters from the post catalog and warn on invalid legacy dates", async () => {
-  const { PostsFeedAdvancedEditor } =
+  const { PostsFeedWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   let latestValue: PostsFeedData = {
@@ -801,7 +842,7 @@ test("PostsFeed editors derive author filters from the post catalog and warn on 
   };
 
   const view = mount(
-    <PostsFeedAdvancedEditor
+    <PostsFeedWizardEditor
       value={latestValue}
       onChange={(next) => {
         latestValue = next;

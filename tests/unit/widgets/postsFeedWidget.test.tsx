@@ -4,6 +4,7 @@ import { renderToString } from "react-dom/server";
 
 import { resolvePostsFeedRuntimeData } from "../../../core/services/content/postsFeedResolver";
 import type { PostSummary } from "../../../core/services/content/postsService";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import {
   createPostsFeedWidget,
   mapPostsFeedToContentListData,
@@ -619,6 +620,47 @@ test("posts feed validator accepts normalized payload and visual owns variant", 
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+});
+
+test("posts feed exposes a strict source, visual, and readonly advanced editor contract", () => {
+  const widget = createPostsFeedWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+  const writableOwners = new Map<string, string>();
+
+  for (const section of widget.editorContract?.sections ?? []) {
+    for (const path of section.writablePaths) {
+      expect(writableOwners.has(path)).toBe(false);
+      writableOwners.set(path, section.mode);
+    }
+  }
+
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "posts-feed.wizard.source-setup",
+    "posts-feed.visual.display",
+    "posts-feed.visual.section-header",
+    "posts-feed.visual.layout-style",
+    "posts-feed.visual.pagination",
+    "posts-feed.visual.empty-state",
+    "posts-feed.advanced.resolved-query",
+    "posts-feed.advanced.runtime-status",
+    "posts-feed.advanced.runtime-payload",
+    "posts-feed.advanced.contract-summary",
+  ]);
+  expect(writableOwners.get("source.mode")).toBe("wizard");
+  expect(writableOwners.get("source.manualPostIds")).toBe("wizard");
+  expect(writableOwners.get("variant")).toBe("visual");
+  expect(writableOwners.get("pagination.mode")).toBe("visual");
+  expect(writableOwners.get("style.cardStyle")).toBe("visual");
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .flatMap((section) => section.writablePaths)
+  ).toEqual([]);
 });
 
 test("posts feed validator rejects unknown nested keys", () => {

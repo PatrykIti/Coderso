@@ -16,17 +16,23 @@
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Wizard` | (meta-label only, not actual section) |
+| 2 | `Preview and metadata` | Runtime payload |
+| 3 | `Runtime behavior` | Runtime payload |
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Visual` | (meta-label only, not actual section) |
+| 2 | `Preview and metadata` | Runtime payload |
+| 3 | `Runtime behavior` | Runtime payload |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
 | 1 | `Advanced` | (meta-label only, not actual section) |
 | 2 | `Resolved payload` | Runtime payload |
+| 3 | `Preview and metadata` | Runtime payload |
+| 4 | `Runtime behavior` | Runtime payload |
 
 ## 3. Krytyczne uwagi kontraktu
 
@@ -34,7 +40,8 @@ Sekcje nazwane literalnie `Wizard`, `Visual`, `Advanced` (meta-labele) — to ni
 
 ## 5. Rekomendacje per widget
 
-1. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+1. Przemianować `Runtime behavior` → `Runtime payload` (CONTRACT-05).
+2. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 
