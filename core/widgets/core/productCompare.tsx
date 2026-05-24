@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import {
   buildCommerceWidgetQueryInput,
   commerceStockLabelMap,
@@ -198,6 +198,108 @@ export const productCompareDefaults: ProductCompareData = {
     total: 0,
     resolvedAt: "",
   },
+};
+
+const productCompareWizardVisualDuplicateAllowances = [
+  {
+    path: "source.productIds",
+    reason:
+      "Wizard seeds compared products until product-picker ownership is moved fully to Visual.",
+    expiresWithTask: "TASK-336-19",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const productCompareEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "product-compare.wizard.source-setup",
+      title: "Source setup",
+      role: "source",
+      writablePaths: [
+        "source.limit",
+        "source.search",
+        "source.collectionIds",
+        "source.productIds",
+        "source.status",
+        "source.sortField",
+        "source.sortDir",
+      ],
+      allowedDuplicateWritablePaths: productCompareWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "product-compare.visual.rows-labels",
+      title: "Rows and labels",
+      role: "content",
+      writablePaths: [
+        "source.productIds",
+        "rows",
+        "fields.showPrice",
+        "fields.showCompareAt",
+        "fields.showStock",
+        "fields.showStockQuantity",
+        "fields.showSlug",
+        "fields.showExcerpt",
+        "labels.attributeHeader",
+        "labels.price",
+        "labels.compareAt",
+        "labels.stock",
+        "labels.quantity",
+        "labels.slug",
+        "labels.excerpt",
+        "labels.inStock",
+        "labels.outOfStock",
+        "labels.backorder",
+        "header.showImages",
+        "header.linkTitles",
+        "header.ctaMode",
+        "header.ctaLabel",
+        "section.title",
+        "section.description",
+        "section.caption",
+        "section.hideCaption",
+        "emptyState.title",
+        "emptyState.description",
+      ],
+      allowedDuplicateWritablePaths: productCompareWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "product-compare.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "format.moneyLocale",
+        "format.quantityDisplay",
+        "format.quantityCompactLimit",
+        "layout.featuredProductId",
+        "layout.stickyHeader",
+        "style.tableBackground",
+        "style.tableBorderColor",
+        "style.headerBackground",
+        "style.emptyBackground",
+        "style.emptyBorderColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "product-compare.advanced.source-diagnostics",
+      title: "Source diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["source", "resolved", "runtime.queryInput"],
+    },
+    {
+      mode: "advanced",
+      id: "product-compare.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["runtime.normalizedData"],
+    },
+  ],
 };
 
 const text = (value: unknown, fallback: string) => {
@@ -1062,6 +1164,7 @@ export function createProductCompareWidget(editors: {
       visual: editors.visual,
       advanced: editors.advanced,
     },
+    editorContract: productCompareEditorContract,
     editorCapabilities: {
       supportsPreviewState: true,
     },

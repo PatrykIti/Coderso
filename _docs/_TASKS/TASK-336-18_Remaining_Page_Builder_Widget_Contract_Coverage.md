@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Contract + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12, TASK-336-13, TASK-336-14, TASK-336-15
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -49,16 +49,37 @@ Screen-only widgets remain out of scope here:
 
 ## Sub-Tasks
 
-- [ ] Run `TASK-336-03` smoke inventory for the in-scope widgets and collect
+- [x] Run `TASK-336-03` smoke inventory for the in-scope widgets and collect
   `missing-contract`, `path-metadata-gap`, and duplicate-owner findings.
-- [ ] Add or update `editorContract` metadata for each in-scope widget.
-- [ ] Use the existing editor wave tests for each widget when present.
-- [ ] Create a focused widget/editor test only when an in-scope widget lacks
+- [x] Add or update `editorContract` metadata for each in-scope widget.
+- [x] Use the existing editor wave tests for each widget when present.
+- [x] Create a focused widget/editor test only when an in-scope widget lacks
   coverage for the changed contract.
-- [ ] Route any newly discovered high-risk ownership bug to a new physical
+- [x] Route any newly discovered high-risk ownership bug to a new physical
   leaf instead of hiding it in this sweep.
-- [ ] Record accepted/rejected Claude UX feedback for any widget whose mode
+- [x] Record accepted/rejected Claude UX feedback for any widget whose mode
   labels or Advanced summaries change materially.
+
+## Status Notes
+
+- Done (2026-05-24): added explicit `editorContract.version = 2` metadata for
+  all 18 in-scope remaining page-builder widgets and extended
+  `tests/vitest/widgets/editorContract.test.ts` with strict coverage for the
+  full TASK-336-18 set.
+- Done (2026-05-24): full frontend Playwright smoke stayed green with
+  `publicFailures=0` and no fixture gaps in
+  `widget-contract-smoke-task-336-18-full-2026-05-24.*`.
+- Done (2026-05-24): authenticated full admin Playwright smoke captured the
+  remaining actual UI drift:
+  `adminFailures=9`, `fixtureGaps=19`, `metadataGaps=2` in
+  `widget-contract-smoke-task-336-18-admin-auth-2026-05-24.*`. These findings
+  are routed to `TASK-336-19` instead of being hidden behind broad allowlists.
+- Done (2026-05-24): Claude CLI read-only review confirmed the target direction:
+  Wizard setup-only, Visual daily controls, and Advanced read-only diagnostics.
+  It also flagged raw `formId`, `menuKey`, `assetId`, item-id,
+  `map.embedUrl`, rich HTML, JSON-LD, and contact nonce diagnostics as
+  `TASK-336-19` cleanup inputs. Two read-only helper-agent audits provided the
+  concrete drift inventory used for `TASK-336-19`.
 
 ## Files to Change
 

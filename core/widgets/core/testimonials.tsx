@@ -7,7 +7,7 @@ import {
   parseHtmlAttributes,
   sanitizeHtmlWithPolicy,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -309,6 +309,121 @@ export const testimonialsDefaults: TestimonialsData = {
     cardRadius: "lg",
     cardBorderWidth: "sm",
   },
+};
+
+const testimonialsWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the social-proof layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "testimonials.count",
+    reason: "Wizard chooses the starter quote count; Visual remains the daily list owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "testimonials.quote",
+    reason: "Wizard seeds initial quotes; Visual remains the daily testimonial owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "testimonials.author",
+    reason: "Wizard seeds initial authors; Visual remains the daily testimonial owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const testimonialsEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "testimonials.wizard.starter-proof",
+      title: "Starter social proof",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "testimonials.count",
+        "testimonials.quote",
+        "testimonials.author",
+      ],
+      allowedDuplicateWritablePaths: testimonialsWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "testimonials.visual.header-list",
+      title: "Header and quotes",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.eyebrow",
+        "header.title",
+        "header.description",
+        "testimonials.count",
+        "testimonials.quote",
+        "testimonials.quoteHtml",
+        "testimonials.author",
+        "testimonials.role",
+        "testimonials.avatar",
+        "testimonials.rating",
+        "testimonials.sourceLabel",
+      ],
+      allowedDuplicateWritablePaths: testimonialsWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "testimonials.visual.conversion-display",
+      title: "Conversion and display",
+      role: "visual",
+      writablePaths: [
+        "cta.enabled",
+        "cta.label",
+        "cta.href",
+        "cta.target",
+        "cta.style",
+        "layout.spotlightItemId",
+        "behavior.sliderNavigation",
+        "behavior.ratingDisplay",
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.loadMoreLabel",
+        "style.sectionBackground",
+        "style.sectionGradient",
+        "style.backgroundTone",
+        "style.backgroundImage",
+        "style.cardSurface",
+        "style.cardBorder",
+        "style.textColor",
+        "style.accentColor",
+        "style.spacing",
+        "style.headerAlign",
+        "style.titleSize",
+        "style.cardRadius",
+        "style.cardBorderWidth",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "testimonials.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "testimonials", "layout", "behavior", "pagination", "style"],
+    },
+  ],
 };
 
 const createTestimonialId = (index: number) => `testimonial-${index + 1}`;
@@ -1179,6 +1294,7 @@ export function createTestimonialsWidget(editors: {
     schema: testimonialsSchema,
     defaults: testimonialsDefaults,
     editor: editors,
+    editorContract: testimonialsEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

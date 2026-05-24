@@ -264,3 +264,12 @@ Primary CTA jest renderowane tylko dla:
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `navigationEditorContract` with `version: 2`.
+- Contract target: Wizard seeds brand/menu source/links/CTA; Visual owns brand,
+  links, CTA, mobile behavior, layout, and style; Advanced is read-only runtime
+  diagnostics.
+- Raw source keys, slot copy, and writable Advanced layout behavior are routed
+  to `TASK-336-19`.

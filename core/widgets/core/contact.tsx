@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -718,6 +718,151 @@ export const contactDefaults: ContactData = {
   },
 };
 
+const contactWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the contact layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "title",
+    reason: "Wizard seeds section copy; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "description",
+    reason: "Wizard seeds section copy; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "form.title",
+    reason: "Wizard seeds form copy; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "form.fields",
+    reason: "Wizard seeds visible fields; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "form.submitLabel",
+    reason: "Wizard seeds submit copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "contact.title",
+    reason: "Wizard seeds business details; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "contact.phone",
+    reason: "Wizard seeds business details; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "contact.email",
+    reason: "Wizard seeds business details; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "contact.address",
+    reason: "Wizard seeds business details; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "contact.hours",
+    reason: "Wizard seeds business details; Visual remains the daily contact owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const contactEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "contact.wizard.starter-contact",
+      title: "Starter contact",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "title",
+        "description",
+        "form.title",
+        "form.fields",
+        "form.submitLabel",
+        "contact.title",
+        "contact.phone",
+        "contact.email",
+        "contact.address",
+        "contact.hours",
+      ],
+      allowedDuplicateWritablePaths: contactWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "contact.visual.form-details",
+      title: "Form and details",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "title",
+        "description",
+        "form.title",
+        "form.fields",
+        "form.required",
+        "form.submitLabel",
+        "form.fieldLayout",
+        "form.fieldSettings",
+        "form.submission.mode",
+        "form.submission.formId",
+        "form.submission.fieldMap",
+        "form.submission.staticMessage",
+        "form.submission.successMessage",
+        "form.submission.errorMessage",
+        "contact.title",
+        "contact.phone",
+        "contact.email",
+        "contact.address",
+        "contact.hours",
+        "contact.details",
+        "contact.social",
+        "map.enabled",
+        "map.embedUrl",
+        "map.title",
+        "map.description",
+        "map.height",
+        "map.fallbackCopy",
+      ],
+      allowedDuplicateWritablePaths: contactWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "contact.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.spacing",
+        "style.background",
+        "style.columns",
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.maxWidth",
+        "style.paddingX",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "contact.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["form.submission", "map.embedUrl", "resolved", "runtime.normalizedData"],
+    },
+  ],
+};
+
 export const resolveContactVariant = (variant: string): ContactVariantId => {
   if (variant === "form-right" || variant === "minimal") return variant;
   return "form-left";
@@ -1406,6 +1551,7 @@ export function createContactWidget(editors: {
     schema: contactSchema,
     defaults: contactDefaults,
     editor: editors,
+    editorContract: contactEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

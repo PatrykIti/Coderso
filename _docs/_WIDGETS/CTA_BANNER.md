@@ -151,3 +151,11 @@ Notes:
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `ctaBannerEditorContract` with `version: 2`.
+- Contract target: Wizard seeds conversion copy and primary action; Visual owns
+  badge/body/actions/background/motion/style; Advanced is read-only runtime
+  diagnostics.
+- Raw style-token Advanced controls are routed to `TASK-336-19`.

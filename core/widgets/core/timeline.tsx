@@ -1,5 +1,5 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
@@ -468,6 +468,119 @@ export const timelineDefaults: TimelineData = {
     titleWeight: "semibold",
   },
   background: { color: "transparent" },
+};
+
+const timelineWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the timeline layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds timeline copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds timeline copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "steps.count",
+    reason: "Wizard chooses starter milestone count; Visual remains the daily step owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "steps.title",
+    reason: "Wizard seeds milestone titles; Visual remains the daily step owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "steps.description",
+    reason: "Wizard seeds milestone descriptions; Visual remains the daily step owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const timelineEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "timeline.wizard.starter-steps",
+      title: "Starter steps",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "steps.count",
+        "steps.title",
+        "steps.description",
+      ],
+      allowedDuplicateWritablePaths: timelineWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.steps",
+      title: "Timeline steps",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "mode",
+        "steps.count",
+        "steps.title",
+        "steps.description",
+        "steps.date",
+        "steps.badge",
+        "steps.status",
+        "steps.icon",
+        "steps.href",
+        "steps.accent",
+      ],
+      allowedDuplicateWritablePaths: timelineWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "timeline.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "layout.orientation",
+        "layout.align",
+        "layout.spacing",
+        "layout.labelPosition",
+        "layout.padding",
+        "layout.sectionSpacing",
+        "layout.maxWidth",
+        "guides.enabled",
+        "guides.style",
+        "style.lineStyle",
+        "style.thickness",
+        "style.markerSize",
+        "style.markerDisplay",
+        "style.lineColor",
+        "style.markerColor",
+        "style.titleColor",
+        "style.descriptionColor",
+        "style.titleSize",
+        "style.descriptionSize",
+        "style.titleWeight",
+        "background.color",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "timeline.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "mode", "steps", "layout", "guides", "style", "background"],
+    },
+  ],
 };
 
 export const resolveTimelineVariant = (variant: string): TimelineVariantId => {
@@ -1392,6 +1505,7 @@ export function createTimelineWidget(editors: {
     schema: timelineSchema,
     defaults: timelineDefaults,
     editor: editors,
+    editorContract: timelineEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

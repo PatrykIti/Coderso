@@ -1,6 +1,6 @@
 import { useId, type ComponentType, type CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -212,6 +212,113 @@ export const logoCloudDefaults: LogoCloudData = {
     tileBackground: "var(--color-bg)",
     tileBorderColor: "color-mix(in srgb, var(--color-border) 60%, transparent)",
   },
+};
+
+const logoCloudWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the trust section layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logos.count",
+    reason: "Wizard chooses starter logo count; Visual remains the daily list owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logos.name",
+    reason: "Wizard seeds logo names; Visual remains the daily logo owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logos.image",
+    reason: "Wizard seeds logo media; Visual remains the daily logo owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const logoCloudEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "logo-cloud.wizard.starter-logos",
+      title: "Starter logos",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "logos.count",
+        "logos.name",
+        "logos.image",
+      ],
+      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "logo-cloud.visual.logos",
+      title: "Logos and header",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.eyebrow",
+        "header.title",
+        "header.description",
+        "logos.count",
+        "logos.name",
+        "logos.alt",
+        "logos.image",
+        "logos.href",
+        "cta.enabled",
+        "cta.label",
+        "cta.href",
+        "cta.target",
+      ],
+      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "logo-cloud.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.logoHeight",
+        "style.grayscale",
+        "style.hoverColor",
+        "style.gap",
+        "style.alignment",
+        "style.sectionBackground",
+        "style.tileBackground",
+        "style.tileBorderColor",
+        "style.headerAlign",
+        "style.headerSize",
+        "style.rowMode",
+        "style.motionMode",
+        "style.tileRadius",
+        "style.tileBorderWidth",
+        "style.openLinksInNewTab",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "logo-cloud.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "logos", "cta", "style"],
+    },
+  ],
 };
 
 const createLogoId = (index: number) => `logo-${index + 1}`;
@@ -728,6 +835,7 @@ export function createLogoCloudWidget(editors: {
     schema: logoCloudSchema,
     defaults: logoCloudDefaults,
     editor: editors,
+    editorContract: logoCloudEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

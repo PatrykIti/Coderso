@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -309,6 +309,112 @@ export const faqAccordionDefaults: FaqAccordionData = {
   seo: {
     emitFaqJsonLd: false,
   },
+};
+
+const faqAccordionWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the starter FAQ layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds FAQ copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds FAQ copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.count",
+    reason: "Wizard chooses the starter question count; Visual remains the daily item owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.question",
+    reason: "Wizard seeds initial questions; Visual remains the daily item owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.answer",
+    reason: "Wizard seeds initial answers; Visual remains the daily item owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const faqAccordionEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "faq-accordion.wizard.starter-questions",
+      title: "Starter questions",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "items.count",
+        "items.question",
+        "items.answer",
+      ],
+      allowedDuplicateWritablePaths: faqAccordionWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "faq-accordion.visual.questions",
+      title: "Questions and answers",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "items.count",
+        "items.question",
+        "items.answer",
+        "items.answerFormat",
+        "items.icon",
+        "options.allowMultipleOpen",
+        "options.defaultOpenIndex",
+        "seo.emitFaqJsonLd",
+      ],
+      allowedDuplicateWritablePaths: faqAccordionWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "faq-accordion.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.surface",
+        "style.border",
+        "style.divider",
+        "style.spacing",
+        "style.maxWidth",
+        "style.headerAlign",
+        "style.sectionPaddingX",
+        "style.sectionPaddingY",
+        "style.questionTextColor",
+        "style.answerTextColor",
+        "style.headerTitleColor",
+        "style.headerDescriptionColor",
+        "style.panelRadius",
+        "style.borderWidth",
+        "style.headerTitleSize",
+        "style.motion",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "faq-accordion.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "items", "options", "seo", "style"],
+    },
+  ],
 };
 
 const resolveString = (value: string | undefined, fallback: string) =>
@@ -1089,6 +1195,7 @@ export function createFaqAccordionWidget(editors: {
     schema: faqAccordionSchema,
     defaults: faqAccordionDefaults,
     editor: editors,
+    editorContract: faqAccordionEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

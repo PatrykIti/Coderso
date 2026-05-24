@@ -15,14 +15,32 @@ import {
 } from "../../../core/widgets/editorContract";
 import { appointmentFormEditorContract } from "../../../core/widgets/core/appointmentForm";
 import { bookingCalendarEditorContract } from "../../../core/widgets/core/bookingCalendar";
+import { compareTimelineEditorContract } from "../../../core/widgets/core/compareTimeline";
+import { contactEditorContract } from "../../../core/widgets/core/contact";
 import { contentListEditorContract } from "../../../core/widgets/core/contentList";
+import { ctaBannerEditorContract } from "../../../core/widgets/core/ctaBanner";
 import { dividerEditorContract } from "../../../core/widgets/core/divider";
+import { entryTeaserEditorContract } from "../../../core/widgets/core/entryTeaser";
+import { faqAccordionEditorContract } from "../../../core/widgets/core/faqAccordion";
+import { featureGridEditorContract } from "../../../core/widgets/core/featureGrid";
+import { footerEditorContract } from "../../../core/widgets/core/footer";
+import { galleryMosaicEditorContract } from "../../../core/widgets/core/galleryMosaic";
 import { gridColumnsEditorContract } from "../../../core/widgets/core/gridColumns";
+import { logoCloudEditorContract } from "../../../core/widgets/core/logoCloud";
+import { navigationEditorContract } from "../../../core/widgets/core/navigation";
+import { newsletterEditorContract } from "../../../core/widgets/core/newsletter";
+import { pricingPlansEditorContract } from "../../../core/widgets/core/pricingPlans";
+import { productCompareEditorContract } from "../../../core/widgets/core/productCompare";
+import { productGalleryEditorContract } from "../../../core/widgets/core/productGallery";
 import { productTableEditorContract } from "../../../core/widgets/core/productTable";
+import { richTextSectionEditorContract } from "../../../core/widgets/core/richTextSection";
 import { sectionEditorContract } from "../../../core/widgets/core/section";
 import { spacerEditorContract } from "../../../core/widgets/core/spacer";
 import { splitLayoutEditorContract } from "../../../core/widgets/core/splitLayout";
 import { stackEditorContract } from "../../../core/widgets/core/stack";
+import { testimonialsEditorContract } from "../../../core/widgets/core/testimonials";
+import { timelineEditorContract } from "../../../core/widgets/core/timeline";
+import { toggleBlockEditorContract } from "../../../core/widgets/core/toggleBlock";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
@@ -405,6 +423,48 @@ describe("widget editor contract validation", () => {
       expect(validation.valid).toBe(true);
       expect(
         definition.editorContract.sections.filter((section) => section.mode === "advanced")
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            writablePaths: [],
+          }),
+        ])
+      );
+    }
+  });
+
+  test("accepts TASK-336-18 remaining page-builder widget contracts in strict mode", () => {
+    const contracts = [
+      { type: "toggle-block", editorContract: toggleBlockEditorContract },
+      { type: "feature-grid", editorContract: featureGridEditorContract },
+      { type: "testimonials", editorContract: testimonialsEditorContract },
+      { type: "pricing-plans", editorContract: pricingPlansEditorContract },
+      { type: "faq-accordion", editorContract: faqAccordionEditorContract },
+      { type: "cta-banner", editorContract: ctaBannerEditorContract },
+      { type: "logo-cloud", editorContract: logoCloudEditorContract },
+      { type: "gallery-mosaic", editorContract: galleryMosaicEditorContract },
+      { type: "rich-text-section", editorContract: richTextSectionEditorContract },
+      { type: "entry-teaser", editorContract: entryTeaserEditorContract },
+      { type: "product-gallery", editorContract: productGalleryEditorContract },
+      { type: "product-compare", editorContract: productCompareEditorContract },
+      { type: "timeline", editorContract: timelineEditorContract },
+      { type: "compare-timeline", editorContract: compareTimelineEditorContract },
+      { type: "newsletter", editorContract: newsletterEditorContract },
+      { type: "contact", editorContract: contactEditorContract },
+      { type: "navigation", editorContract: navigationEditorContract },
+      { type: "footer", editorContract: footerEditorContract },
+    ];
+
+    expect(contracts).toHaveLength(18);
+
+    for (const definition of contracts) {
+      const validation = validateWidgetEditorContract(definition, { requireContract: true });
+      expect(validation.errors).toEqual([]);
+      expect(validation.valid).toBe(true);
+      expect(
+        definition.editorContract.sections.filter(
+          (section) => section.mode === "advanced" && section.role === "diagnostics"
+        )
       ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({

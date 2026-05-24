@@ -205,3 +205,12 @@ The renderer emits bounded data markers including:
   every viewport.
 - Newsletter therefore keeps a scalar `variant` contract. No
   `mobileVariant`/per-breakpoint override field is part of the schema.
+
+## TASK-336-18 Editor Contract
+
+- Exports `newsletterEditorContract` with `version: 2`.
+- Contract target: Wizard seeds signup copy, placeholder, consent, and submit
+  label; Visual owns field labels, state copy, submission behavior, opt-in, and
+  style; Advanced is read-only transport diagnostics.
+- Raw action URL/webhook ID and analytics-event editing drift is routed to
+  `TASK-336-19`.

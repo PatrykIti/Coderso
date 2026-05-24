@@ -170,3 +170,11 @@ do not live here anymore.
   override so the section surface falls back to transparent.
 - Typography and spacing continue to use bounded token sets instead of freeform
   class names.
+
+## TASK-336-18 Editor Contract
+
+- Exports `richTextSectionEditorContract` with `version: 2`.
+- Contract target: Wizard seeds safe structured copy; Visual owns daily rich
+  content, typography, spacing, and color; Advanced is read-only source,
+  sanitizer, and runtime diagnostics.
+- Raw HTML/output-mode authoring drift is routed to `TASK-336-19`.

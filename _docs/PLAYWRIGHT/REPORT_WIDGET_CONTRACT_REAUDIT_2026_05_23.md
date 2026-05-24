@@ -505,6 +505,38 @@ The TASK-336-15 rerun supersedes the frontend CSS/fixture gaps listed above:
   content, commerce, search, timeline, and template-section fixture pages used
   by the smoke inventory.
 
+## TASK-336-18 Contract Coverage Evidence (2026-05-24)
+
+TASK-336-18 adds strict v2 editor contracts for the remaining page-builder
+widgets not covered by earlier TASK-336 leaves:
+
+- `toggle-block`, `feature-grid`, `testimonials`, `pricing-plans`,
+  `faq-accordion`, `cta-banner`, `logo-cloud`, `gallery-mosaic`,
+  `rich-text-section`, `entry-teaser`, `product-gallery`, `product-compare`,
+  `timeline`, `compare-timeline`, `newsletter`, `contact`, `navigation`, and
+  `footer` now export `editorContract.version = 2`.
+- `tests/vitest/widgets/editorContract.test.ts` validates the full TASK-336-18
+  set in strict mode and keeps Advanced diagnostic sections read-only in the
+  declared contract.
+- `widget-contract-smoke-task-336-18-full-2026-05-24.*` covered the full
+  38-widget public inventory and kept frontend CSS smoke green with
+  `publicFailures=0` and `fixtureGaps=0`.
+- Authenticated admin smoke
+  `widget-contract-smoke-task-336-18-admin-auth-2026-05-24.*` intentionally
+  records the remaining actual UI/fixture/metadata drift:
+  `adminFailures=9`, `fixtureGaps=19`, and `metadataGaps=2`. These findings are
+  routed to `TASK-336-19` instead of being hidden behind broad duplicate
+  allowlists.
+
+Accepted UX direction from the earlier Claude review, the 2026-05-24 read-only
+Claude rerun, and the TASK-336-18 helper-agent audits: Wizard is setup-only,
+Visual owns daily content/style/behavior, and Advanced diagnostics stay
+read-only. Rejected: treating raw CSS, JSON, HTML, source IDs, product IDs,
+webhook IDs, or technical integration URLs as normal fields for nontechnical
+users. The fresh Claude rerun also routed raw `formId`, `menuKey`, `assetId`,
+item-id, `map.embedUrl`, rich HTML, FAQ JSON-LD, and contact nonce diagnostics
+to `TASK-336-19`.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

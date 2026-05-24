@@ -172,3 +172,11 @@ Advanced intentionally excludes duplicated day-to-day content or style editing.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `timelineEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter milestones; Visual owns steps,
+  orientation, guides, layout, markers, colors, and background; Advanced is
+  read-only runtime diagnostics.
+- Current Wizard/Advanced style-layout drift is routed to `TASK-336-19`.

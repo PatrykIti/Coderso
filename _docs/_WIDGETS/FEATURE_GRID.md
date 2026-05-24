@@ -113,3 +113,12 @@ media-first cards, CTA actions, and bounded layout/style controls.
   contract
 - first-open editor mode policy (`UX-10`) is not a widget-local contract; this
   doc only reflects local Wizard guidance
+
+## TASK-336-18 Editor Contract
+
+- Exports `featureGridEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter layout/count/copy; Visual owns daily
+  card content, CTA, media, layout, and styling; Advanced is read-only runtime
+  diagnostics.
+- Remaining raw URL and normalization-action UX drift is routed to
+  `TASK-336-19`.

@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
@@ -372,6 +372,97 @@ export const compareTimelineDefaults: CompareTimelineData = {
     segmentLabelFontWeight: "normal",
     markerShape: "rounded",
   },
+};
+
+const compareTimelineWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds comparison layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds comparison copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.subtitle",
+    reason: "Wizard seeds comparison copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "axis.steps",
+    reason: "Wizard seeds starter axis labels; Visual remains the daily timeline owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "tracks",
+    reason: "Wizard seeds starter tracks; Visual remains the daily track owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const compareTimelineEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "compare-timeline.wizard.starter-comparison",
+      title: "Starter comparison",
+      role: "setup",
+      writablePaths: ["variant", "header.title", "header.subtitle", "axis.steps", "tracks"],
+      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "compare-timeline.visual.axis-tracks",
+      title: "Axis and tracks",
+      role: "content",
+      writablePaths: ["variant", "header.title", "header.subtitle", "axis.steps", "tracks"],
+      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "compare-timeline.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "guides.enabled",
+        "guides.style",
+        "layout.trackSpacing",
+        "layout.labelPosition",
+        "layout.maxWidth",
+        "layout.padding",
+        "layout.trackOrder",
+        "layout.motion",
+        "highlight.targetTrackId",
+        "highlight.targetTrackIds",
+        "style.highlightColor",
+        "style.highlightLabelStyle",
+        "style.markerColor",
+        "style.trackLabelColor",
+        "style.stepLabelColor",
+        "style.mutedStepColor",
+        "style.guideColor",
+        "style.trackBackgroundColor",
+        "style.trackLabelSize",
+        "style.stepLabelSize",
+        "style.segmentLabelSize",
+        "style.trackLabelFontWeight",
+        "style.stepLabelFontWeight",
+        "style.segmentLabelFontWeight",
+        "style.markerShape",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "compare-timeline.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "axis", "tracks", "guides", "layout", "highlight", "style"],
+    },
+  ],
 };
 
 const resolveStepFallbackLabel = (index: number) => {
@@ -1086,6 +1177,7 @@ export function createCompareTimelineWidget(editors: {
     schema: compareTimelineSchema,
     defaults: compareTimelineDefaults,
     editor: editors,
+    editorContract: compareTimelineEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

@@ -154,3 +154,11 @@ before applying a config.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `galleryMosaicEditorContract` with `version: 2`.
+- Contract target: Wizard seeds initial media/copy/count; Visual owns media,
+  captions, links, lightbox, density, and motion; Advanced is read-only runtime
+  diagnostics.
+- JSON import/export and raw media URL UX drift is routed to `TASK-336-19`.

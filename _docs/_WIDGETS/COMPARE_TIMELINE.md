@@ -180,3 +180,12 @@ tokens remain explicit semantic choices; they are not clearable style sentinels.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `compareTimelineEditorContract` with `version: 2`.
+- Contract target: Wizard seeds comparison copy, axis, and tracks; Visual owns
+  axis/tracks/highlights/layout/style; Advanced is read-only runtime
+  diagnostics.
+- Raw step IDs and writable Advanced guide/highlight controls are routed to
+  `TASK-336-19`.

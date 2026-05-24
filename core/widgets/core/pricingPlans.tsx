@@ -1,7 +1,7 @@
 import type { CSSProperties, ComponentType, ReactNode, SVGProps } from "react";
 import { Check, Clock3, LockKeyhole, Sparkles } from "lucide-react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
@@ -400,6 +400,138 @@ export const pricingPlansDefaults: PricingPlansData = {
     radius: "lg",
     featureMarker: "bullet",
   },
+};
+
+const pricingPlansWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the starter pricing layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds section copy; Visual remains the daily pricing owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds section copy; Visual remains the daily pricing owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.count",
+    reason: "Wizard chooses the starter plan count; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.name",
+    reason: "Wizard seeds plan names; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.price",
+    reason: "Wizard seeds starter prices; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.period",
+    reason: "Wizard seeds starter prices; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.ctaLabel",
+    reason: "Wizard seeds primary action copy; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "plans.ctaHref",
+    reason: "Wizard seeds primary action URL; Visual remains the daily plan owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const pricingPlansEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "pricing-plans.wizard.starter-offer",
+      title: "Starter offer",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "plans.count",
+        "plans.name",
+        "plans.price",
+        "plans.period",
+        "plans.ctaLabel",
+        "plans.ctaHref",
+      ],
+      allowedDuplicateWritablePaths: pricingPlansWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "pricing-plans.visual.header-plans",
+      title: "Header and plans",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "plans.count",
+        "plans.name",
+        "plans.description",
+        "plans.price",
+        "plans.period",
+        "plans.badge",
+        "plans.badgeTone",
+        "plans.surface",
+        "plans.ctaStyle",
+        "plans.highlightLabel",
+        "plans.prices",
+        "plans.features",
+        "plans.priceDisplay",
+        "plans.ctaLabel",
+        "plans.ctaHref",
+        "plans.highlighted",
+      ],
+      allowedDuplicateWritablePaths: pricingPlansWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "pricing-plans.visual.behavior-style",
+      title: "Behavior and style",
+      role: "visual",
+      writablePaths: [
+        "billingToggle.enabled",
+        "billingToggle.monthlyLabel",
+        "billingToggle.annualLabel",
+        "billingToggle.defaultCycle",
+        "comparison.stickyHeader",
+        "comparison.showHeaderCta",
+        "comparison.showHeaderBadges",
+        "layout.maxWidth",
+        "layout.typography",
+        "layout.footerNote",
+        "style.cardSurface",
+        "style.cardBorder",
+        "style.highlightRing",
+        "style.spacing",
+        "style.radius",
+        "style.featureMarker",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "pricing-plans.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "plans", "billingToggle", "comparison", "layout", "style"],
+    },
+  ],
 };
 
 const createPlanId = (index: number) => `plan-${index + 1}`;
@@ -1622,6 +1754,7 @@ export function createPricingPlansWidget(editors: {
     schema: pricingPlansSchema,
     defaults: pricingPlansDefaults,
     editor: editors,
+    editorContract: pricingPlansEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

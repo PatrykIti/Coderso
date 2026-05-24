@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { sanitizeRichTextHtml } from "./richTextSection";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -269,6 +269,120 @@ export const featureGridDefaults: FeatureGridData = {
     cardTitleSize: "md",
     hoverEffect: "none",
   },
+};
+
+const featureGridWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds a starter card arrangement until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds the section heading; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds the section description; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.count",
+    reason: "Wizard chooses the starter card count; Visual remains the daily structure owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.title",
+    reason: "Wizard seeds card titles; Visual remains the daily card content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const featureGridEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "feature-grid.wizard.starter-setup",
+      title: "Starter setup",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "items.count",
+        "items.title",
+      ],
+      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.structure",
+      title: "Structure",
+      role: "layout",
+      writablePaths: ["variant", "items.count", "style.columns", "style.gap"],
+      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
+        (allowance) => allowance.path === "variant" || allowance.path === "items.count"
+      ),
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.header-cards",
+      title: "Header and cards",
+      role: "content",
+      writablePaths: [
+        "header.eyebrow",
+        "header.title",
+        "header.description",
+        "items.title",
+        "items.description",
+        "items.descriptionMode",
+        "items.icon",
+        "items.image",
+        "items.imageAlt",
+        "items.ctaEnabled",
+        "items.ctaLabel",
+        "items.ctaHref",
+        "items.ctaTarget",
+      ],
+      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
+        (allowance) =>
+          allowance.path === "header.title" ||
+          allowance.path === "header.description" ||
+          allowance.path === "items.title"
+      ),
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.sectionBackground",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+        "style.textAlign",
+        "style.cardPadding",
+        "style.mediaSize",
+        "style.cardLayout",
+        "style.maxWidth",
+        "style.headerSize",
+        "style.cardTitleSize",
+        "style.hoverEffect",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "feature-grid.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "header", "items", "style", "runtime.normalizedData"],
+    },
+  ],
 };
 
 const createItemId = (index: number) => `item-${index + 1}`;
@@ -698,6 +812,7 @@ export function createFeatureGridWidget(editors: {
     schema: featureGridSchema,
     defaults: featureGridDefaults,
     editor: editors,
+    editorContract: featureGridEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

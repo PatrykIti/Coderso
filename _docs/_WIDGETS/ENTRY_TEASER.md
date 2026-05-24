@@ -216,3 +216,11 @@ Rows without stable IDs are not offered in the manual picker.
 - `data-entry-teaser-media-mode`
 - `data-entry-teaser-max-width`
 - `data-entry-teaser-tag-limit`
+
+## TASK-336-18 Editor Contract
+
+- Exports `entryTeaserEditorContract` with `version: 2`.
+- Contract target: Wizard owns source setup; Visual owns display fields, CTA,
+  fallback copy, media, layout, and style; Advanced is read-only source/runtime
+  diagnostics.
+- Raw source IDs and preview JSON drift remain routed to `TASK-336-19`.

@@ -1,7 +1,12 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { NormalizedFormField } from "../../services/forms/validation";
-import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
+import type {
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
@@ -414,6 +419,131 @@ export const newsletterDefaults: NewsletterData = {
     buttonBackground: "",
     buttonTextColor: "",
   },
+};
+
+const newsletterWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the signup layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "title",
+    reason: "Wizard seeds signup copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "description",
+    reason: "Wizard seeds signup copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "placeholder",
+    reason: "Wizard seeds input copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "consent.enabled",
+    reason: "Wizard seeds consent behavior; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "consent.label",
+    reason: "Wizard seeds consent copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "submit.label",
+    reason: "Wizard seeds submit copy; Visual remains the daily form owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const newsletterEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "newsletter.wizard.starter-form",
+      title: "Starter form",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "title",
+        "description",
+        "placeholder",
+        "consent.enabled",
+        "consent.label",
+        "submit.label",
+      ],
+      allowedDuplicateWritablePaths: newsletterWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "newsletter.visual.copy-fields",
+      title: "Copy and fields",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "title",
+        "description",
+        "placeholder",
+        "form.emailFieldName",
+        "form.emailLabel",
+        "form.showEmailLabel",
+        "form.consentFieldName",
+        "form.firstName.enabled",
+        "form.firstName.fieldName",
+        "form.firstName.label",
+        "form.firstName.placeholder",
+        "consent.enabled",
+        "consent.label",
+        "consent.required",
+        "submit.label",
+        "submit.successMessage",
+        "stateCopy.loadingMessage",
+        "stateCopy.successMessage",
+        "stateCopy.errorMessage",
+        "submission.mode",
+        "submission.formId",
+        "submission.successBehavior",
+        "optIn.mode",
+        "optIn.confirmationCopy",
+        "optIn.enforcement",
+      ],
+      allowedDuplicateWritablePaths: newsletterWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "newsletter.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.spacing",
+        "style.alignment",
+        "style.width",
+        "style.background",
+        "style.textColor",
+        "style.buttonBackground",
+        "style.buttonTextColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "newsletter.advanced.transport-diagnostics",
+      title: "Transport diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "integration.mode",
+        "integration.method",
+        "integration.actionUrl",
+        "integration.webhookId",
+        "submission.analyticsEvent",
+        "resolved",
+      ],
+    },
+  ],
 };
 
 const resolveString = (value: string | undefined, fallback: string) =>
@@ -1154,6 +1284,7 @@ export function createNewsletterWidget(editors: {
     schema: newsletterSchema,
     defaults: newsletterDefaults,
     editor: editors,
+    editorContract: newsletterEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

@@ -1,7 +1,7 @@
 import { ArrowRight, ChevronRight, ExternalLink } from "lucide-react";
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -310,6 +310,125 @@ export const ctaBannerDefaults: CtaBannerData = {
   motion: {
     preset: "none",
   },
+};
+
+const ctaBannerWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the conversion layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "content.title",
+    reason: "Wizard seeds primary CTA copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "content.description",
+    reason: "Wizard seeds supporting copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "actions.primaryCta.label",
+    reason: "Wizard seeds the primary action; Visual remains the daily action owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "actions.primaryCta.href",
+    reason: "Wizard seeds the primary action; Visual remains the daily action owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const ctaBannerEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "cta-banner.wizard.starter-conversion",
+      title: "Starter conversion",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "content.title",
+        "content.description",
+        "actions.primaryCta.label",
+        "actions.primaryCta.href",
+      ],
+      allowedDuplicateWritablePaths: ctaBannerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "cta-banner.visual.copy-actions",
+      title: "Copy and actions",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "content.badge",
+        "content.title",
+        "content.description",
+        "content.showDescription",
+        "actions.primaryCta.label",
+        "actions.primaryCta.href",
+        "actions.primaryCta.enabled",
+        "actions.primaryCta.openInNewTab",
+        "actions.primaryCta.icon",
+        "actions.secondaryCta.label",
+        "actions.secondaryCta.href",
+        "actions.secondaryCta.enabled",
+        "actions.secondaryCta.openInNewTab",
+        "actions.secondaryCta.icon",
+        "actions.tertiaryCta.label",
+        "actions.tertiaryCta.href",
+        "actions.tertiaryCta.enabled",
+        "actions.tertiaryCta.openInNewTab",
+        "actions.tertiaryCta.icon",
+      ],
+      allowedDuplicateWritablePaths: ctaBannerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "cta-banner.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.background",
+        "style.text",
+        "style.border",
+        "style.borderWidth",
+        "style.radius",
+        "style.padding",
+        "style.badgeBackground",
+        "style.badgeText",
+        "style.primaryButtonBg",
+        "style.primaryButtonText",
+        "style.primaryButtonBorder",
+        "style.secondaryButtonBg",
+        "style.secondaryButtonText",
+        "style.secondaryButtonBorder",
+        "style.buttonRadius",
+        "style.primaryButtonSize",
+        "style.secondaryButtonSize",
+        "background.color",
+        "background.gradient",
+        "background.media.type",
+        "background.media.source",
+        "background.media.assetId",
+        "background.media.src",
+        "background.media.fit",
+        "background.media.position",
+        "motion.preset",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "cta-banner.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "content", "actions", "style", "background", "motion"],
+    },
+  ],
 };
 
 const resolveString = (value: string | undefined, fallback: string) =>
@@ -891,6 +1010,7 @@ export function createCtaBannerWidget(editors: {
     schema: ctaBannerSchema,
     defaults: ctaBannerDefaults,
     editor: editors,
+    editorContract: ctaBannerEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

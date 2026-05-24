@@ -206,3 +206,12 @@ icon-based social actions.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `footerEditorContract` with `version: 2`.
+- Contract target: Wizard seeds footer columns, brand, legal, and social basics;
+  Visual owns all daily link/contact/social/content and presentation controls;
+  Advanced is read-only runtime diagnostics.
+- Slot ID copy and writable Advanced layout controls are routed to
+  `TASK-336-19`.

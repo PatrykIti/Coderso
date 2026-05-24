@@ -5,6 +5,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -280,6 +281,139 @@ export const navigationDefaults: NavigationData = {
     ctaBorderRadius: "md",
     ctaSeparator: "none",
   },
+};
+
+const navigationWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the navigation layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logo.type",
+    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logo.value",
+    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "logo.href",
+    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "linksSource",
+    reason: "Wizard seeds menu source; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "menuKey",
+    reason: "Wizard seeds menu source; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items",
+    reason: "Wizard seeds starter links; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "cta.label",
+    reason: "Wizard seeds the starter CTA; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "cta.href",
+    reason: "Wizard seeds the starter CTA; Visual remains the daily navigation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const navigationEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "navigation.wizard.starter-menu",
+      title: "Starter menu",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "logo.type",
+        "logo.value",
+        "logo.href",
+        "linksSource",
+        "menuKey",
+        "items",
+        "cta.label",
+        "cta.href",
+      ],
+      allowedDuplicateWritablePaths: navigationWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.brand-links",
+      title: "Brand and links",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "logo.type",
+        "logo.value",
+        "logo.href",
+        "logo.alt",
+        "logo.source",
+        "logo.assetId",
+        "linksSource",
+        "menuKey",
+        "items",
+        "cta.label",
+        "cta.href",
+        "cta.target",
+        "cta.enabled",
+      ],
+      allowedDuplicateWritablePaths: navigationWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "navigation.visual.behavior-presentation",
+      title: "Behavior and presentation",
+      role: "visual",
+      writablePaths: [
+        "behavior.sticky",
+        "behavior.transparent",
+        "behavior.collapseOnScroll",
+        "behavior.mobileMode",
+        "behavior.hideCtaOnMobile",
+        "behavior.activeLinkMode",
+        "layout.alignment",
+        "layout.maxWidth",
+        "layout.paddingY",
+        "layout.itemGap",
+        "style.surfaceColor",
+        "style.ctaBackgroundColor",
+        "style.ctaTextColor",
+        "style.ctaBorderColor",
+        "style.linkUnderline",
+        "style.shadow",
+        "style.backdropBlur",
+        "style.dropdownDirection",
+        "style.motion",
+        "style.logoHeight",
+        "style.ctaBorderRadius",
+        "style.ctaSeparator",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "navigation.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["linksSource", "menuKey", "items", "behavior", "layout", "style"],
+    },
+  ],
 };
 
 const joinClasses = (...classes: Array<string | false | undefined>) =>
@@ -1356,6 +1490,7 @@ export function createNavigationWidget(editors: {
     schema: navigationSchema,
     defaults: navigationDefaults,
     editor: editors,
+    editorContract: navigationEditorContract,
     editorCapabilities: { visualOwnsVariantSelection: true },
     render: NavigationBlock,
   };

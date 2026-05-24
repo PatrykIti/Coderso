@@ -167,3 +167,12 @@ fallbacks in editor/runtime code.
   Public runtime does not leak page-builder instructions.
 - Shared color controls are reused instead of raw-only local token inputs.
 - Reset to defaults restores the normalized v2 contract and offers undo.
+
+## TASK-336-18 Editor Contract
+
+- Exports `toggleBlockEditorContract` with `version: 2`.
+- Contract target: Wizard seeds variant, labels, and starting pane; Visual owns
+  daily labels, motion, accessibility copy, and pane styling; Advanced is
+  read-only runtime/contract diagnostics.
+- Existing Advanced writable controls and replayable Wizard/Visual duplicates
+  are routed to `TASK-336-19` / `TASK-336-16`.

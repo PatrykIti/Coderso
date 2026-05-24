@@ -6,6 +6,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -181,6 +182,107 @@ export const toggleBlockDefaults: ToggleBlockData = {
       secondary: { ...toggleBlockPaneStyleDefaults },
     },
   },
+};
+
+const toggleBlockWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard remains replayable until the one-time setup lifecycle hides starter fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "labels.primary",
+    reason: "Wizard seeds initial labels; Visual remains the daily owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "labels.secondary",
+    reason: "Wizard seeds initial labels; Visual remains the daily owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "labels.helper",
+    reason: "Wizard seeds helper copy; Visual remains the daily owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "options.defaultState",
+    reason: "Wizard seeds the opening pane; Visual remains the daily behavior owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const toggleBlockEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "toggle-block.wizard.initial-setup",
+      title: "Initial setup",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "labels.primary",
+        "labels.secondary",
+        "labels.helper",
+        "options.defaultState",
+      ],
+      allowedDuplicateWritablePaths: toggleBlockWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.structure-copy",
+      title: "Structure and copy",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "labels.primary",
+        "labels.secondary",
+        "labels.helper",
+        "labels.ariaLabel",
+        "labels.selectedSuffix",
+        "options.defaultState",
+        "options.motion",
+      ],
+      allowedDuplicateWritablePaths: toggleBlockWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.theme-panes",
+      title: "Theme and panes",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.accentColor",
+        "style.accentContrastColor",
+        "style.panes.primary.surface",
+        "style.panes.primary.padding",
+        "style.panes.primary.radius",
+        "style.panes.primary.borderEmphasis",
+        "style.panes.secondary.surface",
+        "style.panes.secondary.padding",
+        "style.panes.secondary.radius",
+        "style.panes.secondary.borderEmphasis",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "toggle-block.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "labels", "options", "style", "slots.primary", "slots.secondary"],
+    },
+    {
+      mode: "advanced",
+      id: "toggle-block.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["editorContract"],
+    },
+  ],
 };
 
 const panePaddingClassMap: Record<ToggleBlockPanePaddingToken, string> = {
@@ -741,6 +843,7 @@ export function createToggleBlockWidget(editors: {
       },
     ],
     editor: editors,
+    editorContract: toggleBlockEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

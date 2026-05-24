@@ -110,3 +110,12 @@ styling.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `productGalleryEditorContract` with `version: 2`.
+- Contract target: Wizard owns commerce source setup; Visual owns section
+  header, card fields, links, pagination, empty state, columns, and style;
+  Advanced is read-only query/runtime diagnostics.
+- Minor-unit price wording, style fields in Wizard, and manual product IDs are
+  routed to `TASK-336-19`.

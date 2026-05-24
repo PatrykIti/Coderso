@@ -219,3 +219,12 @@ renderu zamiast udawac aktywna wysylke.
   - `map.height = md`
   - `maxWidth = xl`
   - `paddingX = md`
+
+## TASK-336-18 Editor Contract
+
+- Exports `contactEditorContract` with `version: 2`.
+- Contract target: Wizard seeds contact/form basics; Visual owns form details,
+  field labels, business details, map, social links, and style; Advanced is
+  read-only submission/map/runtime diagnostics.
+- Duplicate map embed URL editing and raw form binding details are routed to
+  `TASK-336-19`.

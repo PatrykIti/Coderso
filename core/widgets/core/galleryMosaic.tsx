@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -287,6 +287,106 @@ export const galleryMosaicDefaults: GalleryMosaicData = {
     layoutDensity: "auto",
     motionPreset: "none",
   },
+};
+
+const galleryMosaicWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the media layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.title",
+    reason: "Wizard seeds gallery copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "header.description",
+    reason: "Wizard seeds gallery copy; Visual remains the daily content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.count",
+    reason: "Wizard chooses the starter media count; Visual remains the daily media owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.image",
+    reason: "Wizard seeds initial media; Visual remains the daily media owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.alt",
+    reason: "Wizard seeds initial media alt text; Visual remains the daily media owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const galleryMosaicEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "gallery-mosaic.wizard.starter-media",
+      title: "Starter media",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "items.count",
+        "items.image",
+        "items.alt",
+      ],
+      allowedDuplicateWritablePaths: galleryMosaicWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "gallery-mosaic.visual.media",
+      title: "Media and captions",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header.title",
+        "header.description",
+        "items.count",
+        "items.image",
+        "items.video",
+        "items.alt",
+        "items.poster",
+        "items.caption",
+        "items.href",
+        "items.objectPosition",
+        "items.ratio",
+      ],
+      allowedDuplicateWritablePaths: galleryMosaicWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "gallery-mosaic.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "interaction.mode",
+        "interaction.zoom",
+        "style.ratio",
+        "style.gap",
+        "style.radius",
+        "style.overlay",
+        "style.captionPosition",
+        "style.layoutDensity",
+        "style.motionPreset",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "gallery-mosaic.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "items", "interaction", "style", "runtime.normalizedData"],
+    },
+  ],
 };
 
 const createGalleryItemId = (index: number) => `gallery-${index + 1}`;
@@ -1281,6 +1381,7 @@ export function createGalleryMosaicWidget(editors: {
     schema: galleryMosaicSchema,
     defaults: galleryMosaicDefaults,
     editor: editors,
+    editorContract: galleryMosaicEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

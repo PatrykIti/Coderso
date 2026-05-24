@@ -139,3 +139,12 @@ Notes:
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `faqAccordionEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter questions; Visual owns FAQ item
+  content, behavior, SEO toggle, and presentation; Advanced is read-only
+  runtime diagnostics.
+- Raw default-index/style-token controls in Advanced are routed to
+  `TASK-336-19`.

@@ -1,6 +1,11 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
+import type {
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import {
   buildCommerceWidgetQueryInput,
   commerceStockLabelMap,
@@ -131,6 +136,82 @@ export const productGalleryDefaults: ProductGalleryData = {
     total: 0,
     resolvedAt: "",
   },
+};
+
+export const productGalleryEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "product-gallery.wizard.source-setup",
+      title: "Source setup",
+      role: "source",
+      writablePaths: [
+        "source.limit",
+        "source.search",
+        "source.collectionIds",
+        "source.status",
+        "source.sortField",
+        "source.sortDir",
+        "source.minPriceMinor",
+        "source.maxPriceMinor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-gallery.visual.header-cards",
+      title: "Header and cards",
+      role: "content",
+      writablePaths: [
+        "header.title",
+        "header.description",
+        "fields.showExcerpt",
+        "fields.showPrice",
+        "fields.showStock",
+        "fields.showStatus",
+        "fields.showMediaHint",
+        "link.basePath",
+        "link.target",
+        "link.ctaLabel",
+        "link.ctaStyle",
+        "pagination.mode",
+        "pagination.viewAllHref",
+        "pagination.viewAllLabel",
+        "emptyState.title",
+        "emptyState.description",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-gallery.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.columns",
+        "style.cardStyle",
+        "style.cardBackground",
+        "style.cardBorderColor",
+        "style.emptyBackground",
+        "style.emptyBorderColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "product-gallery.advanced.source-diagnostics",
+      title: "Source diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["source", "curation", "resolved", "runtime.queryInput"],
+    },
+    {
+      mode: "advanced",
+      id: "product-gallery.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["runtime.normalizedData"],
+    },
+  ],
 };
 
 const maxManualProductIds = 48;
@@ -925,6 +1006,7 @@ export function createProductGalleryWidget(editors: {
       visual: editors.visual,
       advanced: editors.advanced,
     },
+    editorContract: productGalleryEditorContract,
     editorCapabilities: {
       supportsPreviewState: true,
     },

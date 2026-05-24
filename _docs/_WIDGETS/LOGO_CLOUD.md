@@ -152,3 +152,11 @@ plus normalize/reset and raw payload diagnostics.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `logoCloudEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter logos and copy; Visual owns logo list,
+  links, CTA, motion, and style; Advanced is read-only runtime diagnostics.
+- Image URL fallback copy and reset/normalize support actions are routed to
+  `TASK-336-19`.

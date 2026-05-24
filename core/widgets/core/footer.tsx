@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
@@ -364,6 +370,101 @@ export const footerDefaults: FooterData = {
     linkFontWeight: "normal",
     linkLetterSpacing: "normal",
   },
+};
+
+const footerWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the footer layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "columns",
+    reason: "Wizard seeds starter link groups; Visual remains the daily footer owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "brand",
+    reason: "Wizard seeds brand basics; Visual remains the daily footer owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "legal",
+    reason: "Wizard seeds legal basics; Visual remains the daily footer owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "socialEnabled",
+    reason: "Wizard seeds social visibility; Visual remains the daily footer owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "social",
+    reason: "Wizard seeds social links; Visual remains the daily footer owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const footerEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "footer.wizard.starter-footer",
+      title: "Starter footer",
+      role: "setup",
+      writablePaths: ["variant", "columns", "brand", "legal", "socialEnabled", "social"],
+      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.content-links",
+      title: "Content and links",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "columns",
+        "brand",
+        "legal",
+        "contact",
+        "backToTop",
+        "socialEnabled",
+        "social",
+      ],
+      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "layout.align",
+        "layout.legalAlign",
+        "layout.maxWidth",
+        "layout.columnGap",
+        "layout.columnBreakpoint",
+        "layout.sectionPaddingY",
+        "layout.paddingX",
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.borderTopWidth",
+        "style.fontSize",
+        "style.headingTransform",
+        "style.linkUnderline",
+        "style.linkFontWeight",
+        "style.linkLetterSpacing",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "columns", "layout", "style", "slots"],
+    },
+  ],
 };
 
 const footerColumnCountByVariant = {
@@ -1290,6 +1391,7 @@ export function createFooterWidget(editors: {
     schema: footerSchema,
     defaults: footerDefaults,
     editor: editors,
+    editorContract: footerEditorContract,
     editorCapabilities: { visualOwnsVariantSelection: true },
     render: FooterBlock,
   };

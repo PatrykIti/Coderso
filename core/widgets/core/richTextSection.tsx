@@ -10,7 +10,7 @@ import {
   stripNullBytes,
   tokenizeHtml,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -326,6 +326,101 @@ export const richTextSectionDefaults: RichTextSectionData = {
     background: "transparent",
     spacing: "md",
   },
+};
+
+const richTextSectionWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the starter reading layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "titleBlock.eyebrow",
+    reason: "Wizard seeds title copy; Visual remains the daily editorial owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "titleBlock.title",
+    reason: "Wizard seeds title copy; Visual remains the daily editorial owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "titleBlock.headingLevel",
+    reason: "Wizard seeds title structure; Visual remains the daily editorial owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "body.blocks",
+    reason: "Wizard seeds starter blocks; Visual remains the daily rich-content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const richTextSectionEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "rich-text-section.wizard.starter-copy",
+      title: "Starter copy",
+      role: "setup",
+      writablePaths: [
+        "variant",
+        "titleBlock.eyebrow",
+        "titleBlock.title",
+        "titleBlock.headingLevel",
+        "body.blocks",
+      ],
+      allowedDuplicateWritablePaths: richTextSectionWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "rich-text-section.visual.editorial-content",
+      title: "Editorial content",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "titleBlock.eyebrow",
+        "titleBlock.title",
+        "titleBlock.headingLevel",
+        "body.blocks",
+        "body.html",
+        "options.dropcap",
+        "options.toc",
+        "options.maxWidth",
+      ],
+      allowedDuplicateWritablePaths: richTextSectionWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "rich-text-section.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "style.fontScale",
+        "style.lineHeight",
+        "style.textColor",
+        "style.background",
+        "style.spacing",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "rich-text-section.advanced.source-summary",
+      title: "Source summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["options.outputMode", "body.html", "body.blocks", "runtime.sanitizer"],
+    },
+    {
+      mode: "advanced",
+      id: "rich-text-section.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["runtime.normalizedData"],
+    },
+  ],
 };
 
 const createBlockId = (index: number) => `block-${index + 1}`;
@@ -1300,6 +1395,7 @@ export function createRichTextSectionWidget(editors: {
     schema: richTextSectionSchema,
     defaults: richTextSectionDefaults,
     editor: editors,
+    editorContract: richTextSectionEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

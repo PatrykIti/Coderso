@@ -128,3 +128,12 @@ read-only runtime diagnostics.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `productCompareEditorContract` with `version: 2`.
+- Contract target: Wizard seeds source selection; Visual owns rows, labels,
+  visible fields, header, empty state, format, layout, and style; Advanced is
+  read-only query/runtime diagnostics.
+- Raw selected product IDs and technical Visual formatting fields are routed to
+  `TASK-336-19`.

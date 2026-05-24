@@ -156,3 +156,11 @@ Pricing table for plans, tiers, and comparison-style rows.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `pricingPlansEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter offer/count/copy/prices; Visual owns
+  plan details, billing, comparison rows, layout, and style; Advanced is
+  read-only runtime diagnostics.
+- Destructive align/reset and raw payload UX drift is routed to `TASK-336-19`.

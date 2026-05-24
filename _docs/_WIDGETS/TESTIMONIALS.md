@@ -167,3 +167,12 @@ Visual-owned spacing and display controls.
   }
 }
 ```
+
+## TASK-336-18 Editor Contract
+
+- Exports `testimonialsEditorContract` with `version: 2`.
+- Contract target: Wizard seeds starter social-proof copy/count; Visual owns
+  quotes, authors, avatars, ratings, CTA, pagination, and style; Advanced is
+  read-only runtime diagnostics.
+- JSON/CSV import, pagination placement, and replayable duplicate ownership are
+  routed to `TASK-336-19` / `TASK-336-16`.

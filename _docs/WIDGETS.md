@@ -127,6 +127,16 @@ Zasady:
   `Raw payload snapshot`. Dopuszczalne legacy compatibility hooks musza byc
   `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
   UX.
+- Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
+  `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
+  `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,
+  `entry-teaser`, `product-gallery`, `product-compare`, `timeline`,
+  `compare-timeline`, `newsletter`, `contact`, `navigation`, `footer`) now
+  export v2 contracts. The contract target is beginner-safe: Wizard is
+  setup-only, Visual owns daily content/appearance/behavior controls, and
+  Advanced diagnostics are read-only. Known UI drift where legacy editors still
+  expose raw CSS/JSON/HTML/IDs/technical URLs or writable Advanced controls is
+  routed to TASK-336-19 rather than hidden behind broad allowlists.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

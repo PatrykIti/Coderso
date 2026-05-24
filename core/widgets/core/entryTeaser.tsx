@@ -1,6 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
+import type {
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -295,6 +300,97 @@ export const entryTeaserDefaults: EntryTeaserData = {
     sourceTypeSlug: "",
     resolvedAt: "",
   },
+};
+
+const entryTeaserWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the teaser layout until one-time setup hides replayed fields.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const entryTeaserEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "entry-teaser.wizard.source-setup",
+      title: "Source setup",
+      role: "source",
+      writablePaths: [
+        "variant",
+        "sourceMode",
+        "source.mode",
+        "source.listingQueryId",
+        "source.listingTemplateId",
+        "source.listingManualTarget.rowId",
+        "source.listingManualTarget.entryId",
+        "source.contentTypeId",
+        "source.entryId",
+      ],
+      allowedDuplicateWritablePaths: entryTeaserWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "entry-teaser.visual.content-display",
+      title: "Content display",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "section.title",
+        "section.headingLevel",
+        "title.headingLevel",
+        "fields.showImage",
+        "fields.showExcerpt",
+        "fields.showMeta",
+        "fields.showTags",
+        "fields.tagLimit",
+        "cta.label",
+        "cta.hrefMode",
+        "cta.href",
+        "cta.opensInNewTab",
+        "cta.style",
+        "fallback.title",
+        "fallback.description",
+        "fallback.fallbackToLatest",
+      ],
+      allowedDuplicateWritablePaths: entryTeaserWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "entry-teaser.visual.presentation",
+      title: "Presentation",
+      role: "visual",
+      writablePaths: [
+        "media.mode",
+        "media.aspect",
+        "media.height",
+        "media.fit",
+        "layout.maxWidth",
+        "style.surface",
+        "style.border",
+        "style.radius",
+        "style.spacing",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "entry-teaser.advanced.source-diagnostics",
+      title: "Source diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["source", "sourceMode", "resolved", "runtime.previewState"],
+    },
+    {
+      mode: "advanced",
+      id: "entry-teaser.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["runtime.normalizedData"],
+    },
+  ],
 };
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
@@ -978,6 +1074,7 @@ export function createEntryTeaserWidget(editors: {
     schema: entryTeaserSchema,
     defaults: entryTeaserDefaults,
     editor: editors,
+    editorContract: entryTeaserEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
       supportsPreviewState: true,
