@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` (1607 linii)
 > **Strona testowa:** `/admin/pages/160c954b-1b3e-4798-bf37-74f697a18e24` (slug `/ctr-posts-feed-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/posts-feed-visual.png`, `posts-feed-advanced.png`, `posts-feed-wizard.png`
+> **Screenshot:** `screenshots/posts-feed-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/posts-feed.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -43,6 +43,18 @@
 | 6 | `Source setup` | Data source |
 | 7 | `Empty state` | Empty state |
 
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `posts-feed.visual.display` | `Display` | 5 |
+| `posts-feed.visual.section-header` | `Section header` | 2 |
+| `posts-feed.visual.layout-style` | `Layout and style` | 10 |
+| `posts-feed.visual.pagination` | `Pagination presentation` | 1 |
+| `posts-feed.visual.empty-state` | `Empty state` | 2 |
+
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
 Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych komponentów, nie w głównej funkcji editora — przez to parser top-level nie znalazł ich w §1, ale renderują się w UI:
@@ -61,22 +73,9 @@ Wszystkie 3 zakładki mają pustą main funkcję — sekcje w helperach. Należy
 
 ## 5. Rekomendacje per widget
 
-1. Przemianować `Runtime status` → `Runtime payload` (CONTRACT-05).
+1. **CONTRACT-13 + SHARED-HELPER (KRYTYCZNE):** Wszystkie 6 sekcji (`Runtime status`, `Section header`, `Layout and style`, `Display`, `Source setup`, `Empty state`) renderowanych identycznie w Wizard, Visual i Advanced. Jedyna unikalność: Advanced dodaje `Runtime payload`. Trzy tryby są praktycznie nieodróżnialne. Wymaga decyzji: rozłącznie po trybach, albo usunięcie zakładek dla Posts Feed.
+2. Przemianować `Runtime status` → `Runtime payload` (CONTRACT-05).
 
 ---
 
 > Raport powiązany: `REPORT_COMMON_CONTRACT.md` (pełna lista kanonów i TASK-336+).
-
-## 2026-05-24 TASK-336-09 status
-
-Ten raport jest zastąpiony przez implementację TASK-336-09:
-
-- `Wizard` renderuje tylko `Source setup` i posiada `source.*` ownership.
-- `Visual` renderuje `Display`, `Section header`, `Layout and style`,
-  `Pagination presentation` oraz `Empty state`.
-- `Advanced` renderuje wyłącznie read-only diagnostics: `Resolved query`,
-  `Runtime status`, `Runtime payload`, `Contract summary`.
-- `posts-feed` ma teraz v2 `editorContract`, a targetowane testy Vitest/Bun
-  sprawdzają brak zduplikowanych writable paths.
-- Targetowany smoke Playwright na `/posts-feed-test-page` przeszedł z
-  `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`, `publicFailures=0`.

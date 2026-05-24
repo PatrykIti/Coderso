@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/SpacerEditors.tsx` (500 linii)
 > **Strona testowa:** `/admin/pages/719cca9b-25fe-43ba-a17c-24407f3f2d36` (slug `/ctr-spacer-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/spacer-visual.png`, `spacer-advanced.png`, `spacer-wizard.png`
+> **Screenshot:** `screenshots/spacer-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/spacer.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -27,6 +27,16 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 |---|----------------|--------------------|
 | 1 | `Technical height tokens` | Technical tokens |
 | 2 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_3 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `spacer.visual-variant-behavior` | `Variant and responsive behavior` | 0 |
+| `spacer.visual-responsive-heights` | `Responsive heights` | 0 |
+| `spacer.visual-editor-guide` | `Editor guide` | 0 |
 
 ## 5. Rekomendacje per widget
 

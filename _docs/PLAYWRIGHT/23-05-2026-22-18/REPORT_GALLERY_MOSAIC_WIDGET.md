@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` (1516 linii)
 > **Strona testowa:** `/admin/pages/5b42d115-258d-4967-9936-e3ca11972a14` (slug `/ctr-gallery-mosaic-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/gallery-mosaic-visual.png`, `gallery-mosaic-advanced.png`, `gallery-mosaic-wizard.png`
+> **Screenshot:** `screenshots/gallery-mosaic-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/gallery-mosaic.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -34,6 +34,20 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 2 | `Configuration import and export` | Items and order (import/export action) |
 | 3 | `Normalization and safeguards` | Normalization and safeguards |
 | 4 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_7 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-media-structure` | `Variant and media structure` | 0 |
+| `header-copy` | `Header copy` | 0 |
+| `media-items-and-links` | `Media items and links` | 0 |
+| `interaction` | `Interaction` | 0 |
+| `overlay-and-caption-controls` | `Overlay and caption controls` | 0 |
+| `layout-style` | `Layout style` | 0 |
+| `density-and-motion` | `Density and motion` | 0 |
 
 ## 5. Rekomendacje per widget
 

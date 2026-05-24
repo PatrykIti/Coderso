@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` (1557 linii)
 > **Strona testowa:** `/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474` (slug `/ctr-logo-cloud-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/logo-cloud-visual.png`, `logo-cloud-advanced.png`, `logo-cloud-wizard.png`
+> **Screenshot:** `screenshots/logo-cloud-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/logo-cloud.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -32,6 +32,18 @@
 | 1 | `Technical layout diagnostics` | Runtime payload |
 | 2 | `Normalization and safeguards` | Normalization and safeguards |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout-structure` | `Variant and layout structure` | 0 |
+| `header-copy` | `Header copy` | 0 |
+| `logos-list-and-links` | `Logos list and links` | 30 |
+| `section-cta` | `Section CTA` | 0 |
+| `display-style` | `Display style` | 0 |
 
 ## 5. Rekomendacje per widget
 

@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/StackEditors.tsx` (812 linii)
 > **Strona testowa:** `/admin/pages/7b23083d-f7cd-481e-8417-fc2278e54466` (slug `/ctr-stack-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/stack-visual.png`, `stack-advanced.png`, `stack-wizard.png`
+> **Screenshot:** `screenshots/stack-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/stack.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -28,6 +28,18 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 |---|----------------|--------------------|
 | 1 | `Technical flow tokens` | Technical tokens |
 | 2 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-flow` | `Variant and flow` | 0 |
+| `responsive-direction` | `Responsive direction` | 0 |
+| `responsive-alignment-and-wrap` | `Responsive alignment and wrap` | 0 |
+| `slot-guidance` | `Slot guidance` | 0 |
+| `stack.structure` | `Structure` | 1 |
 
 ## 5. Rekomendacje per widget
 

@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` (697 linii)
 > **Strona testowa:** `/admin/pages/c3fa7a67-99fc-42ec-a4e4-131c1dc75a58` (slug `/ctr-split-layout-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/split-layout-visual.png`, `split-layout-advanced.png`, `split-layout-wizard.png`
+> **Screenshot:** `screenshots/split-layout-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/split-layout.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -28,6 +28,18 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 |---|----------------|--------------------|
 | 1 | `Responsive diagnostics` | Runtime payload |
 | 2 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-pane-ratio` | `Variant and pane ratio` | 0 |
+| `mobile-collapse-behavior` | `Mobile collapse behavior` | 0 |
+| `spacing-and-vertical-alignment` | `Spacing and vertical alignment` | 0 |
+| `pane-content` | `Pane content` | 0 |
+| `split-layout.structure` | `Structure` | 2 |
 
 ## 5. Rekomendacje per widget
 

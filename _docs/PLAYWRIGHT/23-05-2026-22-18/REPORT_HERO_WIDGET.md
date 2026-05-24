@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/HeroEditors.tsx` (3139 linii)
 > **Strona testowa:** `/admin/pages/1216108b-7cc2-4ed9-956e-afa97351aca5` (slug `/ctr-hero-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/hero-visual.png`, `hero-advanced.png`, `hero-wizard.png`
+> **Screenshot:** `screenshots/hero-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/hero.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -33,6 +33,23 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 |---|----------------|--------------------|
 | 1 | `Hero Layout` | Layout (width, padding, alignment) |
 | 2 | `Background` | Background |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_10 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `hero.variant-presets` | `Variant and Presets` | 0 |
+| `hero.badge-headline` | `Badge and headline` | 4 |
+| `hero.cta` | `CTA` | 0 |
+| `hero.rich-copy-social-proof` | `Rich copy and social proof` | 3 |
+| `hero.media` | `Media` | 0 |
+| `hero.typography` | `Typography` | 0 |
+| `hero.appearance` | `Appearance` | 0 |
+| `hero.colors-borders` | `Colors and Borders` | 10 |
+| `hero.background` | `Background` | 2 |
+| `hero.structure` | `Structure` | 1 |
 
 ## 3. Krytyczne uwagi kontraktu
 

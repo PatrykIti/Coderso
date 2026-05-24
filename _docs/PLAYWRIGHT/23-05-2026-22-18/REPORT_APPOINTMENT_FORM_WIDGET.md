@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx` (829 linii)
 > **Strona testowa:** `/admin/pages/f22436b5-24db-4536-9dda-07c0ae9cfcdb` (slug `/ctr-appointment-form-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/appointment-form-visual.png`, `appointment-form-advanced.png`, `appointment-form-wizard.png`
+> **Screenshot:** `screenshots/appointment-form-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/appointment-form.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -33,6 +33,10 @@
 |---|----------------|--------------------|
 | 1 | `Runtime endpoint` | Runtime payload |
 | 2 | `Resolved runtime payload` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_DOM nie znalazł żadnych sekcji `[data-widget-editor-section]`._
 
 ## 5. Rekomendacje per widget
 

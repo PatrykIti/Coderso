@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/SectionEditors.tsx` (2559 linii)
 > **Strona testowa:** `/admin/pages/d37f900c-e8c2-4608-a71e-4a038300a048` (slug `/ctr-section-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/section-visual.png`, `section-advanced.png`, `section-wizard.png`
+> **Screenshot:** `screenshots/section-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/section.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -32,6 +32,20 @@
 |---|----------------|--------------------|
 | 1 | `Technical tokens` | (unmapped — propose canonical) |
 | 2 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_7 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `section.variant-structure` | `Variant and structure` | 0 |
+| `section.heading-intro` | `Heading and intro` | 11 |
+| `section.semantics-anchor` | `Semantics and anchor` | 3 |
+| `section.width-spacing` | `Width and spacing` | 13 |
+| `section.surface-borders` | `Surface and borders` | 11 |
+| `section.background-media-layers` | `Background media and layers` | 1 |
+| `section.regions` | `Regions` | 1 |
 
 ## 3. Krytyczne uwagi kontraktu
 

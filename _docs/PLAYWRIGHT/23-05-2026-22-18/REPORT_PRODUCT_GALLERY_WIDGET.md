@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` (822 linii)
 > **Strona testowa:** `/admin/pages/1edd10a5-7626-4630-aa47-87c6604fcc62` (slug `/ctr-product-gallery-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/product-gallery-visual.png`, `product-gallery-advanced.png`, `product-gallery-wizard.png`
+> **Screenshot:** `screenshots/product-gallery-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/product-gallery.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -35,6 +35,18 @@
 | 2 | `Diagnostics` | Runtime payload |
 | 3 | `Preview status` | Runtime payload |
 | 4 | `Query preview` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `section-header` | `Section header` | 0 |
+| `card-content` | `Card content` | 0 |
+| `product-links` | `Product links` | 0 |
+| `empty-state` | `Empty state` | 0 |
+| `surfaces` | `Surfaces` | 0 |
 
 ## 5. Rekomendacje per widget
 

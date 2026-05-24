@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` (1357 linii)
 > **Strona testowa:** `/admin/pages/639e28ec-1203-4fbe-8273-bf3fd0bba203` (slug `/ctr-faq-accordion-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/faq-accordion-visual.png`, `faq-accordion-advanced.png`, `faq-accordion-wizard.png`
+> **Screenshot:** `screenshots/faq-accordion-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/faq-accordion.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -38,6 +38,20 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 2 | `Technical style tokens` | Technical tokens |
 | 3 | `Normalization and safeguards` | Normalization and safeguards |
 | 4 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_7 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout-structure` | `Variant and layout structure` | 0 |
+| `header-copy` | `Header copy` | 0 |
+| `questions-and-answers` | `Questions and answers` | 0 |
+| `display-behavior` | `Display behavior` | 0 |
+| `layout-and-typography` | `Layout and typography` | 0 |
+| `colors-and-panel-style` | `Colors and panel style` | 0 |
+| `seo-and-structured-data` | `SEO and structured data` | 0 |
 
 ## 5. Rekomendacje per widget
 

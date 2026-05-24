@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` (844 linii)
 > **Strona testowa:** `/admin/pages/3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e` (slug `/ctr-product-compare-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/product-compare-visual.png`, `product-compare-advanced.png`, `product-compare-wizard.png`
+> **Screenshot:** `screenshots/product-compare-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/product-compare.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -35,6 +35,10 @@
 |---|----------------|--------------------|
 | 1 | `Runtime payload` | Runtime payload |
 | 2 | `Query preview` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_DOM nie znalazł żadnych sekcji `[data-widget-editor-section]`._
 
 ## 5. Rekomendacje per widget
 

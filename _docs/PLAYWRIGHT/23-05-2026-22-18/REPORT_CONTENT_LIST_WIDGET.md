@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ContentListEditors.tsx` (1434 linii)
 > **Strona testowa:** `/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61` (slug `/ctr-content-list-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/content-list-visual.png`, `content-list-advanced.png`, `content-list-wizard.png`
+> **Screenshot:** `screenshots/content-list-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/content-list.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -34,6 +34,19 @@
 | 1 | `Query controls` | (unmapped — propose canonical) |
 | 2 | `Styling tokens` | Technical tokens |
 | 3 | `Runtime payload snapshot` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout` | `Variant and layout` | 0 |
+| `source-and-filters` | `Source and filters` | 0 |
+| `section-context` | `Section context` | 0 |
+| `pagination-and-actions` | `Pagination and actions` | 0 |
+| `presentation-fields` | `Presentation fields` | 0 |
+| `empty-state` | `Empty state` | 0 |
 
 ## 5. Rekomendacje per widget
 

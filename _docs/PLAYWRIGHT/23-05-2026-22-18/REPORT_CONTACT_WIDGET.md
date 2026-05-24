@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ContactEditors.tsx` (1818 linii)
 > **Strona testowa:** `/admin/pages/969501e7-887f-458a-887a-1c2725e815d8` (slug `/ctr-contact-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/contact-visual.png`, `contact-advanced.png`, `contact-wizard.png`
+> **Screenshot:** `screenshots/contact-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/contact.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -38,6 +38,21 @@
 | 1 | `Map source and runtime metadata` | Runtime payload |
 | 2 | `Normalization and fallback controls` | Normalization and safeguards |
 | 3 | `Runtime diagnostics snapshot` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_8 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-section-header` | `Variant and section header` | 0 |
+| `form-fields-and-required-rules` | `Form fields and required rules` | 0 |
+| `field-labels-placeholders-and-layout` | `Field labels, placeholders, and layout` | 0 |
+| `submission-runtime-binding` | `Submission runtime binding` | 0 |
+| `contact-details-and-business-info` | `Contact details and business info` | 0 |
+| `map-source-and-display-behavior` | `Map source and display behavior` | 0 |
+| `colors-borders-and-surface-styling` | `Colors, borders, and surface styling` | 0 |
+| `section-layout-and-spacing` | `Section layout and spacing` | 0 |
 
 ## 5. Rekomendacje per widget
 

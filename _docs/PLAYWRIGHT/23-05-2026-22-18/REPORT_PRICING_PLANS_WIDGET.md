@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` (1859 linii)
 > **Strona testowa:** `/admin/pages/21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e` (slug `/ctr-pricing-plans-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/pricing-plans-visual.png`, `pricing-plans-advanced.png`, `pricing-plans-wizard.png`
+> **Screenshot:** `screenshots/pricing-plans-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/pricing-plans.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -32,6 +32,19 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Visual-owned tokens` | Technical tokens |
 | 2 | `Fix and reset` | Normalization and safeguards (reset action) |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-plan-structure` | `Variant and plan structure` | 0 |
+| `header-copy` | `Header copy` | 0 |
+| `pricing.billing` | `Billing toggle` | 0 |
+| `plans-features-and-actions` | `Plans, features, and actions` | 0 |
+| `layout-and-notes` | `Layout and notes` | 0 |
+| `colors-and-emphasis` | `Colors and emphasis` | 0 |
 
 ## 5. Rekomendacje per widget
 

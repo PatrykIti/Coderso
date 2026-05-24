@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` (624 linii)
 > **Strona testowa:** `/admin/pages/2fc615b9-5d62-4135-839f-3f10b119f0da` (slug `/ctr-booking-calendar-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/booking-calendar-visual.png`, `booking-calendar-advanced.png`, `booking-calendar-wizard.png`
+> **Screenshot:** `screenshots/booking-calendar-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/booking-calendar.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -37,6 +37,10 @@
 | 1 | `Runtime endpoints` | Runtime payload |
 | 2 | `Defaults` | Behavior (+ Section header for defaults) |
 | 3 | `Resolved runtime payload` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_DOM nie znalazł żadnych sekcji `[data-widget-editor-section]`._
 
 ## 5. Rekomendacje per widget
 

@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` (2486 linii)
 > **Strona testowa:** `/admin/pages/ee3f7352-52f1-4b4a-a910-619d94dc4410` (slug `/ctr-grid-columns-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/grid-columns-visual.png`, `grid-columns-advanced.png`, `grid-columns-wizard.png`
+> **Screenshot:** `screenshots/grid-columns-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/grid-columns.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -30,6 +30,19 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Technical layout tokens` | Technical tokens |
 | 2 | `Per-column override tokens` | Technical tokens (per-item subsection) |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout-structure` | `Variant and layout structure` | 0 |
+| `column-sizing-and-labels` | `Column sizing and labels` | 0 |
+| `gap-and-column-surface` | `Gap and column surface` | 0 |
+| `per-column-surfaces-and-behavior` | `Per-column surfaces and behavior` | 0 |
+| `slots-and-runtime-behavior` | `Slots and runtime behavior` | 0 |
+| `grid-columns.structure` | `Structure` | 2 |
 
 ## 5. Rekomendacje per widget
 

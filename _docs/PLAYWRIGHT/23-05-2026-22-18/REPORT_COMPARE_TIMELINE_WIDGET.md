@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` (1681 linii)
 > **Strona testowa:** `/admin/pages/9ad7e86e-e732-4d17-9ea9-07c5bfb32cca` (slug `/ctr-compare-timeline-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/compare-timeline-visual.png`, `compare-timeline-advanced.png`, `compare-timeline-wizard.png`
+> **Screenshot:** `screenshots/compare-timeline-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/compare-timeline.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -37,6 +37,19 @@
 | 1 | `Layout tokens` | Technical tokens |
 | 2 | `Raw metadata fields` | Raw payload snapshot |
 | 3 | `Data normalization` | Normalization and safeguards |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-compare-structure` | `Variant and compare structure` | 0 |
+| `axis-steps-and-track-labels` | `Axis steps and track labels` | 0 |
+| `markers-and-segment-mapping` | `Markers and segment mapping` | 0 |
+| `highlight-and-guide-styles` | `Highlight and guide styles` | 0 |
+| `colors-and-typography` | `Colors and typography` | 0 |
+| `spacing-and-layout-preview-hints` | `Spacing and layout preview hints` | 0 |
 
 ## 5. Rekomendacje per widget
 

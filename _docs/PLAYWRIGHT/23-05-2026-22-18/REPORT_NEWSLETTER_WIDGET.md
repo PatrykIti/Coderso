@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/NewsletterEditors.tsx` (1451 linii)
 > **Strona testowa:** `/admin/pages/f0ad3daf-aedf-47d8-9ff4-41587dff8e07` (slug `/ctr-newsletter-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/newsletter-visual.png`, `newsletter-advanced.png`, `newsletter-wizard.png`
+> **Screenshot:** `screenshots/newsletter-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/newsletter.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -32,6 +32,10 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Transport diagnostics` | Runtime payload |
 | 2 | `Raw integration metadata` | Runtime payload |
 | 3 | `Normalization and fallback` | Normalization and safeguards |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_DOM nie znalazł żadnych sekcji `[data-widget-editor-section]`._
 
 ## 5. Rekomendacje per widget
 

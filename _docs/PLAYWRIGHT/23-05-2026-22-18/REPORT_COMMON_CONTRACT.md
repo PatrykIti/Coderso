@@ -348,46 +348,55 @@ Pełne raporty per widget znajdują się obok tego pliku jako `REPORT_<WIDGET>.m
 - listę kolizji,
 - proponowane TASK-336+ specyficzne dla tego widgetu.
 
-| # | Widget | Status raportu | Wizard | Visual | Advanced |
-|---|--------|----------------|--------|--------|----------|
-| 1 | section | ✔ | 1 | 6 | 2 |
-| 2 | template-section | ✔ | 1 | 1 | 2 |
-| 3 | grid-columns | ✔ | 0 | 5 | 3 |
-| 4 | split-layout | ✔ | 0 | 4 | 2 |
-| 5 | tabs | ✔ | 1 | 1 | 2 (kolizja `Variant`) |
-| 6 | accordion | ✔ | 1 | 1 | 2 (kolizja `Variant`) |
-| 7 | toggle-block | ✔ | 3 (`Step n:`) | 1 | 1 |
-| 8 | spacer | ✔ | 0 | 3 | 2 |
-| 9 | divider | ✔ | 0 | 4 | 4 (kolizja `Preview`) |
-| 10 | stack | ✔ | 0 | 4 | 2 |
-| 11 | hero | ✔ | 0 | 9 | 2 (kolizja `Background`) |
-| 12 | feature-grid | ✔ | 0 | 7 | 3 |
-| 13 | testimonials | ✔ | 2 | 7 | 4 |
-| 14 | pricing-plans | ✔ | 0 | 7 | 3 |
-| 15 | faq-accordion | ✔ | 0 | 12 | 4 |
-| 16 | cta-banner | ✔ | 0 | 9 | 3 |
-| 17 | logo-cloud | ✔ | 1 | 5 | 3 |
-| 18 | gallery-mosaic | ✔ | 0 | 8 | 4 |
-| 19 | stats-kpi | ✔ | 4 | 6 | 3 (kolizja `Header copy`) |
-| 20 | team | ✔ | 0 | 4 | 3 |
-| 21 | rich-text-section | ⚠ | 0 (helpery) | 8 | 0 (helpery) |
-| 22 | content-list | ✔ | 2 | 6 | 3 |
-| 23 | posts-feed | ⚠ | 0 (helpery) | 0 (helpery) | 0 (helpery) |
-| 24 | entry-teaser | ✔ | 2 | 3 | 1 |
-| 25 | product-gallery | ✔ | 3 | 4 | 4 |
-| 26 | product-compare | ✔ | 2 | 7 | 1 |
-| 27 | product-table | ✔ | 1 | 6 | 2 |
-| 28 | listing-filters | ⚠ | 0 | 0 (helpery) | 1 (`Contract`) |
-| 29 | search-box | ⚠ | 0 | 0 (helpery) | 1 (`Contract`) |
-| 30 | timeline | ✔ | 0 | 6 | 2 |
-| 31 | compare-timeline | ✔ | 5 | 6 | 3 |
-| 32 | newsletter | ✔ | 0 | 7 | 3 |
-| 33 | booking-calendar | ✔ | 3 | 4 | 3 |
-| 34 | appointment-form | ✔ | 2 | 4 | 3 |
-| 35 | form-embed | ⚠ | 0 (helpery) | 0 (helpery) | 0 (helpery) |
-| 36 | contact | ✔ | 1 | 5 | 4 |
-| 37 | navigation | ✔ | 0 | 5 | 0 |
-| 38 | footer | ❌ | 0 | 0 | 0 (brak `WidgetEditorSection`) |
+Liczby z parsera rekursywnego (zlicza helpery, więc oddaje to, co naprawdę renderuje się w UI):
+
+| # | Widget | Status | Wizard | Visual | Advanced | Główny problem kontraktu |
+|---|--------|--------|--------|--------|----------|--------------------------|
+| 1 | section | ✔ | 1 | 6 | 2 | Drift nazewniczy (`Width and spacing`, `Background media and layers`, `Heading and intro`) |
+| 2 | template-section | ⚠ | 3 | 3 | 4 | Sekcje literalnie nazwane `Wizard`/`Visual`/`Advanced`; `Preview and metadata` i `Runtime behavior` w 3 zakładkach |
+| 3 | grid-columns | ✔ | 0 | 5 | 3 | Wizard pusty |
+| 4 | split-layout | ✔ | 0 | 4 | 2 | Wizard pusty |
+| 5 | tabs | ❌ | 3 | 5 | 6 | **Shared helpers**: `Variant`/`Layout`/`Tabs Structure`/`Trigger style`/`Colors` w 3 zakładkach |
+| 6 | accordion | ❌ | 2 | 3 | 4 | **Shared helpers**: `Variant`/`Items`/`Behavior and Style` w 3 zakładkach |
+| 7 | toggle-block | ✔ | 3 (`Step n:`) | 4 | 6 | Wzorzec wzorcowy dla Wizardu, ale dziwna nazwa `Experience`/`Theme` w Visual |
+| 8 | spacer | ✔ | 0 | 3 | 2 | Wizard pusty |
+| 9 | divider | ✔ | 0 | 4 | 4 | **Kolizja `Preview`** w Visual+Advanced |
+| 10 | stack | ✔ | 0 | 4 | 2 | Wizard pusty |
+| 11 | hero | ⚠ | 0 | 9 | 2 | **Kolizja `Background`** w Visual+Advanced; `Variant and Presets` (kapitalik) |
+| 12 | feature-grid | ✔ | 0 | 7 | 3 | Wizard pusty; sekcja `Remove feature card` to mis-mapping (przycisk jako sekcja) |
+| 13 | testimonials | ✔ | 2 | 7 | 4 | `Remove testimonial` jako sekcja (mis-mapping) |
+| 14 | pricing-plans | ✔ | 0 | 7 | 3 | Wizard pusty |
+| 15 | faq-accordion | ⚠ | 0 | 12 | 4 | 4 sekcje to przyciski/dialogi (`Move up`, `Move down`, `Remove`, `Remove FAQ item?`, `Delete selected FAQ items?`) — bug w atrybutach |
+| 16 | cta-banner | ✔ | 0 | 9 | 3 | Wizard pusty; sub-sekcje `Primary CTA`/`Secondary CTA`/`Tertiary CTA` |
+| 17 | logo-cloud | ✔ | 1 | 5 | 3 | OK |
+| 18 | gallery-mosaic | ✔ | 0 | 8 | 4 | Sekcja `Drag to reorder…` (hint jako sekcja) |
+| 19 | stats-kpi | ⚠ | 5 | 7 | 3 | **Kolizja `Header copy`/`Title`** w Wizard+Visual |
+| 20 | team | ✔ | 0 | 4 | 3 | Wizard pusty |
+| 21 | rich-text-section | ✔ | 0 | 8 | 4 | Wizard pusty; sekcje `Remove…`/`Reduce…` to dialogi |
+| 22 | content-list | ✔ | 2 | 6 | 3 | OK |
+| 23 | posts-feed | ❌ | 6 | 6 | 7 | **Shared helpers**: WSZYSTKIE 6 sekcji w 3 zakładkach identycznie; tylko Advanced dodaje `Runtime payload` |
+| 24 | entry-teaser | ✔ | 2 | 6 | 3 | OK |
+| 25 | product-gallery | ✔ | 3 | 5 | 4 | `Surfaces` (sentence case z 's' na końcu) |
+| 26 | product-compare | ✔ | 2 | 8 | 2 | `Surfaces`; `Section copy` zamiast `Section header` |
+| 27 | product-table | ⚠ | 2 | 10 | 2 | **Kolizja `Surfaces`** w Wizard+Visual; Visual ma 10 sekcji |
+| 28 | listing-filters | ❌ | 5 | 6 | 4 | **Shared helpers**: `Listing query`/`Diagnostics`/`Facet controls`/`Surface`/`Runtime behavior` w wielu zakładkach |
+| 29 | search-box | ❌ | 3 | 3 | 3 | **Shared helpers**: Wizard i Visual mają DOKŁADNIE te same 3 sekcje |
+| 30 | timeline | ✔ | 0 | 6 | 2 | Wizard pusty |
+| 31 | compare-timeline | ✔ | 5 | 6 | 3 | OK |
+| 32 | newsletter | ✔ | 0 | 7 | 3 | Wizard pusty |
+| 33 | booking-calendar | ⚠ | 5 | 6 | 3 | **Kolizja `Surface`/`Copy`** w Wizard+Visual |
+| 34 | appointment-form | ⚠ | 3 | 5 | 2 | **Kolizja `Surface`** w Wizard+Visual |
+| 35 | form-embed | ❌ | 4 | 6 | 3 | **Shared helpers**: `Form selection`/`Layout`/`Field labels` w wielu zakładkach |
+| 36 | contact | ✔ | 4 | 8 | 3 | `Contact …` jako prefix w 4 sekcjach (redundantny) |
+| 37 | navigation | ⚠ | 1 | 9 | 0 | Advanced KOMPLETNIE pusty; `Colors, Borders, Typography` (źle skondensowana sekcja) |
+| 38 | footer | ❌ | 0 | 0 | 0 | **Brak `<WidgetEditorSection>` w ogóle**. 8 surowych divów. |
+
+Legenda:
+- ✔ — zgodny z kontraktem (drift głównie nazewniczy)
+- ⚠ — wymaga refaktoryzacji (kolizja w 2 zakładkach lub kontrakt zachowany niespójnie)
+- ❌ — **krytyczne naruszenie kontraktu** (shared helpers we wszystkich 3 zakładkach lub brak `WidgetEditorSection`)
+
+**Statystyka:** 7 widgetów (18%) wymaga krytycznej refaktoryzacji, 9 (24%) refaktoryzacji średniego priorytetu, 22 (58%) tylko nazewniczego ujednolicenia.
 
 Legenda:
 - ✔ — edytor używa kontraktu `WidgetEditorSection`, drift głównie nazewniczy

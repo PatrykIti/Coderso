@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/TeamEditors.tsx` (1575 linii)
 > **Strona testowa:** `/admin/pages/fb31e030-07df-4dce-9243-a3c8904d3269` (slug `/ctr-team-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/team-visual.png`, `team-advanced.png`, `team-wizard.png`
+> **Screenshot:** `screenshots/team-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/team.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -29,6 +29,17 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Technical layout tokens` | Technical tokens |
 | 2 | `Normalization and safeguards` | Normalization and safeguards |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_4 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-member-structure` | `Variant and member structure` | 0 |
+| `header-copy-and-cta` | `Header copy and CTA` | 0 |
+| `members-content-and-order` | `Members content and order` | 0 |
+| `section-and-card-style` | `Section and card style` | 0 |
 
 ## 5. Rekomendacje per widget
 

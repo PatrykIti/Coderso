@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` (2011 linii)
 > **Strona testowa:** `/admin/pages/f9435704-9702-45f5-92b1-22711c7fb0ad` (slug `/ctr-listing-filters-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/listing-filters-visual.png`, `listing-filters-advanced.png`, `listing-filters-wizard.png`
+> **Screenshot:** `screenshots/listing-filters-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/listing-filters.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -39,6 +39,17 @@
 | 3 | `Runtime payload` | Runtime payload |
 | 4 | `Facet controls` | Items and order (facet subsection) |
 
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_4 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `listing-filters.visual.variant-layout` | `Variant and layout` | 3 |
+| `listing-filters.visual.copy-behavior` | `Filter copy and behavior` | 7 |
+| `listing-filters.visual.surface` | `Filter surface` | 3 |
+| `listing-filters.visual.facet-presentation` | `Facet presentation` | 15 |
+
 ## 2. Sekcje siedzące w helperach (poza top-level funkcjami)
 
 Sekcje (`<EditorSection title=…>`) zdefiniowane wewnątrz pomocniczych komponentów, nie w głównej funkcji editora — przez to parser top-level nie znalazł ich w §1, ale renderują się w UI:
@@ -57,8 +68,9 @@ Visual top-level pusty; jedyna `Contract` w Advanced. Wymaga pełnego odświeże
 
 ## 5. Rekomendacje per widget
 
-1. Przemianować `Variant and layout` → `Variant and structure` (CONTRACT-01).
-2. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
+1. **CONTRACT-12 + SHARED-HELPER:** Sekcje renderowane identycznie w Wizard i Visual. Advanced ma jedyną unikalną sekcję `Contract`/`Runtime payload`. Wymaga rozłącznego podziału lub usunięcia trybów.
+2. Przemianować `Variant and layout` → `Variant and structure` (CONTRACT-01).
+3. Przemianować `Contract` → `Runtime payload` (CONTRACT-05).
 
 ---
 

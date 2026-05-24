@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` (1390 linii)
 > **Strona testowa:** `/admin/pages/a06fb6e2-3b58-44c5-87e9-32125f572461` (slug `/ctr-feature-grid-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/feature-grid-visual.png`, `feature-grid-advanced.png`, `feature-grid-wizard.png`
+> **Screenshot:** `screenshots/feature-grid-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/feature-grid.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -32,6 +32,19 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Layout diagnostics` | Runtime payload |
 | 2 | `Normalization and safeguards` | Normalization and safeguards |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout-structure` | `Variant and layout structure` | 6 |
+| `header-copy` | `Header copy` | 0 |
+| `feature-cards-and-actions` | `Feature cards and actions` | 0 |
+| `card-layout-and-density` | `Card layout and density` | 0 |
+| `colors-and-borders` | `Colors and borders` | 0 |
+| `section-typography-and-container` | `Section typography and container` | 0 |
 
 ## 5. Rekomendacje per widget
 

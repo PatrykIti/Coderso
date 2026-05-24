@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` (870 linii)
 > **Strona testowa:** `/admin/pages/12d1d6fb-2aeb-46db-8775-088e87d8b70b` (slug `/ctr-toggle-block-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/toggle-block-visual.png`, `toggle-block-advanced.png`, `toggle-block-wizard.png`
+> **Screenshot:** `screenshots/toggle-block-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/toggle-block.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -36,6 +36,19 @@
 | 4 | `Pane cards` | Items and order |
 | 5 | `Primary pane` | Items and order (subsection) |
 | 6 | `Secondary pane` | Items and order (subsection) |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `toggle-block.variant` | `Variant` | 2 |
+| `toggle-block.labels` | `Labels` | 0 |
+| `toggle-block.experience` | `Experience` | 1 |
+| `toggle-block.theme` | `Theme` | 0 |
+| `toggle-block.authoring` | `Pane authoring` | 0 |
+| `toggle-block.structure` | `Structure` | 2 |
 
 ## 3. Krytyczne uwagi kontraktu
 

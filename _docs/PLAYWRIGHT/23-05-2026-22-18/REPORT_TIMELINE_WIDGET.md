@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/TimelineEditors.tsx` (1846 linii)
 > **Strona testowa:** `/admin/pages/261d5209-9323-4237-ad8e-20eb3f0e9d60` (slug `/ctr-timeline-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/timeline-visual.png`, `timeline-advanced.png`, `timeline-wizard.png`
+> **Screenshot:** `screenshots/timeline-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/timeline.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -30,6 +30,19 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 |---|----------------|--------------------|
 | 1 | `Layout tokens` | Technical tokens |
 | 2 | `Data normalization` | Normalization and safeguards |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `timeline.mode-layout` | `Variant and timeline structure` | 0 |
+| `timeline.items-dates` | `Steps content and order` | 0 |
+| `timeline.axis-markers` | `Guides and axis line` | 0 |
+| `timeline.markers-accents` | `Markers and accents` | 0 |
+| `timeline.colors` | `Colors and background` | 0 |
+| `timeline.typography-spacing` | `Typography and spacing` | 0 |
 
 ## 5. Rekomendacje per widget
 

@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/ProductTableEditors.tsx` (1013 linii)
 > **Strona testowa:** `/admin/pages/f317c971-cc3f-4003-9a38-66ff40c8d036` (slug `/ctr-product-table-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/product-table-visual.png`, `product-table-advanced.png`, `product-table-wizard.png`
+> **Screenshot:** `screenshots/product-table-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/product-table.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -37,6 +37,23 @@
 |---|----------------|--------------------|
 | 1 | `Runtime payload` | Runtime payload |
 | 2 | `Query preview` | Runtime payload |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_10 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `layout-and-style` | `Layout and style` | 0 |
+| `section-header` | `Section header` | 0 |
+| `columns` | `Columns` | 0 |
+| `column-labels` | `Column labels` | 0 |
+| `public-controls` | `Public controls` | 0 |
+| `export-and-currency` | `Export and currency` | 0 |
+| `stock-presentation` | `Stock presentation` | 0 |
+| `links-and-actions` | `Links and actions` | 0 |
+| `empty-state` | `Empty state` | 0 |
+| `surfaces` | `Surfaces` | 0 |
 
 ## 5. Rekomendacje per widget
 

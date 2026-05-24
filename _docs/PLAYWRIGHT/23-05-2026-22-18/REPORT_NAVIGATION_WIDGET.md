@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/NavigationEditors.tsx` (1983 linii)
 > **Strona testowa:** `/admin/pages/2789358f-ed6c-446e-954e-d5b2b0835ce5` (slug `/ctr-navigation-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/navigation-visual.png`, `navigation-advanced.png`, `navigation-wizard.png`
+> **Screenshot:** `screenshots/navigation-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/navigation.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -33,6 +33,21 @@
 ### Advanced
 _(brak sekcji top-level)_
 
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_8 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-structure` | `Variant and Structure` | 0 |
+| `brand-and-logo` | `Brand and Logo` | 0 |
+| `navigation-links` | `Navigation Links` | 0 |
+| `cta-and-right-actions` | `CTA and Right Actions` | 0 |
+| `mobile-behavior` | `Mobile Behavior` | 0 |
+| `colors-borders-typography` | `Colors, Borders, Typography` | 0 |
+| `surface-and-runtime-behavior` | `Surface and Runtime Behavior` | 0 |
+| `navigation.structure` | `Structure` | 1 |
+
 ## 3. Krytyczne uwagi kontraktu
 
 Advanced renderuje tylko opisową kartę bez `WidgetEditorSection`. Brakuje kanonicznych `Runtime payload`, `Technical tokens`, `Raw payload snapshot` w Advanced (CONTRACT-14).
@@ -41,6 +56,8 @@ Advanced renderuje tylko opisową kartę bez `WidgetEditorSection`. Brakuje kano
 
 1. Przemianować `Variant and Structure` → `Variant and structure` (CONTRACT-01).
 2. Przemianować `Colors, Borders, Typography` → `Colors` (CONTRACT-03), wyodrębniając Surface/Typography do osobnych sekcji jeżeli były razem.
+3. **CONTRACT-14:** Advanced jest kompletnie pusty (`NavigationAdvancedEditor` renderuje tylko opisową kartę). Dodać kanoniczne sekcje: `Runtime payload`, `Technical tokens`, `Normalization and safeguards`, `Raw payload snapshot`.
+4. Wszystkie tytuły w Visual używają niespójnej kapitalizacji (`Variant and Structure`, `Brand and Logo`, `Navigation Links`, `Colors, Borders, Typography`, `Surface and Runtime Behavior`) — sentence case, rozbić `Colors, Borders, Typography` na 3 sekcje (`Colors`, `Surface`, `Typography`).
 
 ---
 

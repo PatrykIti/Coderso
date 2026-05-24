@@ -5,12 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` (1296 linii)
 > **Strona testowa:** `/admin/pages/94e844e2-9287-4aa4-949e-c2ea9d28ca4f` (slug `/ctr-cta-banner-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/cta-banner-visual.png`, `cta-banner-advanced.png`, `cta-banner-wizard.png`
+> **Screenshot:** `screenshots/cta-banner-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/cta-banner.txt`
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu, top-level funkcje)
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
@@ -34,6 +34,19 @@ _(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widget
 | 1 | `Technical style tokens` | Technical tokens |
 | 2 | `Normalization and safeguards` | Normalization and safeguards |
 | 3 | `Raw payload snapshot` | Raw payload snapshot |
+
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `variant-and-layout-structure` | `Variant and layout structure` | 0 |
+| `content-copy` | `Content copy` | 0 |
+| `actions` | `Actions` | 0 |
+| `colors-and-button-styles` | `Colors and button styles` | 0 |
+| `border-and-spacing` | `Border and spacing` | 0 |
+| `background-and-motion` | `Background and motion` | 0 |
 
 ## 5. Rekomendacje per widget
 

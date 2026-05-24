@@ -5,15 +5,12 @@
 > **Edytor:** `core/admin/ui/widgets/editors/TabsEditors.tsx` (918 linii)
 > **Strona testowa:** `/admin/pages/0be2cb49-8113-4a88-8d17-0ed70d5c5fdd` (slug `/ctr-tabs-2305`)
 > **Sesja Playwright:** `contract-admin-pc` (świeża, izolowana)
-> **Screenshoty:** `screenshots/tabs-visual.png`, `tabs-advanced.png`, `tabs-wizard.png`
+> **Screenshot:** `screenshots/tabs-editor.png` (Visual mode — domyślny po utworzeniu strony)
 > **DOM raw:** `_raw/tabs.txt`
 
 ---
 
-## 1. Sekcje per zakładka (historyczne źródło: parser kodu, top-level funkcje)
-
-Poniższe tabele są historycznym stanem z audytu 2026-05-23. Aktualny stan po
-TASK-336-07 jest opisany w sekcji `2026-05-24 TASK-336-07 status`.
+## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard
 | # | Tytuł (obecny) | Proponowany kanon |
@@ -41,11 +38,24 @@ TASK-336-07 jest opisany w sekcji `2026-05-24 TASK-336-07 status`.
 | 5 | `Layout` | Layout (width, padding, alignment) |
 | 6 | `Colors` | Colors |
 
-## 3. Krytyczne uwagi kontraktu (historyczne)
+## 2. Live DOM scan — Visual mode (Playwright snapshot)
+
+_6 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+
+| `data-widget-editor-section` | Title | Kontrolki |
+|------------------------------|-------|-----------|
+| `tabs.visual.variant` | `Variant` | 1 |
+| `tabs.visual.item-content` | `Tab content` | 10 |
+| `tabs.visual.layout` | `Layout` | 6 |
+| `tabs.visual.trigger-style` | `Trigger style` | 3 |
+| `tabs.visual.colors` | `Colors` | 6 |
+| `tabs.structure` | `Structure` | 2 |
+
+## 3. Krytyczne uwagi kontraktu
 
 **Kolizja `Variant`** w 3 zakładkach jednocześnie — ten sam tytuł sekcji w Wizard, Visual, Advanced. Trzeba przemianować: Visual `Variant and structure`, Advanced `Behavior` lub `Runtime payload`, Wizard `Step 1: Variant`.
 
-## 4. Kolizje (historycznie: ten sam tytuł w wielu zakładkach)
+## 4. Kolizje (ten sam tytuł w wielu zakładkach)
 
 | Tytuł | Występuje w |
 |-------|--------------|
@@ -53,46 +63,13 @@ TASK-336-07 jest opisany w sekcji `2026-05-24 TASK-336-07 status`.
 
 Naprawa: nadać unikalne tytuły lub scalić sekcje w jedno miejsce.
 
-## 5. Rekomendacje per widget (historyczne)
+## 5. Rekomendacje per widget
 
-1. Przemianować `Variant` → `Variant and structure` (CONTRACT-01).
-2. Przemianować `Diagnostics` → `Runtime payload` (CONTRACT-05).
-3. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
+1. **CONTRACT-09 + SHARED-HELPER:** Tabs renderuje pomocniczy komponent z 5 sekcjami (`Variant`, `Layout`, `Tabs Structure`, `Trigger style`, `Colors`) w obu Visual i Advanced — Wizard też re-renderuje 3 z nich. Zakładki nie różnicują treści. Decyzja: albo każda zakładka renderuje rozłączny podzbiór sekcji, albo `Tabs` ma tylko jedną zakładkę bez tabs trybów edytora.
+2. Przemianować `Variant` → `Variant and structure` (CONTRACT-01).
+3. Przemianować `Diagnostics` → `Runtime payload` (CONTRACT-05).
+4. Dodać `Raw payload snapshot` w Advanced (kanon §6.4 wspólnego raportu).
 
 ---
 
 > Raport powiązany: `REPORT_COMMON_CONTRACT.md` (pełna lista kanonów i TASK-336+).
-
-## 2026-05-24 TASK-336-07 status
-
-Ten raport zachowuje pierwotne ustalenia z audytu 2026-05-23. Aktualny stan
-po TASK-336-07 superseduje sekcje powyżej:
-
-### Wizard
-
-| # | Tytuł aktualny | Rola |
-|---|----------------|------|
-| 1 | `Starter tabs` | setup: liczba startowych zakładek i domyślna zakładka |
-
-### Visual
-
-| # | Tytuł aktualny | Rola |
-|---|----------------|------|
-| 1 | `Variant` | wariant |
-| 2 | `Tab content` | etykiety, intro panelu, trigger metadata, ikony, disabled |
-| 3 | `Layout` | orientation/alignment/overflow/padding/gaps |
-| 4 | `Trigger style` | typografia triggera i motion |
-| 5 | `Colors` | kolory powierzchni, triggera i panelu |
-
-### Advanced
-
-| # | Tytuł aktualny | Rola |
-|---|----------------|------|
-| 1 | `Runtime diagnostics` | read-only |
-| 2 | `Technical ids` | read-only |
-| 3 | `Runtime payload` | read-only |
-| 4 | `Contract summary` | read-only |
-
-Kolizja `Variant` i duplikacja Visual w Advanced zostały usunięte. Uwaga
-procesowa: TASK-336-07 nie wdraża jeszcze docelowego one-time Wizard lifecycle;
-Wizard pozostaje widoczną zakładką do czasu TASK-336-16.
