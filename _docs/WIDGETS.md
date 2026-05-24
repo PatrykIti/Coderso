@@ -120,6 +120,11 @@ Zasady:
   wlada contentem i wygladem, a `Advanced` ogranicza sie do technicznych,
   layoutowych i diagnostycznych ustawien. Sekcje diagnostyczne w `Advanced` sa
   read-only.
+- `Wizard` jest one-time setup surface. Nowy lub jawnie ponownie otwarty widget
+  startuje w `Wizard`; po ukonczeniu setupu shell pokazuje read-only summary
+  `Setup complete`, codzienne zakladki `Visual` i `Advanced`, oraz akcje
+  `Run setup again`. `Wizard` nie jest stalym peer tabem po completion, a
+  ponowne uruchomienie setupu nie resetuje danych widgetu.
 - Layout widgets (`section`, `grid-columns`, `split-layout`, `stack`, `spacer`,
   `divider`) stosuja po TASK-336-14 zaostrzona polityke: `Wizard` jest
   setup-only, `Visual` wlada codziennymi layout/style controls przez presety,

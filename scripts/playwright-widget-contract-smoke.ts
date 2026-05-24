@@ -145,7 +145,7 @@ type SmokeReport = {
 const defaultInventoryPath = "_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json";
 const defaultOutputJsonPath = "_docs/PLAYWRIGHT/widget-contract-smoke-results.json";
 const defaultOutputMarkdownPath = "_docs/PLAYWRIGHT/widget-contract-smoke-results.md";
-const defaultModes: EditorMode[] = ["wizard", "visual", "advanced"];
+const defaultModes: EditorMode[] = ["visual", "advanced"];
 const screenOnlyWidgets = new Set([
   "screen-record-header",
   "screen-field-value",
@@ -579,7 +579,9 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
       await tab.click().catch(() => undefined);
       await settle();
     } else if (mode !== "wizard") {
-      const complete = page.getByRole("button", { name: /continue to layout and styling/i }).first();
+      const complete = page
+        .getByRole("button", { name: /finish setup and open visual|continue to layout and styling/i })
+        .first();
       if ((await complete.count()) > 0) {
         await complete.click().catch(() => undefined);
         await settle();

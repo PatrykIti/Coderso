@@ -285,6 +285,11 @@ const clickByText = (container: HTMLElement, text: string) => {
   });
 };
 
+const queryButtonsByExactText = (container: HTMLElement, text: string) =>
+  Array.from(container.querySelectorAll("button")).filter(
+    (candidate) => candidate.textContent?.trim() === text
+  );
+
 const getSlotControlItem = (container: HTMLElement, label: string) =>
   Array.from(container.querySelectorAll("[data-slot-item]")).find(
     (candidate): candidate is HTMLDivElement =>
@@ -406,6 +411,123 @@ test("BlockSettings renders shared live preview in unfinished wizard mode", () =
     expect(view.container.textContent).toContain(
       "preview:hero-1:editor-preview:Preview wizard headline"
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings hides Wizard from daily tabs after setup completion", () => {
+  const onChange = vi.fn();
+  const block: Block = {
+    ...createBlock("hero"),
+    id: "hero-complete",
+    data: {
+      headline: "Keep daily content",
+    },
+    editor: { mode: "visual", wizardCompleted: true },
+  };
+  const widget = createWidget();
+
+  const view = mount(<BlockSettings block={block} widget={widget} onChange={onChange} />);
+
+  try {
+    expect(view.container.textContent).toContain("Setup complete");
+    expect(view.container.textContent).toContain(
+      "Daily edits live in Visual. Advanced is for technical diagnostics."
+    );
+    expect(view.container.textContent).toContain("visual:hero-complete");
+    expect(view.container.textContent).not.toContain("wizard:hero-complete");
+    expect(queryButtonsByExactText(view.container, "Wizard")).toHaveLength(0);
+    expect(queryButtonsByExactText(view.container, "Visual")).toHaveLength(1);
+    expect(queryButtonsByExactText(view.container, "Advanced")).toHaveLength(1);
+
+    clickByText(view.container, "Run setup again");
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "hero-complete",
+        data: {
+          headline: "Keep daily content",
+        },
+        editor: { mode: "wizard", wizardCompleted: false },
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings treats legacy completed Wizard mode as daily Visual", () => {
+  const block: Block = {
+    ...createBlock("hero"),
+    id: "hero-legacy",
+    editor: { mode: "wizard", wizardCompleted: true },
+  };
+  const widget = createWidget();
+
+  const view = mount(<BlockSettings block={block} widget={widget} onChange={() => undefined} />);
+
+  try {
+    expect(view.container.textContent).toContain("Setup complete");
+    expect(view.container.textContent).toContain("visual:hero-legacy");
+    expect(view.container.textContent).not.toContain("wizard:hero-legacy");
+    expect(queryButtonsByExactText(view.container, "Wizard")).toHaveLength(0);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockSettings reopens setup explicitly and returns to Visual without data loss", () => {
+  const initialBlock: Block = {
+    ...createBlock("hero"),
+    id: "hero-rerun",
+    data: {
+      headline: "Preserved headline",
+    },
+    editor: { mode: "visual", wizardCompleted: true },
+  };
+  const onChangeSpy = vi.fn();
+  const widget = createWidget();
+
+  const Harness = () => {
+    const [block, setBlock] = useState<Block>(initialBlock);
+    return (
+      <BlockSettings
+        block={block}
+        widget={widget}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setBlock(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    clickByText(view.container, "Run setup again");
+    expect(view.container.textContent).toContain("wizard:hero-rerun");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        data: {
+          headline: "Preserved headline",
+        },
+        editor: { mode: "wizard", wizardCompleted: false },
+      })
+    );
+
+    clickByText(view.container, "wizard-change");
+    clickByText(view.container, "wizard-complete");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        data: {
+          headline: "Preserved headline",
+          wizardTouched: true,
+        },
+        editor: { mode: "visual", wizardCompleted: true },
+      })
+    );
+    expect(view.container.textContent).toContain("visual:hero-rerun");
   } finally {
     view.cleanup();
   }

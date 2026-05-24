@@ -6,7 +6,7 @@
 **Category:** Page Builder + Widgets + Admin UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12, TASK-336-13, TASK-336-14, TASK-336-15, TASK-336-18
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -56,26 +56,34 @@ editor-shell code is written. Decision owner is the product/UX owner for the
 page builder; Claude feedback may inform the decision, but cannot replace the
 recorded repo decision.
 
+Decision recorded 2026-05-24: choose Option A for the shared page-builder
+widget shell. After setup completion, daily editing shows `Visual` and
+`Advanced` only. `Wizard` remains available only through an explicit
+`Run setup again` action that preserves widget data and re-enters the existing
+`wizardCompleted=false` setup path. Option B is deferred until a future
+content-heavy widget proves `Visual` is too broad; Option C is rejected because
+keeping `Wizard` as a peer tab would preserve the current daily-work drift.
+
 ## Sub-Tasks
 
-- [ ] Verify all prior `TASK-336-*` leaves are complete and strict contract
+- [x] Verify all prior `TASK-336-*` leaves are complete and strict contract
   tests pass.
-- [ ] Reuse the existing `WidgetBlock.editor.wizardCompleted` state instead of
+- [x] Reuse the existing `WidgetBlock.editor.wizardCompleted` state instead of
   adding a parallel `setupState` model.
-- [ ] Decide whether any extension of `WidgetBlock.editor` is needed; if yes,
+- [x] Decide whether any extension of `WidgetBlock.editor` is needed; if yes,
   update `core/server/validation/pageSchemas.ts` and document whether a DB
   migration is required.
-- [ ] Update page-builder editor tab behavior for new and existing widgets.
-- [ ] Remove the double-header IA when returning to Wizard by ensuring
+- [x] Update page-builder editor tab behavior for new and existing widgets.
+- [x] Remove the double-header IA when returning to Wizard by ensuring
   `WizardPanel` and `BlockSettings` share one selected-widget header region.
-- [ ] Add `Run setup again` or equivalent explicit affordance.
-- [ ] Add dirty-state protection so completing/reopening Wizard does not
+- [x] Add `Run setup again` or equivalent explicit affordance.
+- [x] Add dirty-state protection so completing/reopening Wizard does not
   overwrite unsaved Visual edits.
-- [ ] Add cache/prefetch/SPA consistency if editor shell state is cached.
-- [ ] Add Vitest UI tests for first insertion, completed setup, rerun setup,
+- [x] Add cache/prefetch/SPA consistency if editor shell state is cached.
+- [x] Add Vitest UI tests for first insertion, completed setup, rerun setup,
   and legacy widget behavior.
-- [ ] Add Playwright smoke for representative widgets across setup lifecycle.
-- [ ] Use Claude for UX copy/flow review and record accepted/rejected feedback.
+- [x] Add Playwright smoke for representative widgets across setup lifecycle.
+- [x] Use Claude for UX copy/flow review and record accepted/rejected feedback.
 
 ## Files to Change
 
@@ -185,6 +193,32 @@ Regression-test shape:
 - Add changelog/index updates when this leaf is marked Done, unless the family
   has an explicitly approved single closure changelog policy.
 - Keep `_docs/_TASKS/README.md` synchronized when status changes.
+
+## Closure Notes
+
+- Completed 2026-05-24 with Option A recorded as the shared daily-tab model.
+- No `WidgetBlock.editor` schema extension was added; `mode` and
+  `wizardCompleted` remain the only persisted editor-state fields.
+- `resolveWidgetEditorState` treats completed legacy `mode: "wizard"` blocks as
+  daily `Visual`, while `reopenWidgetSetup` explicitly re-enters the existing
+  `wizardCompleted=false` setup path without clearing widget data.
+- `BlockSettings` now shows `Setup complete`, `Visual`, `Advanced`, and
+  `Run setup again` after setup completion; `Wizard` is no longer a permanent
+  daily peer tab.
+- Cache/prefetch changes were not required because this editor shell state is
+  held in the existing page/template block state and saved through existing
+  admin page/template writes.
+- Claude CLI review was attempted with the required
+  `claude -p --permission-mode plan --output-format text` command, but the CLI
+  timed out without returning findings. Accepted helper-agent feedback:
+  implement Option A, reuse `wizardCompleted`, keep `applyWizardSelection` as
+  the completion helper, hide `Wizard` from daily tabs, and expose a clear
+  `Run setup again` affordance. Rejected: adding a parallel `setupState` model
+  or keeping `Wizard` as a peer tab after completion.
+- Playwright evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-hero-2026-05-24.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-lifecycle-2026-05-24.*`.
 
 ## Acceptance Criteria
 

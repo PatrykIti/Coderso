@@ -34,6 +34,11 @@ const defaultEditor: WidgetEditorState = {
   wizardCompleted: false,
 };
 
+const completedDefaultEditor: WidgetEditorState = {
+  mode: "visual",
+  wizardCompleted: true,
+};
+
 const isContainerToken = (value: unknown): value is (typeof containerTokens)[number] =>
   typeof value === "string" && containerTokens.includes(value as (typeof containerTokens)[number]);
 
@@ -473,6 +478,24 @@ export function stripEditor(blocks: Block[]): BlockWithoutEditor[] {
       ...(nextSlots ? { slots: nextSlots } : {}),
     };
   });
+}
+
+export function resolveWidgetEditorState(block: Pick<Block, "editor"> | null | undefined) {
+  const editor = block?.editor;
+  if (!editor?.wizardCompleted) {
+    return { ...defaultEditor };
+  }
+  return {
+    ...completedDefaultEditor,
+    mode: editor.mode === "advanced" ? "advanced" : "visual",
+  } satisfies WidgetEditorState;
+}
+
+export function reopenWidgetSetup(block: Block): Block {
+  return {
+    ...block,
+    editor: { mode: "wizard", wizardCompleted: false },
+  };
 }
 
 export function applyWizardSelection(block: Block, variant?: string): Block {

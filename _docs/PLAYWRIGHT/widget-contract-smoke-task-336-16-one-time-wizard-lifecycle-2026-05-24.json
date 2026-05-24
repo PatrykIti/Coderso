@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-05-24T19:51:55.000Z",
+  "command": "playwright-cli -s=widget-contract-task-336-16-lifecycle run-code --filename .tmp/playwright-widget-contract-smoke/task-336-16-one-time-wizard-lifecycle.js",
+  "admin": "http://localhost:5173/admin",
+  "widgetType": "hero",
+  "fixtureSlug": "/ctr-hero-2305",
+  "status": "passed",
+  "pageId": "1216108b-7cc2-4ed9-956e-afa97351aca5",
+  "adminPath": "http://localhost:5173/admin/pages/1216108b-7cc2-4ed9-956e-afa97351aca5",
+  "checks": {
+    "wizardTabHidden": true,
+    "visualTabVisible": true,
+    "advancedTabVisible": true,
+    "setupSummaryVisible": true,
+    "initialVisualVisible": true,
+    "advancedVisible": true,
+    "wizardVisibleAfterRun": true,
+    "visualVisibleAfterFinish": true
+  },
+  "failed": []
+}

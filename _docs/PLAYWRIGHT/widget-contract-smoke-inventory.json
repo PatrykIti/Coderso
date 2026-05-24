@@ -15,7 +15,7 @@
       "adminFixtureSlug": "/ctr-section-2305",
       "publicPath": "/section-widget-test",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -25,7 +25,7 @@
       "adminFixtureSlug": "/ctr-template-section-2305",
       "publicPath": "/ctr-template-section-2305",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "notes": "Hidden from the regular page-builder picker in the 2026-05-23 re-audit; published fixture verifies the runtime empty-template contract."
     },
     {
@@ -35,7 +35,7 @@
       "adminFixtureSlug": "/ctr-grid-columns-2305",
       "publicPath": "/test-grid-columns-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "card-overflow"]
     },
     {
@@ -45,7 +45,7 @@
       "adminFixtureSlug": "/ctr-split-layout-2305",
       "publicPath": "/test-split-layout-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"]
     },
     {
@@ -55,7 +55,7 @@
       "adminFixtureSlug": "/ctr-tabs-2305",
       "publicPath": "/test-tabs-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -65,7 +65,7 @@
       "adminFixtureSlug": "/ctr-accordion-2305",
       "publicPath": "/test-accordion-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -75,7 +75,7 @@
       "adminFixtureSlug": "/ctr-toggle-block-2305",
       "publicPath": "/test-toggle-block-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -85,7 +85,7 @@
       "adminFixtureSlug": "/ctr-spacer-2305",
       "publicPath": "/test-spacer-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -95,7 +95,7 @@
       "adminFixtureSlug": "/ctr-divider-2305",
       "publicPath": "/test-divider-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -105,7 +105,7 @@
       "adminFixtureSlug": "/ctr-stack-2305",
       "publicPath": "/test-stack-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"]
     },
     {
@@ -116,7 +116,7 @@
       "publicPath": "/homepage",
       "publicFixtureStatus": "shared-page",
       "priority": "P1",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"],
       "allowedDuplicateWritablePaths": [
         {
@@ -148,7 +148,7 @@
       "adminFixtureSlug": "/ctr-feature-grid-2305",
       "publicPath": "/featuregridtest",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "card-overflow"]
     },
     {
@@ -159,7 +159,7 @@
       "publicPath": "/test-testimonials-0516",
       "publicFixtureStatus": "published",
       "priority": "P1",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "card-overflow"],
       "notes": "Known intentional slider overflow requires explicit marker."
     },
@@ -171,7 +171,7 @@
       "publicPath": "/test-pricing-plans-0516",
       "publicFixtureStatus": "published",
       "priority": "P1",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "card-overflow"],
       "notes": "Comparison table horizontal scroll must be marked intentional."
     },
@@ -182,7 +182,7 @@
       "adminFixtureSlug": "/ctr-faq-accordion-2305",
       "publicPath": "/test-faq-accordion-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -192,7 +192,7 @@
       "adminFixtureSlug": "/ctr-cta-banner-2305",
       "publicPath": "/test-cta-banner-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -202,7 +202,7 @@
       "adminFixtureSlug": "/ctr-logo-cloud-2305",
       "publicPath": "/test-logo-cloud-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -212,7 +212,7 @@
       "adminFixtureSlug": "/ctr-gallery-mosaic-2305",
       "publicPath": "/gallery-mosaic-test-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -222,7 +222,7 @@
       "adminFixtureSlug": "/ctr-stats-kpi-2305",
       "publicPath": "/stats-kpi-audit-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"],
       "allowedDuplicateWritablePaths": [
         {
@@ -495,7 +495,7 @@
       "publicPath": "/test-team-0516",
       "publicFixtureStatus": "published",
       "priority": "P1",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "card-overflow"],
       "notes": "Known spotlight side-rail density risk."
     },
@@ -506,7 +506,7 @@
       "adminFixtureSlug": "/ctr-rich-text-section-2305",
       "publicPath": "/richtextsectiontest",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -516,7 +516,7 @@
       "adminFixtureSlug": "/ctr-content-list-2305",
       "publicPath": "/test-content-list-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"],
       "notes": "Known empty-state fixture gap."
     },
@@ -527,7 +527,7 @@
       "adminFixtureSlug": "/posts-feed-test-page",
       "publicPath": "/posts-feed-test-page",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -537,7 +537,7 @@
       "adminFixtureSlug": "/ctr-entry-teaser-2305",
       "publicPath": "/test-entry-teaser-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -547,7 +547,7 @@
       "adminFixtureSlug": "/ctr-product-gallery-2305",
       "publicPath": "/test-product-gallery-widget",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"],
       "notes": "Known empty-state fixture gap."
     },
@@ -558,7 +558,7 @@
       "adminFixtureSlug": "/ctr-product-compare-2305",
       "publicPath": "/test-product-compare-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"],
       "notes": "Known empty-state fixture gap."
     },
@@ -569,7 +569,7 @@
       "adminFixtureSlug": "/ctr-product-table-2305",
       "publicPath": "/producttabletestproducttabletest",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow", "empty-fixture"],
       "notes": "Known empty-state fixture gap."
     },
@@ -581,7 +581,7 @@
       "publicPath": "/test-listing-filters-0516",
       "publicFixtureStatus": "published",
       "priority": "P0",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -592,7 +592,7 @@
       "publicPath": "/ctr-search-box-2305",
       "publicFixtureStatus": "published",
       "priority": "P0",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "notes": "Standalone public fixture published during TASK-336-15; TASK-336-05 verifies admin ownership."
     },
     {
@@ -602,7 +602,7 @@
       "adminFixtureSlug": "/ctr-timeline-2305",
       "publicPath": "/ctr-timeline-2305",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "notes": "Standalone public fixture published during TASK-336-15."
     },
     {
@@ -612,7 +612,7 @@
       "adminFixtureSlug": "/ctr-compare-timeline-2305",
       "publicPath": "/test-compare-timeline-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -622,7 +622,7 @@
       "adminFixtureSlug": "/ctr-newsletter-2305",
       "publicPath": "/test-newsletter-widget-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -632,7 +632,7 @@
       "adminFixtureSlug": "/ctr-booking-calendar-2305",
       "publicPath": "/test-booking-calendar-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -642,7 +642,7 @@
       "adminFixtureSlug": "/ctr-appointment-form-2305",
       "publicPath": "/test-appointment-form-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -652,7 +652,7 @@
       "adminFixtureSlug": "/ctr-form-embed-2305",
       "publicPath": "/ctr-form-embed-2305",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -662,7 +662,7 @@
       "adminFixtureSlug": "/ctr-contact-2305",
       "publicPath": "/contact-audit-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -672,7 +672,7 @@
       "adminFixtureSlug": "/ctr-navigation-2305",
       "publicPath": "/homepage",
       "publicFixtureStatus": "shared-page",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },
     {
@@ -682,7 +682,7 @@
       "adminFixtureSlug": "/ctr-footer-2305",
       "publicPath": "/test-footer-widget-0516",
       "publicFixtureStatus": "published",
-      "requiredModes": ["wizard", "visual", "advanced"],
+      "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     }
   ]

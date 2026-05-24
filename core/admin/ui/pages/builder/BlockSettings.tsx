@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import {
@@ -36,6 +37,8 @@ import {
   removeRepeatableSlotInstanceForWidget,
   reorderBlocks,
   reorderRepeatableSlotInstancesForWidget,
+  reopenWidgetSetup,
+  resolveWidgetEditorState,
 } from "./blockUtils";
 
 export type BlockSettingsProps = {
@@ -186,7 +189,7 @@ export function BlockSettings({
         ? { default: value.children }
         : {};
 
-  const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
+  const editorState = resolveWidgetEditorState(block);
   const slotMap = getSlotMap(block);
   const slotDefinitions = widget.slots ?? [];
   const rawSlotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
@@ -413,6 +416,11 @@ export function BlockSettings({
     );
   }
 
+  const dailyMode = editorState.mode === "advanced" ? "advanced" : "visual";
+  const handleRunSetupAgain = () => {
+    patchBlock((current) => reopenWidgetSetup(current));
+  };
+
   return (
     <>
       <div className="mb-4 rounded-lg border bg-muted/10 p-3">
@@ -437,31 +445,41 @@ export function BlockSettings({
           ) : null}
         </div>
       </div>
+      <section
+        className="mb-4 rounded-lg border bg-muted/10 p-3"
+        data-widget-setup-summary="complete"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Setup complete
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Daily edits live in Visual. Advanced is for technical diagnostics.
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={handleRunSetupAgain}>
+            Run setup again
+          </Button>
+        </div>
+      </section>
       <Tabs
-        value={editorState.mode}
+        value={dailyMode}
         onValueChange={(mode) =>
           patchBlock((current) => ({
             ...current,
-            editor: { ...(current.editor ?? editorState), mode: mode as EditorMode },
+            editor: {
+              mode: mode === "advanced" ? "advanced" : "visual",
+              wizardCompleted: true,
+            },
           }))
         }
         className="gap-4"
       >
         <TabsList variant="line">
-          <TabsTrigger value="wizard">Wizard</TabsTrigger>
           <TabsTrigger value="visual">Visual</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
-        <TabsContent value="wizard">
-          <WizardPanel
-            widget={widget}
-            block={block}
-            onChange={onChange}
-            onBlockPatch={patchBlock}
-            onComplete={() => onChange(applyWizardSelection(block))}
-            editorContext={resolvedEditorContext}
-          />
-        </TabsContent>
         <TabsContent value="visual">
           <VisualPanel
             widget={widget}

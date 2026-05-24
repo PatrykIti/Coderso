@@ -117,7 +117,7 @@ test("WizardPanel renders widget editor and metadata", () => {
     expect(view.container.innerHTML).toContain('data-widget-editor="dummy"');
     expect(view.container.innerHTML).toContain('data-widget-editor-mode="wizard"');
     expect(view.container.innerHTML).toContain('aria-label="Dummy Widget widget information"');
-    expect(view.container.textContent).toContain("Continue to layout and styling");
+    expect(view.container.textContent).toContain("Finish setup and open Visual");
   } finally {
     view.cleanup();
   }
@@ -136,7 +136,7 @@ test("WizardPanel forwards editor data, variant updates, and completion", () => 
     React.act(() => {
       buttons.find((button) => button.textContent === "change-data")?.click();
       buttons.find((button) => button.textContent === "change-variant")?.click();
-      buttons.find((button) => button.textContent === "Continue to layout and styling")?.click();
+      buttons.find((button) => button.textContent === "Finish setup and open Visual")?.click();
     });
 
     expect(onChange).toHaveBeenCalledWith({

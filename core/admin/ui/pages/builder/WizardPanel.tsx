@@ -74,7 +74,7 @@ export function WizardPanel({
         context={editorContext}
       />
       <Button className="w-full" onClick={onComplete}>
-        Continue to layout and styling
+        Finish setup and open Visual
       </Button>
     </WidgetEditorModeRoot>
   );

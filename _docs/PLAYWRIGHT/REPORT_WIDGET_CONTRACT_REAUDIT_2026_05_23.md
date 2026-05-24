@@ -665,10 +665,32 @@ behaved as a second Visual editor despite `writablePaths: []` contracts.
   reports `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with an
   unchanged `block_select_missing` admin fixture gap.
 
+## TASK-336-16 One-Time Wizard Evidence (2026-05-24)
+
+The one-time Wizard lifecycle is now implemented at the shared page-builder
+shell instead of per widget.
+
+- Option A is recorded for the daily tab model: completed widgets expose
+  `Visual` and `Advanced` only. `Wizard` is no longer a permanent peer tab after
+  setup completion.
+- Completed widgets show a read-only `Setup complete` summary and a
+  `Run setup again` action. Reopening setup preserves widget data and re-enters
+  the existing `wizardCompleted=false` path; completion still uses
+  `applyWizardSelection` to return to `Visual`.
+- The Playwright mode inventory was updated so completed admin fixtures verify
+  daily `visual` and `advanced` modes. Targeted Hero evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-hero-2026-05-24.*`
+  and reports `adminFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`.
+- A dedicated lifecycle smoke is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-lifecycle-2026-05-24.*`
+  and verifies hidden Wizard peer tab, visible setup summary, daily Visual,
+  Advanced diagnostics, explicit setup rerun, and return to Visual.
+
 ## Claude and Helper Agent Review Summary
 
-- Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract
-  until the one-time Wizard migration is test-backed.
+- Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
+  contract roles, but expose `Wizard` only as an initial/reopened setup flow in
+  the page-builder shell after TASK-336-16.
 - Accepted: add a soft validator before strict 38-widget enforcement so current
   widgets can migrate in dependency order.
 - Accepted: treat Advanced as read-only diagnostics for Visual-owned values

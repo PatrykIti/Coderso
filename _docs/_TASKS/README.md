@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 11 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1936 tasks
+- **Done:** 1937 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Harden the existing `WidgetBlock.editor.wizardCompleted` lifecycle only after widget owner contracts are strict |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
@@ -66,6 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Done (2026-05-24): completed widgets now show `Setup complete`, daily `Visual`/`Advanced` tabs only, and explicit `Run setup again` one-time setup reentry backed by Vitest and Playwright lifecycle smoke. |
 | TASK-336-18 | Remaining Page Builder Widget Contract Coverage | Medium | Large | Done (2026-05-24): all 18 remaining page-builder widgets now export strict v2 contracts; full frontend smoke is green, and remaining admin UI/fixture/metadata drift is routed to TASK-336-19. |
 | TASK-336-15 | Renderer Fixture Overflow and Team UX Contract | Medium | Large | Done (2026-05-24): frontend fixture data is meaningful across 38 widgets, approved overflow regions are allowlisted with visible affordances, Team spotlight rail collapse is fixed, and full frontend Playwright smoke has zero failures or fixture gaps. |
 | TASK-336-14 | Layout Widget Advanced Technical Token Policy | Medium | Large | Done (2026-05-24): section, grid-columns, split-layout, stack, spacer, and divider now have strict v2 contracts, setup-only Wizard ownership, Visual preset/swatch controls, read-only Advanced diagnostics, and targeted Vitest plus Playwright smoke coverage. |
