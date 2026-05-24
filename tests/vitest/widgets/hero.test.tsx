@@ -6,10 +6,12 @@ import { renderToString } from "react-dom/server";
 import {
   createHeroWidget,
   heroDefaults,
+  heroEditorContract,
   HeroBlock,
   normalizeHeroData,
   type HeroData,
 } from "../../../core/widgets/core/hero";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
@@ -97,6 +99,44 @@ test("hero validator accepts extended schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("hero exposes a strict v2 editor ownership contract", () => {
+  const widget = createHeroWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract).toBe(heroEditorContract);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "hero.wizard.goal-structure",
+    "hero.wizard.starter-copy",
+    "hero.wizard.primary-action",
+    "hero.variant-presets",
+    "hero.badge-headline",
+    "hero.cta",
+    "hero.rich-copy-social-proof",
+    "hero.media",
+    "hero.layout-spacing",
+    "hero.typography",
+    "hero.appearance",
+    "hero.colors-borders",
+    "hero.background",
+    "hero.advanced.layout-summary",
+    "hero.advanced.style-summary",
+    "hero.advanced.media-diagnostics",
+    "hero.advanced.accessibility-diagnostics",
+    "hero.advanced.runtime-payload",
+    "hero.advanced.contract-summary",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .every((section) => section.writablePaths.length === 0)
+  ).toBe(true);
 });
 
 test("hero renders slot content blocks", () => {

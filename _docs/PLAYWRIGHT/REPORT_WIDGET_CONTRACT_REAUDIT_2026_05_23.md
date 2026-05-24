@@ -174,6 +174,27 @@ Targeted smoke evidence:
 - `form-embed`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
   `publicFailures=0` (`.tmp/widget-smoke-form-embed.json`).
 
+## 2026-05-24 TASK-336-11 Ownership Update
+
+`hero` now has an explicit v2 editor contract and no longer treats Advanced as
+the second design panel:
+
+- Wizard owns only one-time setup seeds: goal action, initial layout, headline,
+  and primary CTA.
+- Visual owns public copy, badges, CTA, media, layout, spacing, responsive
+  media visibility, typography, appearance, colors, borders, and background.
+- Advanced is read-only layout, style-token, media, and accessibility
+  diagnostics, normalized runtime payload, and contract summary.
+- The remaining Wizard/Visual duplicate seed paths are explicit temporary
+  allowances until `TASK-336-16`.
+
+Targeted smoke evidence:
+
+- `hero`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
+  `publicFailures=0`
+  (`_docs/PLAYWRIGHT/widget-contract-smoke-hero-2026-05-24.md`,
+  `.tmp/widget-smoke-hero.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

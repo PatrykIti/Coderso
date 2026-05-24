@@ -38,7 +38,11 @@ import type {
   HeroMedia,
 } from "../../../../widgets/core/hero";
 import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import {
   ColorContrastNotice,
   ClearableFieldHeader,
@@ -47,7 +51,12 @@ import {
   resolveColorPickerValue,
   SharedColorFieldInputs,
 } from "./ClearableFields";
-import { WidgetControlRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow as BaseWidgetControlRow,
+  WidgetEditorSection,
+  type WidgetControlRowProps,
+} from "./WidgetEditorControls";
 
 type HeroVariantId = "centered" | "split" | "media-left" | "media-center";
 
@@ -91,28 +100,19 @@ const goalOptions = [
 
 const goalPresets: Record<
   (typeof goalOptions)[number]["id"],
-  Pick<HeroData, "headline" | "subhead" | "body" | "primaryCta" | "secondaryCta">
+  Pick<HeroData, "headline" | "primaryCta">
 > = {
   lead: {
     headline: "Grow your audience faster",
-    subhead: "Capture more signups with a clear message and CTA.",
-    body: "Use a short statement to describe the primary benefit.",
     primaryCta: { label: "Join the list", href: "/signup" },
-    secondaryCta: { label: "See examples", href: "/examples" },
   },
   sales: {
     headline: "Convert more visitors",
-    subhead: "Lead with the outcome and reduce friction.",
-    body: "Highlight the value in one or two lines of supporting copy.",
     primaryCta: { label: "Book a demo", href: "/demo" },
-    secondaryCta: { label: "Pricing", href: "/pricing" },
   },
   info: {
     headline: "Everything you need to know",
-    subhead: "A concise overview of your offer or product.",
-    body: "Use the body to explain the most important details.",
     primaryCta: { label: "Learn more", href: "/about" },
-    secondaryCta: { label: "Contact", href: "/contact" },
   },
 };
 
@@ -266,6 +266,94 @@ const isCompatibleExternalMediaUrl = (value: string | undefined, mediaType: Hero
   return false;
 };
 
+const heroControlPathById: Record<string, string> = {
+  "hero.variant": "variant",
+  "hero.badge.enabled": "badge.enabled",
+  "hero.badge.label": "badge.label",
+  "hero.badge.prefix": "badge.prefix",
+  "hero.badge.href": "badge.href",
+  "hero.badge.tone": "badge.tone",
+  "hero.badge.placement": "badge.placement",
+  "hero.headline": "headline",
+  "hero.subhead": "subhead",
+  "hero.body": "body",
+  "hero.cta.layout": "secondaryCta",
+  "hero.primaryCta.label": "primaryCta.label",
+  "hero.primaryCta.href": "primaryCta.href",
+  "hero.style.primaryButtonSize": "style.primaryButtonSize",
+  "hero.secondaryCta.label": "secondaryCta.label",
+  "hero.secondaryCta.href": "secondaryCta.href",
+  "hero.style.secondaryButtonSize": "style.secondaryButtonSize",
+  "hero.richHeadline": "richHeadline",
+  "hero.richBody": "richBody",
+  "hero.socialProof.enabled": "socialProof.enabled",
+  "hero.socialProof.rating": "socialProof.rating",
+  "hero.socialProof.reviewCount": "socialProof.reviewCount",
+  "hero.socialProof.label": "socialProof.label",
+  "hero.media.type": "media.type",
+  "hero.media.source": "media.source",
+  "hero.media.assetId": "media.assetId",
+  "hero.media.src": "media.src",
+  "hero.media.alt": "media.alt",
+  "hero.media.title": "media.title",
+  "hero.media.description": "media.description",
+  "hero.media.posterSource": "media.posterSource",
+  "hero.media.posterAssetId": "media.posterAssetId",
+  "hero.media.posterSrc": "media.posterSrc",
+  "hero.media.ratio": "media.ratio",
+  "hero.media.overlay": "media.overlay",
+  "hero.layout.align": "layout.align",
+  "hero.layout.maxWidth": "layout.maxWidth",
+  "hero.layout.contentWidth": "layout.contentWidth",
+  "hero.layout.height": "layout.height",
+  "hero.layout.bleed": "layout.bleed",
+  "hero.spacing.paddingTop": "spacing.paddingTop",
+  "hero.spacing.paddingBottom": "spacing.paddingBottom",
+  "hero.style.headlineSize": "style.headlineSize",
+  "hero.style.subheadSize": "style.subheadSize",
+  "hero.style.bodySize": "style.bodySize",
+  "hero.style.cardShadow": "style.cardShadow",
+  "hero.style.mediaShadow": "style.mediaShadow",
+  "hero.style.buttonShadow": "style.buttonShadow",
+  "hero.style.fontFamily": "style.fontFamily",
+  "hero.style.headlineWeight": "style.headlineWeight",
+  "hero.style.bodyWeight": "style.bodyWeight",
+  "hero.style.motion": "style.motion",
+  "hero.style.textColor": "style.textColor",
+  "hero.style.subheadColor": "style.subheadColor",
+  "hero.style.bodyColor": "style.bodyColor",
+  "hero.style.borderColor": "style.borderColor",
+  "hero.style.primaryButtonBg": "style.primaryButtonBg",
+  "hero.style.primaryButtonText": "style.primaryButtonText",
+  "hero.style.primaryButtonBorder": "style.primaryButtonBorder",
+  "hero.style.secondaryButtonBg": "style.secondaryButtonBg",
+  "hero.style.secondaryButtonText": "style.secondaryButtonText",
+  "hero.style.secondaryButtonBorder": "style.secondaryButtonBorder",
+  "hero.style.mediaBorderColor": "style.mediaBorderColor",
+  "hero.style.borderWidth": "style.borderWidth",
+  "hero.style.borderRadius": "style.borderRadius",
+  "hero.style.mediaBorderWidth": "style.mediaBorderWidth",
+  "hero.style.mediaRadius": "style.mediaRadius",
+  "hero.background.color": "background.color",
+  "hero.background.gradient": "background.gradient",
+  "hero.background.media.type": "background.media.type",
+  "hero.background.media.source": "background.media.source",
+  "hero.background.media.assetId": "background.media.assetId",
+  "hero.background.media.src": "background.media.src",
+  "hero.background.media.title": "background.media.title",
+  "hero.background.media.description": "background.media.description",
+  "hero.background.media.posterSource": "background.media.posterSource",
+  "hero.background.media.posterAssetId": "background.media.posterAssetId",
+  "hero.background.media.posterSrc": "background.media.posterSrc",
+  "hero.background.media.overlay": "background.media.overlay",
+  "hero.responsive.hideMediaOnMobile": "responsive.hideMediaOnMobile",
+};
+
+function WidgetControlRow(props: WidgetControlRowProps) {
+  const path = props.path ?? heroControlPathById[props.id];
+  return <BaseWidgetControlRow {...props} path={path} />;
+}
+
 const resolveMediaTypeTransition = (
   current: HeroMediaEditorValue,
   nextType: HeroMediaType
@@ -301,10 +389,14 @@ function HeroMediaSourceFields({
   media,
   mediaType,
   onChange,
+  controlIdPrefix = "hero.media",
+  pathPrefix = "media",
 }: {
   media: HeroMediaEditorValue;
   mediaType: HeroMediaType;
   onChange: (patch: HeroMediaEditorValue) => void;
+  controlIdPrefix?: string;
+  pathPrefix?: string;
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -370,46 +462,73 @@ function HeroMediaSourceFields({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Media source</p>
-        <Select
-          value={source}
-          onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {mediaSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow
+        id={`${controlIdPrefix}.source`}
+        label="Media source"
+        path={`${pathPrefix}.source`}
+      >
+        {(fieldProps) => (
+          <Select
+            value={source}
+            onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
+          >
+            <SelectTrigger
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            >
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent>
+              {mediaSourceOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {source === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={media.assetId ?? null}
-            onChange={(value) => void handleAssetChange(value)}
-            multiple={false}
-            accept={accept}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-        </div>
+        <WidgetControlRow
+          id={`${controlIdPrefix}.assetId`}
+          label="Media asset"
+          path={`${pathPrefix}.assetId`}
+        >
+          {() => (
+            <div className="space-y-2">
+              <MediaPicker
+                value={media.assetId ?? null}
+                onChange={(value) => void handleAssetChange(value)}
+                multiple={false}
+                accept={accept}
+              />
+              {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+            </div>
+          )}
+        </WidgetControlRow>
       ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Media URL</p>
-          <Input
-            value={media.src ?? ""}
-            onChange={(event) => onChange({ src: event.target.value })}
-            placeholder="https://"
-          />
-          {!isValidMediaUrl(media.src) ? (
-            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-          ) : null}
-        </div>
+        <WidgetControlRow
+          id={`${controlIdPrefix}.src`}
+          label="Media URL"
+          path={`${pathPrefix}.src`}
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <Input
+                id={fieldProps.id}
+                value={media.src ?? ""}
+                onChange={(event) => onChange({ src: event.target.value })}
+                placeholder="https://"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+              {!isValidMediaUrl(media.src) ? (
+                <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+              ) : null}
+            </div>
+          )}
+        </WidgetControlRow>
       )}
     </div>
   );
@@ -419,10 +538,14 @@ function HeroPosterFields({
   media,
   onChange,
   onClear,
+  controlIdPrefix = "hero.media",
+  pathPrefix = "media",
 }: {
   media: HeroMediaEditorValue;
   onChange: (patch: HeroMediaEditorValue) => void;
   onClear: () => void;
+  controlIdPrefix?: string;
+  pathPrefix?: string;
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
@@ -486,46 +609,73 @@ function HeroPosterFields({
           })
         }
       />
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Poster source</p>
-        <Select
-          value={posterSource}
-          onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {mediaSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow
+        id={`${controlIdPrefix}.posterSource`}
+        label="Poster source"
+        path={`${pathPrefix}.posterSource`}
+      >
+        {(fieldProps) => (
+          <Select
+            value={posterSource}
+            onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
+          >
+            <SelectTrigger
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            >
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent>
+              {mediaSourceOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {posterSource === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={media.posterAssetId ?? null}
-            onChange={(value) => void handlePosterAssetChange(value)}
-            multiple={false}
-            accept={["image/*"]}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-        </div>
+        <WidgetControlRow
+          id={`${controlIdPrefix}.posterAssetId`}
+          label="Poster asset"
+          path={`${pathPrefix}.posterAssetId`}
+        >
+          {() => (
+            <div className="space-y-2">
+              <MediaPicker
+                value={media.posterAssetId ?? null}
+                onChange={(value) => void handlePosterAssetChange(value)}
+                multiple={false}
+                accept={["image/*"]}
+              />
+              {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+            </div>
+          )}
+        </WidgetControlRow>
       ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Poster image URL</p>
-          <Input
-            value={media.posterSrc ?? ""}
-            onChange={(event) => onChange({ posterSrc: event.target.value })}
-            placeholder="https://"
-          />
-          {!isValidMediaUrl(media.posterSrc) ? (
-            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-          ) : null}
-        </div>
+        <WidgetControlRow
+          id={`${controlIdPrefix}.posterSrc`}
+          label="Poster image URL"
+          path={`${pathPrefix}.posterSrc`}
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <Input
+                id={fieldProps.id}
+                value={media.posterSrc ?? ""}
+                onChange={(event) => onChange({ posterSrc: event.target.value })}
+                placeholder="https://"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+              {!isValidMediaUrl(media.posterSrc) ? (
+                <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+              ) : null}
+            </div>
+          )}
+        </WidgetControlRow>
       )}
     </div>
   );
@@ -534,15 +684,24 @@ function HeroPosterFields({
 function HeroVariantSelect({
   value,
   onChange,
+  fieldProps,
 }: {
   value: string;
   onChange?: (next: string) => void;
+  fieldProps?: {
+    id: string;
+    "aria-labelledby": string;
+    "aria-describedby"?: string;
+  };
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Hero layout</p>
       <Select value={value} onValueChange={(next) => onChange?.(next)}>
-        <SelectTrigger>
+        <SelectTrigger
+          id={fieldProps?.id}
+          aria-labelledby={fieldProps?.["aria-labelledby"]}
+          aria-describedby={fieldProps?.["aria-describedby"]}
+        >
           <SelectValue placeholder="Choose layout" />
         </SelectTrigger>
         <SelectContent>
@@ -566,179 +725,107 @@ export function HeroWizardEditor({
   const [goal, setGoal] = useState<(typeof goalOptions)[number]["id"]>("lead");
   const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
   const primary = value.primaryCta ?? { label: "", href: "" };
-  const secondary = value.secondaryCta ?? { label: "", href: "" };
-  const media = {
-    type: value.media?.type ?? "none",
-    source: value.media?.source ?? "external",
-    ...value.media,
-  };
-  const mediaType: HeroMediaType = media.type ?? "none";
-  const ctaMode: CtaMode = value.secondaryCta ? "dual" : "single";
-  const updateMedia = (patch: Partial<HeroData["media"]>) =>
-    update({
-      media: {
-        type: value.media?.type ?? "none",
-        source: value.media?.source ?? "external",
-        ...value.media,
-        ...patch,
-      },
-    });
-  const handleMediaTypeChange = (nextType: HeroMediaType) =>
-    update({
-      media: resolveMediaTypeTransition(
-        {
-          type: value.media?.type ?? "none",
-          source: value.media?.source ?? "external",
-          posterSource: value.media?.posterSource ?? "library",
-          ...value.media,
-        },
-        nextType
-      ) as HeroData["media"],
-    });
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Goal</p>
-        <Select
-          value={goal}
-          onValueChange={(next) => {
-            const selected = next as (typeof goalOptions)[number]["id"];
-            setGoal(selected);
-            update(goalPresets[selected]);
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose goal" />
-          </SelectTrigger>
-          <SelectContent>
-            {goalOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <HeroVariantSelect value={variant} onChange={onVariantChange} />
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Headline</p>
-        <Input
-          value={value.headline}
-          onChange={(event) => update({ headline: event.target.value })}
-          placeholder="Build with confidence"
-        />
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Subhead</p>
-        <Textarea
-          value={value.subhead ?? ""}
-          onChange={(event) => update({ subhead: event.target.value })}
-          placeholder="Short supporting message"
-        />
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">CTA layout</p>
-        <Select
-          value={ctaMode}
-          onValueChange={(next) => {
-            if (next === "single") {
-              update({ secondaryCta: undefined });
-            } else {
-              update({ secondaryCta: secondary });
-            }
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="CTA layout" />
-          </SelectTrigger>
-          <SelectContent>
-            {ctaOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Primary CTA Label</p>
-          <Input
-            value={primary.label}
-            onChange={(event) => update({ primaryCta: { ...primary, label: event.target.value } })}
-            placeholder="Get started"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Primary CTA URL</p>
-          <Input
-            value={primary.href}
-            onChange={(event) => update({ primaryCta: { ...primary, href: event.target.value } })}
-            placeholder={heroCtaPlaceholderExamples.primary}
-          />
-        </div>
-        {ctaMode === "dual" ? (
-          <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Secondary CTA Label</p>
+      <EditorSection
+        id="hero.wizard.goal-structure"
+        mode="wizard"
+        role="setup"
+        title="Goal and structure"
+        description="Seed a usable Hero. Daily presentation changes live in Visual."
+      >
+        <WidgetControlRow id="hero.goal" label="Goal" ownership="action">
+          {(fieldProps) => (
+            <Select
+              value={goal}
+              onValueChange={(next) => {
+                const selected = next as (typeof goalOptions)[number]["id"];
+                setGoal(selected);
+                update(goalPresets[selected]);
+              }}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose goal" />
+              </SelectTrigger>
+              <SelectContent>
+                {goalOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="hero.variant" label="Initial Hero layout" path="variant">
+          {(fieldProps) => (
+            <HeroVariantSelect value={variant} onChange={onVariantChange} fieldProps={fieldProps} />
+          )}
+        </WidgetControlRow>
+      </EditorSection>
+      <EditorSection
+        id="hero.wizard.starter-copy"
+        mode="wizard"
+        role="setup"
+        title="Starter copy"
+        description="Seed the headline only. Subheads, body, badges, and rich copy are Visual edits."
+      >
+        <WidgetControlRow id="hero.headline" label="Headline seed" path="headline">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={value.headline}
+              onChange={(event) => update({ headline: event.target.value })}
+              placeholder="Build with confidence"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+      </EditorSection>
+      <EditorSection
+        id="hero.wizard.primary-action"
+        mode="wizard"
+        role="setup"
+        title="Primary action seed"
+        description="Seed the first CTA. Secondary CTAs and button design are Visual edits."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <WidgetControlRow id="hero.primaryCta.label" label="Primary CTA label">
+            {(fieldProps) => (
               <Input
-                value={secondary.label}
+                id={fieldProps.id}
+                value={primary.label}
                 onChange={(event) =>
-                  update({
-                    secondaryCta: { ...secondary, label: event.target.value },
-                  })
+                  update({ primaryCta: { ...primary, label: event.target.value } })
                 }
-                placeholder="Learn more"
+                placeholder="Get started"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
               />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Secondary CTA URL</p>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA URL">
+            {(fieldProps) => (
               <Input
-                value={secondary.href}
+                id={fieldProps.id}
+                value={primary.href}
                 onChange={(event) =>
-                  update({
-                    secondaryCta: { ...secondary, href: event.target.value },
-                  })
+                  update({ primaryCta: { ...primary, href: event.target.value } })
                 }
-                placeholder={heroCtaPlaceholderExamples.secondary}
+                placeholder={heroCtaPlaceholderExamples.primary}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
               />
-            </div>
-          </>
-        ) : null}
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Media</p>
-        <Select
-          value={mediaType}
-          onValueChange={(next) => handleMediaTypeChange(next as HeroMediaType)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select media" />
-          </SelectTrigger>
-          <SelectContent>
-            {mediaOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {mediaType !== "none" ? (
-        <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
-      ) : null}
-      {variant === "centered" && mediaType === "image" ? (
-        <p className="text-xs text-muted-foreground">
-          Centered layout renders the selected image as hero background.
-        </p>
-      ) : null}
-      {variant === "centered" && mediaType === "video" ? (
-        <p className="text-xs text-muted-foreground">
-          Centered layout does not show inline video. Use Media Right, Media Left, or Media Center
-          to display video content.
-        </p>
-      ) : null}
+            )}
+          </WidgetControlRow>
+        </div>
+      </EditorSection>
     </div>
   );
 }
@@ -1017,17 +1104,21 @@ const resolveHeroContrastSurfaceBackground = ({
 
 function EditorSection({
   id,
+  mode = "visual",
+  role = "visual",
   title,
   description,
   children,
 }: {
   id: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <WidgetEditorSection id={id} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -1257,6 +1348,8 @@ export function HeroVisualEditor({
   });
   const updateLayout = (patch: Partial<HeroData["layout"]>) =>
     update({ layout: { ...value.layout, ...patch } });
+  const updateSpacing = (patch: Partial<HeroData["spacing"]>) =>
+    update({ spacing: { ...value.spacing, ...patch } });
   const updateBackground = (patch: Partial<HeroData["background"]>) =>
     update({ background: { ...value.background, ...patch } });
   const updateStyle = (patch: Partial<HeroStyle>) =>
@@ -1549,29 +1642,42 @@ export function HeroVisualEditor({
         title="Variant and Presets"
         description="Choose hero orientation and save reusable configurations."
       >
-        <div className="space-y-2">
-          {variantOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onVariantChange?.(option.id)}
-              className={cn(
-                "w-full rounded-lg border p-3 text-left transition",
-                variant === option.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background hover:border-primary/50"
-              )}
+        <WidgetControlRow id="hero.variant" label="Hero layout">
+          {(fieldProps) => (
+            <div
+              id={fieldProps.id}
+              role="group"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+              className="space-y-2"
             >
-              <div className="flex w-full items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
-                <Badge className="shrink-0" variant={variant === option.id ? "default" : "outline"}>
-                  {variant === option.id ? "Selected" : "Pick"}
-                </Badge>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-            </button>
-          ))}
-        </div>
+              {variantOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onVariantChange?.(option.id)}
+                  className={cn(
+                    "w-full rounded-lg border p-3 text-left transition",
+                    variant === option.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:border-primary/50"
+                  )}
+                >
+                  <div className="flex w-full items-start justify-between gap-2">
+                    <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+                    <Badge
+                      className="shrink-0"
+                      variant={variant === option.id ? "default" : "outline"}
+                    >
+                      {variant === option.id ? "Selected" : "Pick"}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </WidgetControlRow>
         <div className="grid gap-2 md:grid-cols-3">
           <Button
             type="button"
@@ -1834,109 +1940,144 @@ export function HeroVisualEditor({
         title="CTA"
         description="Manage CTA structure and button appearance."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">CTA layout</p>
-          <Select
-            value={ctaMode}
-            onValueChange={(next) => {
-              if (next === "single") {
-                update({ secondaryCta: undefined });
-              } else {
-                update({ secondaryCta: secondary });
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="CTA layout" />
-            </SelectTrigger>
-            <SelectContent>
-              {ctaOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Primary CTA Label</p>
-            <Input
-              value={primary.label}
-              onChange={(event) => updatePrimary({ label: event.target.value })}
-              placeholder="Get started"
-            />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Primary CTA URL</p>
-            <Input
-              value={primary.href}
-              onChange={(event) => updatePrimary({ href: event.target.value })}
-              placeholder={heroCtaPlaceholderExamples.primary}
-            />
-            {!isValidHref(primary.href) ? (
-              <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Primary button size</p>
+        <WidgetControlRow id="hero.cta.layout" label="CTA layout">
+          {(fieldProps) => (
             <Select
-              value={style.primaryButtonSize ?? "md"}
-              onValueChange={(next) => updateStyle({ primaryButtonSize: next as HeroButtonSize })}
+              value={ctaMode}
+              onValueChange={(next) => {
+                if (next === "single") {
+                  update({ secondaryCta: undefined });
+                } else {
+                  update({ secondaryCta: secondary });
+                }
+              }}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="CTA layout" />
               </SelectTrigger>
               <SelectContent>
-                {buttonSizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                {ctaOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          {ctaMode === "dual" ? (
-            <>
+          )}
+        </WidgetControlRow>
+        <div className="grid gap-3 md:grid-cols-2">
+          <WidgetControlRow id="hero.primaryCta.label" label="Primary CTA Label">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                value={primary.label}
+                onChange={(event) => updatePrimary({ label: event.target.value })}
+                placeholder="Get started"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA URL">
+            {(fieldProps) => (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Secondary CTA Label</p>
                 <Input
-                  value={secondary.label}
-                  onChange={(event) => updateSecondary({ label: event.target.value })}
-                  placeholder="Learn more"
+                  id={fieldProps.id}
+                  value={primary.href}
+                  onChange={(event) => updatePrimary({ href: event.target.value })}
+                  placeholder={heroCtaPlaceholderExamples.primary}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
                 />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Secondary CTA URL</p>
-                <Input
-                  value={secondary.href}
-                  onChange={(event) => updateSecondary({ href: event.target.value })}
-                  placeholder={heroCtaPlaceholderExamples.secondary}
-                />
-                {!isValidHref(secondary.href) ? (
+                {!isValidHref(primary.href) ? (
                   <p className="text-xs text-destructive">Use a relative path or full URL.</p>
                 ) : null}
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Secondary button size</p>
-                <Select
-                  value={style.secondaryButtonSize ?? "md"}
-                  onValueChange={(next) =>
-                    updateStyle({ secondaryButtonSize: next as HeroButtonSize })
-                  }
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.primaryButtonSize" label="Primary button size">
+            {(fieldProps) => (
+              <Select
+                value={style.primaryButtonSize ?? "md"}
+                onValueChange={(next) => updateStyle({ primaryButtonSize: next as HeroButtonSize })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {buttonSizeOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {formatTokenOptionLabel(option)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buttonSizeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          {ctaMode === "dual" ? (
+            <>
+              <WidgetControlRow id="hero.secondaryCta.label" label="Secondary CTA Label">
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    value={secondary.label}
+                    onChange={(event) => updateSecondary({ label: event.target.value })}
+                    placeholder="Learn more"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow id="hero.secondaryCta.href" label="Secondary CTA URL">
+                {(fieldProps) => (
+                  <div className="space-y-2">
+                    <Input
+                      id={fieldProps.id}
+                      value={secondary.href}
+                      onChange={(event) => updateSecondary({ href: event.target.value })}
+                      placeholder={heroCtaPlaceholderExamples.secondary}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                    {!isValidHref(secondary.href) ? (
+                      <p className="text-xs text-destructive">Use a relative path or full URL.</p>
+                    ) : null}
+                  </div>
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow id="hero.style.secondaryButtonSize" label="Secondary button size">
+                {(fieldProps) => (
+                  <Select
+                    value={style.secondaryButtonSize ?? "md"}
+                    onValueChange={(next) =>
+                      updateStyle({ secondaryButtonSize: next as HeroButtonSize })
+                    }
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {buttonSizeOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {formatTokenOptionLabel(option)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
             </>
           ) : null}
         </div>
@@ -2035,29 +2176,49 @@ export function HeroVisualEditor({
                 const avatar = socialProof.avatars[index] ?? { src: "", alt: "" };
                 return (
                   <div key={`hero-avatar-${index}`} className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Avatar {index + 1} URL</p>
-                      <Input
-                        value={avatar.src}
-                        onChange={(event) =>
-                          updateSocialProofAvatar(index, { src: event.target.value })
-                        }
-                        placeholder={`https://cdn.example.com/avatar-${index + 1}.jpg`}
-                      />
-                      {!isValidMediaUrl(avatar.src) ? (
-                        <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-                      ) : null}
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Avatar {index + 1} alt text</p>
-                      <Input
-                        value={avatar.alt ?? ""}
-                        onChange={(event) =>
-                          updateSocialProofAvatar(index, { alt: event.target.value })
-                        }
-                        placeholder="Reviewer avatar"
-                      />
-                    </div>
+                    <WidgetControlRow
+                      id={`hero.socialProof.avatars.${index}.src`}
+                      label={`Avatar ${index + 1} URL`}
+                      path={`socialProof.avatars.${index}.src`}
+                    >
+                      {(fieldProps) => (
+                        <div className="space-y-2">
+                          <Input
+                            id={fieldProps.id}
+                            value={avatar.src}
+                            onChange={(event) =>
+                              updateSocialProofAvatar(index, { src: event.target.value })
+                            }
+                            placeholder={`https://cdn.example.com/avatar-${index + 1}.jpg`}
+                            aria-labelledby={fieldProps["aria-labelledby"]}
+                            aria-describedby={fieldProps["aria-describedby"]}
+                          />
+                          {!isValidMediaUrl(avatar.src) ? (
+                            <p className="text-xs text-destructive">
+                              Use a relative path or full URL.
+                            </p>
+                          ) : null}
+                        </div>
+                      )}
+                    </WidgetControlRow>
+                    <WidgetControlRow
+                      id={`hero.socialProof.avatars.${index}.alt`}
+                      label={`Avatar ${index + 1} alt text`}
+                      path={`socialProof.avatars.${index}.alt`}
+                    >
+                      {(fieldProps) => (
+                        <Input
+                          id={fieldProps.id}
+                          value={avatar.alt ?? ""}
+                          onChange={(event) =>
+                            updateSocialProofAvatar(index, { alt: event.target.value })
+                          }
+                          placeholder="Reviewer avatar"
+                          aria-labelledby={fieldProps["aria-labelledby"]}
+                          aria-describedby={fieldProps["aria-describedby"]}
+                        />
+                      )}
+                    </WidgetControlRow>
                   </div>
                 );
               })}
@@ -2075,55 +2236,72 @@ export function HeroVisualEditor({
             : "Inline media is visible in split, media-left, and media-center variants."
         }
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Media type</p>
-          <Select
-            value={mediaType}
-            onValueChange={(next) => handleMediaTypeChange(next as HeroMediaType)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select media" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="hero.media.type" label="Media type">
+          {(fieldProps) => (
+            <Select
+              value={mediaType}
+              onValueChange={(next) => handleMediaTypeChange(next as HeroMediaType)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select media" />
+              </SelectTrigger>
+              <SelectContent>
+                {mediaOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
         {mediaType !== "none" ? (
           <>
             <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
             {mediaType === "image" ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Media alt text</p>
-                <Input
-                  value={media.alt ?? ""}
-                  onChange={(event) => updateMedia({ alt: event.target.value })}
-                  placeholder="Describe the media"
-                />
-              </div>
+              <WidgetControlRow id="hero.media.alt" label="Media alt text">
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    value={media.alt ?? ""}
+                    onChange={(event) => updateMedia({ alt: event.target.value })}
+                    placeholder="Describe the media"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
             ) : null}
             {mediaType === "video" ? (
               <>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Video title</p>
-                  <Input
-                    value={media.title ?? ""}
-                    onChange={(event) => updateMedia({ title: event.target.value })}
-                    placeholder="Product demo video"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Video description</p>
-                  <Textarea
-                    value={media.description ?? ""}
-                    onChange={(event) => updateMedia({ description: event.target.value })}
-                    placeholder="Optional context for screen readers"
-                  />
-                </div>
+                <WidgetControlRow id="hero.media.title" label="Video title">
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={media.title ?? ""}
+                      onChange={(event) => updateMedia({ title: event.target.value })}
+                      placeholder="Product demo video"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow id="hero.media.description" label="Video description">
+                  {(fieldProps) => (
+                    <Textarea
+                      id={fieldProps.id}
+                      value={media.description ?? ""}
+                      onChange={(event) => updateMedia({ description: event.target.value })}
+                      placeholder="Optional context for screen readers"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
                 <HeroPosterFields
                   media={media}
                   onChange={updateMedia}
@@ -2138,39 +2316,57 @@ export function HeroVisualEditor({
               </>
             ) : null}
             {selectedVariant !== "centered" ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Media ratio</p>
-                <Select
-                  value={media.ratio ?? "16:9"}
-                  onValueChange={(next) => updateMedia({ ratio: next })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select ratio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ratioOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {formatTokenOptionLabel(option)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <WidgetControlRow id="hero.media.ratio" label="Media ratio">
+                {(fieldProps) => (
+                  <Select
+                    value={media.ratio ?? "16:9"}
+                    onValueChange={(next) => updateMedia({ ratio: next })}
+                  >
+                    <SelectTrigger
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    >
+                      <SelectValue placeholder="Select ratio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ratioOptions.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {formatTokenOptionLabel(option)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </WidgetControlRow>
             ) : null}
             {selectedVariant !== "centered" || mediaType === "image" ? (
-              <div className="space-y-2">
-                <ClearableFieldHeader
-                  label="Media overlay"
-                  value={media.overlay}
-                  onClear={() => clearMediaField("overlay")}
-                  onRestoreValue={(next) => updateMedia({ overlay: next })}
-                />
-                <Input
-                  value={media.overlay ?? ""}
-                  onChange={(event) => updateMedia({ overlay: event.target.value })}
-                  placeholder="rgba(0,0,0,0.2)"
-                />
-              </div>
+              <WidgetControlRow
+                id="hero.media.overlay"
+                label="Media overlay"
+                actions={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => clearMediaField("overlay")}
+                    disabled={!hasClearableFieldValue(media.overlay)}
+                  >
+                    Clear
+                  </Button>
+                }
+              >
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    value={media.overlay ?? ""}
+                    onChange={(event) => updateMedia({ overlay: event.target.value })}
+                    placeholder="rgba(0,0,0,0.2)"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
             ) : null}
           </>
         ) : null}
@@ -2188,83 +2384,269 @@ export function HeroVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="hero.layout-spacing"
+        title="Layout and spacing"
+        description="Control Hero card alignment, width, height, bleed, spacing, and mobile media behavior."
+        role="layout"
+      >
+        <WidgetControlRow id="hero.layout.align" label="Alignment">
+          {(fieldProps) => (
+            <Select
+              value={value.layout?.align ?? "center"}
+              onValueChange={(next) => updateLayout({ align: next as HeroAlign })}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <div className="grid gap-3 md:grid-cols-2">
+          <WidgetControlRow id="hero.layout.maxWidth" label="Max width">
+            {(fieldProps) => (
+              <Select
+                value={value.layout?.maxWidth ?? "xl"}
+                onValueChange={(next) => updateLayout({ maxWidth: next as HeroMaxWidth })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maxWidthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.layout.contentWidth" label="Content width">
+            {(fieldProps) => (
+              <Select
+                value={value.layout?.contentWidth ?? "lg"}
+                onValueChange={(next) => updateLayout({ contentWidth: next as HeroContentWidth })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contentWidthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.layout.height" label="Height">
+            {(fieldProps) => (
+              <Select
+                value={value.layout?.height ?? "auto"}
+                onValueChange={(next) => updateLayout({ height: next as HeroHeight })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select height" />
+                </SelectTrigger>
+                <SelectContent>
+                  {heightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.layout.bleed" label="Bleed">
+            {(fieldProps) => (
+              <Select
+                value={value.layout?.bleed ?? "contained"}
+                onValueChange={(next) => updateLayout({ bleed: next as HeroBleed })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select bleed" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bleedOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "full-bleed" ? "Full bleed" : "Contained"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.spacing.paddingTop" label="Hero content padding top">
+            {(fieldProps) => (
+              <Select
+                value={value.spacing?.paddingTop ?? "xl"}
+                onValueChange={(next) => updateSpacing({ paddingTop: next as HeroSpacing })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.spacing.paddingBottom" label="Hero content padding bottom">
+            {(fieldProps) => (
+              <Select
+                value={value.spacing?.paddingBottom ?? "xl"}
+                onValueChange={(next) => updateSpacing({ paddingBottom: next as HeroSpacing })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        </div>
+        <WidgetControlRow
+          id="hero.responsive.hideMediaOnMobile"
+          label="Hide media on mobile"
+          help="Keeps mobile Hero output focused on copy and CTA."
+        >
+          {(fieldProps) => (
+            <Switch
+              checked={value.responsive?.hideMediaOnMobile ?? false}
+              onCheckedChange={(checked) =>
+                update({
+                  responsive: { ...value.responsive, hideMediaOnMobile: checked },
+                })
+              }
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+      </EditorSection>
+
+      <EditorSection
         id="hero.typography"
         title="Typography"
-        description="Adjust alignment and text scale."
+        description="Adjust text scale and weight."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment</p>
-          <Select
-            value={value.layout?.align ?? "center"}
-            onValueChange={(next) => updateLayout({ align: next as HeroAlign })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {formatTokenOptionLabel(option)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Headline size</p>
-            <Select
-              value={style.headlineSize ?? "3xl"}
-              onValueChange={(next) => updateStyle({ headlineSize: next as HeroHeadlineSize })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                {headlineSizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Subhead size</p>
-            <Select
-              value={style.subheadSize ?? "xl"}
-              onValueChange={(next) => updateStyle({ subheadSize: next as HeroSubheadSize })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                {subheadSizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Body size</p>
-            <Select
-              value={style.bodySize ?? "base"}
-              onValueChange={(next) => updateStyle({ bodySize: next as HeroBodySize })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                {bodySizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="hero.style.headlineSize" label="Headline size">
+            {(fieldProps) => (
+              <Select
+                value={style.headlineSize ?? "3xl"}
+                onValueChange={(next) => updateStyle({ headlineSize: next as HeroHeadlineSize })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {headlineSizeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.subheadSize" label="Subhead size">
+            {(fieldProps) => (
+              <Select
+                value={style.subheadSize ?? "xl"}
+                onValueChange={(next) => updateStyle({ subheadSize: next as HeroSubheadSize })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subheadSizeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.bodySize" label="Body size">
+            {(fieldProps) => (
+              <Select
+                value={style.bodySize ?? "base"}
+                onValueChange={(next) => updateStyle({ bodySize: next as HeroBodySize })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bodySizeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
 
@@ -2274,32 +2656,17 @@ export function HeroVisualEditor({
         description="Add bounded shadow, font, and motion presets without custom CSS."
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card shadow</p>
-            <Select
-              value={style.cardShadow ?? "none"}
-              onValueChange={(next) => updateStyle({ cardShadow: next as HeroShadow })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select shadow" />
-              </SelectTrigger>
-              <SelectContent>
-                {shadowOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedVariant !== "centered" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media shadow</p>
+          <WidgetControlRow id="hero.style.cardShadow" label="Card shadow">
+            {(fieldProps) => (
               <Select
-                value={style.mediaShadow ?? "none"}
-                onValueChange={(next) => updateStyle({ mediaShadow: next as HeroShadow })}
+                value={style.cardShadow ?? "none"}
+                onValueChange={(next) => updateStyle({ cardShadow: next as HeroShadow })}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Select shadow" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2310,98 +2677,152 @@ export function HeroVisualEditor({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </WidgetControlRow>
+          {selectedVariant !== "centered" ? (
+            <WidgetControlRow id="hero.style.mediaShadow" label="Media shadow">
+              {(fieldProps) => (
+                <Select
+                  value={style.mediaShadow ?? "none"}
+                  onValueChange={(next) => updateStyle({ mediaShadow: next as HeroShadow })}
+                >
+                  <SelectTrigger
+                    id={fieldProps.id}
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  >
+                    <SelectValue placeholder="Select shadow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {shadowOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {formatTokenOptionLabel(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
           ) : null}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Button shadow</p>
-            <Select
-              value={style.buttonShadow ?? "none"}
-              onValueChange={(next) => updateStyle({ buttonShadow: next as HeroShadow })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select shadow" />
-              </SelectTrigger>
-              <SelectContent>
-                {shadowOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Font family</p>
-            <Select
-              value={style.fontFamily ?? "inherit"}
-              onValueChange={(next) => updateStyle({ fontFamily: next as HeroFont })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select font family" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontFamilyOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "inherit" ? "Inherit" : option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Headline weight</p>
-            <Select
-              value={style.headlineWeight ?? "semibold"}
-              onValueChange={(next) => updateStyle({ headlineWeight: next as HeroWeight })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select weight" />
-              </SelectTrigger>
-              <SelectContent>
-                {textWeightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Body weight</p>
-            <Select
-              value={style.bodyWeight ?? "normal"}
-              onValueChange={(next) => updateStyle({ bodyWeight: next as HeroWeight })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select weight" />
-              </SelectTrigger>
-              <SelectContent>
-                {textWeightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Entrance motion</p>
-            <Select
-              value={style.motion ?? "none"}
-              onValueChange={(next) => updateStyle({ motion: next as HeroMotion })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select motion" />
-              </SelectTrigger>
-              <SelectContent>
-                {motionOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "fade-in" ? "Fade in" : option === "slide-up" ? "Slide up" : "None"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="hero.style.buttonShadow" label="Button shadow">
+            {(fieldProps) => (
+              <Select
+                value={style.buttonShadow ?? "none"}
+                onValueChange={(next) => updateStyle({ buttonShadow: next as HeroShadow })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select shadow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shadowOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.fontFamily" label="Font family">
+            {(fieldProps) => (
+              <Select
+                value={style.fontFamily ?? "inherit"}
+                onValueChange={(next) => updateStyle({ fontFamily: next as HeroFont })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select font family" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontFamilyOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "inherit" ? "Inherit" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.headlineWeight" label="Headline weight">
+            {(fieldProps) => (
+              <Select
+                value={style.headlineWeight ?? "semibold"}
+                onValueChange={(next) => updateStyle({ headlineWeight: next as HeroWeight })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select weight" />
+                </SelectTrigger>
+                <SelectContent>
+                  {textWeightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.bodyWeight" label="Body weight">
+            {(fieldProps) => (
+              <Select
+                value={style.bodyWeight ?? "normal"}
+                onValueChange={(next) => updateStyle({ bodyWeight: next as HeroWeight })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select weight" />
+                </SelectTrigger>
+                <SelectContent>
+                  {textWeightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.motion" label="Entrance motion">
+            {(fieldProps) => (
+              <Select
+                value={style.motion ?? "none"}
+                onValueChange={(next) => updateStyle({ motion: next as HeroMotion })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select motion" />
+                </SelectTrigger>
+                <SelectContent>
+                  {motionOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "fade-in"
+                        ? "Fade in"
+                        : option === "slide-up"
+                          ? "Slide up"
+                          : "None"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
 
@@ -2514,50 +2935,17 @@ export function HeroVisualEditor({
           ) : null}
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card border width</p>
-            <Select
-              value={style.borderWidth ?? "1"}
-              onValueChange={(next) => updateStyle({ borderWidth: next as HeroBorderWidth })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card radius</p>
-            <Select
-              value={style.borderRadius ?? "3xl"}
-              onValueChange={(next) => updateStyle({ borderRadius: next as HeroRadius })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedVariant !== "centered" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media border width</p>
+          <WidgetControlRow id="hero.style.borderWidth" label="Card border width">
+            {(fieldProps) => (
               <Select
-                value={style.mediaBorderWidth ?? "1"}
-                onValueChange={(next) => updateStyle({ mediaBorderWidth: next as HeroBorderWidth })}
+                value={style.borderWidth ?? "1"}
+                onValueChange={(next) => updateStyle({ borderWidth: next as HeroBorderWidth })}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Select width" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2568,16 +2956,19 @@ export function HeroVisualEditor({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          ) : null}
-          {selectedVariant !== "centered" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media radius</p>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.borderRadius" label="Card radius">
+            {(fieldProps) => (
               <Select
-                value={style.mediaRadius ?? "2xl"}
-                onValueChange={(next) => updateStyle({ mediaRadius: next as HeroRadius })}
+                value={style.borderRadius ?? "3xl"}
+                onValueChange={(next) => updateStyle({ borderRadius: next as HeroRadius })}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Select radius" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2588,7 +2979,59 @@ export function HeroVisualEditor({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </WidgetControlRow>
+          {selectedVariant !== "centered" ? (
+            <WidgetControlRow id="hero.style.mediaBorderWidth" label="Media border width">
+              {(fieldProps) => (
+                <Select
+                  value={style.mediaBorderWidth ?? "1"}
+                  onValueChange={(next) =>
+                    updateStyle({ mediaBorderWidth: next as HeroBorderWidth })
+                  }
+                >
+                  <SelectTrigger
+                    id={fieldProps.id}
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  >
+                    <SelectValue placeholder="Select width" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {borderWidthOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {formatTokenOptionLabel(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
+          ) : null}
+          {selectedVariant !== "centered" ? (
+            <WidgetControlRow id="hero.style.mediaRadius" label="Media radius">
+              {(fieldProps) => (
+                <Select
+                  value={style.mediaRadius ?? "2xl"}
+                  onValueChange={(next) => updateStyle({ mediaRadius: next as HeroRadius })}
+                >
+                  <SelectTrigger
+                    id={fieldProps.id}
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  >
+                    <SelectValue placeholder="Select radius" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {radiusOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {formatTokenOptionLabel(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
           ) : null}
         </div>
         <div className="space-y-1 rounded-md border border-border/70 p-3">
@@ -2621,49 +3064,69 @@ export function HeroVisualEditor({
           onChange={(next) => updateBackground({ gradient: next })}
           onClear={() => clearBackgroundField("gradient")}
         />
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Background media type</p>
-          <Select
-            value={backgroundMediaType}
-            onValueChange={(next) => handleBackgroundMediaTypeChange(next as HeroMediaType)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select media type" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="hero.background.media.type" label="Background media type">
+          {(fieldProps) => (
+            <Select
+              value={backgroundMediaType}
+              onValueChange={(next) => handleBackgroundMediaTypeChange(next as HeroMediaType)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select media type" />
+              </SelectTrigger>
+              <SelectContent>
+                {mediaOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
         {backgroundMediaType !== "none" ? (
           <>
             <HeroMediaSourceFields
               media={backgroundMedia}
               mediaType={backgroundMediaType}
               onChange={updateBackgroundMedia}
+              controlIdPrefix="hero.background.media"
+              pathPrefix="background.media"
             />
             {backgroundMediaType === "video" ? (
               <>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Background video title</p>
-                  <Input
-                    value={backgroundMedia.title ?? ""}
-                    onChange={(event) => updateBackgroundMedia({ title: event.target.value })}
-                    placeholder="Ambient background video"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Background video description</p>
-                  <Textarea
-                    value={backgroundMedia.description ?? ""}
-                    onChange={(event) => updateBackgroundMedia({ description: event.target.value })}
-                    placeholder="Optional context for screen readers"
-                  />
-                </div>
+                <WidgetControlRow id="hero.background.media.title" label="Background video title">
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={backgroundMedia.title ?? ""}
+                      onChange={(event) => updateBackgroundMedia({ title: event.target.value })}
+                      placeholder="Ambient background video"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id="hero.background.media.description"
+                  label="Background video description"
+                >
+                  {(fieldProps) => (
+                    <Textarea
+                      id={fieldProps.id}
+                      value={backgroundMedia.description ?? ""}
+                      onChange={(event) =>
+                        updateBackgroundMedia({ description: event.target.value })
+                      }
+                      placeholder="Optional context for screen readers"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
                 <HeroPosterFields
                   media={backgroundMedia}
                   onChange={updateBackgroundMedia}
@@ -2674,22 +3137,37 @@ export function HeroVisualEditor({
                       posterSrc: undefined,
                     })
                   }
+                  controlIdPrefix="hero.background.media"
+                  pathPrefix="background.media"
                 />
               </>
             ) : null}
-            <div className="space-y-2">
-              <ClearableFieldHeader
-                label="Background media overlay"
-                value={backgroundMedia.overlay}
-                onClear={() => clearBackgroundMediaField("overlay")}
-                onRestoreValue={(next) => updateBackgroundMedia({ overlay: next })}
-              />
-              <Input
-                value={backgroundMedia.overlay ?? ""}
-                onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
-                placeholder="rgba(0,0,0,0.25)"
-              />
-            </div>
+            <WidgetControlRow
+              id="hero.background.media.overlay"
+              label="Background media overlay"
+              actions={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearBackgroundMediaField("overlay")}
+                  disabled={!hasClearableFieldValue(backgroundMedia.overlay)}
+                >
+                  Clear
+                </Button>
+              }
+            >
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={backgroundMedia.overlay ?? ""}
+                  onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
+                  placeholder="rgba(0,0,0,0.25)"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
           </>
         ) : null}
         <div className="space-y-2">
@@ -2825,315 +3303,381 @@ export function HeroVisualEditor({
   );
 }
 
-export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroData>) {
-  const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
-  const updateLayout = (patch: Partial<HeroData["layout"]>) =>
-    update({ layout: { ...value.layout, ...patch } });
-  const updateSpacing = (patch: Partial<HeroData["spacing"]>) =>
-    update({ spacing: { ...value.spacing, ...patch } });
-  const updateBackground = (patch: Partial<HeroData["background"]>) =>
-    update({ background: { ...value.background, ...patch } });
-  const backgroundMedia = resolveBackgroundMedia(value.background);
-  const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
-  const clearBackgroundField = (key: keyof HeroBackground) => {
-    const { [key]: _removed, ...nextBackground } = value.background ?? {};
-    update({ background: Object.keys(nextBackground).length > 0 ? nextBackground : {} });
-  };
-  const updateBackgroundMedia = (
-    patch: Partial<NonNullable<HeroData["media"]> & HeroBackgroundMedia>
-  ) => {
-    const next = {
-      ...backgroundMedia,
-      ...patch,
-    };
-    const nextType = next.type ?? "none";
-    const normalized =
-      nextType === "none"
-        ? { type: "none" as const, source: next.source ?? "external" }
-        : {
-            type: nextType,
-            source: next.source ?? "external",
-            assetId: next.assetId,
-            src: next.src,
-            posterSource: next.posterSource,
-            posterAssetId: next.posterAssetId,
-            posterSrc: next.posterSrc,
-            title: next.title,
-            description: next.description,
-            overlay: next.overlay,
-          };
-    updateBackground({
-      media: normalized,
-      image: normalized.type === "image" ? normalized.src : undefined,
-    });
-  };
-  const handleBackgroundMediaTypeChange = (nextType: HeroMediaType) =>
-    updateBackgroundMedia(resolveMediaTypeTransition(backgroundMedia, nextType));
-  const clearBackgroundMediaField = (key: keyof HeroBackgroundMedia) => {
-    const nextBackground = value.background ?? {};
-    const nextMedia = { ...(nextBackground.media ?? backgroundMedia) };
-    delete nextMedia[key];
-    updateBackground({
-      media: Object.keys(nextMedia).length > 0 ? nextMedia : { type: "none" },
-      image: key === "src" ? undefined : nextBackground.image,
-    });
-  };
+const summarizeHeroValue = (value: unknown) => {
+  if (typeof value === "boolean") return value ? "Enabled" : "Disabled";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  return "Not configured";
+};
+
+const summarizeHeroHrefStatus = (cta: HeroData["primaryCta"]) => {
+  if (!cta?.href) return "Not configured";
+  return normalizeHeroHref(cta.href) ? "Safe URL" : "Rejected unsafe URL";
+};
+
+export function HeroAdvancedEditor({ value, variant }: WidgetEditorProps<HeroData>) {
+  const normalized = normalizeHeroData(value);
+  const layout = normalized.layout ?? {};
+  const spacing = normalized.spacing ?? {};
+  const style = normalized.style ?? {};
+  const media = normalized.media ?? { type: "none", source: "external" };
+  const background = normalized.background ?? {};
+  const backgroundMedia = resolveBackgroundMedia(background);
+  const runtimePayload = JSON.stringify(normalized, null, 2);
+  const videoDiagnostics =
+    media.type === "video"
+      ? media.title && media.description
+        ? "Video title and description provided"
+        : "Video title or description missing"
+      : "Not required";
+  const backgroundVideoDiagnostics =
+    backgroundMedia.type === "video"
+      ? backgroundMedia.title && backgroundMedia.description
+        ? "Background video title and description provided"
+        : "Background video title or description missing"
+      : "Not required";
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
-        Advanced mode exposes technical layout controls only.
+        Advanced mode is read-only. Use Visual for public-facing Hero copy, media, layout, spacing,
+        color, and background changes.
       </p>
       <EditorSection
-        id="hero.advanced.layout"
-        title="Hero Layout"
-        description="Control alignment, width, height, full-bleed, and internal Hero spacing."
+        id="hero.advanced.layout-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Layout summary"
+        description="Resolved Hero layout, spacing, and responsive tokens."
       >
-        <p className="text-xs text-muted-foreground">
-          These controls change the Hero card itself. Generic page or builder container padding
-          stays outside this widget.
-        </p>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment</p>
-          <Select
-            value={value.layout?.align ?? "center"}
-            onValueChange={(next) => updateLayout({ align: next as HeroAlign })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {formatTokenOptionLabel(option)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Max width</p>
-            <Select
-              value={value.layout?.maxWidth ?? "xl"}
-              onValueChange={(next) => updateLayout({ maxWidth: next as HeroMaxWidth })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select width" />
-              </SelectTrigger>
-              <SelectContent>
-                {maxWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Content width</p>
-            <Select
-              value={value.layout?.contentWidth ?? "lg"}
-              onValueChange={(next) => updateLayout({ contentWidth: next as HeroContentWidth })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select width" />
-              </SelectTrigger>
-              <SelectContent>
-                {contentWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Height</p>
-            <Select
-              value={value.layout?.height ?? "auto"}
-              onValueChange={(next) => updateLayout({ height: next as HeroHeight })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select height" />
-              </SelectTrigger>
-              <SelectContent>
-                {heightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Bleed</p>
-            <Select
-              value={value.layout?.bleed ?? "contained"}
-              onValueChange={(next) => updateLayout({ bleed: next as HeroBleed })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select bleed" />
-              </SelectTrigger>
-              <SelectContent>
-                {bleedOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option === "full-bleed" ? "Full bleed" : "Contained"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Hero content padding top</p>
-            <Select
-              value={value.spacing?.paddingTop ?? "xl"}
-              onValueChange={(next) => updateSpacing({ paddingTop: next as HeroSpacing })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select padding" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Hero content padding bottom</p>
-            <Select
-              value={value.spacing?.paddingBottom ?? "xl"}
-              onValueChange={(next) => updateSpacing({ paddingBottom: next as HeroSpacing })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select padding" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.variant"
+            label="Variant"
+            path="variant"
+            value={variant}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.layout.align"
+            label="Alignment"
+            path="layout.align"
+            value={summarizeHeroValue(layout.align)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.layout.maxWidth"
+            label="Max width"
+            path="layout.maxWidth"
+            value={summarizeHeroValue(layout.maxWidth)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.layout.contentWidth"
+            label="Content width"
+            path="layout.contentWidth"
+            value={summarizeHeroValue(layout.contentWidth)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.layout.height"
+            label="Height"
+            path="layout.height"
+            value={summarizeHeroValue(layout.height)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.layout.bleed"
+            label="Bleed"
+            path="layout.bleed"
+            value={summarizeHeroValue(layout.bleed)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.spacing.paddingTop"
+            label="Padding top"
+            path="spacing.paddingTop"
+            value={summarizeHeroValue(spacing.paddingTop)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.spacing.paddingBottom"
+            label="Padding bottom"
+            path="spacing.paddingBottom"
+            value={summarizeHeroValue(spacing.paddingBottom)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.responsive.hideMediaOnMobile"
+            label="Hide media on mobile"
+            path="responsive.hideMediaOnMobile"
+            value={summarizeHeroValue(normalized.responsive?.hideMediaOnMobile)}
+          />
         </div>
       </EditorSection>
 
       <EditorSection
-        id="hero.advanced.background"
-        title="Background"
-        description="Set color/gradient and optional image or video source."
+        id="hero.advanced.style-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Style token summary"
+        description="Resolved typography, color, button, border, and shadow tokens."
       >
-        <HeroColorField
-          id="hero.advanced.background.color"
-          label="Background color"
-          value={value.background?.color}
-          onChange={(next) => updateBackground({ color: next })}
-          onClear={() => clearBackgroundField("color")}
-          placeholder="transparent"
-          pickerFallback="#ffffff"
-        />
-        <GradientField
-          id="hero.advanced.background.gradient"
-          label="Background gradient"
-          value={value.background?.gradient}
-          onChange={(next) => updateBackground({ gradient: next })}
-          onClear={() => clearBackgroundField("gradient")}
-        />
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Background media type</p>
-          <Select
-            value={backgroundMediaType}
-            onValueChange={(next) => handleBackgroundMediaTypeChange(next as HeroMediaType)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select media type" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.headlineSize"
+            label="Headline size"
+            path="style.headlineSize"
+            value={summarizeHeroValue(style.headlineSize)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.subheadSize"
+            label="Subhead size"
+            path="style.subheadSize"
+            value={summarizeHeroValue(style.subheadSize)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.bodySize"
+            label="Body size"
+            path="style.bodySize"
+            value={summarizeHeroValue(style.bodySize)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.textColor"
+            label="Headline color"
+            path="style.textColor"
+            value={summarizeHeroValue(style.textColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.subheadColor"
+            label="Subhead color"
+            path="style.subheadColor"
+            value={summarizeHeroValue(style.subheadColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.bodyColor"
+            label="Body color"
+            path="style.bodyColor"
+            value={summarizeHeroValue(style.bodyColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.primaryButton"
+            label="Primary button"
+            path="style.primaryButtonBg"
+            value={`bg=${summarizeHeroValue(style.primaryButtonBg)}; text=${summarizeHeroValue(
+              style.primaryButtonText
+            )}; border=${summarizeHeroValue(style.primaryButtonBorder)}; size=${summarizeHeroValue(
+              style.primaryButtonSize
+            )}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.secondaryButton"
+            label="Secondary button"
+            path="style.secondaryButtonBg"
+            value={`bg=${summarizeHeroValue(style.secondaryButtonBg)}; text=${summarizeHeroValue(
+              style.secondaryButtonText
+            )}; border=${summarizeHeroValue(
+              style.secondaryButtonBorder
+            )}; size=${summarizeHeroValue(style.secondaryButtonSize)}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.cardBorder"
+            label="Card border"
+            path="style.borderColor"
+            value={`color=${summarizeHeroValue(style.borderColor)}; width=${summarizeHeroValue(
+              style.borderWidth
+            )}; radius=${summarizeHeroValue(style.borderRadius)}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.mediaFrame"
+            label="Media frame"
+            path="style.mediaBorderColor"
+            value={`color=${summarizeHeroValue(style.mediaBorderColor)}; width=${summarizeHeroValue(
+              style.mediaBorderWidth
+            )}; radius=${summarizeHeroValue(style.mediaRadius)}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.shadows"
+            label="Shadows"
+            path="style.cardShadow"
+            value={`card=${summarizeHeroValue(style.cardShadow)}; media=${summarizeHeroValue(
+              style.mediaShadow
+            )}; buttons=${summarizeHeroValue(style.buttonShadow)}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.style.typeface"
+            label="Typeface"
+            path="style.fontFamily"
+            value={`family=${summarizeHeroValue(style.fontFamily)}; headline=${summarizeHeroValue(
+              style.headlineWeight
+            )}; body=${summarizeHeroValue(style.bodyWeight)}`}
+          />
         </div>
-        {backgroundMediaType !== "none" ? (
-          <>
-            <HeroMediaSourceFields
-              media={backgroundMedia}
-              mediaType={backgroundMediaType}
-              onChange={updateBackgroundMedia}
-            />
-            {backgroundMediaType === "video" ? (
-              <>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Background video title</p>
-                  <Input
-                    value={backgroundMedia.title ?? ""}
-                    onChange={(event) => updateBackgroundMedia({ title: event.target.value })}
-                    placeholder="Ambient background video"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Background video description</p>
-                  <Textarea
-                    value={backgroundMedia.description ?? ""}
-                    onChange={(event) => updateBackgroundMedia({ description: event.target.value })}
-                    placeholder="Optional context for screen readers"
-                  />
-                </div>
-                <HeroPosterFields
-                  media={backgroundMedia}
-                  onChange={updateBackgroundMedia}
-                  onClear={() =>
-                    updateBackgroundMedia({
-                      posterSource: undefined,
-                      posterAssetId: undefined,
-                      posterSrc: undefined,
-                    })
-                  }
-                />
-              </>
-            ) : null}
-            <div className="space-y-2">
-              <ClearableFieldHeader
-                label="Background media overlay"
-                value={backgroundMedia.overlay}
-                onClear={() => clearBackgroundMediaField("overlay")}
-                onRestoreValue={(next) => updateBackgroundMedia({ overlay: next })}
-              />
-              <Input
-                value={backgroundMedia.overlay ?? ""}
-                onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
-                placeholder="rgba(0,0,0,0.25)"
-              />
-            </div>
-          </>
-        ) : null}
       </EditorSection>
 
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <p className="text-sm font-medium">Hide media on mobile</p>
-          <p className="text-xs text-muted-foreground">Keep the hero focused on copy and CTA.</p>
+      <EditorSection
+        id="hero.advanced.media-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Media diagnostics"
+        description="Normalized media and background media state used by the public renderer."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.media.type"
+            label="Media type"
+            path="media.type"
+            value={summarizeHeroValue(media.type)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.media.source"
+            label="Media source"
+            path="media.source"
+            value={summarizeHeroValue(media.source)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.media.src"
+            label="Media URL"
+            path="media.src"
+            value={summarizeHeroValue(media.src)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.media.alt"
+            label="Image alt text"
+            path="media.alt"
+            value={
+              media.type === "image"
+                ? summarizeHeroValue(media.alt)
+                : "Not required for this media type"
+            }
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.media.videoMetadata"
+            label="Video metadata"
+            path="media.title"
+            value={videoDiagnostics}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.color"
+            label="Background color"
+            path="background.color"
+            value={summarizeHeroValue(background.color)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.gradient"
+            label="Background gradient"
+            path="background.gradient"
+            value={summarizeHeroValue(background.gradient)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.media.type"
+            label="Background media type"
+            path="background.media.type"
+            value={summarizeHeroValue(backgroundMedia.type)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.media.src"
+            label="Background media URL"
+            path="background.media.src"
+            value={summarizeHeroValue(backgroundMedia.src)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.media.overlay"
+            label="Background overlay"
+            path="background.media.overlay"
+            value={summarizeHeroValue(backgroundMedia.overlay)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.background.media.videoMetadata"
+            label="Background video metadata"
+            path="background.media.title"
+            value={backgroundVideoDiagnostics}
+          />
         </div>
-        <Switch
-          checked={value.responsive?.hideMediaOnMobile ?? false}
-          onCheckedChange={(checked) =>
-            update({
-              responsive: { ...value.responsive, hideMediaOnMobile: checked },
-            })
+      </EditorSection>
+
+      <EditorSection
+        id="hero.advanced.accessibility-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Accessibility diagnostics"
+        description="Safe-link, copy, and sanitized rich-text diagnostics."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.headline"
+            label="Headline"
+            path="headline"
+            value={summarizeHeroValue(normalized.headline)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.primaryCta.href"
+            label="Primary CTA href"
+            path="primaryCta.href"
+            value={summarizeHeroHrefStatus(value.primaryCta)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.secondaryCta.href"
+            label="Secondary CTA href"
+            path="secondaryCta.href"
+            value={summarizeHeroHrefStatus(value.secondaryCta)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.richHeadline"
+            label="Rich headline"
+            path="richHeadline"
+            value={normalized.richHeadline ? "Sanitized HTML configured" : "Plain headline used"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.richBody"
+            label="Rich body"
+            path="richBody"
+            value={normalized.richBody ? "Sanitized HTML configured" : "Plain body used"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.motion"
+            label="Motion preset"
+            path="style.motion"
+            value={summarizeHeroValue(style.motion)}
+          />
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        id="hero.advanced.runtime-payload"
+        mode="advanced"
+        role="technical"
+        title="Runtime payload"
+        description="Normalized payload passed to the Hero renderer. This widget stores no secrets."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="hero.advanced.runtime-json"
+          label="Normalized data"
+          value={
+            <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words text-xs">
+              {runtimePayload}
+            </pre>
           }
         />
-      </div>
+      </EditorSection>
+
+      <EditorSection
+        id="hero.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the v2 Hero contract."
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.contract.wizard"
+            label="Wizard owns"
+            value="One-time setup seed: initial layout, headline, and primary CTA."
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.contract.visual"
+            label="Visual owns"
+            value="Copy, CTA, media, layout, spacing, style, colors, and background."
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.contract.advanced"
+            label="Advanced owns"
+            value="Read-only diagnostics, token summaries, accessibility checks, and runtime payload."
+          />
+        </div>
+      </EditorSection>
     </div>
   );
 }

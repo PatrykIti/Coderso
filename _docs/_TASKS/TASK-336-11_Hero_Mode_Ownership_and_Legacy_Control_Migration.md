@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -34,14 +34,22 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Inventory Hero legacy controls and writable paths.
-- [ ] Add or update `hero` `editorContract` metadata.
-- [ ] Migrate local `EditorSection`/raw rows to shared primitives.
-- [ ] Move all end-user design controls to Visual.
-- [ ] Convert Advanced duplicate design controls into read-only summaries.
-- [ ] Preserve public Hero rendering and accessibility semantics.
-- [ ] Add focused Vitest UI tests.
-- [ ] Add Playwright admin and public smoke screenshots.
+- [x] Inventory Hero legacy controls and writable paths.
+- [x] Add or update `hero` `editorContract` metadata.
+- [x] Migrate local `EditorSection`/raw rows to shared primitives.
+- [x] Move all end-user design controls to Visual.
+- [x] Convert Advanced duplicate design controls into read-only summaries.
+- [x] Preserve public Hero rendering and accessibility semantics.
+- [x] Add focused Vitest UI tests.
+- [x] Add Playwright admin and public smoke screenshots.
+
+## Status Notes
+
+- 2026-05-24 - Done: Hero now ships a v2 editor contract. Wizard is limited to
+  setup seeds, Visual owns all copy/media/layout/style/background presentation,
+  and Advanced is read-only layout/style/media diagnostics/runtime payload. The
+  temporary Wizard/Visual duplicate seed paths are explicitly allowed until
+  `TASK-336-16`.
 
 ## Files to Change
 

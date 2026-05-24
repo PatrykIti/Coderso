@@ -117,7 +117,29 @@
       "publicFixtureStatus": "shared-page",
       "priority": "P1",
       "requiredModes": ["wizard", "visual", "advanced"],
-      "cssChecks": ["body-overflow"]
+      "cssChecks": ["body-overflow"],
+      "allowedDuplicateWritablePaths": [
+        {
+          "path": "variant",
+          "reason": "Wizard remains a temporary one-time Hero setup surface until TASK-336-16 hides setup after initial completion.",
+          "expiresWithTask": "TASK-336-16"
+        },
+        {
+          "path": "headline",
+          "reason": "Wizard remains a temporary one-time Hero setup surface until TASK-336-16 hides setup after initial completion.",
+          "expiresWithTask": "TASK-336-16"
+        },
+        {
+          "path": "primaryCta.label",
+          "reason": "Wizard remains a temporary one-time Hero setup surface until TASK-336-16 hides setup after initial completion.",
+          "expiresWithTask": "TASK-336-16"
+        },
+        {
+          "path": "primaryCta.href",
+          "reason": "Wizard remains a temporary one-time Hero setup surface until TASK-336-16 hides setup after initial completion.",
+          "expiresWithTask": "TASK-336-16"
+        }
+      ]
     },
     {
       "widgetType": "feature-grid",

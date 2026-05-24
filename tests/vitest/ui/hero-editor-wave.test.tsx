@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { HeroData } from "../../../core/widgets/core/hero";
+import { heroEditorContract, type HeroData } from "../../../core/widgets/core/hero";
 
 const heroState = vi.hoisted(() => {
   const createMediaItems = () => [
@@ -384,8 +384,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h2,h3,p")).some(
+      (heading) => normalizeText(heading.textContent) === normalizeText(title)
     )
   );
 
@@ -395,7 +395,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("HeroWizardEditor applies presets, updates direct content fields, toggles CTA branches, resolves media, and emits centered guidance", async () => {
+test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and primary CTA", async () => {
   const { HeroWizardEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   const onChangeSpy = vi.fn();
@@ -425,6 +425,30 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain("Daily presentation changes live in Visual.");
+    expect(view.container.querySelector('[data-widget-control="hero.subhead"]')).toBeNull();
+    expect(
+      view.container.querySelector('[data-widget-control="hero.secondaryCta.label"]')
+    ).toBeNull();
+    expect(view.container.querySelector('[data-widget-control="hero.media.type"]')).toBeNull();
+
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) => [
+        section.getAttribute("data-widget-editor-mode"),
+        section.getAttribute("data-widget-editor-section-role"),
+      ])
+    ).toEqual([
+      ["wizard", "setup"],
+      ["wizard", "setup"],
+      ["wizard", "setup"],
+    ]);
+
+    expect(
+      Array.from(view.container.querySelectorAll('[data-widget-control-ownership="writable"]')).map(
+        (control) => control.getAttribute("data-widget-control-path")
+      )
+    ).toEqual(["variant", "headline", "primaryCta.label", "primaryCta.href"]);
+
     React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["lead", "sales", "info"]), "sales");
     });
@@ -436,89 +460,21 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
     ).toEqual(
       expect.objectContaining({
         headline: "Convert more visitors",
-        subhead: "Lead with the outcome and reduce friction.",
         primaryCta: { label: "Book a demo", href: "/demo" },
-        secondaryCta: { label: "Pricing", href: "/pricing" },
       })
     );
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("subhead");
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("body");
+    expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("secondaryCta");
 
     React.act(() => {
       setInputValue(
         findInputByPlaceholder(view.container, "Build with confidence"),
         "Pipeline-ready hero"
       );
-      setTextareaValue(
-        findTextareaByPlaceholder(view.container, "Short supporting message"),
-        "Support the main outcome with a concise sentence."
-      );
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
       setInputValue(findInputByPlaceholder(view.container, "/signup"), "/join");
-      setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/examples"), "/pricing");
     });
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
-    });
-    expect(view.container.textContent).not.toContain("Secondary CTA Label");
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
-    });
-    expect(view.container.textContent).toContain("Secondary CTA Label");
-
-    React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
-      setInputValue(findInputByPlaceholder(view.container, "/examples"), "/pricing");
-    });
-    expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.secondaryCta?.label === "Review pricing")?.[0]
-    ).toEqual(
-      expect.objectContaining({
-        secondaryCta: {
-          label: "Review pricing",
-          href: "/pricing",
-        },
-      })
-    );
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
-    });
-    expect(view.container.textContent).toContain(
-      "Centered layout renders the selected image as hero background."
-    );
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
-    await flush();
-
-    expect(
-      [...onChangeSpy.mock.calls]
-        .reverse()
-        .find(([arg]) => arg?.media?.assetId === "asset-hero")?.[0]
-    ).toEqual(
-      expect.objectContaining({
-        media: expect.objectContaining({
-          type: "image",
-          source: "library",
-          assetId: "asset-hero",
-          src: "/media/hero.jpg",
-          alt: "Hero alt",
-        }),
-      })
-    );
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "video");
-    });
-    expect(view.container.textContent).toContain(
-      "Centered layout does not show inline video. Use Media Right, Media Left, or Media Center to display video content."
-    );
 
     React.act(() => {
       setSelectValue(
@@ -529,98 +485,45 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
     expect(onVariantChangeSpy).toHaveBeenCalledWith("media-left");
     expect(latestValue).toMatchObject({
       headline: "Pipeline-ready hero",
-      subhead: "Support the main outcome with a concise sentence.",
       primaryCta: {
         label: "Start onboarding",
         href: "/join",
       },
-      media: {
-        type: "video",
-        source: "library",
-        assetId: undefined,
-        src: undefined,
-      },
     });
+    expect(latestValue.secondaryCta).toBeUndefined();
+    expect(latestValue.media).toBeUndefined();
   } finally {
     view.cleanup();
   }
 });
 
-test("HeroWizardEditor validates media URLs and covers unresolved, clear, external-source, and lookup failure branches", async () => {
+test("HeroWizardEditor marks goal as an action and keeps all writable paths documented", async () => {
   const { HeroWizardEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
-  let latestValue: HeroData = { headline: "" };
 
-  const Harness = () => {
-    const [value, setValue] = useState<HeroData>(latestValue);
-    return (
-      <HeroWizardEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="split"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
+  const view = mount(
+    <HeroWizardEditor
+      value={{ headline: "Hero", primaryCta: { label: "Start", href: "/start" } }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
   try {
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "image");
-    });
-
-    React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://asset.invalid");
-    });
-    expect(view.container.textContent).toContain("Use a relative path or full URL.");
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-missing-asset")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Selected media could not be resolved.");
-
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "clear-media")[0]);
-    await flush();
-    expect(latestValue.media).toEqual(
-      expect.objectContaining({
-        type: "image",
-        source: "library",
-        assetId: undefined,
-        src: undefined,
-      })
-    );
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "external");
-    });
-    expect(latestValue.media).toEqual(
-      expect.objectContaining({
-        source: "external",
-        assetId: undefined,
-      })
-    );
-
-    heroState.mediaError = {
-      name: "ApiClientError",
-      message: "Media lookup failed",
-    };
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Media lookup failed");
-
-    heroState.mediaError = new Error("lookup exploded");
-    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
-    await flush();
-    expect(view.container.textContent).toContain("Failed to resolve media URL.");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.goal"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("action");
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.goal"]')
+        ?.hasAttribute("data-widget-control-path")
+    ).toBe(false);
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-control]"))
+        .filter((control) => control.getAttribute("data-widget-control-ownership") !== "action")
+        .map((control) => control.getAttribute("data-widget-control-path"))
+    ).toEqual(["variant", "headline", "primaryCta.label", "primaryCta.href"]);
   } finally {
     view.cleanup();
   }
@@ -905,9 +808,85 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
   }
 });
 
+test("HeroVisualEditor exposes contract metadata for visible Visual controls", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const visualContractPaths = new Set(
+    heroEditorContract.sections
+      .filter((section) => section.mode === "visual")
+      .flatMap((section) => section.writablePaths)
+  );
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{
+        headline: "Hero",
+        badge: { enabled: true, label: "New" },
+        primaryCta: { label: "Start", href: "/start" },
+        secondaryCta: { label: "Learn", href: "/learn" },
+        media: {
+          type: "video",
+          source: "external",
+          src: "https://cdn.example.com/demo.mp4",
+        },
+        background: {
+          media: {
+            type: "video",
+            source: "external",
+            src: "https://cdn.example.com/bg.mp4",
+          },
+        },
+        socialProof: {
+          enabled: true,
+          avatars: [{ src: "/avatar.jpg", alt: "Reviewer" }],
+        },
+      }}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    const controls = Array.from(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    );
+    const visiblePaths = controls
+      .map((control) => control.getAttribute("data-widget-control-path"))
+      .filter((path): path is string => Boolean(path));
+
+    expect(controls.every((control) => control.hasAttribute("data-widget-control-path"))).toBe(
+      true
+    );
+    expect(new Set(visiblePaths).size).toBe(visiblePaths.length);
+    for (const path of visiblePaths) {
+      expect(visualContractPaths.has(path)).toBe(true);
+    }
+    expect(visiblePaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "headline",
+        "primaryCta.label",
+        "secondaryCta.label",
+        "media.type",
+        "media.title",
+        "background.media.type",
+        "background.media.title",
+        "socialProof.avatars.0.src",
+        "socialProof.avatars.0.alt",
+        "layout.align",
+        "spacing.paddingTop",
+        "responsive.hideMediaOnMobile",
+      ])
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("HeroVisualEditor keeps centered media editable and clears incompatible media sources on type changes", async () => {
-  const { HeroVisualEditor, HeroAdvancedEditor } =
-    await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   let latestVisualValue: HeroData = {
     headline: "Hero",
@@ -967,59 +946,6 @@ test("HeroVisualEditor keeps centered media editable and clears incompatible med
     );
   } finally {
     visualView.cleanup();
-  }
-
-  let latestAdvancedValue: HeroData = {
-    headline: "Hero",
-    background: {
-      media: {
-        type: "image",
-        source: "library",
-        assetId: "asset-background",
-        src: "/media/background.jpg",
-      },
-    },
-  };
-
-  const AdvancedHarness = () => {
-    const [value, setValue] = useState(latestAdvancedValue);
-    return (
-      <HeroAdvancedEditor
-        value={value}
-        variant="centered"
-        onChange={(next) => {
-          latestAdvancedValue = next;
-          setValue(next);
-        }}
-      />
-    );
-  };
-
-  const advancedView = mount(<AdvancedHarness />);
-
-  try {
-    await flush();
-
-    React.act(() => {
-      setSelectValue(
-        findSelectsByOptions(advancedView.container, ["none", "image", "video"])[0],
-        "video"
-      );
-    });
-
-    expect(latestAdvancedValue.background).toEqual(
-      expect.objectContaining({
-        image: undefined,
-        media: expect.objectContaining({
-          type: "video",
-          source: "library",
-          assetId: undefined,
-          src: undefined,
-        }),
-      })
-    );
-  } finally {
-    advancedView.cleanup();
   }
 });
 
@@ -1275,10 +1201,9 @@ test("HeroVisualEditor uses the runtime body weight default in Typography contro
   try {
     await flush();
 
-    const label = Array.from(view.container.querySelectorAll("p")).find(
-      (element) => normalizeText(element.textContent) === "body weight"
+    const bodyWeightSelect = view.container.querySelector(
+      '[data-widget-control="hero.style.bodyWeight"] select'
     );
-    const bodyWeightSelect = label?.parentElement?.querySelector("select");
 
     expect(bodyWeightSelect).toBeInstanceOf(HTMLSelectElement);
     expect((bodyWeightSelect as HTMLSelectElement).value).toBe("normal");
@@ -1319,6 +1244,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     await flush();
 
     const ctaSection = findSectionByTitle(view.container, "CTA");
+    const layoutSection = findSectionByTitle(view.container, "Layout and spacing");
     const typographySection = findSectionByTitle(view.container, "Typography");
     const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
     const backgroundSection = findSectionByTitle(view.container, "Background");
@@ -1330,6 +1256,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       "Background media supports both Media Library and external URL."
     );
     expect(ctaSection).toBeTruthy();
+    expect(layoutSection).toBeTruthy();
     expect(typographySection).toBeTruthy();
     expect(colorsSection).toBeTruthy();
     expect(backgroundSection).toBeTruthy();
@@ -1403,7 +1330,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     await flush();
 
     React.act(() => {
-      const typographySelects = findSelectsByOptions(typographySection ?? view.container, [
+      const alignmentSelect = findSelectByOptions(layoutSection ?? view.container, [
         "left",
         "center",
         "right",
@@ -1431,7 +1358,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           Array.from((select as HTMLSelectElement).options).map((option) => option.value)
         ).toContain("none");
       }
-      setSelectValue(typographySelects[0], "left");
+      setSelectValue(alignmentSelect, "left");
       setSelectValue(headlineSizeSelect, "5xl");
       setSelectValue(subheadSizeSelect, "2xl");
       setSelectValue(bodySizeSelect, "lg");
@@ -1737,113 +1664,63 @@ test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", a
   }
 });
 
-test("HeroAdvancedEditor covers legacy background media, layout and spacing controls, gradients, hide-on-mobile, and media reset", async () => {
+test("HeroAdvancedEditor exposes read-only diagnostics and normalized runtime payload", async () => {
   const { HeroAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   const onChangeSpy = vi.fn();
 
-  const Harness = () => {
-    const [value, setValue] = useState<HeroData>({
-      headline: "",
-      background: {
-        image: "/legacy-hero.jpg",
-      },
-    });
-    return (
-      <HeroAdvancedEditor
-        value={value}
-        variant="centered"
-        onChange={(next) => {
-          onChangeSpy(next);
-          setValue(next);
-        }}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
+  const view = mount(
+    <HeroAdvancedEditor
+      value={{
+        headline: "",
+        primaryCta: { label: "Start", href: "javascript:alert(1)" },
+        media: {
+          type: "video",
+          src: "https://cdn.example.com/demo.mp4",
+          title: "Demo",
+        },
+        background: {
+          image: "/legacy-hero.jpg",
+          media: {
+            type: "video",
+            src: "https://cdn.example.com/bg.mp4",
+            overlay: "rgba(0,0,0,0.25)",
+          },
+        },
+        responsive: { hideMediaOnMobile: true },
+      }}
+      variant="centered"
+      onChange={onChangeSpy}
+    />
+  );
 
   try {
     expect(view.container.textContent).toContain(
-      "Advanced mode exposes technical layout controls only."
+      "Advanced mode is read-only. Use Visual for public-facing Hero copy"
     );
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).toContain("Style token summary");
+    expect(view.container.textContent).toContain("Media diagnostics");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.textContent).toContain("Rejected unsafe URL");
+    expect(view.container.textContent).toContain("Video title or description missing");
+    expect(view.container.textContent).toContain("Background video title or description missing");
+    expect(view.container.textContent).toContain('"src": "https://cdn.example.com/bg.mp4"');
     expect(
-      (findSelectByOptions(view.container, ["none", "image", "video"]) as HTMLSelectElement).value
-    ).toBe("image");
-
-    const backgroundSection = findSectionByTitle(view.container, "Background");
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "right");
-      const maxWidthSelect = findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "2xl"]);
-      const contentWidthSelect = findSelectsByOptions(view.container, ["sm", "md", "lg", "xl"])[1];
-      expect(
-        Array.from((maxWidthSelect as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-      expect(
-        Array.from((contentWidthSelect as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-      setSelectValue(maxWidthSelect, "2xl");
-      setSelectValue(contentWidthSelect, "sm");
-      const spacingSelects = findSelectsByOptions(view.container, [
-        "none",
-        "xs",
-        "sm",
-        "md",
-        "lg",
-        "xl",
-        "2xl",
-      ]);
-      setSelectValue(spacingSelects[0], "sm");
-      setSelectValue(spacingSelects[1], "2xl");
-      setInputValue(findInputByPlaceholder(view.container, "transparent"), "#ffffff");
-      const backgroundColors = backgroundSection?.querySelectorAll('input[type="color"]') as
-        | NodeListOf<HTMLInputElement>
-        | undefined;
-      setInputValue(backgroundColors?.[0], "#f8fafc");
-      setInputValue(backgroundColors?.[1], "#0ea5e9");
-      setInputValue(backgroundColors?.[2], "#0369a1");
-      setInputValue(backgroundSection?.querySelector('input[type="range"]') ?? undefined, "60");
-    });
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["library", "external"]), "library");
-    });
-    clickElement(
-      findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-background")[0]
-    );
-    await flush();
-
-    clickElement(view.container.querySelector("input[type='checkbox']") ?? undefined);
-
-    React.act(() => {
-      setSelectValue(findSelectByOptions(view.container, ["none", "image", "video"]), "none");
-    });
-
-    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
-      expect.objectContaining({
-        layout: expect.objectContaining({
-          align: "right",
-          maxWidth: "2xl",
-          contentWidth: "sm",
-        }),
-        spacing: expect.objectContaining({
-          paddingTop: "sm",
-          paddingBottom: "2xl",
-        }),
-        background: expect.objectContaining({
-          color: "#f8fafc",
-          gradient: "linear-gradient(60deg, #0ea5e9, #0369a1)",
-          media: expect.objectContaining({
-            type: "none",
-          }),
-        }),
-        responsive: expect.objectContaining({
-          hideMediaOnMobile: true,
-        }),
-      })
-    );
-    expect(onChangeSpy.mock.lastCall?.[0]?.background?.image).toBeUndefined();
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) =>
+        section.getAttribute("data-widget-editor-mode")
+      )
+    ).toEqual(["advanced", "advanced", "advanced", "advanced", "advanced", "advanced"]);
+    expect(view.container.querySelector("input,select,textarea,button")).toBeNull();
+    expect(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    ).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll('[data-widget-control-readonly="true"]')
+    ).not.toHaveLength(0);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

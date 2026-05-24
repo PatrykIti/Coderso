@@ -10,6 +10,27 @@
 
 ---
 
+## 0. Status 2026-05-24 — TASK-336-11 closed
+
+Ten raport pozostaje historycznym snapshotem z re-auditu. Aktualny stan po
+`TASK-336-11`:
+
+- `hero` ma v2 `editorContract`.
+- Wizard jest setup-only: goal action, initial layout, headline seed, primary
+  CTA seed.
+- Visual przejął publiczne copy, badge, CTA, media, layout, spacing,
+  responsive, typography, appearance, colors/borders i background.
+- Advanced jest read-only: layout/style-token/media/accessibility diagnostics,
+  normalized runtime payload i contract summary.
+- Tymczasowe duplikaty `variant`, `headline`, `primaryCta.label`,
+  `primaryCta.href` są jawnie dozwolone do `TASK-336-16`.
+- Targeted smoke: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
+  `publicFailures=0`
+  (`_docs/PLAYWRIGHT/widget-contract-smoke-hero-2026-05-24.md`,
+  `.tmp/widget-smoke-hero.json`).
+
+---
+
 ## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard

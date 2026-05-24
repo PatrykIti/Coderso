@@ -23,8 +23,14 @@ Top-of-page section with main value proposition, CTA, and optional media.
 
 ### Wizard
 
-- Minimal onboarding for goal, layout, media type, and CTA mode.
-- Fast defaults only.
+- One-time setup only: goal preset action, initial Hero layout, headline seed,
+  and primary CTA seed.
+- Wizard intentionally does not own subhead/body, secondary CTA, media,
+  background, style, layout spacing, or responsive behavior. Those are Visual
+  edits.
+- Temporary duplicate writable paths with Visual (`variant`, `headline`,
+  `primaryCta.label`, `primaryCta.href`) are allowed only until
+  `TASK-336-16` hides completed Wizard setup for existing widgets.
 
 ### Visual
 
@@ -34,21 +40,31 @@ Primary day-to-day editing surface with section-based IA:
 3. CTA
 4. Rich copy and social proof
 5. Media
-6. Typography
-7. Appearance
-8. Colors and Borders
-9. Background
+6. Layout and spacing
+7. Typography
+8. Appearance
+9. Colors and Borders
+10. Background
+
+Visual owns all public-facing and presentation fields: copy, badges, CTA copy
+and button sizes, media, background media/overlay, typography, appearance,
+colors, borders, alignment, width, height, bleed, spacing, and mobile media
+visibility.
 
 Variant presets are persisted per user in `user_settings` key:
 `widgets.hero.presets`.
 
 ### Advanced
 
-Technical controls only (no duplicated content/style editing):
-- hero layout tokens: align, maxWidth, contentWidth, height, bleed
-- internal spacing: paddingTop, paddingBottom
-- background raw values
-- responsive toggle: `hideMediaOnMobile`
+Read-only diagnostics only:
+- resolved layout, spacing, responsive, and variant summaries
+- resolved typography, color, button, border, and shadow token summaries
+- media/background media diagnostics
+- safe-link and accessibility diagnostics
+- sanitized runtime payload snapshot
+- editor contract summary
+
+Advanced must not duplicate Visual as a second design panel.
 
 ## Media Behavior
 

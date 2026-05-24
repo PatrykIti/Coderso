@@ -20,6 +20,16 @@
 - Fixture gaps: 29
 - Metadata gaps: 13
 
+## Targeted Reruns After This Baseline
+
+This file is the 38-widget baseline generated at `2026-05-24T00:57:17.930Z`.
+Per-widget TASK-336 fixes record targeted reruns separately until the final
+38-widget closure rerun in `TASK-336-17`.
+
+| Date | Widget | Result | Evidence |
+|---|---|---|---|
+| 2026-05-24 | `hero` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-hero-2026-05-24.md` |
+
 ## Admin Mode Contract
 
 | Widget | Status | Modes | Duplicate paths | Notes |
