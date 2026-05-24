@@ -7,6 +7,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -161,6 +162,92 @@ export const accordionDefaults: AccordionData = {
   layout: {
     maxWidth: "full",
   },
+};
+
+export const accordionEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "accordion.wizard.starter-setup",
+      title: "Starter items",
+      role: "setup",
+      writablePaths: ["items.count", "options.defaultOpenIds"],
+      readOnlyPaths: ["items.title", "items.description"],
+    },
+    {
+      mode: "visual",
+      id: "accordion.visual.variant",
+      title: "Variant",
+      role: "visual",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "accordion.visual.item-content",
+      title: "Item content",
+      role: "content",
+      writablePaths: ["items.title", "items.description", "items.icon"],
+    },
+    {
+      mode: "visual",
+      id: "accordion.visual.behavior-style",
+      title: "Behavior and Style",
+      role: "visual",
+      writablePaths: [
+        "options.openMode",
+        "options.collapsible",
+        "options.motion",
+        "layout.maxWidth",
+        "style.summaryPadding",
+        "style.contentPadding",
+        "style.radius",
+        "style.summaryFontSize",
+        "style.summaryFontWeight",
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.summaryTextColor",
+        "style.descriptionTextColor",
+      ],
+      readOnlyPaths: ["options.defaultOpenIds"],
+    },
+    {
+      mode: "advanced",
+      id: "accordion.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "options.openMode",
+        "options.defaultOpenIds",
+        "options.collapsible",
+        "options.motion",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "accordion.advanced.technical-ids",
+      title: "Technical ids",
+      role: "technical",
+      writablePaths: [],
+      readOnlyPaths: ["items.id"],
+    },
+    {
+      mode: "advanced",
+      id: "accordion.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["items"],
+    },
+    {
+      mode: "advanced",
+      id: "accordion.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
 };
 
 type NormalizedAccordionItem = {
@@ -747,6 +834,7 @@ export function createAccordionWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
+    editorContract: accordionEditorContract,
     render: AccordionBlock,
   };
 }

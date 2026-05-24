@@ -23,28 +23,43 @@ state behavior, and Accordion-local layout/styling controls.
 ## Editor Modes
 
 ### Wizard
-- variant selection with visual preview cards
-- item count
-- title, description, and optional plain-text icon per item
+- starter item count
 - initial open state, including `None - start collapsed` when all-closed is
   allowed
+- read-only starter title and summary text
+
+Wizard is setup-only in the v2 editor contract. It does not own variant, item
+copy, layout, motion, typography, or colors.
+
+Interim before `TASK-336-16`: Wizard still appears as a normal editor tab in
+the existing builder shell. The one-time Wizard lifecycle and `Run setup again`
+affordance are not part of `TASK-336-08`.
 
 ### Visual
 Sections:
 1. Variant
-2. Structure
+2. Item content
 3. Behavior and style
 
 Notes:
 - Accordion owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - The shared page-builder Structure section owns repeatable slot add/remove
   actions. Accordion-specific add/reorder UX is not shipped yet.
-- Visual mode exposes open-state, motion, max-width, padding, radius, title
-  typography, and color-picker controls.
+- Item content owns title, description, and optional decorative icon edits.
+- Behavior and style owns open mode, collapsible behavior, motion, max-width,
+  padding, radius, title typography, and color-picker controls.
+- The starter default-open item remains Wizard-owned in this interim ownership
+  split.
 
 ### Advanced
-- same Accordion-local controls as Visual
+- runtime diagnostics for open mode, default open ids, collapsible behavior, and
+  motion
+- technical item/summary/content id suffixes
 - normalized payload snapshot
+- read-only contract summary
+
+Advanced is technical/read-only only. It must not render writable Visual
+controls for variant, item content, behavior, layout, typography, or colors.
 
 ## Runtime Behavior Notes
 

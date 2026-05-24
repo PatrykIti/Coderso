@@ -121,6 +121,22 @@ Targeted smoke evidence:
 - `tabs`: `adminFailures=0`, `metadataGaps=0`, `publicFailures=0`
   (`.tmp/widget-smoke-tabs.json`).
 
+## 2026-05-24 TASK-336-08 Ownership Update
+
+`accordion` now has an explicit v2 editor contract and no longer treats
+Advanced as Visual plus diagnostics:
+
+- Wizard owns starter item count and default-open setup.
+- Visual owns variant, item content, open behavior, layout, motion, typography,
+  and color controls.
+- Advanced is read-only runtime diagnostics, technical IDs, normalized payload,
+  and contract summary.
+
+Targeted smoke evidence:
+
+- `accordion`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
+  `publicFailures=0` (`.tmp/widget-smoke-accordion.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

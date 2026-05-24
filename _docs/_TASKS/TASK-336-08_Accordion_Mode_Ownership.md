@@ -6,7 +6,7 @@
 **Category:** Widgets + Accordion + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -35,13 +35,25 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Inventory Accordion writable paths by current mode.
-- [ ] Add or update `accordion` `editorContract` metadata.
-- [ ] Remove duplicate writable structure/style paths from Advanced.
-- [ ] Add read-only Advanced summaries for open behavior and item ids.
-- [ ] Preserve existing runtime accessibility behavior.
-- [ ] Add focused Vitest UI coverage.
-- [ ] Add Playwright admin and public smoke evidence.
+- [x] Inventory Accordion writable paths by current mode.
+- [x] Add or update `accordion` `editorContract` metadata.
+- [x] Remove duplicate writable structure/style paths from Advanced.
+- [x] Add read-only Advanced summaries for open behavior and item ids.
+- [x] Preserve existing runtime accessibility behavior.
+- [x] Add focused Vitest UI coverage.
+- [x] Add Playwright admin and public smoke evidence.
+
+## Status Notes
+
+- 2026-05-24: Completed. Wizard now owns starter item count and default-open
+  setup, Visual owns variant/item content/behavior/layout/style authoring, and
+  Advanced is read-only runtime diagnostics, technical IDs, payload, and
+  contract summary. The widget declares a v2 `editorContract`, targeted Vitest
+  ownership/runtime coverage passes, and Playwright smoke for `accordion`
+  passed with no admin, metadata, fixture, or public failures.
+- 2026-05-24: Lifecycle caveat: this task is an ownership cleanup only. Wizard
+  remains visible as a standard editor tab until `TASK-336-16` ships the
+  one-time Wizard lifecycle and `Run setup again` affordance.
 
 ## Files to Change
 

@@ -28,9 +28,17 @@ import {
   type AccordionData,
   type AccordionVariantId,
 } from "../../../../widgets/core/accordion";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  WidgetEditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: AccordionVariantId;
@@ -222,6 +230,8 @@ function clearStyleField(
 }
 
 function ColorField({
+  id,
+  path,
   label,
   value,
   onChange,
@@ -229,6 +239,8 @@ function ColorField({
   pickerFallback,
   onClear,
 }: {
+  id: string;
+  path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -237,36 +249,47 @@ function ColorField({
   onClear: () => void;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
-        label={label}
-        value={value}
-        onClear={onClear}
-        onRestoreValue={onChange}
-      />
-      <SharedColorFieldInputs
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        pickerFallback={pickerFallback}
-      />
-    </div>
+    <WidgetControlRow id={id} label={label} path={path}>
+      {(fieldProps) => (
+        <div className="space-y-2">
+          <ClearableFieldHeader
+            label={label}
+            value={value}
+            onClear={onClear}
+            onRestoreValue={onChange}
+          />
+          <SharedColorFieldInputs
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            pickerFallback={pickerFallback}
+            inputId={fieldProps.id}
+            ariaLabelledby={fieldProps["aria-labelledby"]}
+            ariaDescribedby={fieldProps["aria-describedby"]}
+          />
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id: string;
+  mode: WidgetEditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <WidgetEditorSection id={id} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -343,16 +366,16 @@ function StructureSection({
   value,
   onChange,
   context,
-  includeInitialOpenControl = false,
+  mode,
 }: {
   value: AccordionData;
   onChange: (next: AccordionData) => void;
   context?: WidgetEditorProps<AccordionData>["context"];
-  includeInitialOpenControl?: boolean;
+  mode: "setup" | "presentation";
 }) {
+  const isSetupMode = mode === "setup";
   const slotTargetCount = resolveAccordionSlotTargetCount(context);
-  const desiredCount =
-    !includeInitialOpenControl && slotTargetCount > 0 ? slotTargetCount : undefined;
+  const desiredCount = !isSetupMode && slotTargetCount > 0 ? slotTargetCount : undefined;
   const normalized = normalizeValue(value, desiredCount);
   const items = normalizeAccordionItems(normalized.items, desiredCount);
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
@@ -362,76 +385,90 @@ function StructureSection({
 
   return (
     <EditorSection
-      id="accordion.items"
-      title="Items"
-      description="Set titles and helper text for each item."
+      id={isSetupMode ? "accordion.wizard.starter-setup" : "accordion.visual.item-content"}
+      mode={isSetupMode ? "wizard" : "visual"}
+      role={isSetupMode ? "setup" : "content"}
+      title={isSetupMode ? "Starter items" : "Item content"}
+      description={
+        isSetupMode
+          ? "Set the initial item count and first open item before daily visual editing."
+          : "Edit item titles, helper text, and optional decorative icons."
+      }
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {includeInitialOpenControl ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Number of items</p>
-            <Select
-              value={String(items.length)}
-              onValueChange={(next) => setCount(value, onChange, Number(next))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select count" />
-              </SelectTrigger>
-              <SelectContent>
-                {itemCountOptions.map((option) => (
-                  <SelectItem key={`accordion-count-${option}`} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Item count</p>
-            <p className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-              Use the shared Structure controls in Visual mode to add or remove Accordion items.
-              Advanced mode reflects the current slot-backed item count.
-            </p>
-          </div>
-        )}
+      {isSetupMode ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow
+            id="accordion.wizard.item-count"
+            label="Number of items"
+            path="items.count"
+          >
+            {(fieldProps) => (
+              <Select
+                value={String(items.length)}
+                onValueChange={(next) => setCount(value, onChange, Number(next))}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select count" />
+                </SelectTrigger>
+                <SelectContent>
+                  {itemCountOptions.map((option) => (
+                    <SelectItem key={`accordion-count-${option}`} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-        {includeInitialOpenControl ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Initially open item</p>
-            <Select
-              value={initialOpenValue}
-              onValueChange={(next) => {
-                if (next === accordionNoneOpenValue) {
+          <WidgetControlRow
+            id="accordion.wizard.default-open"
+            label="Initially open item"
+            path="options.defaultOpenIds"
+          >
+            {(fieldProps) => (
+              <Select
+                value={initialOpenValue}
+                onValueChange={(next) => {
+                  if (next === accordionNoneOpenValue) {
+                    updateOptions(value, onChange, {
+                      initiallyOpenId: undefined,
+                      defaultOpenIds: [],
+                    });
+                    return;
+                  }
                   updateOptions(value, onChange, {
-                    initiallyOpenId: undefined,
-                    defaultOpenIds: [],
+                    initiallyOpenId: next,
+                    defaultOpenIds: [next],
                   });
-                  return;
-                }
-                updateOptions(value, onChange, {
-                  initiallyOpenId: next,
-                  defaultOpenIds: [next],
-                });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose item" />
-              </SelectTrigger>
-              <SelectContent>
-                {allowsAllClosed ? (
-                  <SelectItem value={accordionNoneOpenValue}>None - start collapsed</SelectItem>
-                ) : null}
-                {items.map((item) => (
-                  <SelectItem key={`accordion-open-${item.id}`} value={item.id}>
-                    {item.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : null}
-      </div>
+                }}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Choose item" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowsAllClosed ? (
+                    <SelectItem value={accordionNoneOpenValue}>None - start collapsed</SelectItem>
+                  ) : null}
+                  {items.map((item) => (
+                    <SelectItem key={`accordion-open-${item.id}`} value={item.id}>
+                      {item.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        </div>
+      ) : null}
 
       <div className="space-y-3">
         {items.map((item, index) => (
@@ -439,43 +476,102 @@ function StructureSection({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {context?.slotTargets?.[index]?.label ?? `Item ${index + 1}`}
             </p>
-            <Input
-              value={item.title}
-              onChange={(event) =>
-                updateItem(value, onChange, item.id, { title: event.target.value }, items.length)
-              }
-              placeholder={`Section ${index + 1}`}
-            />
-            <Input
-              value={item.description ?? ""}
-              onChange={(event) =>
-                updateItem(
-                  value,
-                  onChange,
-                  item.id,
-                  {
-                    description: event.target.value,
-                  },
-                  items.length
-                )
-              }
-              placeholder="Optional summary text"
-            />
-            <Input
-              value={item.icon ?? ""}
-              onChange={(event) =>
-                updateItem(
-                  value,
-                  onChange,
-                  item.id,
-                  {
-                    icon: event.target.value,
-                  },
-                  items.length
-                )
-              }
-              placeholder="Optional icon or emoji"
-            />
+            {isSetupMode ? (
+              <>
+                <ReadonlyWidgetSummaryRow
+                  id={`accordion.wizard.item.${item.id}.title`}
+                  label="Item title"
+                  path={`items.${index}.title`}
+                  value={item.title}
+                  help="Visual owns daily item title edits after setup creates the item."
+                />
+                <ReadonlyWidgetSummaryRow
+                  id={`accordion.wizard.item.${item.id}.description`}
+                  label="Summary text"
+                  path={`items.${index}.description`}
+                  value={item.description || "Not set"}
+                />
+              </>
+            ) : (
+              <>
+                <WidgetControlRow
+                  id={`accordion.visual.item.${item.id}.title`}
+                  label="Item title"
+                  path={`items.${index}.title`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                      value={item.title}
+                      onChange={(event) =>
+                        updateItem(
+                          value,
+                          onChange,
+                          item.id,
+                          { title: event.target.value },
+                          items.length
+                        )
+                      }
+                      placeholder={`Section ${index + 1}`}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`accordion.visual.item.${item.id}.description`}
+                  label="Summary text"
+                  path={`items.${index}.description`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                      value={item.description ?? ""}
+                      onChange={(event) =>
+                        updateItem(
+                          value,
+                          onChange,
+                          item.id,
+                          {
+                            description: event.target.value,
+                          },
+                          items.length
+                        )
+                      }
+                      placeholder="Optional summary text"
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`accordion.visual.item.${item.id}.icon`}
+                  label="Icon or emoji"
+                  path={`items.${index}.icon`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                      value={item.icon ?? ""}
+                      onChange={(event) =>
+                        updateItem(
+                          value,
+                          onChange,
+                          item.id,
+                          {
+                            icon: event.target.value,
+                          },
+                          items.length
+                        )
+                      }
+                      placeholder="Optional icon or emoji"
+                    />
+                  )}
+                </WidgetControlRow>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -500,296 +596,302 @@ function BehaviorSection({
   const items = normalizeAccordionItems(normalized.items, desiredCount);
   const openMode = normalized.options?.openMode ?? "single";
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
-  const allowsAllClosed = normalized.options?.collapsible ?? true;
-  const singleOpenValue =
-    defaultOpenIds[0] ?? (allowsAllClosed ? accordionNoneOpenValue : (items[0]?.id ?? "1"));
   const fallbackTokens = accordionVariantFallbackTokenMap[variant];
 
   return (
     <EditorSection
-      id="accordion.behavior-style"
+      id="accordion.visual.behavior-style"
+      mode="visual"
+      role="visual"
       title="Behavior and Style"
       description="Control open state, layout, styling, and motion."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Open mode</p>
-          <Select
-            value={openMode}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, {
-                openMode: next as "single" | "multiple",
-                allowMultiple: next === "multiple",
-                defaultOpenIds:
-                  next === "multiple" ? defaultOpenIds : [defaultOpenIds[0] ?? items[0]?.id ?? "1"],
-                initiallyOpenId: defaultOpenIds[0] ?? items[0]?.id ?? "1",
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose open mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single">Single open item</SelectItem>
-              <SelectItem value="multiple">Multiple open items</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="accordion.visual.open-mode" label="Open mode" path="options.openMode">
+          {(fieldProps) => (
+            <Select
+              value={openMode}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, {
+                  openMode: next as "single" | "multiple",
+                  allowMultiple: next === "multiple",
+                  defaultOpenIds:
+                    next === "multiple"
+                      ? defaultOpenIds
+                      : [defaultOpenIds[0] ?? items[0]?.id ?? "1"],
+                  initiallyOpenId: defaultOpenIds[0] ?? items[0]?.id ?? "1",
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose open mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single open item</SelectItem>
+                <SelectItem value="multiple">Multiple open items</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="flex items-center justify-between rounded-md border p-3">
-          <div>
-            <p className="text-sm font-medium">Allow all sections to close</p>
-            <p className="text-xs text-muted-foreground">
-              Turn this on if visitors should be able to collapse every section.
-            </p>
-          </div>
-          <Switch
-            checked={normalized.options?.collapsible ?? true}
-            onCheckedChange={(checked) => updateOptions(value, onChange, { collapsible: checked })}
-          />
-        </div>
+        <WidgetControlRow
+          id="accordion.visual.collapsible"
+          label="Allow all sections to close"
+          help="Turn this on if visitors should be able to collapse every section."
+          path="options.collapsible"
+        >
+          {() => (
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <p className="text-xs text-muted-foreground">Visitor collapse behavior</p>
+              <Switch
+                checked={normalized.options?.collapsible ?? true}
+                onCheckedChange={(checked) =>
+                  updateOptions(value, onChange, { collapsible: checked })
+                }
+              />
+            </div>
+          )}
+        </WidgetControlRow>
       </div>
 
-      {openMode === "single" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Default open item</p>
-          <Select
-            value={singleOpenValue}
-            onValueChange={(next) => {
-              if (next === accordionNoneOpenValue) {
-                updateOptions(value, onChange, {
-                  defaultOpenIds: [],
-                  initiallyOpenId: undefined,
-                });
-                return;
-              }
-              updateOptions(value, onChange, {
-                defaultOpenIds: [next],
-                initiallyOpenId: next,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose item" />
-            </SelectTrigger>
-            <SelectContent>
-              {allowsAllClosed ? (
-                <SelectItem value={accordionNoneOpenValue}>None - start collapsed</SelectItem>
-              ) : null}
-              {items.map((item) => (
-                <SelectItem key={`accordion-default-open-${item.id}`} value={item.id}>
-                  {item.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Default open items</p>
-          <div className="space-y-2 rounded-md border p-3">
-            {items.map((item) => {
-              const checked = defaultOpenIds.includes(item.id);
-              return (
-                <label
-                  key={`accordion-default-open-checkbox-${item.id}`}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span>{item.title}</span>
-                  <Switch
-                    checked={checked}
-                    onCheckedChange={(nextChecked) => {
-                      const nextIds = nextChecked
-                        ? Array.from(new Set([...defaultOpenIds, item.id]))
-                        : defaultOpenIds.filter((entry) => entry !== item.id);
-                      const resolvedIds =
-                        nextIds.length === 0 && !allowsAllClosed ? [item.id] : nextIds;
-                      updateOptions(value, onChange, {
-                        defaultOpenIds: resolvedIds,
-                        initiallyOpenId: resolvedIds[0],
-                      });
-                    }}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <ReadonlyWidgetSummaryRow
+        id="accordion.visual.default-open-summary"
+        label="Default open setup"
+        path="options.defaultOpenIds"
+        value={defaultOpenIds.length > 0 ? defaultOpenIds.join(", ") : "All collapsed"}
+        help="Wizard owns the starter default open item until the one-time Wizard lifecycle lands."
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Motion</p>
-          <Select
-            value={normalized.options?.motion ?? "none"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, {
-                motion: next as NonNullable<NonNullable<AccordionData["options"]>["motion"]>,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose motion" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionMotionOptions.map((option) => (
-                <SelectItem key={`accordion-motion-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Max width</p>
-          <Select
-            value={normalized.layout?.maxWidth ?? "full"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                maxWidth: next as NonNullable<NonNullable<AccordionData["layout"]>["maxWidth"]>,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose width" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionMaxWidthOptions.map((option) => (
-                <SelectItem key={`accordion-max-width-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="accordion.visual.motion" label="Motion" path="options.motion">
+          {(fieldProps) => (
+            <Select
+              value={normalized.options?.motion ?? "none"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, {
+                  motion: next as NonNullable<NonNullable<AccordionData["options"]>["motion"]>,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionMotionOptions.map((option) => (
+                  <SelectItem key={`accordion-motion-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="accordion.visual.max-width" label="Max width" path="layout.maxWidth">
+          {(fieldProps) => (
+            <Select
+              value={normalized.layout?.maxWidth ?? "full"}
+              onValueChange={(next) =>
+                updateLayout(value, onChange, {
+                  maxWidth: next as NonNullable<NonNullable<AccordionData["layout"]>["maxWidth"]>,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose width" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionMaxWidthOptions.map((option) => (
+                  <SelectItem key={`accordion-max-width-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Summary padding</p>
-          <Select
-            value={normalized.style?.summaryPadding ?? fallbackTokens.summaryPadding}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                summaryPadding: next as NonNullable<
-                  NonNullable<AccordionData["style"]>["summaryPadding"]
-                >,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose summary padding" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionPaddingOptions.map((option) => (
-                <SelectItem key={`accordion-summary-padding-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Content padding</p>
-          <Select
-            value={normalized.style?.contentPadding ?? fallbackTokens.contentPadding}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                contentPadding: next as NonNullable<
-                  NonNullable<AccordionData["style"]>["contentPadding"]
-                >,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose content padding" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionPaddingOptions.map((option) => (
-                <SelectItem key={`accordion-content-padding-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Corner radius</p>
-          <Select
-            value={normalized.style?.radius ?? fallbackTokens.radius}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                radius: next as NonNullable<NonNullable<AccordionData["style"]>["radius"]>,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose radius" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionRadiusOptions.map((option) => (
-                <SelectItem key={`accordion-radius-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="accordion.visual.summary-padding"
+          label="Summary padding"
+          path="style.summaryPadding"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.summaryPadding ?? fallbackTokens.summaryPadding}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  summaryPadding: next as NonNullable<
+                    NonNullable<AccordionData["style"]>["summaryPadding"]
+                  >,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose summary padding" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionPaddingOptions.map((option) => (
+                  <SelectItem key={`accordion-summary-padding-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="accordion.visual.content-padding"
+          label="Content padding"
+          path="style.contentPadding"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.contentPadding ?? fallbackTokens.contentPadding}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  contentPadding: next as NonNullable<
+                    NonNullable<AccordionData["style"]>["contentPadding"]
+                  >,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose content padding" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionPaddingOptions.map((option) => (
+                  <SelectItem key={`accordion-content-padding-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="accordion.visual.radius" label="Corner radius" path="style.radius">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.radius ?? fallbackTokens.radius}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  radius: next as NonNullable<NonNullable<AccordionData["style"]>["radius"]>,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionRadiusOptions.map((option) => (
+                  <SelectItem key={`accordion-radius-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title size</p>
-          <Select
-            value={normalized.style?.summaryFontSize ?? fallbackTokens.summaryFontSize}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                summaryFontSize: next as NonNullable<
-                  NonNullable<AccordionData["style"]>["summaryFontSize"]
-                >,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose title size" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionSummaryFontSizeOptions.map((option) => (
-                <SelectItem key={`accordion-title-size-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title weight</p>
-          <Select
-            value={normalized.style?.summaryFontWeight ?? fallbackTokens.summaryFontWeight}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                summaryFontWeight: next as NonNullable<
-                  NonNullable<AccordionData["style"]>["summaryFontWeight"]
-                >,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose title weight" />
-            </SelectTrigger>
-            <SelectContent>
-              {accordionSummaryFontWeightOptions.map((option) => (
-                <SelectItem key={`accordion-title-weight-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="accordion.visual.summary-font-size"
+          label="Title size"
+          path="style.summaryFontSize"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.summaryFontSize ?? fallbackTokens.summaryFontSize}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  summaryFontSize: next as NonNullable<
+                    NonNullable<AccordionData["style"]>["summaryFontSize"]
+                  >,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose title size" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionSummaryFontSizeOptions.map((option) => (
+                  <SelectItem key={`accordion-title-size-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="accordion.visual.summary-font-weight"
+          label="Title weight"
+          path="style.summaryFontWeight"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.summaryFontWeight ?? fallbackTokens.summaryFontWeight}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  summaryFontWeight: next as NonNullable<
+                    NonNullable<AccordionData["style"]>["summaryFontWeight"]
+                  >,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose title weight" />
+              </SelectTrigger>
+              <SelectContent>
+                {accordionSummaryFontWeightOptions.map((option) => (
+                  <SelectItem key={`accordion-title-weight-${option.id}`} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <ColorField
+          id="accordion.visual.surface-color"
+          path="style.surfaceColor"
           label="Surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
@@ -798,6 +900,8 @@ function BehaviorSection({
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
         />
         <ColorField
+          id="accordion.visual.border-color"
+          path="style.borderColor"
           label="Border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
@@ -806,6 +910,8 @@ function BehaviorSection({
           onClear={() => clearStyleField(value, onChange, "borderColor")}
         />
         <ColorField
+          id="accordion.visual.summary-text-color"
+          path="style.summaryTextColor"
           label="Summary text color"
           value={normalized.style?.summaryTextColor}
           onChange={(next) => updateStyle(value, onChange, { summaryTextColor: next })}
@@ -814,6 +920,8 @@ function BehaviorSection({
           onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
         />
         <ColorField
+          id="accordion.visual.description-text-color"
+          path="style.descriptionTextColor"
           label="Body text color"
           value={normalized.style?.descriptionTextColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionTextColor: next })}
@@ -834,22 +942,10 @@ function DiagnosticsSnapshot({ value }: { value: AccordionData }) {
   );
 }
 
-export function AccordionWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<AccordionData>) {
+export function AccordionWizardEditor({ value, onChange }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <EditorSection
-        id="accordion.variant"
-        title="Variant"
-        description="Pick accordion visual style."
-      >
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
-      </EditorSection>
-      <StructureSection value={value} onChange={onChange} includeInitialOpenControl />
+      <StructureSection value={value} onChange={onChange} mode="setup" />
     </div>
   );
 }
@@ -863,10 +959,18 @@ export function AccordionVisualEditor({
 }: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <EditorSection id="accordion.variant" title="Variant" description="Choose accordion style.">
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
+      <EditorSection
+        id="accordion.visual.variant"
+        mode="visual"
+        role="visual"
+        title="Variant"
+        description="Choose accordion style."
+      >
+        <WidgetControlRow id="accordion.visual.variant-picker" label="Variant" path="variant">
+          {() => <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />}
+        </WidgetControlRow>
       </EditorSection>
-      <StructureSection value={value} onChange={onChange} context={context} />
+      <StructureSection value={value} onChange={onChange} context={context} mode="presentation" />
       <BehaviorSection
         value={value}
         onChange={onChange}
@@ -877,35 +981,97 @@ export function AccordionVisualEditor({
   );
 }
 
-export function AccordionAdvancedEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  context,
-}: WidgetEditorProps<AccordionData>) {
+export function AccordionAdvancedEditor({ value, context }: WidgetEditorProps<AccordionData>) {
+  const slotTargetCount = resolveAccordionSlotTargetCount(context);
+  const desiredCount = slotTargetCount > 0 ? slotTargetCount : undefined;
+  const normalized = normalizeValue(value, desiredCount);
+  const items = normalizeAccordionItems(normalized.items, desiredCount);
+  const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
+  const openMode = normalized.options?.openMode ?? "single";
+
   return (
     <div className="space-y-4">
       <EditorSection
-        id="accordion.variant"
-        title="Variant"
-        description="Variant and behavior tuning."
+        id="accordion.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime diagnostics"
+        description="Read-only open-state and runtime behavior summary."
       >
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.open-mode"
+          label="Open mode"
+          path="options.openMode"
+          value={openMode}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.default-open"
+          label="Default open ids"
+          path="options.defaultOpenIds"
+          value={defaultOpenIds.length > 0 ? defaultOpenIds.join(", ") : "All collapsed"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.collapsible"
+          label="Collapsible"
+          path="options.collapsible"
+          value={
+            normalized.options?.collapsible === false
+              ? "At least one item stays open"
+              : "All items may close"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.motion"
+          label="Motion"
+          path="options.motion"
+          value={normalized.options?.motion ?? "none"}
+        />
       </EditorSection>
-      <StructureSection value={value} onChange={onChange} context={context} />
-      <BehaviorSection
-        value={value}
-        onChange={onChange}
-        variant={resolveVariant(variant)}
-        context={context}
-      />
       <EditorSection
-        id="accordion.diagnostics"
-        title="Diagnostics"
+        id="accordion.advanced.technical-ids"
+        mode="advanced"
+        role="technical"
+        title="Technical ids"
+        description="Read-only item, summary, and content id suffixes."
+      >
+        {items.map((item, index) => (
+          <ReadonlyWidgetSummaryRow
+            key={item.id}
+            id={`accordion.advanced.item.${item.id}.id`}
+            label={`Item ${index + 1}`}
+            path={`items.${index}.id`}
+            value={`item=${item.id}; summary suffix=summary-${item.id}; content suffix=content-${item.id}`}
+          />
+        ))}
+      </EditorSection>
+      <EditorSection
+        id="accordion.advanced.runtime-payload"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime payload"
         description="Normalized payload preview."
       >
-        <DiagnosticsSnapshot value={normalizeValue(value)} />
+        <WidgetControlRow
+          id="accordion.advanced.normalized-payload"
+          label="Normalized payload"
+          path="items"
+          ownership="readonly"
+          readOnly
+        >
+          {() => <DiagnosticsSnapshot value={normalized} />}
+        </WidgetControlRow>
+      </EditorSection>
+      <EditorSection
+        id="accordion.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Accordion runtime and editor ownership summary."
+      >
+        <p className="text-xs text-muted-foreground">
+          Visual owns variant, item content, behavior, layout, and style. Advanced is read-only
+          diagnostics.
+        </p>
       </EditorSection>
     </div>
   );

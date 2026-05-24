@@ -212,6 +212,26 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const getSectionByTitle = (container: ParentNode, title: string) => {
+  const section = Array.from(container.querySelectorAll("section")).find(
+    (candidate) =>
+      normalizeText(candidate.querySelector("h3")?.textContent) === normalizeText(title)
+  );
+  if (!(section instanceof HTMLElement)) {
+    throw new Error(`Missing section "${title}"`);
+  }
+  return section;
+};
+
+const writablePaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
+
 const readDiagnostics = (container: ParentNode) => {
   const diagnostics = container.querySelector("pre");
   if (!(diagnostics instanceof HTMLPreElement)) {
@@ -288,7 +308,60 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Accordion wizard editor resolves legacy variants, preserves a valid open item, and updates generated items", async () => {
+test("Accordion editors expose non-overlapping writable ownership metadata", async () => {
+  const baseValue: AccordionData = {
+    items: [
+      { id: "1", title: "Intro", description: "Start here" },
+      { id: "2", title: "Pricing", description: "Plans overview", icon: "✨" },
+    ],
+    options: {
+      defaultOpenIds: ["1"],
+      openMode: "single",
+      collapsible: true,
+    },
+    style: accordionDefaults.style,
+  };
+  const wizard = await renderEditor({ editor: "wizard", initialValue: baseValue });
+  const visual = await renderEditor({ editor: "visual", initialValue: baseValue });
+  const advanced = await renderEditor({ editor: "advanced", initialValue: baseValue });
+
+  try {
+    const wizardPaths = writablePaths(wizard.container);
+    const visualPaths = writablePaths(visual.container);
+    const advancedPaths = writablePaths(advanced.container);
+    const duplicatePaths = [...wizardPaths, ...visualPaths, ...advancedPaths].filter(
+      (path, index, paths) => paths.indexOf(path) !== index
+    );
+
+    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count", "options.defaultOpenIds"]));
+    expect(visualPaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "items.0.title",
+        "items.0.description",
+        "items.0.icon",
+        "options.openMode",
+        "options.collapsible",
+        "options.motion",
+        "layout.maxWidth",
+        "style.summaryPadding",
+        "style.surfaceColor",
+      ])
+    );
+    expect(wizardPaths).not.toContain("variant");
+    expect(wizardPaths).not.toContain("style.surfaceColor");
+    expect(visualPaths).not.toContain("items.count");
+    expect(visualPaths).not.toContain("options.defaultOpenIds");
+    expect(advancedPaths).toEqual([]);
+    expect(duplicatePaths).toEqual([]);
+  } finally {
+    wizard.cleanup();
+    visual.cleanup();
+    advanced.cleanup();
+  }
+});
+
+test("Accordion wizard editor preserves a valid open item and seeds generated items", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy",
@@ -306,16 +379,15 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
   });
 
   try {
-    expect(view.container.innerHTML).toContain('data-widget-editor-section="accordion.items"');
-    expect(findButtonByText(view.container, "Soft")?.textContent).toContain("Selected");
-    expect(findButtonByText(view.container, "Bordered")?.textContent).toContain("Pick");
-
-    clickElement(findButtonByText(view.container, "Bordered"));
-    expect(view.getVariant()).toBe("bordered");
-    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("bordered");
+    const setupSection = getSectionByTitle(view.container, "Starter items");
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.wizard.starter-setup"'
+    );
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(setupSection.textContent).toContain("Visual owns daily item title edits");
 
     setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
+      findSelectByOptions(setupSection, ["2", "3", "4", String(accordionItemMax)]),
       "4"
     );
 
@@ -328,22 +400,13 @@ test("Accordion wizard editor resolves legacy variants, preserves a valid open i
       })
     );
 
-    setSelectValue(findSelectByOptions(view.container, ["1", "2", "3", "4"]), "4");
+    setSelectValue(findSelectByOptions(setupSection, ["1", "2", "3", "4"]), "4");
     expect(view.getValue().options?.initiallyOpenId).toBe("4");
 
-    setInputValue(findInputByPlaceholder(view.container, "Section 4"), "Support");
-    setInputValue(findAllInputsByPlaceholder(view.container, "Optional summary text")[3], "SLA");
-    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[3], "✨");
-
-    expect(view.getValue().items?.[3]).toEqual(
-      expect.objectContaining({
-        id: "4",
-        title: "Support",
-        description: "SLA",
-        icon: "✨",
-      })
-    );
+    expect(setupSection.querySelectorAll("input")).toHaveLength(0);
+    expect(view.getValue().items?.[3]).toEqual(expect.objectContaining({ id: "4" }));
     expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -398,12 +461,12 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
 
   try {
     expect(view.container.innerHTML).toContain(
-      'data-widget-editor-section="accordion.behavior-style"'
+      'data-widget-editor-section="accordion.visual.behavior-style"'
+    );
+    expect(view.container.innerHTML).toContain(
+      'data-widget-editor-section="accordion.visual.item-content"'
     );
     expect(view.container.textContent).not.toContain("Initially open item");
-    expect(view.container.textContent).toContain(
-      "Use the shared Structure controls in Visual mode"
-    );
     expect(
       findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)])
     ).toBeUndefined();
@@ -446,17 +509,10 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
         icon: "🔥",
       })
     );
-    setSelectValue(
-      findSelectByOptions(view.container, ["__none__", "alpha", "beta", "3"]),
-      "__none__"
-    );
-    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
-    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
-
     setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
 
     expect(view.getValue().options?.openMode).toBe("multiple");
-    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.defaultOpenIds).toEqual(["alpha"]);
 
     setSelectValue(findSelectByOptions(view.container, ["none", "subtle", "smooth"]), "smooth");
     setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "full"]), "sm");
@@ -477,7 +533,7 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
       expect.objectContaining({
         options: expect.objectContaining({
           openMode: "multiple",
-          defaultOpenIds: [],
+          defaultOpenIds: ["alpha"],
           collapsible: true,
           allowMultiple: true,
           motion: "smooth",
@@ -501,7 +557,7 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
   }
 });
 
-test("Accordion advanced editor shows normalized diagnostics and keeps the preview in sync with edits", async () => {
+test("Accordion advanced editor exposes read-only normalized diagnostics", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "unknown",
@@ -548,12 +604,21 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
   });
 
   try {
-    expect(findButtonByText(view.container, "Soft")?.textContent).toContain("Selected");
+    const diagnosticsSection = getSectionByTitle(view.container, "Runtime diagnostics");
+    const idsSection = getSectionByTitle(view.container, "Technical ids");
+    const payloadSection = getSectionByTitle(view.container, "Runtime payload");
+    const summarySection = getSectionByTitle(view.container, "Contract summary");
 
-    expect(readDiagnostics(view.container)).toEqual({
+    expect(diagnosticsSection.textContent).toContain("Open mode");
+    expect(diagnosticsSection.textContent).toContain("Default open ids");
+    expect(idsSection.textContent).toContain("summary suffix=summary-1");
+    expect(idsSection.textContent).toContain("content suffix=content-3");
+    expect(summarySection.textContent).toContain("Advanced is read-only diagnostics");
+    expect(readDiagnostics(payloadSection)).toEqual({
       items: [
         { id: "1", title: "Section 1" },
         { id: "2", title: "Custom title", description: "Helpful details" },
+        { id: "3", title: "Section 3" },
       ],
       options: {
         openMode: "single",
@@ -572,42 +637,13 @@ test("Accordion advanced editor shows normalized diagnostics and keeps the previ
       },
     });
 
-    setSelectValue(
-      findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)]),
-      "3"
-    );
-    setInputValue(findInputByPlaceholder(view.container, "Section 3"), "Rollout");
-    setInputValue(findAllInputsByPlaceholder(view.container, "Optional icon or emoji")[2], "📌");
-    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
-    setInputValue(
-      findAllInputsByPlaceholder(view.container, "var(--color-text)")[0],
-      "var(--color-muted)"
-    );
-    setSelectValue(findSelectByOptions(view.container, ["none", "subtle", "smooth"]), "subtle");
-
-    expect(readDiagnostics(view.container)).toEqual({
-      items: [
-        { id: "1", title: "Section 1" },
-        { id: "2", title: "Custom title", description: "Helpful details" },
-        { id: "3", title: "Rollout", icon: "📌" },
-      ],
-      options: {
-        openMode: "multiple",
-        defaultOpenIds: ["1"],
-        collapsible: true,
-        initiallyOpenId: "1",
-        allowMultiple: true,
-        motion: "subtle",
-      },
-      style: {
-        borderColor: "accent-border",
-        summaryTextColor: "var(--color-muted)",
-      },
-      layout: {
-        maxWidth: "full",
-      },
-    });
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Item content")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Behavior and Style")).toThrow();
+    expect(view.container.querySelectorAll("input, select, button")).toHaveLength(0);
+    expect(writablePaths(view.container)).toEqual([]);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

@@ -17,6 +17,7 @@ import {
   normalizeAccordionData,
   type AccordionData,
 } from "../../../core/widgets/core/accordion";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -272,26 +273,65 @@ test("accordion visual editor renders key sections", () => {
     />
   );
 
-  expect(html).toContain("Items");
+  expect(html).toContain("Item content");
   expect(html).toContain("Behavior and Style");
-  expect(html).toContain('data-widget-editor-section="accordion.items"');
-  expect(html).toContain('data-widget-editor-section="accordion.behavior-style"');
+  expect(html).toContain('data-widget-editor-section="accordion.visual.variant"');
+  expect(html).toContain('data-widget-editor-section="accordion.visual.item-content"');
+  expect(html).toContain('data-widget-editor-section="accordion.visual.behavior-style"');
   expect(html).toContain("Optional icon or emoji");
 });
 
-const editors = [AccordionWizardEditor, AccordionAdvancedEditor];
+test("accordion wizard and advanced editors render v2 ownership surfaces", () => {
+  const wizardHtml = renderToString(
+    <AccordionWizardEditor
+      value={accordionDefaults}
+      onChange={() => undefined}
+      variant="soft"
+      onVariantChange={() => undefined}
+    />
+  );
+  const advancedHtml = renderToString(
+    <AccordionAdvancedEditor
+      value={accordionDefaults}
+      onChange={() => undefined}
+      variant="soft"
+      onVariantChange={() => undefined}
+    />
+  );
 
-test("accordion wizard and advanced editors render", () => {
-  for (const Editor of editors) {
-    const html = renderToString(
-      <Editor
-        value={accordionDefaults}
-        onChange={() => undefined}
-        variant="soft"
-        onVariantChange={() => undefined}
-      />
-    );
+  expect(wizardHtml).toContain("Starter items");
+  expect(wizardHtml).toContain("Visual owns daily item title edits");
+  expect(wizardHtml).not.toContain("Variant");
+  expect(wizardHtml).not.toContain("Behavior and Style");
+  expect(advancedHtml).toContain("Runtime diagnostics");
+  expect(advancedHtml).toContain("Technical ids");
+  expect(advancedHtml).toContain("Runtime payload");
+  expect(advancedHtml).toContain("Contract summary");
+  expect(advancedHtml).not.toContain("Variant");
+  expect(advancedHtml).not.toContain("Optional icon or emoji");
+  expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
+});
 
-    expect(html).toContain("Variant");
-  }
+test("accordion ships a strict v2 editor contract", () => {
+  const widget = createAccordionWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(validation).toEqual(expect.objectContaining({ valid: true, errors: [] }));
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual(
+    expect.arrayContaining([
+      "accordion.wizard.starter-setup",
+      "accordion.visual.variant",
+      "accordion.visual.item-content",
+      "accordion.visual.behavior-style",
+      "accordion.advanced.runtime-diagnostics",
+      "accordion.advanced.technical-ids",
+      "accordion.advanced.runtime-payload",
+      "accordion.advanced.contract-summary",
+    ])
+  );
 });
