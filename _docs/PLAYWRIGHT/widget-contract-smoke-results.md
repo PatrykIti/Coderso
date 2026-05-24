@@ -1,6 +1,6 @@
 # Widget Contract Smoke Results
 
-- **Generated:** 2026-05-23T23:02:02.738Z
+- **Generated:** 2026-05-23T23:40:11.338Z
 - **Dry run:** no
 - **Inventory:** 38/38 widgets
 - **Admin:** http://localhost:5173/admin
@@ -15,8 +15,8 @@
 
 ## Summary
 
-- Admin failures: 31
-- Public failures: 3
+- Admin failures: 30
+- Public failures: 2
 - Fixture gaps: 9
 - Metadata gaps: 9
 
@@ -24,44 +24,44 @@
 
 | Widget | Status | Modes | Duplicate paths | Notes |
 |---|---|---|---|---|
-| `section` | failed | - | - | block_select_missing |
-| `template-section` | passed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:passed r1/s4/v4 | - | - |
-| `grid-columns` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6 | - | block_select_missing |
-| `split-layout` | failed | - | - | block_select_missing |
-| `tabs` | metadata-gap | wizard:passed r1/s3/v3<br>visual:passed r1/s6/v6<br>advanced:passed r1/s6/v6 | - | - |
-| `accordion` | failed | wizard:passed r1/s2/v2<br>visual:passed r1/s4/v4 | - | block_select_missing |
-| `toggle-block` | failed | - | - | block_select_missing |
+| `section` | metadata-gap | wizard:passed r1/s1/v1<br>visual:passed r1/s7/v7<br>advanced:passed r1/s2/v2 | - | - |
+| `template-section` | failed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:failed r0/s0/v0 | - | - |
+| `grid-columns` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
+| `split-layout` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s5/v5<br>advanced:passed r1/s2/v2 | - | - |
+| `tabs` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s6/v6 | - | - |
+| `accordion` | metadata-gap | wizard:passed r1/s2/v2<br>visual:passed r1/s4/v4<br>advanced:passed r1/s4/v4 | - | - |
+| `toggle-block` | failed | wizard:passed r1/s3/v3<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
 | `spacer` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s3/v3<br>advanced:passed r1/s2/v2 | - | - |
-| `divider` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s4/v4 | - | block_select_missing |
-| `stack` | failed | - | - | block_select_missing |
+| `divider` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s4/v4<br>advanced:failed r0/s0/v0 | - | - |
+| `stack` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s5/v5<br>advanced:passed r1/s2/v2 | - | - |
 | `hero` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s10/v10<br>advanced:passed r1/s2/v2 | - | - |
-| `feature-grid` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6 | - | block_select_missing |
-| `testimonials` | failed | - | - | block_select_missing |
-| `pricing-plans` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `faq-accordion` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s7/v7 | - | block_select_missing |
-| `cta-banner` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `logo-cloud` | failed | wizard:passed r1/s1/v1<br>visual:passed r1/s5/v5 | - | block_select_missing |
-| `gallery-mosaic` | failed | - | - | block_select_missing |
-| `stats-kpi` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `team` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s4/v4 | - | block_select_missing |
-| `rich-text-section` | failed | - | - | block_select_missing |
+| `feature-grid` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
+| `testimonials` | passed | wizard:passed r1/s2/v2<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
+| `pricing-plans` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `faq-accordion` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s7/v7<br>advanced:passed r1/s4/v4 | - | - |
+| `cta-banner` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:failed r0/s0/v0 | - | - |
+| `logo-cloud` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s5/v5<br>advanced:passed r1/s3/v3 | - | - |
+| `gallery-mosaic` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s7/v7<br>advanced:passed r1/s4/v4 | - | - |
+| `stats-kpi` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
+| `team` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s4/v4<br>advanced:passed r1/s3/v3 | - | - |
+| `rich-text-section` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
 | `content-list` | passed | wizard:passed r1/s2/v2<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `posts-feed` | failed | - | - | block_select_missing |
-| `entry-teaser` | failed | - | - | block_select_missing |
+| `posts-feed` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `entry-teaser` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
 | `product-gallery` | passed | wizard:passed r1/s3/v3<br>visual:passed r1/s5/v5<br>advanced:passed r1/s4/v4 | - | - |
-| `product-compare` | failed | - | - | block_select_missing |
-| `product-table` | failed | - | - | block_select_missing |
-| `listing-filters` | metadata-gap | wizard:passed r1/s5/v5<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
-| `search-box` | failed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3 | - | block_select_missing |
-| `timeline` | failed | - | - | block_select_missing |
-| `compare-timeline` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `newsletter` | failed | - | - | block_select_missing |
-| `booking-calendar` | failed | wizard:failed r1/s0/v0 | - | block_select_missing |
-| `appointment-form` | failed | wizard:failed r1/s0/v0<br>visual:failed r1/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
-| `form-embed` | failed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6 | - | block_select_missing |
-| `contact` | failed | - | - | block_select_missing |
-| `navigation` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s8/v8<br>advanced:failed r1/s0/v0 | - | - |
-| `footer` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s1/v1 | - | block_select_missing |
+| `product-compare` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `product-table` | passed | wizard:passed r1/s2/v2<br>visual:passed r1/s10/v10<br>advanced:passed r1/s2/v2 | - | - |
+| `listing-filters` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `search-box` | passed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:passed r1/s3/v3 | - | - |
+| `timeline` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:failed r0/s0/v0 | - | - |
+| `compare-timeline` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
+| `newsletter` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `booking-calendar` | failed | wizard:failed r1/s0/v0<br>visual:failed r1/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
+| `appointment-form` | failed | wizard:failed r1/s0/v0<br>visual:failed r1/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `form-embed` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
+| `contact` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s8/v8<br>advanced:passed r1/s3/v3 | - | - |
+| `navigation` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
+| `footer` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s1/v1<br>advanced:failed r1/s0/v0 | - | - |
 
 ## Public CSS Smoke
 
@@ -80,7 +80,7 @@
 | `hero` | passed | /homepage | 200 | no | screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-hero.png |
 | `feature-grid` | passed | /featuregridtest | 200 | no | screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-feature-grid.png |
 | `testimonials` | failed | /test-testimonials-0516 | 200 | no | card_overflow_unmarked; screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-testimonials.png |
-| `pricing-plans` | failed | /test-pricing-plans-0516 | 200 | no | card_overflow_unmarked; screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-pricing-plans.png |
+| `pricing-plans` | passed | /test-pricing-plans-0516 | 200 | no | screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-pricing-plans.png |
 | `faq-accordion` | passed | /test-faq-accordion-0516 | 200 | no | - |
 | `cta-banner` | passed | /test-cta-banner-0516 | 200 | no | - |
 | `logo-cloud` | passed | /test-logo-cloud-0516 | 200 | no | - |

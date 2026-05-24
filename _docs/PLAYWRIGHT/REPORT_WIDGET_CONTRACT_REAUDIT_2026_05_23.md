@@ -65,8 +65,8 @@ Latest recorded run in `widget-contract-smoke-results.json`:
 
 - 38 widgets selected.
 - Admin auth succeeded.
-- Admin mode failures: 31 widgets.
-- Public CSS failures: 3 widgets: `testimonials`, `pricing-plans`, `team`.
+- Admin mode failures: 30 widgets.
+- Public CSS failures: 2 widgets: `testimonials`, `team`.
 - Fixture gaps: 9 public/admin fixture gaps, including missing standalone
   public fixtures and empty-state-only public pages.
 - Metadata gaps: 9 widgets with missing control-path ownership metadata.

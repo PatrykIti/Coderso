@@ -530,9 +530,7 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
         return { ok: true, matchedExpectedBlock: true };
       }
     }
-    await blocks.first().click().catch(() => undefined);
-    await settle();
-    return { ok: true, matchedExpectedBlock: false };
+    return { ok: false, error: "wrong_widget_selected", matchedExpectedBlock: false };
   }
   async function openFixtureAndSelect(item, pageRow, adminPath) {
     await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 }).catch(async () => {
@@ -679,6 +677,15 @@ function buildPublicProbeCode(frontUrl: string, cases: WidgetSmokeCase[], screen
           .filter((element) => {
             if (!(element instanceof HTMLElement)) return false;
             if (element.closest('[data-overflow-intentional="true"]')) return false;
+            if (element.closest('[aria-hidden="true"], [hidden]')) return false;
+            if (element.getAttribute("aria-hidden") === "true" || element.hidden) return false;
+            const className = typeof element.className === "string" ? element.className : "";
+            if (/\\bsr-only\\b/.test(className)) return false;
+            const style = window.getComputedStyle(element);
+            if (style.display === "none" || style.visibility === "hidden") return false;
+            const rect = element.getBoundingClientRect();
+            if (rect.width <= 1 || rect.height <= 1) return false;
+            if (style.clip === "rect(0px, 0px, 0px, 0px)" || style.clipPath === "inset(50%)") return false;
             return element.scrollWidth > element.clientWidth + 1 && element.clientWidth > 0;
           })
           .slice(0, 12)
@@ -813,9 +820,21 @@ function renderMarkdown(report: SmokeReport): string {
         .join("; ");
       return `| \`${item.widgetType}\` | ${item.status} | ${item.publicPath ?? "-"} | ${item.statusCode ?? "-"} | ${overflow} | ${notes || "-"} |`;
     }),
-    "",
   ];
   return `${lines.join("\n")}\n`;
+}
+
+function createFailedAdminMode(mode: EditorMode, error: string): AdminModeResult {
+  return {
+    mode,
+    status: "failed",
+    rootCount: 0,
+    sectionCount: 0,
+    visibleSectionCount: 0,
+    writablePaths: [],
+    controlsWithoutPath: 0,
+    error,
+  };
 }
 
 function findDuplicateWritablePaths(
@@ -840,6 +859,14 @@ function finalizeAdminResult(
   item: WidgetSmokeCase,
   partial: Omit<AdminWidgetResult, "status" | "duplicateWritablePaths">
 ): AdminWidgetResult {
+  if (partial.modes.length === 0 && !partial.error) {
+    return {
+      ...partial,
+      status: "failed",
+      duplicateWritablePaths: [],
+      error: "admin_modes_missing",
+    };
+  }
   if (partial.error) {
     return {
       ...partial,
@@ -858,6 +885,37 @@ function finalizeAdminResult(
     status: hasFailure ? "failed" : hasMetadataGap ? "metadata-gap" : "passed",
     duplicateWritablePaths: duplicates,
   };
+}
+
+function classifyPublicStatus(input: {
+  cssChecks: CssCheck[];
+  statusCode: number | null;
+  emptyFixture: boolean;
+  bodyOverflow: boolean;
+  unmarkedOverflowOwnerCount: number;
+}): Pick<PublicWidgetResult, "status" | "error"> {
+  const hasHttpFailure = !input.statusCode || input.statusCode < 200 || input.statusCode >= 400;
+  const hasBodyOverflowFailure =
+    input.cssChecks.includes("body-overflow") &&
+    input.bodyOverflow &&
+    input.unmarkedOverflowOwnerCount > 0;
+  const hasCardOverflowFailure =
+    input.cssChecks.includes("card-overflow") && input.unmarkedOverflowOwnerCount > 0;
+  if (input.emptyFixture) return { status: "fixture-gap", error: "public_fixture_empty" };
+  if (hasHttpFailure) return { status: "failed", error: "public_http_failed" };
+  if (hasBodyOverflowFailure) return { status: "failed", error: "body_overflow_unmarked" };
+  if (hasCardOverflowFailure) return { status: "failed", error: "card_overflow_unmarked" };
+  return { status: "passed", error: undefined };
+}
+
+function hasStrictFailure(report: SmokeReport): boolean {
+  return (
+    report.summary.adminFailures > 0 ||
+    report.summary.publicFailures > 0 ||
+    report.summary.fixtureGaps > 0 ||
+    report.summary.metadataGaps > 0 ||
+    Boolean(report.admin.error || report.public.error)
+  );
 }
 
 async function main() {
@@ -935,6 +993,7 @@ async function main() {
             widgetType: item.widgetType,
             modes: [],
           };
+          let directResult: AdminWidgetResult | null = null;
           for (const mode of item.requiredModes) {
             await runCommand(["playwright-cli", `-s=${args.session}`, "close"]);
             await runCommand(["playwright-cli", `-s=${args.session}`, "open", "about:blank"]);
@@ -945,8 +1004,8 @@ async function main() {
               authStatePath,
             ]);
             if (stateLoad.exitCode !== 0) {
-              merged.error = "auth_state_load_failed";
-              break;
+              merged.modes.push(createFailedAdminMode(mode, "auth_state_load_failed"));
+              continue;
             }
             const adminCodePath = `${scratchDir}/admin-probe-${item.widgetType}-${mode}.js`;
             const modeCase: WidgetSmokeCase = { ...item, requiredModes: [mode] };
@@ -962,36 +1021,34 @@ async function main() {
               report.admin.authenticated =
                 report.admin.authenticated === false ? false : adminResult.login.authenticated;
               if (adminResult.error) {
-                merged.error = adminResult.error;
-                break;
+                merged.modes.push(createFailedAdminMode(mode, adminResult.error));
+                continue;
               }
               const [modeResult] = adminResult.results;
               if (!modeResult) {
-                merged.error = "admin_probe_result_missing";
-                break;
+                merged.modes.push(createFailedAdminMode(mode, "admin_probe_result_missing"));
+                continue;
               }
               if (modeResult.status === "fixture-gap") {
-                report.admin.results.push(modeResult);
-                merged.error = undefined;
+                directResult = modeResult;
                 break;
               }
               if (modeResult.error && modeResult.modes.length === 0) {
-                merged.error = modeResult.error;
                 merged.pageId = modeResult.pageId;
                 merged.adminPath = modeResult.adminPath;
-                break;
+                merged.modes.push(createFailedAdminMode(mode, modeResult.error));
+                continue;
               }
               merged.pageId = merged.pageId ?? modeResult.pageId;
               merged.adminPath = merged.adminPath ?? modeResult.adminPath;
               merged.modes.push(...modeResult.modes);
             } catch (error) {
-              merged.error = error instanceof Error ? error.message : String(error);
-              break;
+              merged.modes.push(
+                createFailedAdminMode(mode, error instanceof Error ? error.message : String(error))
+              );
             }
           }
-          if (!report.admin.results.some((result) => result.widgetType === item.widgetType)) {
-            report.admin.results.push(finalizeAdminResult(item, merged));
-          }
+          report.admin.results.push(directResult ?? finalizeAdminResult(item, merged));
         }
       }
       if (!args.skipFront && report.environment.frontReachable && !report.public.error) {
@@ -1028,11 +1085,7 @@ async function main() {
   await ensureDirForFile(args.outputMarkdownPath);
   await Bun.write(args.outputMarkdownPath, renderMarkdown(report));
 
-  const failed =
-    report.summary.adminFailures > 0 ||
-    report.summary.publicFailures > 0 ||
-    Boolean(report.admin.error || report.public.error);
-  if (args.strict && failed) {
+  if (args.strict && hasStrictFailure(report)) {
     throw new Error("widget_contract_smoke_failed");
   }
   console.log(
@@ -1056,10 +1109,15 @@ export {
   validateInventory,
   selectCases,
   extractCliJson,
+  createFailedAdminMode,
+  findDuplicateWritablePaths,
+  finalizeAdminResult,
+  classifyPublicStatus,
+  hasStrictFailure,
   summarize,
   renderMarkdown,
 };
-export type { SmokeInventory, SmokeReport, WidgetSmokeCase };
+export type { AdminModeResult, SmokeInventory, SmokeReport, WidgetSmokeCase };
 
 if (import.meta.main) {
   main().catch((error) => {

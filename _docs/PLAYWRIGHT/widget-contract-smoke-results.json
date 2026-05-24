@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-23T23:02:02.738Z",
+  "generatedAt": "2026-05-23T23:40:11.338Z",
   "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-smoke --admin http://localhost:5173/admin --front http://localhost:3000",
   "dryRun": false,
   "inventory": {
@@ -66,11 +66,38 @@
     "results": [
       {
         "widgetType": "section",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
+            "writablePaths": [],
+            "controlsWithoutPath": 6
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [],
+            "controlsWithoutPath": 40
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 2
+          }
+        ],
         "pageId": "d37f900c-e8c2-4608-a71e-4a038300a048",
         "adminPath": "http://localhost:5173/admin/pages/d37f900c-e8c2-4608-a71e-4a038300a048",
-        "status": "failed",
+        "status": "metadata-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -96,21 +123,59 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "56a31dad-cf02-4671-89f4-15ecd77fa67f",
         "adminPath": "http://localhost:5173/admin/pages/56a31dad-cf02-4671-89f4-15ecd77fa67f",
-        "status": "passed",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "grid-columns",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 2
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "ee3f7352-52f1-4b4a-a910-619d94dc4410",
+        "adminPath": "http://localhost:5173/admin/pages/ee3f7352-52f1-4b4a-a910-619d94dc4410",
+        "status": "failed",
+        "duplicateWritablePaths": []
+      },
+      {
+        "widgetType": "split-layout",
         "modes": [
           {
             "mode": "wizard",
@@ -126,22 +191,21 @@
             "mode": "visual",
             "status": "passed",
             "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "sectionCount": 5,
+            "visibleSectionCount": 5,
             "writablePaths": [],
             "controlsWithoutPath": 2
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
-        "pageId": "ee3f7352-52f1-4b4a-a910-619d94dc4410",
-        "adminPath": "http://localhost:5173/admin/pages/ee3f7352-52f1-4b4a-a910-619d94dc4410",
-        "error": "block_select_missing",
-        "status": "failed",
-        "duplicateWritablePaths": []
-      },
-      {
-        "widgetType": "split-layout",
-        "modes": [],
-        "error": "block_select_missing",
         "pageId": "c3fa7a67-99fc-42ec-a4e4-131c1dc75a58",
         "adminPath": "http://localhost:5173/admin/pages/c3fa7a67-99fc-42ec-a4e4-131c1dc75a58",
         "status": "failed",
@@ -152,21 +216,23 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 2
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -180,7 +246,7 @@
         ],
         "pageId": "0be2cb49-8113-4a88-8d17-0ed70d5c5fdd",
         "adminPath": "http://localhost:5173/admin/pages/0be2cb49-8113-4a88-8d17-0ed70d5c5fdd",
-        "status": "metadata-gap",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -203,18 +269,55 @@
             "visibleSectionCount": 4,
             "writablePaths": [],
             "controlsWithoutPath": 2
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "cabe29cc-1ad6-45b7-8773-731cc5b0c503",
         "adminPath": "http://localhost:5173/admin/pages/cabe29cc-1ad6-45b7-8773-731cc5b0c503",
-        "error": "block_select_missing",
-        "status": "failed",
+        "status": "metadata-gap",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "toggle-block",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 3
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "12d1d6fb-2aeb-46db-8775-088e87d8b70b",
         "adminPath": "http://localhost:5173/admin/pages/12d1d6fb-2aeb-46db-8775-088e87d8b70b",
         "status": "failed",
@@ -278,18 +381,55 @@
             "visibleSectionCount": 4,
             "writablePaths": [],
             "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "074a7240-a254-4ebc-8a09-1d060e057981",
         "adminPath": "http://localhost:5173/admin/pages/074a7240-a254-4ebc-8a09-1d060e057981",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "stack",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 5,
+            "visibleSectionCount": 5,
+            "writablePaths": [],
+            "controlsWithoutPath": 1
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
         "pageId": "7b23083d-f7cd-481e-8417-fc2278e54466",
         "adminPath": "http://localhost:5173/admin/pages/7b23083d-f7cd-481e-8417-fc2278e54466",
         "status": "failed",
@@ -338,12 +478,49 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 1,
+            "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "a06fb6e2-3b58-44c5-87e9-32125f572461",
+        "adminPath": "http://localhost:5173/admin/pages/a06fb6e2-3b58-44c5-87e9-32125f572461",
+        "status": "failed",
+        "duplicateWritablePaths": []
+      },
+      {
+        "widgetType": "testimonials",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
@@ -352,22 +529,21 @@
             "sectionCount": 6,
             "visibleSectionCount": 6,
             "writablePaths": [],
-            "controlsWithoutPath": 6
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
-        "pageId": "a06fb6e2-3b58-44c5-87e9-32125f572461",
-        "adminPath": "http://localhost:5173/admin/pages/a06fb6e2-3b58-44c5-87e9-32125f572461",
-        "error": "block_select_missing",
-        "status": "failed",
-        "duplicateWritablePaths": []
-      },
-      {
-        "widgetType": "testimonials",
-        "modes": [],
-        "error": "block_select_missing",
         "pageId": "4c0e301f-1c64-48e2-b6b5-791201a8d66c",
         "adminPath": "http://localhost:5173/admin/pages/4c0e301f-1c64-48e2-b6b5-791201a8d66c",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -385,21 +561,23 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e",
@@ -428,11 +606,19 @@
             "visibleSectionCount": 7,
             "writablePaths": [],
             "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "639e28ec-1203-4fbe-8273-bf3fd0bba203",
         "adminPath": "http://localhost:5173/admin/pages/639e28ec-1203-4fbe-8273-bf3fd0bba203",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       },
@@ -460,12 +646,13 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "94e844e2-9287-4aa4-949e-c2ea9d28ca4f",
@@ -478,12 +665,13 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 1,
-            "visibleSectionCount": 1,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
@@ -493,18 +681,54 @@
             "visibleSectionCount": 5,
             "writablePaths": [],
             "controlsWithoutPath": 30
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "5958b461-fd78-4b65-b154-64692c0fa474",
         "adminPath": "http://localhost:5173/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "gallery-mosaic",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
         "pageId": "5b42d115-258d-4967-9936-e3ca11972a14",
         "adminPath": "http://localhost:5173/admin/pages/5b42d115-258d-4967-9936-e3ca11972a14",
         "status": "failed",
@@ -515,21 +739,23 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -543,7 +769,7 @@
         ],
         "pageId": "3d15559a-c923-49e8-8902-93854a55c734",
         "adminPath": "http://localhost:5173/admin/pages/3d15559a-c923-49e8-8902-93854a55c734",
-        "status": "passed",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -567,18 +793,56 @@
             "visibleSectionCount": 4,
             "writablePaths": [],
             "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "fb31e030-07df-4dce-9243-a3c8904d3269",
         "adminPath": "http://localhost:5173/admin/pages/fb31e030-07df-4dce-9243-a3c8904d3269",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "rich-text-section",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "1e0f651b-d7c0-4c03-8e3b-07bff2c1d5ca",
         "adminPath": "http://localhost:5173/admin/pages/1e0f651b-d7c0-4c03-8e3b-07bff2c1d5ca",
         "status": "failed",
@@ -622,8 +886,38 @@
       },
       {
         "widgetType": "posts-feed",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "160c954b-1b3e-4798-bf37-74f697a18e24",
         "adminPath": "http://localhost:5173/admin/pages/160c954b-1b3e-4798-bf37-74f697a18e24",
         "status": "failed",
@@ -631,8 +925,38 @@
       },
       {
         "widgetType": "entry-teaser",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "8ccacd83-70eb-4e65-aac5-8c0767d4866b",
         "adminPath": "http://localhost:5173/admin/pages/8ccacd83-70eb-4e65-aac5-8c0767d4866b",
         "status": "failed",
@@ -676,8 +1000,38 @@
       },
       {
         "widgetType": "product-compare",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
         "adminPath": "http://localhost:5173/admin/pages/3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
         "status": "failed",
@@ -685,11 +1039,38 @@
       },
       {
         "widgetType": "product-table",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 10,
+            "visibleSectionCount": 10,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
         "pageId": "f317c971-cc3f-4003-9a38-66ff40c8d036",
         "adminPath": "http://localhost:5173/admin/pages/f317c971-cc3f-4003-9a38-66ff40c8d036",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -697,35 +1078,38 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 5,
-            "visibleSectionCount": 5,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 4
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 4
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 4
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "f9435704-9702-45f5-92b1-22711c7fb0ad",
         "adminPath": "http://localhost:5173/admin/pages/f9435704-9702-45f5-92b1-22711c7fb0ad",
-        "status": "metadata-gap",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -748,18 +1132,55 @@
             "visibleSectionCount": 3,
             "writablePaths": [],
             "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "b4734a85-b68d-470f-b65d-54ea42f92eaa",
         "adminPath": "http://localhost:5173/admin/pages/b4734a85-b68d-470f-b65d-54ea42f92eaa",
-        "error": "block_select_missing",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "timeline",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "261d5209-9323-4237-ad8e-20eb3f0e9d60",
         "adminPath": "http://localhost:5173/admin/pages/261d5209-9323-4237-ad8e-20eb3f0e9d60",
         "status": "failed",
@@ -770,12 +1191,13 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
@@ -798,13 +1220,43 @@
         ],
         "pageId": "9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
         "adminPath": "http://localhost:5173/admin/pages/9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
-        "status": "passed",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
         "widgetType": "newsletter",
-        "modes": [],
-        "error": "block_select_missing",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          }
+        ],
         "pageId": "f0ad3daf-aedf-47d8-9ff4-41587dff8e07",
         "adminPath": "http://localhost:5173/admin/pages/f0ad3daf-aedf-47d8-9ff4-41587dff8e07",
         "status": "failed",
@@ -822,11 +1274,30 @@
             "writablePaths": [],
             "controlsWithoutPath": 0,
             "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
           }
         ],
         "pageId": "2fc615b9-5d62-4135-839f-3f10b119f0da",
         "adminPath": "http://localhost:5173/admin/pages/2fc615b9-5d62-4135-839f-3f10b119f0da",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       },
@@ -856,12 +1327,12 @@
           {
             "mode": "advanced",
             "status": "failed",
-            "rootCount": 1,
+            "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "block_select_missing"
           }
         ],
         "pageId": "f22436b5-24db-4536-9dda-07c0ae9cfcdb",
@@ -871,6 +1342,43 @@
       },
       {
         "widgetType": "form-embed",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "fed7fa7d-b498-439c-858d-72ac0a89926f",
+        "adminPath": "http://localhost:5173/admin/pages/fed7fa7d-b498-439c-858d-72ac0a89926f",
+        "status": "failed",
+        "duplicateWritablePaths": []
+      },
+      {
+        "widgetType": "contact",
         "modes": [
           {
             "mode": "wizard",
@@ -885,25 +1393,24 @@
             "mode": "visual",
             "status": "passed",
             "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "sectionCount": 8,
+            "visibleSectionCount": 8,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
             "writablePaths": [],
             "controlsWithoutPath": 0
           }
         ],
-        "pageId": "fed7fa7d-b498-439c-858d-72ac0a89926f",
-        "adminPath": "http://localhost:5173/admin/pages/fed7fa7d-b498-439c-858d-72ac0a89926f",
-        "error": "block_select_missing",
-        "status": "failed",
-        "duplicateWritablePaths": []
-      },
-      {
-        "widgetType": "contact",
-        "modes": [],
-        "error": "block_select_missing",
         "pageId": "969501e7-887f-458a-887a-1c2725e815d8",
         "adminPath": "http://localhost:5173/admin/pages/969501e7-887f-458a-887a-1c2725e815d8",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -912,21 +1419,22 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 1,
+            "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 8,
-            "visibleSectionCount": 8,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 1
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -965,11 +1473,20 @@
             "visibleSectionCount": 1,
             "writablePaths": [],
             "controlsWithoutPath": 4
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
           }
         ],
         "pageId": "0aa97321-eeda-4455-ba63-4537cc7f2dee",
         "adminPath": "http://localhost:5173/admin/pages/0aa97321-eeda-4455-ba63-4537cc7f2dee",
-        "error": "block_select_missing",
         "status": "failed",
         "duplicateWritablePaths": []
       }
@@ -1050,22 +1567,7 @@
         "bodyOverflow": false,
         "viewportWidth": 1280,
         "documentWidth": 1280,
-        "unmarkedOverflowOwners": [
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Secondary Tab selected",
-            "scrollWidth": 170,
-            "clientWidth": 1
-          },
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "View A selected",
-            "scrollWidth": 112,
-            "clientWidth": 1
-          }
-        ]
+        "unmarkedOverflowOwners": []
       },
       {
         "widgetType": "spacer",
@@ -1143,27 +1645,6 @@
             "text": "★★★★★\"We launched our marketing site in two days and kept full control over future edits.\"AAnna KowalskaProduct Marketin",
             "scrollWidth": 1649,
             "clientWidth": 928
-          },
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Jump to testimonial 1",
-            "scrollWidth": 151,
-            "clientWidth": 1
-          },
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Jump to testimonial 2",
-            "scrollWidth": 151,
-            "clientWidth": 1
-          },
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Jump to testimonial 3",
-            "scrollWidth": 151,
-            "clientWidth": 1
           }
         ],
         "error": "card_overflow_unmarked"
@@ -1172,22 +1653,13 @@
         "widgetType": "pricing-plans",
         "publicPath": "/test-pricing-plans-0516",
         "statusCode": 200,
-        "status": "failed",
+        "status": "passed",
         "emptyFixture": false,
         "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-pricing-plans.png",
         "bodyOverflow": false,
         "viewportWidth": 1280,
         "documentWidth": 1280,
-        "unmarkedOverflowOwners": [
-          {
-            "tag": "caption",
-            "className": "sr-only",
-            "text": "Pricing plan comparison",
-            "scrollWidth": 149,
-            "clientWidth": 1
-          }
-        ],
-        "error": "card_overflow_unmarked"
+        "unmarkedOverflowOwners": []
       },
       {
         "widgetType": "faq-accordion",
@@ -1464,15 +1936,7 @@
         "bodyOverflow": false,
         "viewportWidth": 1280,
         "documentWidth": 1280,
-        "unmarkedOverflowOwners": [
-          {
-            "tag": "label",
-            "className": "text-xs font-medium sr-only",
-            "text": "Email address",
-            "scrollWidth": 76,
-            "clientWidth": 1
-          }
-        ]
+        "unmarkedOverflowOwners": []
       },
       {
         "widgetType": "booking-calendar",
@@ -1483,15 +1947,7 @@
         "bodyOverflow": false,
         "viewportWidth": 1280,
         "documentWidth": 1280,
-        "unmarkedOverflowOwners": [
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Available time slots",
-            "scrollWidth": 137,
-            "clientWidth": 1
-          }
-        ]
+        "unmarkedOverflowOwners": []
       },
       {
         "widgetType": "appointment-form",
@@ -1541,28 +1997,13 @@
         "bodyOverflow": false,
         "viewportWidth": 1280,
         "documentWidth": 1280,
-        "unmarkedOverflowOwners": [
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "Twitter (opens in new tab)",
-            "scrollWidth": 137,
-            "clientWidth": 1
-          },
-          {
-            "tag": "span",
-            "className": "sr-only",
-            "text": "LinkedIn (opens in new tab)",
-            "scrollWidth": 147,
-            "clientWidth": 1
-          }
-        ]
+        "unmarkedOverflowOwners": []
       }
     ]
   },
   "summary": {
-    "adminFailures": 31,
-    "publicFailures": 3,
+    "adminFailures": 30,
+    "publicFailures": 2,
     "fixtureGaps": 9,
     "metadataGaps": 9
   }

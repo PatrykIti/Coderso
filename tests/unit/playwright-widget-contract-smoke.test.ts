@@ -1,12 +1,18 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  parseArgs,
+  classifyPublicStatus,
+  createFailedAdminMode,
   extractCliJson,
+  finalizeAdminResult,
+  findDuplicateWritablePaths,
+  hasStrictFailure,
+  parseArgs,
   renderMarkdown,
   selectCases,
   summarize,
   validateInventory,
+  type AdminModeResult,
   type SmokeInventory,
   type SmokeReport,
 } from "../../scripts/playwright-widget-contract-smoke";
@@ -80,6 +86,19 @@ function makeReport(overrides: Partial<SmokeReport> = {}): SmokeReport {
       fixtureGaps: 0,
       metadataGaps: 0,
     },
+    ...overrides,
+  };
+}
+
+function makeMode(overrides: Partial<AdminModeResult> = {}): AdminModeResult {
+  return {
+    mode: "wizard",
+    status: "passed",
+    rootCount: 1,
+    sectionCount: 1,
+    visibleSectionCount: 1,
+    writablePaths: [],
+    controlsWithoutPath: 0,
     ...overrides,
   };
 }
@@ -216,6 +235,86 @@ describe("playwright widget contract smoke helpers", () => {
       fixtureGaps: 1,
       metadataGaps: 1,
     });
+  });
+
+  test("finalizes missing section and duplicate writable path contract failures", () => {
+    const [item] = makeInventory().widgets;
+    const missingSection = finalizeAdminResult(item, {
+      widgetType: "hero",
+      modes: [
+        makeMode({
+          status: "failed",
+          sectionCount: 0,
+          visibleSectionCount: 0,
+          error: "mode_root_or_visible_section_missing",
+        }),
+      ],
+    });
+
+    expect(missingSection.status).toBe("failed");
+    expect(missingSection.modes[0]?.error).toBe("mode_root_or_visible_section_missing");
+
+    const duplicateModes = [
+      makeMode({ mode: "wizard", writablePaths: ["content.title"] }),
+      makeMode({ mode: "visual", writablePaths: ["content.title"] }),
+    ];
+    expect(findDuplicateWritablePaths(duplicateModes)).toEqual(["content.title"]);
+    expect(
+      findDuplicateWritablePaths(duplicateModes, [
+        {
+          path: "content.title",
+          reason: "temporary migration overlap",
+          expiresWithTask: "TASK-336-17",
+        },
+      ])
+    ).toEqual([]);
+  });
+
+  test("records per-mode probe errors without losing required mode coverage", () => {
+    const failed = createFailedAdminMode("advanced", "wrong_widget_selected");
+
+    expect(failed).toMatchObject({
+      mode: "advanced",
+      status: "failed",
+      rootCount: 0,
+      visibleSectionCount: 0,
+      error: "wrong_widget_selected",
+    });
+  });
+
+  test("classifies frontend fixture gaps and overflow failures distinctly", () => {
+    expect(
+      classifyPublicStatus({
+        cssChecks: ["empty-fixture"],
+        statusCode: 200,
+        emptyFixture: true,
+        bodyOverflow: false,
+        unmarkedOverflowOwnerCount: 0,
+      })
+    ).toEqual({ status: "fixture-gap", error: "public_fixture_empty" });
+
+    expect(
+      classifyPublicStatus({
+        cssChecks: ["card-overflow"],
+        statusCode: 200,
+        emptyFixture: false,
+        bodyOverflow: false,
+        unmarkedOverflowOwnerCount: 1,
+      })
+    ).toEqual({ status: "failed", error: "card_overflow_unmarked" });
+  });
+
+  test("strict mode treats fixture and metadata gaps as failures", () => {
+    const report = makeReport({
+      summary: {
+        adminFailures: 0,
+        publicFailures: 0,
+        fixtureGaps: 1,
+        metadataGaps: 1,
+      },
+    });
+
+    expect(hasStrictFailure(report)).toBe(true);
   });
 
   test("renders visible section and local screenshot evidence in markdown", () => {

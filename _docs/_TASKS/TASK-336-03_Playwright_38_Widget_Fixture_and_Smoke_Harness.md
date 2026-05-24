@@ -188,13 +188,22 @@ Latest smoke summary:
 
 - 38 selected page-builder widgets.
 - Admin auth succeeded.
-- Admin failures: 31.
-- Public CSS failures: 3.
+- Admin failures: 30.
+- Public CSS failures: 2.
 - Fixture gaps: 9.
 - Metadata gaps: 9.
+
+Remaining fixture gaps are now explicit TASK-336 follow-up input rather than
+hidden skipped coverage. Non-empty fixture expansion remains assigned to the
+later frontend/CSS fixture waves (`TASK-336-15` and final strict closure in
+`TASK-336-17`).
 
 Validation:
 
 - `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
 - `bun scripts/playwright-widget-contract-smoke.ts --dry-run --output-json .tmp/widget-smoke-dry.json --output-md .tmp/widget-smoke-dry.md`
 - `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-smoke --admin http://localhost:5173/admin --front http://localhost:3000`
+- `git diff --check`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run precommit`
