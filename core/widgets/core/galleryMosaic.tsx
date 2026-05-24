@@ -247,31 +247,26 @@ export const galleryMosaicDefaults: GalleryMosaicData = {
       id: "gallery-1",
       image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
       caption: "Product overview",
-      href: "#",
     },
     {
       id: "gallery-2",
       image: "https://images.unsplash.com/photo-1553877522-43269d4ea984",
       caption: "Team collaboration",
-      href: "#",
     },
     {
       id: "gallery-3",
       image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6",
       caption: "Workflow details",
-      href: "#",
     },
     {
       id: "gallery-4",
       image: "https://images.unsplash.com/photo-1551434678-e076c223a692",
       caption: "Delivery process",
-      href: "#",
     },
     {
       id: "gallery-5",
       image: "https://images.unsplash.com/photo-1518770660439-4636190af475",
       caption: "Platform snapshot",
-      href: "#",
     },
   ],
   interaction: {
@@ -301,11 +296,6 @@ const galleryMosaicWizardVisualDuplicateAllowances = [
     expiresWithTask: "TASK-336-16",
   },
   {
-    path: "header.description",
-    reason: "Wizard seeds gallery copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
     path: "items.count",
     reason: "Wizard chooses the starter media count; Visual remains the daily media owner.",
     expiresWithTask: "TASK-336-16",
@@ -316,8 +306,13 @@ const galleryMosaicWizardVisualDuplicateAllowances = [
     expiresWithTask: "TASK-336-16",
   },
   {
-    path: "items.alt",
-    reason: "Wizard seeds initial media alt text; Visual remains the daily media owner.",
+    path: "items.video",
+    reason: "Wizard seeds initial video media; Visual remains the daily media owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "items.caption",
+    reason: "Wizard seeds initial media captions; Visual remains the daily caption owner.",
     expiresWithTask: "TASK-336-16",
   },
 ] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
@@ -333,10 +328,10 @@ export const galleryMosaicEditorContract: WidgetEditorContract = {
       writablePaths: [
         "variant",
         "header.title",
-        "header.description",
         "items.count",
         "items.image",
-        "items.alt",
+        "items.video",
+        "items.caption",
       ],
       allowedDuplicateWritablePaths: galleryMosaicWizardVisualDuplicateAllowances,
     },
@@ -384,7 +379,7 @@ export const galleryMosaicEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["variant", "items", "interaction", "style", "runtime.normalizedData"],
+      readOnlyPaths: ["variant", "header", "items", "interaction", "style"],
     },
   ],
 };

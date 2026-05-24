@@ -764,6 +764,39 @@ preview-state bridge used by preview-capable widgets.
   `claude -p --permission-mode plan --output-format text`, but it timed out
   after 180 seconds without output.
 
+## TASK-336-19 Gallery Mosaic Media/Link Authoring Evidence (2026-05-24)
+
+The ninth TASK-336-19 implementation family targets Gallery Mosaic raw
+media/link authoring drift in Visual.
+
+- Visual no longer exposes editable `Image URL`, `Video URL`, `Link URL`, or
+  `Poster image URL` fields. Image/video replacement uses `MediaPicker`, video
+  poster frames use an image-only `MediaPicker`, and destinations use the
+  page-first `LinkDestinationField`.
+- Saved legacy media/link string values stay compatible as visible
+  replace-or-clear state rather than editable raw URL fields.
+- New item and widget defaults no longer seed fake destinations such as
+  `href: "#"`, so newly inserted/reset galleries start without a misleading
+  custom destination.
+- The Gallery Mosaic Wizard contract now matches actual writes:
+  `header.title`, item count, image/video media, and captions. It no longer
+  claims `header.description` or `items.alt`. Advanced diagnostics now list
+  real read-only paths and drop the nonexistent `runtime.normalizedData`.
+- Claude read-only review first flagged the Wizard contract mismatch and saved
+  MediaPicker state ambiguity. The follow-up re-review returned no blockers;
+  remaining copy/state suggestions were also addressed before validation.
+- Targeted Vitest evidence covers the editor wave, renderer/runtime behavior,
+  lightbox runtime, strict editor contract, renderer smoke, and `none` style
+  compatibility:
+  `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-gallery-mosaic-media-link-2026-05-24.*`.
+  The final rerun reports `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. The first run showed
+  `block_select_missing`, but browser console logs proved stale Vite optimized
+  deps (`504 Outdated Optimize Dep`); clearing `core/node_modules/.vite` and
+  restarting `coderso-dev-core-host` fixed the environment.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

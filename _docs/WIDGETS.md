@@ -714,6 +714,10 @@ Katalog zawiera podstawowe metadata:
   fallbackiem na jawne collection IDs tylko dla technicznej kompatybilnosci.
 - Media picker w Gallery Mosaic zapisuje tylko schema-owned, public-runtime-safe
   dane, a nie prywatne rekordy admin cache.
+- Gallery Mosaic Visual uses media/page pickers for image, video, poster, and
+  destination authoring. Saved legacy URLs remain visible only as
+  replace-or-clear compatibility state; new defaults must not seed fake
+  destinations such as `href: "#"`.
 
 ---
 

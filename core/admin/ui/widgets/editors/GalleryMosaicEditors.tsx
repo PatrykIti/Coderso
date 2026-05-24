@@ -41,6 +41,7 @@ import {
 } from "../../../../widgets/core/galleryMosaic";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -185,22 +186,22 @@ function resolveGalleryCurrentMediaSummary(item: GalleryMosaicItem) {
     return item.image?.trim()
       ? {
           label: "Video",
-          description: "Video URL is currently active. Clear it to switch back to the image URL.",
+          description: "A saved video is currently active. Clear it to switch back to the image.",
         }
       : {
           label: "Video",
-          description: "Video URL is currently active for this item.",
+          description: "A saved video is currently active for this item.",
         };
   }
   if (currentType === "image") {
     return {
       label: "Image",
-      description: "Image URL is currently active for this item.",
+      description: "A saved image is currently active for this item.",
     };
   }
   return {
     label: "Placeholder",
-    description: "No image or video URL is set yet.",
+    description: "No image or video asset is set yet.",
   };
 }
 
@@ -452,7 +453,7 @@ function addItem(value: GalleryMosaicData, onChange: (next: GalleryMosaicData) =
     return {
       ...current,
       items: normalizeGalleryMosaicItems(
-        [...items, { caption: `Media ${items.length + 1}`, href: "#" }],
+        [...items, { caption: `Media ${items.length + 1}` }],
         items.length + 1
       ),
     };
@@ -742,11 +743,11 @@ export function GalleryMosaicWizardEditor({
             maxItems={galleryMosaicItemMax}
           />
           <p className="text-xs text-muted-foreground">
-            Selected media is saved as public image or video URLs in gallery items.
+            Selected media is saved as the public image or video asset for gallery items.
           </p>
           <p className="text-xs text-muted-foreground">
-            After Wizard, use Visual for per-item alt, poster, lightbox, density, and motion
-            controls, or Advanced to import/export JSON.
+            After Wizard, use Visual for captions, destinations, alt text, posters, lightbox,
+            density, and motion controls, or Advanced to import/export JSON.
           </p>
           {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
         </div>
@@ -767,6 +768,9 @@ export function GalleryMosaicVisualEditor({
   const [selectedMediaIdsByItemId, setSelectedMediaIdsByItemId] = useState<Record<string, string>>(
     {}
   );
+  const [selectedPosterMediaIdsByItemId, setSelectedPosterMediaIdsByItemId] = useState<
+    Record<string, string>
+  >({});
   const [itemMediaPickerErrors, setItemMediaPickerErrors] = useState<Record<string, string>>({});
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -804,7 +808,17 @@ export function GalleryMosaicVisualEditor({
         delete next[itemId];
         return next;
       });
+      setSelectedPosterMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
       setItemMediaError(itemId);
+      updateItem(value, onChange, index, {
+        image: undefined,
+        video: undefined,
+        poster: undefined,
+      });
       return;
     }
 
@@ -820,10 +834,20 @@ export function GalleryMosaicVisualEditor({
         throw new Error("gallery_mosaic_media_unsupported");
       }
 
-      updateItem(value, onChange, index, {
+      const mediaPatch: Partial<GalleryMosaicItem> = {
         image: mediaKind === "image" ? media.url : undefined,
         video: mediaKind === "video" ? media.url : undefined,
-      });
+      };
+      if (mediaKind === "image") {
+        mediaPatch.poster = undefined;
+        setSelectedPosterMediaIdsByItemId((current) => {
+          const next = { ...current };
+          delete next[itemId];
+          return next;
+        });
+      }
+
+      updateItem(value, onChange, index, mediaPatch);
       setSelectedMediaIdsByItemId((current) => ({
         ...current,
         [itemId]: mediaId,
@@ -831,6 +855,65 @@ export function GalleryMosaicVisualEditor({
     } catch {
       setItemMediaError(itemId, `Item ${index + 1}: failed to resolve selected media.`);
     }
+  };
+
+  const handleItemPosterSelection = async (itemId: string, index: number, nextValue: unknown) => {
+    const mediaId = typeof nextValue === "string" && nextValue.trim().length > 0 ? nextValue : null;
+    if (!mediaId) {
+      setSelectedPosterMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+      setItemMediaError(itemId);
+      updateItem(value, onChange, index, { poster: undefined });
+      return;
+    }
+
+    setItemMediaError(itemId);
+    try {
+      const mediaItems = await listMediaCached({ force: false });
+      const media = mediaItems.find((candidate) => candidate.id === mediaId);
+      if (!media?.url || resolveGalleryMediaKind(media) !== "image") {
+        throw new Error("gallery_mosaic_poster_media_invalid");
+      }
+
+      updateItem(value, onChange, index, { poster: media.url });
+      setSelectedPosterMediaIdsByItemId((current) => ({
+        ...current,
+        [itemId]: mediaId,
+      }));
+    } catch {
+      setItemMediaError(itemId, `Item ${index + 1}: choose an image asset for the poster.`);
+    }
+  };
+
+  const clearItemMedia = (index: number, itemId?: string) => {
+    if (itemId) {
+      setSelectedMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+      setSelectedPosterMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+      setItemMediaError(itemId);
+    }
+    updateItem(value, onChange, index, { image: undefined, video: undefined, poster: undefined });
+  };
+
+  const clearItemPoster = (index: number, itemId?: string) => {
+    if (itemId) {
+      setSelectedPosterMediaIdsByItemId((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+    }
+    updateItem(value, onChange, index, { poster: undefined });
   };
 
   const clearDragState = () => {
@@ -969,13 +1052,20 @@ export function GalleryMosaicVisualEditor({
 
       <EditorSection
         title="Media items and links"
-        description="Manage image/video URLs, captions, and target links."
+        description="Choose gallery assets, captions, poster frames, and page destinations."
       >
         {items.map((item, index) => {
           const currentMedia = resolveGalleryCurrentMediaSummary(item);
           const showDropBefore = dropIndex === index;
           const showDropAfter = dropIndex === index + 1;
           const stableItemId = item.id ?? `gallery-item-${index + 1}`;
+          const selectedMediaId = selectedMediaIdsByItemId[item.id ?? ""];
+          const selectedPosterMediaId = selectedPosterMediaIdsByItemId[item.id ?? ""];
+          const hasConfiguredMedia = Boolean(item.image?.trim() || item.video?.trim());
+          const hasConfiguredPoster = Boolean(item.poster?.trim());
+          const showSavedMediaStatus = hasConfiguredMedia && !selectedMediaId;
+          const showPosterControls = Boolean(item.video?.trim() || hasConfiguredPoster);
+          const showSavedPosterStatus = hasConfiguredPoster && !selectedPosterMediaId;
 
           return (
             <div key={stableItemId} className="space-y-1 rounded-lg">
@@ -1050,33 +1140,29 @@ export function GalleryMosaicVisualEditor({
                     accept={["image/*", "video/*"]}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Selecting an asset updates the current image or video URL for this item.
+                    Selecting an asset updates the current image or video for this item.
                   </p>
+                  {showSavedMediaStatus ? (
+                    <p className="text-xs text-muted-foreground">
+                      Saved {item.video?.trim() ? "video" : "image"} asset is configured. Browse
+                      media to replace it or clear media and poster.
+                    </p>
+                  ) : null}
+                  {item.image?.trim() || item.video?.trim() ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => clearItemMedia(index, item.id)}
+                    >
+                      Clear media and poster
+                    </Button>
+                  ) : null}
                   {item.id && itemMediaPickerErrors[item.id] ? (
                     <p className="text-xs text-destructive">{itemMediaPickerErrors[item.id]}</p>
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Image URL</p>
-                  <Input
-                    value={item.image ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { image: event.target.value })
-                    }
-                    placeholder="https://cdn.example.com/photo.jpg"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Video URL</p>
-                  <Input
-                    value={item.video ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { video: event.target.value })
-                    }
-                    placeholder="https://cdn.example.com/clip.mp4"
-                  />
-                </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Caption</p>
                   <Input
@@ -1097,32 +1183,56 @@ export function GalleryMosaicVisualEditor({
                     placeholder={`Gallery item ${index + 1}`}
                   />
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Link URL</p>
-                  <Input
-                    value={item.href ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { href: event.target.value })
-                    }
-                    placeholder="#"
-                  />
-                  {interactionMode === "lightbox" && item.href?.trim() ? (
+                <LinkDestinationField
+                  fieldId={`gallery-mosaic-item-${stableItemId}-destination`}
+                  label="Destination page"
+                  value={item.href}
+                  onChange={(next) => updateItem(value, onChange, index, { href: next })}
+                  emptyLabel="No destination"
+                  helpText="Pick a site page. Hand-typed links from older edits stay until you replace or clear them."
+                  feedback={
+                    interactionMode === "lightbox" && item.href?.trim()
+                      ? "This item keeps link navigation. Clear the destination to open it in the lightbox instead."
+                      : null
+                  }
+                />
+                {showPosterControls ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Poster image</p>
+                    <MediaPicker
+                      value={selectedPosterMediaId ?? null}
+                      onChange={(next) => {
+                        if (!item.id) return;
+                        void handleItemPosterSelection(item.id, index, next);
+                      }}
+                      multiple={false}
+                      accept={["image/*"]}
+                    />
                     <p className="text-xs text-muted-foreground">
-                      This item keeps link navigation. Clear the link URL to open it in the lightbox
-                      instead.
+                      Choose an image asset used as the video poster frame.
                     </p>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Poster image URL</p>
-                  <Input
-                    value={item.poster ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { poster: event.target.value })
-                    }
-                    placeholder="https://cdn.example.com/poster.jpg"
-                  />
-                </div>
+                    {showSavedPosterStatus ? (
+                      <p className="text-xs text-muted-foreground">
+                        Saved poster image is configured. Browse media to replace it or clear it.
+                      </p>
+                    ) : null}
+                    {!item.video?.trim() && hasConfiguredPoster ? (
+                      <p className="text-xs text-muted-foreground">
+                        Poster images only display when this item uses a video asset.
+                      </p>
+                    ) : null}
+                    {item.poster?.trim() ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => clearItemPoster(index, item.id)}
+                      >
+                        Clear poster
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Focus point</p>
                   <Select
@@ -1241,7 +1351,7 @@ export function GalleryMosaicVisualEditor({
         {linkedLightboxItems > 0 ? (
           <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             {linkedLightboxItems} linked item{linkedLightboxItems === 1 ? "" : "s"} still use
-            navigation. Clear each Link URL to open that tile in the lightbox instead.
+            navigation. Clear each destination to open that tile in the lightbox instead.
           </p>
         ) : null}
       </EditorSection>

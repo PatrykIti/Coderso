@@ -24,11 +24,11 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 
 Wizard media selection currently uses the admin media cache for current-contract
 image and video assets and persists selected media as schema-owned public
-`image` or `video` URLs plus caption copy. Per-item Visual media picking stays
-in `TASK-270-01`.
+`image` or `video` values plus caption copy. It does not seed
+`header.description`; Visual owns supporting copy after setup.
 Wizard now also points authors toward the final flow: Visual owns per-item
-alt/poster/lightbox/density/motion controls, while Advanced owns JSON
-import/export for the schema payload.
+captions, destinations, alt text, posters, lightbox, density, and motion
+controls, while Advanced owns JSON import/export for the schema payload.
 
 ### Visual (primary editing mode)
 Sections:
@@ -44,18 +44,23 @@ Notes:
 - Gallery Mosaic owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Generic Visual variant selector is suppressed.
 - Each item now shows a shared-contract current-media badge (`Image`, `Video`,
-  `Placeholder`) so the existing image/video priority is visible before richer
-  Gallery-local authoring lands.
+  `Placeholder`) and saved-asset status text when the persisted media URL came
+  from an earlier edit and cannot be rehydrated to a media library id.
 - Visual item cards now include a local preview panel plus a per-item
-  MediaPicker that can replace the current image or video URL without forcing
-  hand-copied asset links.
+  MediaPicker that can replace or clear the current image/video asset without
+  forcing hand-copied asset links. Clearing media also clears the video poster.
 - Visual item rows now support drag reorder with keyboard fallback
   (`Alt` + arrow keys), explicit confirmation before destructive count
   reductions or row removal, and a `feature-left` warning when only a single
   lead tile remains.
-- Per-item media presentation fields now include dedicated `alt` text,
-  poster-image URL for video, bounded focus point (`center/top/bottom/left/right`),
-  and an optional per-item ratio override that can inherit the section ratio.
+- Per-item media presentation fields now include dedicated `alt` text, an
+  image-only MediaPicker for video poster frames, bounded focus point
+  (`center/top/bottom/left/right`), and an optional per-item ratio override that
+  can inherit the section ratio.
+- Per-item destinations use the shared page-first `LinkDestinationField`.
+  Published pages are selectable, while older hand-typed/hash/external
+  destinations stay visible as replace-or-clear compatibility state instead of
+  editable raw URL fields.
 - Interaction controls now include an opt-in lightbox mode plus bounded
   `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
   and Visual explains that the link must be cleared before that tile can open
@@ -100,6 +105,8 @@ before applying a config.
   button, or `Escape`, and return focus to the originating trigger.
 - Tiles with `href` keep the shared safe-link runtime contract and do not open
   the lightbox.
+- Default Gallery Mosaic items no longer seed `href: "#"` so newly inserted or
+  reset widgets start without fake custom destinations.
 - Responsive layout density stays bounded to variant-owned presets instead of
   raw breakpoint maps. `auto` preserves the legacy layout, while `compact`,
   `balanced`, and `dense` switch only between pre-approved tablet/desktop
@@ -120,7 +127,11 @@ before applying a config.
 
 - `style.overlay` is clearable; clear removes the overlay value and the renderer
   omits the caption overlay node/style instead of writing a transparent overlay.
-- Caption position, media links, and media source fields are unchanged by clear.
+- `image`, `video`, and `poster` are clearable through Visual actions. Clearing
+  the active media also clears the poster because poster frames only apply to
+  video items.
+- Destinations are clearable through `LinkDestinationField`; caption position
+  remains controlled by bounded presets.
 
 ## Data Model (summary)
 
@@ -135,8 +146,9 @@ before applying a config.
       "id": "gallery-1",
       "image": "https://cdn.example.com/photo.jpg",
       "video": "",
+      "poster": "",
       "caption": "Product overview",
-      "href": "#"
+      "href": "/case-study"
     }
   ],
   "interaction": {
@@ -161,4 +173,8 @@ before applying a config.
 - Contract target: Wizard seeds initial media/copy/count; Visual owns media,
   captions, links, lightbox, density, and motion; Advanced is read-only runtime
   diagnostics.
-- JSON import/export and raw media URL UX drift is routed to `TASK-336-19`.
+- TASK-336-19 removed raw image/video/link/poster URL authoring from normal
+  Visual flows. The contract still stores runtime-safe string paths, but the
+  beginner UI uses media and page pickers plus read-only legacy state.
+- The Wizard contract now matches actual writes: `variant`, `header.title`,
+  `items.count`, `items.image`, `items.video`, and `items.caption`.

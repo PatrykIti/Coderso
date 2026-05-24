@@ -226,6 +226,25 @@ read-only diagnostics. It added these concrete cleanup requirements:
   produced clean Newsletter and Product Compare admin smoke. Claude read-only
   review for this PageEditor hardening timed out after 180 seconds without
   returning output.
+- In Progress (2026-05-24): ninth implementation family removes Gallery Mosaic
+  raw Visual URL authoring for image, video, link, and poster fields. Visual now
+  uses media pickers for image/video replacement and video poster frames, a
+  page-first `LinkDestinationField` for destinations, explicit saved-asset
+  compatibility copy for older URL values, and clear actions for media/poster
+  state. Gallery Mosaic defaults no longer seed `href: "#"`, and the Wizard
+  contract now matches actual writes (`header.title`, item count, image/video
+  media, and captions) instead of claiming `header.description` or `items.alt`.
+  The Advanced diagnostics contract also drops the nonexistent
+  `runtime.normalizedData` path. Claude read-only re-review reported no
+  blockers after these fixes. Targeted validation passed
+  `bun run test:vitest -- tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/galleryMosaicLightboxRuntime.test.ts tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`,
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso`. Initial Playwright smoke hit the known stale Vite
+  optimized dependency failure; after clearing `core/node_modules/.vite` and
+  restarting `coderso-dev-core-host`, the rerun stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-gallery-mosaic-media-link-2026-05-24.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Files to Change
 

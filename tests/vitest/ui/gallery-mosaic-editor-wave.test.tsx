@@ -191,6 +191,19 @@ vi.mock("@/services/mediaClient", () => ({
   ]),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "lead-page",
+      title: "Lead page",
+      slug: "lead",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     value,
@@ -328,11 +341,6 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
     (element) => element.getAttribute("placeholder") === placeholder
   );
 
-const findAllInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
-    (element) => element.getAttribute("placeholder") === placeholder
-  );
-
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) => element.getAttribute("placeholder") === placeholder
@@ -357,6 +365,11 @@ const findButtonsByText = (container: ParentNode, text: string) =>
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
     normalizeText(section.textContent).includes(normalizeText(title))
+  );
+
+const findAllSelectsByOption = (container: ParentNode, optionText: string) =>
+  Array.from(container.querySelectorAll("select")).filter((element) =>
+    normalizeText(element.textContent).includes(normalizeText(optionText))
   );
 
 afterEach(() => {
@@ -431,7 +444,7 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
     ]);
     expect(view.container.textContent).toContain("image/*,video/*");
     expect(view.container.textContent).toContain(
-      "After Wizard, use Visual for per-item alt, poster, lightbox, density, and motion controls, or Advanced to import/export JSON."
+      "After Wizard, use Visual for captions, destinations, alt text, posters, lightbox, density, and motion controls, or Advanced to import/export JSON."
     );
 
     await React.act(async () => {
@@ -534,26 +547,35 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
 
     const mediaPickers = findMediaPickers(view.container);
     expect(mediaPickers).toHaveLength(3);
+    expect(view.container.textContent).toContain(
+      "Saved image asset is configured. Browse media to replace it or clear media and poster."
+    );
     clickElement(findButtonsByText(mediaPickers[1]!, "pick-video-media")[0]);
     await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+    const mediaPickersAfterVideo = findMediaPickers(view.container);
+    expect(mediaPickersAfterVideo).toHaveLength(4);
+    clickElement(findButtonsByText(mediaPickersAfterVideo[2]!, "pick-image-media")[0]);
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(latestValue.items[1]).toEqual(
+      expect.objectContaining({
+        video: "/media/launch.mp4",
+        poster: "/media/hero.jpg",
+      })
+    );
+    clickElement(findButtonByText(view.container, "Clear poster"));
+    expect(latestValue.items[1]?.poster).toBeUndefined();
 
-    setInputValue(
-      findAllInputsByPlaceholder(view.container, "https://cdn.example.com/clip.mp4")[1],
-      "https://cdn.example.com/item-2.mp4"
-    );
     setInputValue(findInputByPlaceholder(view.container, "Media 2"), "Motion close-up");
-    setInputValue(findAllInputsByPlaceholder(view.container, "#")[1], "/motion-updated");
     setInputValue(findInputByPlaceholder(view.container, "Gallery item 1"), "Lead alt");
-    setInputValue(
-      findAllInputsByPlaceholder(view.container, "https://cdn.example.com/poster.jpg")[0],
-      "https://cdn.example.com/lead-poster.jpg"
-    );
     selects = Array.from(view.container.querySelectorAll("select"));
-    setSelectValue(selects[1], "right");
-    setSelectValue(selects[2], "1:1");
+    setSelectValue(findAllSelectsByOption(view.container, "Right")[0], "right");
+    setSelectValue(findAllSelectsByOption(view.container, "Inherit section ratio")[0], "1:1");
     expect(view.container.textContent).toContain("Current media: Video");
     expect(view.container.textContent).toContain("Video preview");
     const interactionSection = findSectionByTitle(view.container, "Interaction");
@@ -564,10 +586,10 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     setSelectValue(interactionSelects[0], "lightbox");
     setSelectValue(interactionSelects[1], "fill");
     expect(view.container.textContent).toContain(
-      "This item keeps link navigation. Clear the link URL to open it in the lightbox instead."
+      "This item keeps link navigation. Clear the destination to open it in the lightbox instead."
     );
     expect(view.container.textContent).toContain(
-      "linked items still use navigation. Clear each Link URL to open that tile in the lightbox instead."
+      "linked items still use navigation. Clear each destination to open that tile in the lightbox instead."
     );
 
     const dragHandles = findDragHandles(view.container);
@@ -612,7 +634,12 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     ]);
 
     const refreshedMediaPickers = findMediaPickers(view.container);
-    clickElement(findButtonsByText(refreshedMediaPickers[2]!, "pick-unsupported-media")[0]);
+    clickElement(
+      findButtonsByText(
+        refreshedMediaPickers[refreshedMediaPickers.length - 1]!,
+        "pick-unsupported-media"
+      )[0]
+    );
     await React.act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -656,7 +683,6 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       id: "gallery-a",
       image: "/lead.jpg",
       alt: "Lead alt",
-      poster: "https://cdn.example.com/lead-poster.jpg",
       objectPosition: "right",
       ratio: "1:1",
       caption: "Lead frame",
@@ -905,7 +931,7 @@ test("GalleryMosaic advanced editor exports current config and imports validated
   }
 });
 
-test("GalleryMosaic visual editor updates header title, image field, move-down ordering, and raw overlay token without a variant handler", async () => {
+test("GalleryMosaic visual editor updates header title, media picker, move-down ordering, and raw overlay token without a variant handler", async () => {
   const { GalleryMosaicVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -943,10 +969,21 @@ test("GalleryMosaic visual editor updates header title, image field, move-down o
     );
 
     const mediaSection = findSectionByTitle(view.container, "Media items and links");
-    setInputValue(
-      findInputByPlaceholder(mediaSection ?? view.container, "https://cdn.example.com/photo.jpg"),
-      "https://cdn.example.com/updated-lead.jpg"
+    expect(mediaSection?.textContent).not.toContain("Image URL");
+    expect(mediaSection?.textContent).not.toContain("Video URL");
+    expect(mediaSection?.textContent).not.toContain("Poster image URL");
+    expect(mediaSection?.textContent).not.toContain("Link URL");
+    expect(mediaSection?.textContent).toContain(
+      "Saved image asset is configured. Browse media to replace it or clear media and poster."
     );
+    clickElement(findButtonsByText(mediaSection ?? view.container, "Clear media and poster")[0]);
+    expect(latestValue.items[0]?.image).toBeUndefined();
+    const mediaPicker = findMediaPickers(view.container)[0];
+    clickElement(findButtonByText(mediaPicker ?? view.container, "pick-image-media"));
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     clickElement(findButtonsByText(mediaSection ?? view.container, "Move down")[0]);
 
     const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
@@ -963,7 +1000,7 @@ test("GalleryMosaic visual editor updates header title, image field, move-down o
     expect(latestValue.items[1]).toEqual(
       expect.objectContaining({
         id: "gallery-a",
-        image: "https://cdn.example.com/updated-lead.jpg",
+        image: "/media/hero.jpg",
         caption: "Lead frame",
       })
     );
