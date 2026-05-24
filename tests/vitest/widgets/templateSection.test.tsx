@@ -11,6 +11,7 @@ import {
 } from "../../../core/widgets/core/templateSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -114,4 +115,25 @@ test("template section schema accepts runtime payload", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("template section declares a valid editor ownership contract", () => {
+  const definition = createTemplateSectionWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  const validation = validateWidgetEditorContract(definition, { requireContract: true });
+
+  expect(validation.valid).toBe(true);
+  expect(validation.errors).toEqual([]);
+  expect(definition.editorContract?.sections.map((section) => section.id)).toEqual([
+    "template-section.wizard.template-setup",
+    "template-section.visual.active-template",
+    "template-section.visual.presentation-fields",
+    "template-section.advanced.template-diagnostics",
+    "template-section.advanced.runtime-payload",
+    "template-section.advanced.runtime-rules",
+  ]);
 });

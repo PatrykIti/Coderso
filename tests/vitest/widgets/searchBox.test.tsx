@@ -15,6 +15,7 @@ import {
   searchBoxDefaults,
   type SearchBoxData,
 } from "../../../core/widgets/core/searchBox";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -158,13 +159,16 @@ test("search box editors render expected sections", () => {
   const wizard = renderToString(
     <SearchBoxWizardEditor value={searchBoxDefaults} onChange={() => undefined} variant="default" />
   );
-  expect(wizard).toContain("Mode");
-  expect(wizard).toContain("Copy and behavior");
+  expect(wizard).toContain("Search source");
+  expect(wizard).not.toContain("Search copy");
 
   const visual = renderToString(
     <SearchBoxVisualEditor value={searchBoxDefaults} onChange={() => undefined} variant="default" />
   );
-  expect(visual).toContain("global public search");
+  expect(visual).toContain("Search copy");
+  expect(visual).toContain("Search interaction");
+  expect(visual).toContain("Search surface");
+  expect(visual).not.toContain("Search source");
 
   const advanced = renderToString(
     <SearchBoxAdvancedEditor
@@ -174,6 +178,29 @@ test("search box editors render expected sections", () => {
     />
   );
   expect(advanced).toContain("Runtime payload");
-  expect(advanced).toContain("Contract");
+  expect(advanced).toContain("Runtime diagnostics");
+  expect(advanced).toContain("Contract summary");
   expect(advanced).toContain("route-submit");
+});
+
+test("search box declares a valid editor ownership contract", () => {
+  const definition = createSearchBoxWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  const validation = validateWidgetEditorContract(definition, { requireContract: true });
+
+  expect(validation.valid).toBe(true);
+  expect(validation.errors).toEqual([]);
+  expect(definition.editorContract?.sections.map((section) => section.id)).toEqual([
+    "search-box.wizard.source-setup",
+    "search-box.visual.search-copy",
+    "search-box.visual.search-interaction",
+    "search-box.visual.search-surface",
+    "search-box.advanced.runtime-diagnostics",
+    "search-box.advanced.runtime-payload",
+    "search-box.advanced.contract-summary",
+  ]);
 });

@@ -6,7 +6,7 @@
 **Category:** Widgets + Template Section + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -29,24 +29,27 @@ technical diagnostics separate.
 - `Advanced` owns resolved template diagnostics, internal ids, version/source
   summaries, and read-only payload previews.
 
-Evidence caveat: the re-audit finding is source-backed, not a completed
-38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
-before the task can move to Done.
+Current TASK-336-03 smoke evidence confirmed the widget after implementation:
+targeted admin smoke for `template-section` passed with `adminFailures=0` and
+`metadataGaps=0` on 2026-05-24. The widget remains documented as missing a
+standalone public fixture in the smoke inventory because it is hidden from the
+regular picker; frontend fixture closure remains part of `TASK-336-15` /
+`TASK-336-17`.
 
 ## Sub-Tasks
 
-- [ ] Audit the current `TemplateSectionEditor` and all paths it mutates.
-- [ ] Add an explicit `editorContract` entry for `template-section`.
-- [ ] Split the shared editor into mode-specific sections.
-- [ ] Move all writable setup paths into Wizard.
-- [ ] Move all daily visual/presentation paths into Visual.
-- [ ] Convert Advanced duplicate controls into read-only summaries.
-- [ ] Add empty/missing template state copy that explains the next action.
-- [ ] Add Vitest UI assertions for mode-specific ownership.
-- [ ] Publish a public test fixture page for `template-section` or document why
+- [x] Audit the current `TemplateSectionEditor` and all paths it mutates.
+- [x] Add an explicit `editorContract` entry for `template-section`.
+- [x] Split the shared editor into mode-specific sections.
+- [x] Move all writable setup paths into Wizard.
+- [x] Move all daily visual/presentation paths into Visual.
+- [x] Convert Advanced duplicate controls into read-only summaries.
+- [x] Add empty/missing template state copy that explains the next action.
+- [x] Add Vitest UI assertions for mode-specific ownership.
+- [x] Publish a public test fixture page for `template-section` or document why
   the widget remains admin-only; record the URL or deferral in the smoke
   inventory.
-- [ ] Add Playwright smoke coverage for admin modes and the public fixture
+- [x] Add Playwright smoke coverage for admin modes and the public fixture
   decision.
 
 ## Files to Change
@@ -141,3 +144,22 @@ Regression-test shape:
 - `template-section` no longer renders the same editor in all three modes.
 - Every section/control uses the shared DOM metadata contract.
 - Tests prove Wizard setup ownership and Advanced read-only diagnostics.
+
+## Completion Notes
+
+Completed on 2026-05-24.
+
+Final ownership:
+
+- `Wizard` owns template setup through `templateId` and derived `templateName`.
+- `Visual` owns presentation metadata (`metadata.previewLabel`,
+  `metadata.category`) and shows the active template as a summary.
+- `Advanced` is read-only diagnostics/runtime payload for template id/name,
+  metadata version, resolved blocks, and resolution errors.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx tests/vitest/widgets/templateSection.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-04-05 --widget template-section --skip-front --output-json .tmp/widget-smoke-template-section.json --output-md .tmp/widget-smoke-template-section.md`

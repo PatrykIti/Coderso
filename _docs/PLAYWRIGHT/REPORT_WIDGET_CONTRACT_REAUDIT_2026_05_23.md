@@ -71,6 +71,26 @@ Latest recorded run in `widget-contract-smoke-results.json`:
   public fixtures and empty-state-only public pages.
 - Metadata gaps: 13 widgets with missing control-path ownership metadata.
 
+## 2026-05-24 TASK-336-04/05 Ownership Update
+
+`template-section` and `search-box` now have explicit v2 editor contracts and
+mode-specific ownership:
+
+- `template-section`: Wizard owns template setup, Visual owns presentation
+  metadata, and Advanced is read-only resolved-template/runtime diagnostics.
+- `search-box`: Wizard owns source/setup, Visual owns visitor copy, interaction,
+  and surface, and Advanced is read-only runtime diagnostics/payload.
+
+Targeted admin smoke evidence:
+
+- `template-section`: `adminFailures=0`, `metadataGaps=0`
+  (`.tmp/widget-smoke-template-section.json`).
+- `search-box`: rerun `adminFailures=0`, `metadataGaps=0`
+  (`.tmp/widget-smoke-search-box-rerun.json`).
+
+The standalone public fixture gaps for both widgets remain assigned to
+`TASK-336-15` / `TASK-336-17`; this update closes admin ownership only.
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

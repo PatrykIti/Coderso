@@ -4,7 +4,7 @@ import {
   buildListingRuntimeParamName,
   listingRuntimeTokens,
 } from "../../services/search/filterContract";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
 
@@ -77,6 +77,72 @@ export const searchBoxDefaults: SearchBoxData = {
     actionBackground: "var(--color-primary)",
   },
 };
+
+const searchBoxEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "search-box.wizard.source-setup",
+      title: "Search source",
+      role: "source",
+      writablePaths: [
+        "mode",
+        "listingQueryId",
+        "endpoint",
+        "targetRoute",
+        "queryParam",
+        "sources.pages",
+        "sources.entries",
+        "sources.posts",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "search-box.visual.search-copy",
+      title: "Search copy",
+      role: "content",
+      writablePaths: ["title", "description", "placeholder", "submitLabel"],
+    },
+    {
+      mode: "visual",
+      id: "search-box.visual.search-interaction",
+      title: "Search interaction",
+      role: "visual",
+      writablePaths: ["displayMode", "autoApply"],
+    },
+    {
+      mode: "visual",
+      id: "search-box.visual.search-surface",
+      title: "Search surface",
+      role: "visual",
+      writablePaths: ["style.frameBackground", "style.frameBorderColor", "style.actionBackground"],
+    },
+    {
+      mode: "advanced",
+      id: "search-box.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["mode", "listingQueryId", "endpoint", "targetRoute", "queryParam"],
+    },
+    {
+      mode: "advanced",
+      id: "search-box.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved.query", "resolved.rejectedTokens", "resolved.error"],
+    },
+    {
+      mode: "advanced",
+      id: "search-box.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
+} satisfies WidgetEditorContract;
 
 export const searchBoxSchema = {
   type: "object",
@@ -479,6 +545,7 @@ export function createSearchBoxWidget(editors: {
     schema: searchBoxSchema,
     defaults: searchBoxDefaults,
     editor: editors,
+    editorContract: searchBoxEditorContract,
     render: SearchBoxBlock,
   };
 }

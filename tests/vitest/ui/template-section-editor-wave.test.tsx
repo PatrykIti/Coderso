@@ -246,14 +246,18 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
       "Select a widget template to render in this section."
     );
     expect(view.container.textContent).toContain("Runtime behavior");
-    expect(view.container.textContent).toContain("Preview and metadata");
+    expect(view.container.textContent).toContain("Template presentation");
+    expect(
+      view.container
+        .querySelector("[data-widget-editor-section='template-section.wizard.template-setup']")
+        ?.getAttribute("data-widget-editor-mode")
+    ).toBe("wizard");
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selects[0], "template-2");
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const previewLabelInput = inputs.find((input) => input.placeholder === "Homepage Hero Cluster");
     const categoryInput = inputs.find((input) => input.placeholder === "Marketing");
-    const versionInput = inputs.find((input) => input.placeholder === "v1");
 
     if (!(previewLabelInput instanceof HTMLInputElement)) {
       throw new Error("Missing preview label input");
@@ -261,22 +265,22 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     if (!(categoryInput instanceof HTMLInputElement)) {
       throw new Error("Missing category input");
     }
-    if (!(versionInput instanceof HTMLInputElement)) {
-      throw new Error("Missing version input");
-    }
 
     setInputValue(previewLabelInput, "Landing Hero");
     setInputValue(categoryInput, "Marketing");
-    setInputValue(versionInput, "v2");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.templateId).toBe("template-2");
     expect(latestValue.templateName).toBe("Promo grid");
-    expect(latestValue.metadata).toEqual({
+    expect(latestValue.metadata).toMatchObject({
       previewLabel: "Landing Hero",
       category: "Marketing",
-      version: "v2",
     });
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-control-path]"))
+        .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+        .map((element) => element.getAttribute("data-widget-control-path"))
+    ).toEqual(["templateId", "metadata.previewLabel", "metadata.category"]);
     expect(view.container.textContent).toContain("Draft");
     expect(view.container.textContent).toContain("Active template:");
     expect(view.container.textContent).toContain("Promo grid");
@@ -321,7 +325,8 @@ test("TemplateSection editors surface error state from the template hook while k
   try {
     expect(view.container.textContent).toContain("Failed to load templates.");
     expect(view.container.textContent).toContain("No template");
-    expect(view.container.textContent).toContain("Preview and metadata");
+    expect(view.container.textContent).toContain("Template setup");
+    expect(view.container.textContent).not.toContain("Template presentation");
     expect(view.container.textContent).toContain(
       "Select a widget template to render in this section."
     );

@@ -17,20 +17,25 @@ Allows mixing widgets and templates in the same page flow.
 
 None.
 
-## Editor Modes (current after TASK-053-01)
+## Editor Modes (current after TASK-336-04)
 
 ### Wizard
-- pick a widget template
-- quick summary of active selection
+- owns first-time template setup
+- writable paths: `templateId` and derived `templateName`
+- clears stale resolved template payload when the source template changes
 
 ### Visual
-- swap template selection
-- surface template status (draft/published)
-- category, preview label, and version metadata
+- shows the active template as a daily editing summary
+- owns public presentation metadata:
+  - `metadata.previewLabel`
+  - `metadata.category`
+- does not expose a duplicate template picker
 
 ### Advanced
-- same selection controls
-- read-only resolved payload snapshot
+- read-only resolved template diagnostics
+- read-only `metadata.version` summary
+- read-only runtime payload snapshot
+- no writable template selection or presentation controls
 
 ## Runtime Behavior Notes
 

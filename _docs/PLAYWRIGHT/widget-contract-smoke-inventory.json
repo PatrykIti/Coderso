@@ -308,7 +308,8 @@
       "publicPath": null,
       "publicFixtureStatus": "missing",
       "priority": "P0",
-      "requiredModes": ["wizard", "visual", "advanced"]
+      "requiredModes": ["wizard", "visual", "advanced"],
+      "notes": "Standalone public fixture remains assigned to TASK-336-15; TASK-336-05 verifies admin ownership only."
     },
     {
       "widgetType": "timeline",

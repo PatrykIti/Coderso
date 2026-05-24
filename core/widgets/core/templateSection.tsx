@@ -5,6 +5,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetLayoutDefaults,
 } from "../types";
@@ -65,6 +66,65 @@ export const templateSectionDefaults: TemplateSectionData = {
     version: "",
   },
 };
+
+const templateSectionEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "template-section.wizard.template-setup",
+      title: "Template setup",
+      role: "setup",
+      writablePaths: ["templateId", "templateName"],
+    },
+    {
+      mode: "visual",
+      id: "template-section.visual.active-template",
+      title: "Active template",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["templateId", "templateName"],
+    },
+    {
+      mode: "visual",
+      id: "template-section.visual.presentation-fields",
+      title: "Template presentation",
+      role: "visual",
+      writablePaths: ["metadata.previewLabel", "metadata.category"],
+      readOnlyPaths: ["metadata.version"],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.template-diagnostics",
+      title: "Resolved template",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "templateId",
+        "templateName",
+        "metadata.previewLabel",
+        "metadata.version",
+        "resolved.blocks",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved.blocks", "resolved.error"],
+    },
+    {
+      mode: "advanced",
+      id: "template-section.advanced.runtime-rules",
+      title: "Runtime behavior",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
+} satisfies WidgetEditorContract;
 
 export function normalizeTemplateSectionData(data: TemplateSectionData): TemplateSectionData {
   const templateId = typeof data.templateId === "string" ? data.templateId : "";
@@ -216,6 +276,7 @@ export function createTemplateSectionWidget(editors: {
     defaults: templateSectionDefaults,
     editor: editors,
     editorCapabilities: { visualOwnsVariantSelection: true },
+    editorContract: templateSectionEditorContract,
     render: TemplateSectionBlock,
   };
 }

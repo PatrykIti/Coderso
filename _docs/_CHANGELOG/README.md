@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 933 | 2026-05-24 | Template Section and Search Box editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 932 | 2026-05-23 | Widget contract Playwright smoke harness | CMS Widgets/Admin UI/Playwright/QA/Docs |
 | 931 | 2026-05-23 | Widget editor DOM ownership metadata | CMS Widgets/Admin UI/QA/Docs |
 | 930 | 2026-05-23 | Widget editor contract v2 foundation | CMS Widgets/Admin UI/QA/Docs |

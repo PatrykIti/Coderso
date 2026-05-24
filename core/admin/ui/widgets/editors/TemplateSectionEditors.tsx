@@ -17,7 +17,11 @@ import {
 } from "../../../../widgets/core/templateSection";
 import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const NO_TEMPLATE_VALUE = "__no-template__";
 
@@ -121,44 +125,32 @@ function TemplateSelectField({
   );
 }
 
-function TemplateSectionEditor({
+function TemplatePresentationEditor({
   value,
   onChange,
-  title,
-  description,
-  sectionId,
 }: {
   value: TemplateSectionData;
   onChange: (next: TemplateSectionData) => void;
-  title: string;
-  description?: string;
-  sectionId: string;
 }) {
   const normalized = normalizeTemplateSectionData(value);
-  const activeName = normalized.templateName?.trim();
   const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
 
   return (
-    <div className="space-y-4">
-      <WidgetEditorSection id={`${sectionId}.selection`} title={title} description={description}>
-        <div>
-          <h3 className="text-lg font-semibold">Template section</h3>
-        </div>
-        <TemplateSelectField value={normalized} onChange={onChange} />
-        {activeName ? (
-          <div className="rounded-lg border bg-background/60 p-3 text-xs text-muted-foreground">
-            Active template: <span className="font-semibold text-foreground">{activeName}</span>
-          </div>
-        ) : null}
-      </WidgetEditorSection>
-      <WidgetEditorSection
-        id={`${sectionId}.metadata`}
-        title="Preview and metadata"
-        description="Store category, preview label, and version without changing runtime ownership."
+    <WidgetEditorSection
+      id="template-section.visual.presentation-fields"
+      mode="visual"
+      role="visual"
+      title="Template presentation"
+      description="Public preview labels shown around the resolved template section."
+    >
+      <WidgetControlRow
+        id="template-section.visual.preview-label"
+        label="Preview label"
+        path="metadata.previewLabel"
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Preview label</p>
+        {(fieldProps) => (
           <Input
+            {...fieldProps}
             value={metadata.previewLabel ?? ""}
             onChange={(event) =>
               updateValue(value, onChange, {
@@ -170,11 +162,17 @@ function TemplateSectionEditor({
             }
             placeholder="Homepage Hero Cluster"
           />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Category</p>
+        )}
+      </WidgetControlRow>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <WidgetControlRow
+          id="template-section.visual.category"
+          label="Category"
+          path="metadata.category"
+        >
+          {(fieldProps) => (
             <Input
+              {...fieldProps}
               value={metadata.category ?? ""}
               onChange={(event) =>
                 updateValue(value, onChange, {
@@ -186,37 +184,10 @@ function TemplateSectionEditor({
               }
               placeholder="Marketing"
             />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Version</p>
-            <Input
-              value={metadata.version ?? ""}
-              onChange={(event) =>
-                updateValue(value, onChange, {
-                  metadata: {
-                    ...metadata,
-                    version: event.target.value,
-                  },
-                })
-              }
-              placeholder="v1"
-            />
-          </div>
-        </div>
-      </WidgetEditorSection>
-      <WidgetEditorSection id={`${sectionId}.runtime`} title="Runtime behavior">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Runtime behavior
-        </p>
-      </WidgetEditorSection>
-      <Alert>
-        <AlertTitle>Runtime behavior</AlertTitle>
-        <AlertDescription>
-          This widget renders the selected template blocks in order. Draft templates will only
-          render in preview mode.
-        </AlertDescription>
-      </Alert>
-    </div>
+          )}
+        </WidgetControlRow>
+      </div>
+    </WidgetEditorSection>
   );
 }
 
@@ -225,13 +196,25 @@ export function TemplateSectionWizardEditor({
   onChange,
 }: WidgetEditorProps<TemplateSectionData>) {
   return (
-    <TemplateSectionEditor
-      value={value}
-      onChange={onChange}
-      title="Wizard"
-      description="Choose which widget template should render as this section."
-      sectionId="template-section.wizard"
-    />
+    <>
+      <WidgetEditorSection
+        id="template-section.wizard.template-setup"
+        mode="wizard"
+        role="setup"
+        title="Template setup"
+        description="Choose which widget template should render as this section."
+      >
+        <WidgetControlRow
+          id="template-section.wizard.template-id"
+          label="Template selection"
+          path="templateId"
+        >
+          {() => (
+            <TemplateSelectField value={normalizeTemplateSectionData(value)} onChange={onChange} />
+          )}
+        </WidgetControlRow>
+      </WidgetEditorSection>
+    </>
   );
 }
 
@@ -239,34 +222,94 @@ export function TemplateSectionVisualEditor({
   value,
   onChange,
 }: WidgetEditorProps<TemplateSectionData>) {
+  const normalized = normalizeTemplateSectionData(value);
+  const activeName = normalized.templateName?.trim();
+
   return (
-    <TemplateSectionEditor
-      value={value}
-      onChange={onChange}
-      title="Visual"
-      description="Swap templates or verify the active selection."
-      sectionId="template-section.visual"
-    />
+    <>
+      <WidgetEditorSection
+        id="template-section.visual.active-template"
+        mode="visual"
+        role="summary"
+        title="Active template"
+        description="Daily editing starts from the already selected template."
+      >
+        {activeName ? (
+          <div className="rounded-lg border bg-background/60 p-3 text-xs text-muted-foreground">
+            Active template: <span className="font-semibold text-foreground">{activeName}</span>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+            No template selected yet. Run setup to choose one before editing presentation labels.
+          </div>
+        )}
+      </WidgetEditorSection>
+      <TemplatePresentationEditor value={normalized} onChange={onChange} />
+    </>
   );
 }
 
-export function TemplateSectionAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<TemplateSectionData>) {
+export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<TemplateSectionData>) {
   const normalized = normalizeTemplateSectionData(value);
   const resolvedPayload = normalized.resolved ?? { blocks: [] };
+  const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
+  const resolvedBlockCount = Array.isArray(normalized.resolved?.blocks)
+    ? normalized.resolved.blocks.length
+    : 0;
 
   return (
-    <div className="space-y-4">
-      <TemplateSectionEditor
-        value={value}
-        onChange={onChange}
-        title="Advanced"
-        description="Manage template resolution details."
-        sectionId="template-section.advanced"
-      />
-      <WidgetEditorSection id="template-section.advanced.diagnostics" title="Resolved payload">
+    <>
+      <WidgetEditorSection
+        id="template-section.advanced.template-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Resolved template"
+        description="Read-only setup and resolution state for troubleshooting."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.template-id"
+          label="Template ID"
+          path="templateId"
+          value={normalized.templateId || "Not selected"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.template-name"
+          label="Template name"
+          path="templateName"
+          value={normalized.templateName || "Not selected"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.preview-label"
+          label="Preview label"
+          path="metadata.previewLabel"
+          value={metadata.previewLabel || "Not configured"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.version"
+          label="Version"
+          path="metadata.version"
+          value={metadata.version || "Not configured"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.resolved-blocks"
+          label="Resolved blocks"
+          path="resolved.blocks"
+          value={`${resolvedBlockCount} block${resolvedBlockCount === 1 ? "" : "s"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.resolution-error"
+          label="Resolution error"
+          path="resolved.error"
+          value={normalized.resolved?.error || "None"}
+        />
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        id="template-section.advanced.runtime-payload"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime payload"
+        description="Read-only normalized template payload used by the renderer."
+      >
         <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
           Resolved payload (read-only)
           <pre className="mt-2 overflow-auto rounded-md bg-muted/40 p-3 text-[11px]">
@@ -274,6 +317,20 @@ export function TemplateSectionAdvancedEditor({
           </pre>
         </div>
       </WidgetEditorSection>
-    </div>
+      <WidgetEditorSection
+        id="template-section.advanced.runtime-rules"
+        mode="advanced"
+        role="summary"
+        title="Runtime behavior"
+      >
+        <Alert>
+          <AlertTitle>Runtime behavior</AlertTitle>
+          <AlertDescription>
+            This widget renders the selected template blocks in order. Draft templates will only
+            render in preview mode.
+          </AlertDescription>
+        </Alert>
+      </WidgetEditorSection>
+    </>
   );
 }

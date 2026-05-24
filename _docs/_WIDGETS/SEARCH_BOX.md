@@ -13,22 +13,39 @@ Render a bounded listing or global public search form with runtime-safe source
 
 - `default`
 
-## Editor Modes
+## Editor Modes (current after TASK-336-05)
 
 ### Wizard
-- mode selection
-- title/copy basics
+- owns first-time source/setup:
+  - `mode`
+  - `listingQueryId`
+  - `endpoint`
+  - `targetRoute`
+  - `queryParam`
+  - `sources.pages`
+  - `sources.entries`
+  - `sources.posts`
+- shows listing-query loading, empty, error, and retry guidance
 
 ### Visual
-- mode
-- copy and behavior
-- display mode
-- route target and query binding when `mode=route-submit`
-- surface styling
+- owns visitor-facing copy:
+  - `title`
+  - `description`
+  - `placeholder`
+  - `submitLabel`
+- owns visible interaction/presentation:
+  - `displayMode`
+  - `autoApply`
+  - `style.frameBackground`
+  - `style.frameBorderColor`
+  - `style.actionBackground`
+- does not expose source, route, query-param, or endpoint controls
 
 ### Advanced
-- runtime payload
-- diagnostics
+- read-only runtime diagnostics for source/routing state
+- read-only runtime payload snapshot
+- read-only contract summary
+- no duplicate writable copy, source, or style controls
 
 ## Runtime Behavior Notes
 

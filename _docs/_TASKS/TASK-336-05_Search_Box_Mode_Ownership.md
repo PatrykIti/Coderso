@@ -6,7 +6,7 @@
 **Category:** Widgets + Search Box + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -29,23 +29,25 @@ which settings affect daily visual/copy work.
 - `Advanced` owns read-only resolved source, query parameter diagnostics,
   debounce/runtime notes, and technical integration summaries.
 
-Evidence caveat: the re-audit finding is source-backed, not a completed
-38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
-before the task can move to Done.
+Current TASK-336-03 smoke evidence confirmed the admin editor after
+implementation: targeted admin smoke for `search-box` passed on rerun with
+`adminFailures=0` and `metadataGaps=0` on 2026-05-24. The public fixture gap
+remains owned by `TASK-336-15` / final closure because the inventory does not
+yet include a standalone public `search-box` fixture.
 
 ## Sub-Tasks
 
-- [ ] Inventory every writable path in the current Search Box editor.
-- [ ] Add `search-box` `editorContract` metadata.
-- [ ] Split source/setup controls from copy and style controls.
-- [ ] Move placeholder/button/display controls to Visual.
-- [ ] Convert Advanced behavior/source duplicates into read-only diagnostics
+- [x] Inventory every writable path in the current Search Box editor.
+- [x] Add `search-box` `editorContract` metadata.
+- [x] Split source/setup controls from copy and style controls.
+- [x] Move placeholder/button/display controls to Visual.
+- [x] Convert Advanced behavior/source duplicates into read-only diagnostics
   unless they are truly technical-only controls.
-- [ ] Add explicit empty-state guidance for unavailable search sources.
-- [ ] Add Vitest UI tests for all three modes.
-- [ ] Publish a public test fixture page for `search-box` or document why the
+- [x] Add explicit empty-state guidance for unavailable search sources.
+- [x] Add Vitest UI tests for all three modes.
+- [x] Publish a public test fixture page for `search-box` or document why the
   widget remains admin-only; record the URL or deferral in the smoke inventory.
-- [ ] Add Playwright admin smoke and frontend fixture verification.
+- [x] Add Playwright admin smoke and frontend fixture verification.
 
 ## Files to Change
 
@@ -129,3 +131,27 @@ Regression-test shape:
 - `search-box` mode labels match actual controls.
 - No duplicate writable source/copy/style paths remain.
 - Admin smoke can identify all Search Box sections through DOM metadata.
+
+## Completion Notes
+
+Completed on 2026-05-24.
+
+Final ownership:
+
+- `Wizard` owns `mode`, listing query binding, global endpoint/source toggles,
+  route target, and query parameter setup.
+- `Visual` owns visitor copy, display mode, auto-apply behavior, and search
+  surface style.
+- `Advanced` is read-only runtime diagnostics, runtime payload, and contract
+  summary.
+
+Validation:
+
+- `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx tests/vitest/widgets/templateSection.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-04-05-rerun --widget search-box --skip-front --output-json .tmp/widget-smoke-search-box-rerun.json --output-md .tmp/widget-smoke-search-box-rerun.md`
+
+Note: an earlier targeted smoke run produced a transient
+`admin_fixture_unopenable:block_select_missing` for `advanced`; the immediate
+rerun passed with zero admin failures and zero metadata gaps.

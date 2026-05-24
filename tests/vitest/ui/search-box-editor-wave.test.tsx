@@ -122,8 +122,14 @@ vi.mock("@/components/ui/select", () => {
     ),
     SelectContent: () => null,
     SelectItem: () => null,
-    SelectTrigger: () => null,
-    SelectValue: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
+    SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
+    SelectValue: ({
+      children,
+      placeholder,
+    }: {
+      children?: React.ReactNode;
+      placeholder?: string;
+    }) => <>{children ?? placeholder ?? null}</>,
   };
 });
 
@@ -147,17 +153,26 @@ vi.mock("@/components/ui/textarea", () => ({
   Textarea: ({
     value,
     onChange,
+    readOnly,
     placeholder,
     rows,
     ...props
   }: {
     value?: string;
     onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    readOnly?: boolean;
     placeholder?: string;
     rows?: number;
     [key: string]: unknown;
   }) => (
-    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows} {...props} />
+    <textarea
+      value={value}
+      onChange={onChange}
+      readOnly={readOnly}
+      placeholder={placeholder}
+      rows={rows}
+      {...props}
+    />
   ),
 }));
 
@@ -247,12 +262,6 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
@@ -266,6 +275,11 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const writablePaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"));
+
 const makeApiClientError = (message: string) => {
   const error = new Error(message);
   error.name = "ApiClientError";
@@ -278,7 +292,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("SearchBox wizard editor covers listing mode selection and copy updates", async () => {
+test("SearchBox wizard owns source setup without copy or style controls", async () => {
   const { SearchBoxWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
@@ -300,48 +314,41 @@ test("SearchBox wizard editor covers listing mode selection and copy updates", a
 
   const view = mount(<Harness />);
   try {
+    expect(
+      view.container
+        .querySelector("[data-widget-editor-section='search-box.wizard.source-setup']")
+        ?.getAttribute("data-widget-editor-mode")
+    ).toBe("wizard");
     expect(view.container.textContent).toContain("Loading listing queries...");
     await flush();
 
-    const modeSelect = findSelectByOptions(view.container, ["listing", "global"]);
-    const querySelect = findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]);
-    setSelectValue(modeSelect, "listing");
-    setSelectValue(querySelect, "query-1");
-    setInputValue(findInputsByPlaceholder(view.container, "Search")[0], "Catalog search");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Optional helper text."),
-      "Find matching records."
+    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "listing");
+    setSelectValue(
+      findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]),
+      "query-1"
     );
-    setInputValue(findInputByPlaceholder(view.container, "Type to search..."), "Search catalog");
-    setInputValue(findInputsByPlaceholder(view.container, "Search")[1], "Run search");
-
-    const autoApplyToggle = Array.from(
-      view.container.querySelectorAll('input[type="checkbox"]')
-    )[0];
-    setCheckboxValue(autoApplyToggle, false);
 
     expect(latestValue).toMatchObject({
       mode: "listing",
       listingQueryId: "query-1",
-      description: "Find matching records.",
-      placeholder: "Search catalog",
-      submitLabel: "Run search",
-      autoApply: false,
     });
+    expect(writablePaths(view.container)).toEqual(["mode", "listingQueryId"]);
+    expect(view.container.textContent).not.toContain("Search copy");
+    expect(view.container.textContent).not.toContain("Search surface");
   } finally {
     view.cleanup();
   }
 });
 
-test("SearchBox visual editor covers global mode endpoint and source toggles", async () => {
-  const { SearchBoxVisualEditor } =
+test("SearchBox wizard owns global and route-submit source configuration", async () => {
+  const { SearchBoxWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
-  let latestValue: SearchBoxData = { mode: "global", endpoint: " /api/custom-search " };
+  let latestValue: SearchBoxData = { mode: "global", endpoint: "/api/custom-search" };
   const Harness = () => {
     const [value, setValue] = useState<SearchBoxData>(latestValue);
     return (
-      <SearchBoxVisualEditor
+      <SearchBoxWizardEditor
         value={value}
         onChange={(next) => {
           latestValue = next;
@@ -372,57 +379,33 @@ test("SearchBox visual editor covers global mode endpoint and source toggles", a
         posts: true,
       },
     });
-  } finally {
-    view.cleanup();
-  }
-});
+    expect(writablePaths(view.container)).toEqual([
+      "mode",
+      "endpoint",
+      "sources.pages",
+      "sources.entries",
+      "sources.posts",
+    ]);
 
-test("SearchBox visual editor covers route-submit target route, query param, and display mode", async () => {
-  const { SearchBoxVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
-
-  let latestValue: SearchBoxData = { mode: "route-submit" };
-  const Harness = () => {
-    const [value, setValue] = useState<SearchBoxData>(latestValue);
-    return (
-      <SearchBoxVisualEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="default"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-  try {
-    await flush();
+    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "route-submit");
     setInputValue(findInputByPlaceholder(view.container, "/search"), "/results");
     setInputValue(findInputByPlaceholder(view.container, "q"), "term");
-    setSelectValue(findSelectByOptions(view.container, ["full", "compact"]), "compact");
 
     expect(latestValue).toMatchObject({
       mode: "route-submit",
       targetRoute: "/results",
       queryParam: "term",
-      displayMode: "compact",
     });
-    expect(view.container.textContent).toContain("Route-submit mode forwards the query");
   } finally {
     view.cleanup();
   }
 });
 
-test("SearchBox visual editor surfaces listing query API errors and normalizes listing copy fields", async () => {
-  searchBoxState.error = makeApiClientError("Listing queries are restricted.");
-
+test("SearchBox visual owns visitor copy, interaction, and surface only", async () => {
   const { SearchBoxVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
-  let latestValue: SearchBoxData = {};
+  let latestValue: SearchBoxData = { mode: "listing" };
   const Harness = () => {
     const [value, setValue] = useState<SearchBoxData>(latestValue);
     return (
@@ -440,28 +423,52 @@ test("SearchBox visual editor surfaces listing query API errors and normalizes l
 
   const view = mount(<Harness />);
   try {
-    await flush();
-    expect(view.container.textContent).toContain("Listing queries are restricted.");
-
-    setInputValue(findInputsByPlaceholder(view.container, "Search")[0], "Quick search");
-    setInputValue(findInputsByPlaceholder(view.container, "Search")[1], "   ");
-    const autoApplyToggle = Array.from(
-      view.container.querySelectorAll('input[type="checkbox"]')
-    )[0];
-    setCheckboxValue(autoApplyToggle, false);
+    setInputValue(findInputByPlaceholder(view.container, "Search"), "Catalog search");
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "Optional helper text."),
+      "Find matching records."
+    );
+    setInputValue(findInputByPlaceholder(view.container, "Type to search..."), "Search catalog");
+    setInputValue(
+      Array.from(view.container.querySelectorAll("input")).find(
+        (input) => input.placeholder === "Search" && input.value !== "Catalog search"
+      ),
+      "Run search"
+    );
+    setSelectValue(findSelectByOptions(view.container, ["full", "compact"]), "compact");
+    setCheckboxValue(view.container.querySelector('input[type="checkbox"]'), false);
+    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#ffffff");
 
     expect(latestValue).toMatchObject({
-      title: "Quick search",
-      submitLabel: searchBoxDefaults.submitLabel,
+      title: "Catalog search",
+      description: "Find matching records.",
+      placeholder: "Search catalog",
+      submitLabel: "Run search",
+      displayMode: "compact",
       autoApply: false,
+      style: {
+        frameBackground: "#ffffff",
+      },
     });
+    expect(writablePaths(view.container)).toEqual([
+      "title",
+      "description",
+      "placeholder",
+      "submitLabel",
+      "displayMode",
+      "autoApply",
+      "style.frameBackground",
+      "style.frameBorderColor",
+      "style.actionBackground",
+    ]);
+    expect(view.container.textContent).not.toContain("Search source");
   } finally {
     view.cleanup();
   }
 });
 
-test("SearchBox listing mode exposes manual retry for shared listing query picker errors", async () => {
-  const { SearchBoxVisualEditor } =
+test("SearchBox wizard exposes retry for listing query loading errors", async () => {
+  const { SearchBoxWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
   searchBoxState.error = makeApiClientError("Listing queries failed");
@@ -472,7 +479,7 @@ test("SearchBox listing mode exposes manual retry for shared listing query picke
       mode: "listing",
     });
     return (
-      <SearchBoxVisualEditor
+      <SearchBoxWizardEditor
         value={value}
         onChange={setValue}
         variant="default"
@@ -503,15 +510,25 @@ test("SearchBox listing mode exposes manual retry for shared listing query picke
   }
 });
 
-test("SearchBox advanced editor covers runtime snapshot, global source toggles, and listing-query loading fallback", async () => {
-  searchBoxState.error = new Error("boom");
-
-  const { SearchBoxAdvancedEditor, SearchBoxWizardEditor } =
+test("SearchBox advanced is read-only diagnostics and runtime payload", async () => {
+  const { SearchBoxAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
-  const errorView = mount(
-    <SearchBoxWizardEditor
-      value={{}}
+  const view = mount(
+    <SearchBoxAdvancedEditor
+      value={{
+        mode: "global",
+        endpoint: "   ",
+        sources: {
+          entries: false,
+          posts: true,
+        },
+        resolved: {
+          query: " launch ",
+          rejectedTokens: [" __page ", "", "bad"],
+          error: " upstream-error ",
+        },
+      }}
       onChange={() => undefined}
       variant="default"
       onVariantChange={() => undefined}
@@ -519,64 +536,11 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
   );
 
   try {
-    await flush();
-    expect(errorView.container.textContent).toContain("Failed to load listing queries.");
-  } finally {
-    errorView.cleanup();
-  }
-
-  searchBoxState.error = null;
-
-  let latestValue: SearchBoxData = {
-    mode: "global",
-    endpoint: "   ",
-    sources: {
-      entries: false,
-      posts: true,
-    },
-    resolved: {
-      query: " launch ",
-      rejectedTokens: [" __page ", "", "bad"],
-      error: " upstream-error ",
-    },
-  };
-  const Harness = () => {
-    const [value, setValue] = useState<SearchBoxData>(latestValue);
-    return (
-      <SearchBoxAdvancedEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="default"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
-  try {
-    expect(view.container.textContent).toContain("Contract");
-
-    const toggles = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
-    expect(
-      toggles.map((toggle) => (toggle instanceof HTMLInputElement ? toggle.checked : false))
-    ).toEqual([true, false, true]);
-    setCheckboxValue(toggles[0], false);
-    setCheckboxValue(toggles[1], true);
-    setCheckboxValue(toggles[2], false);
-
-    expect(latestValue).toMatchObject({
-      mode: "global",
-      endpoint: searchBoxDefaults.endpoint,
-      sources: {
-        pages: false,
-        entries: true,
-        posts: false,
-      },
-    });
+    expect(view.container.textContent).toContain("Runtime diagnostics");
+    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(writablePaths(view.container)).toEqual([]);
+    expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
 
     const snapshot = view.container.querySelector("textarea[readonly]");
     const snapshotValue =
@@ -586,70 +550,6 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
     expect(snapshotValue).toContain('"__page"');
     expect(snapshotValue).toContain('"bad"');
     expect(snapshotValue).toContain('"error": "upstream-error"');
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("SearchBox wizard editor covers unknown listing labels, mode switching, and query clearing", async () => {
-  const { SearchBoxWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
-
-  let latestValue: SearchBoxData = {
-    mode: "listing",
-    listingQueryId: "missing-query",
-  };
-
-  const Harness = () => {
-    const [value, setValue] = useState<SearchBoxData>(latestValue);
-    return (
-      <SearchBoxWizardEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="default"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
-  try {
-    await flush();
-    expect(view.container.textContent).toContain("Auto apply on input");
-    expect(
-      (
-        findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("__no_listing_query__");
-
-    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "global");
-    expect(latestValue.mode).toBe("global");
-    expect(view.container.textContent).toContain("Global search sources");
-
-    setInputValue(findInputByPlaceholder(view.container, "/api/search"), "/api/site-search");
-
-    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "listing");
-    expect(latestValue.mode).toBe("listing");
-    expect(view.container.textContent).toContain("Auto apply on input");
-
-    const querySelect = findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]);
-    setSelectValue(querySelect, "query-1");
-    expect(latestValue.listingQueryId).toBe("query-1");
-
-    setSelectValue(querySelect, "__no_listing_query__");
-
-    expect(latestValue).toMatchObject({
-      mode: "listing",
-      listingQueryId: "",
-      endpoint: "/api/site-search",
-    });
-    expect(view.container.textContent).toContain("No listing query selected");
   } finally {
     view.cleanup();
   }
