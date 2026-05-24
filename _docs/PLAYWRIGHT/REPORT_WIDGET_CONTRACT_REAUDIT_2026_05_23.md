@@ -91,6 +91,21 @@ Targeted admin smoke evidence:
 The standalone public fixture gaps for both widgets remain assigned to
 `TASK-336-15` / `TASK-336-17`; this update closes admin ownership only.
 
+## 2026-05-24 TASK-336-06 Ownership Update
+
+`listing-filters` now has an explicit v2 editor contract and no longer mounts
+the same facet editor in Wizard, Visual, and Advanced:
+
+- Wizard owns listing query binding plus facet structure/value setup.
+- Visual owns daily copy, variant/layout, surface styling, facet labels/order,
+  option/sort labels, and presentation modes.
+- Advanced is read-only source/facet/runtime diagnostics plus contract summary.
+
+Targeted smoke evidence:
+
+- `listing-filters`: `adminFailures=0`, `metadataGaps=0`, `publicFailures=0`
+  (`.tmp/widget-smoke-listing-filters.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

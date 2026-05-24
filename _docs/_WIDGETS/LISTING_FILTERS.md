@@ -19,26 +19,31 @@ listing runtime token contract.
 ## Editor Modes
 
 ### Wizard
-- listing query selection
-- safe facet onboarding through the shared facet editor
-- runtime behavior basics
-- diagnostics that explain why editor `resolved` payloads stay sparse before public SSR
+- one-time listing query source selection (`listingQueryId`)
+- setup-only facet structure: facet IDs, kinds, field paths, operators, option
+  values, taxonomy parent values, sort values/fields/directions
+- setup guidance for missing queries, empty facets, invalid fields, duplicate
+  IDs, and legacy operators
+- no runtime copy, layout, or surface styling ownership
 
 ### Visual
 - variant cards for `default`, `horizontal`, `sidebar`, and `drawer`
 - bounded width selection plus collapsible/sticky guidance
-- query selection plus field suggestions from the selected listing query
-- kind-scoped facet controls with structured option and sort-option rows
-- taxonomy parent-value rows plus searchable-option mode
+- runtime labels (`title`, `description`, search/apply copy), `showSearch`,
+  and `autoApply`
+- facet labels, facet order, option labels, sort labels, and preview
+- field/kind/operator bindings are read-only badges with setup ownership
+- searchable-option mode, range input mode/step, and date input mode
 - range/date presentation settings with dual inputs and optional slider pairing
-- facet preview, runtime behavior, diagnostics, and surface styling
-- runtime behavior
 - surface styling
+- no listing query rebinding and no facet source/value row creation
 
 ### Advanced
-- the same facet authoring surface for expert workflows
-- resolved runtime payload and diagnostics
+- read-only listing query and normalized facet binding summary
+- read-only URL/runtime diagnostics for `lq.<queryId>.*` state
+- resolved runtime payload from public SSR
 - contract linkage to `_docs/_WIDGETS/LISTING_FILTERS.md`
+- no writable facet/source/style controls
 
 ## Runtime Behavior Notes
 

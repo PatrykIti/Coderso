@@ -6,7 +6,7 @@
 **Category:** Widgets + Listing Filters + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -35,14 +35,23 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Inventory current Listing Filters writable paths.
-- [ ] Add `listing-filters` `editorContract` metadata.
-- [ ] Move source/facet bootstrapping into Wizard.
-- [ ] Move labels/order/layout/surface controls into Visual.
-- [ ] Convert Advanced query/source duplicates into read-only diagnostics.
-- [ ] Add clear no-collection/no-facets guidance.
-- [ ] Add Vitest UI coverage for ownership and DOM metadata.
-- [ ] Add Playwright admin smoke and frontend fixture decision.
+- [x] Inventory current Listing Filters writable paths.
+- [x] Add `listing-filters` `editorContract` metadata.
+- [x] Move source/facet bootstrapping into Wizard.
+- [x] Move labels/order/layout/surface controls into Visual.
+- [x] Convert Advanced query/source duplicates into read-only diagnostics.
+- [x] Add clear no-collection/no-facets guidance.
+- [x] Add Vitest UI coverage for ownership and DOM metadata.
+- [x] Add Playwright admin smoke and frontend fixture decision.
+
+## Status Notes
+
+- 2026-05-24: Completed. Wizard now owns listing query source plus facet
+  structure/value setup, Visual owns daily copy/layout/surface and facet
+  presentation, and Advanced is read-only source/runtime diagnostics. The widget
+  declares a v2 `editorContract`, targeted Vitest ownership coverage passes, and
+  Playwright smoke for `listing-filters` passed with no admin, metadata, or
+  public failures.
 
 ## Files to Change
 

@@ -16,6 +16,7 @@ import {
   type ListingFiltersData,
 } from "../../../core/widgets/core/listingFilters";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -423,8 +424,9 @@ test("listing filters editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(wizard).toContain("Listing query");
-  expect(wizard).toContain("Runtime behavior");
+  expect(wizard).toContain("Listing query source");
+  expect(wizard).toContain("Facet setup");
+  expect(wizard).not.toContain("Filter copy and behavior");
 
   const visual = renderToString(
     <ListingFiltersVisualEditor
@@ -433,8 +435,9 @@ test("listing filters editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(visual).toContain("Facet controls");
-  expect(visual).toContain("Add facet");
+  expect(visual).toContain("Filter copy and behavior");
+  expect(visual).toContain("Facet presentation");
+  expect(visual).not.toContain("Listing query source");
 
   const advanced = renderToString(
     <ListingFiltersAdvancedEditor
@@ -443,6 +446,32 @@ test("listing filters editors render expected sections", () => {
       variant="default"
     />
   );
+  expect(advanced).toContain("Source and facets summary");
   expect(advanced).toContain("Runtime payload");
-  expect(advanced).toContain("Contract");
+  expect(advanced).toContain("Contract summary");
+  expect(advanced).not.toContain("Add facet");
+});
+
+test("listing filters widget declares a strict editor ownership contract", () => {
+  const widget = createListingFiltersWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(validation.valid).toBe(true);
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "listing-filters.wizard.query-source",
+    "listing-filters.wizard.facet-setup",
+    "listing-filters.visual.copy-behavior",
+    "listing-filters.visual.variant-layout",
+    "listing-filters.visual.surface",
+    "listing-filters.visual.facet-presentation",
+    "listing-filters.advanced.source-summary",
+    "listing-filters.advanced.runtime-diagnostics",
+    "listing-filters.advanced.runtime-payload",
+    "listing-filters.advanced.contract-summary",
+  ]);
 });
