@@ -188,10 +188,10 @@ Latest smoke summary:
 
 - 38 selected page-builder widgets.
 - Admin auth succeeded.
-- Admin failures: 30.
+- Admin failures: 27.
 - Public CSS failures: 2.
 - Fixture gaps: 9.
-- Metadata gaps: 9.
+- Metadata gaps: 11.
 
 Remaining fixture gaps are now explicit TASK-336 follow-up input rather than
 hidden skipped coverage. Non-empty fixture expansion remains assigned to the

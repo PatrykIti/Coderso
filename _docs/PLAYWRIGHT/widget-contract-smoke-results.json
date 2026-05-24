@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-23T23:40:11.338Z",
+  "generatedAt": "2026-05-24T00:21:01.462Z",
   "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-smoke --admin http://localhost:5173/admin --front http://localhost:3000",
   "dryRun": false,
   "inventory": {
@@ -143,12 +143,12 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 0,
+            "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "mode_root_or_visible_section_missing"
           },
           {
             "mode": "visual",
@@ -198,12 +198,13 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 2,
-            "visibleSectionCount": 2,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "c3fa7a67-99fc-42ec-a4e4-131c1dc75a58",
@@ -216,23 +217,21 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 2
           },
           {
             "mode": "advanced",
@@ -246,7 +245,7 @@
         ],
         "pageId": "0be2cb49-8113-4a88-8d17-0ed70d5c5fdd",
         "adminPath": "http://localhost:5173/admin/pages/0be2cb49-8113-4a88-8d17-0ed70d5c5fdd",
-        "status": "failed",
+        "status": "metadata-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -272,17 +271,18 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "cabe29cc-1ad6-45b7-8773-731cc5b0c503",
         "adminPath": "http://localhost:5173/admin/pages/cabe29cc-1ad6-45b7-8773-731cc5b0c503",
-        "status": "metadata-gap",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -299,28 +299,26 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 5
           },
           {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 1
           }
         ],
         "pageId": "12d1d6fb-2aeb-46db-8775-088e87d8b70b",
         "adminPath": "http://localhost:5173/admin/pages/12d1d6fb-2aeb-46db-8775-088e87d8b70b",
-        "status": "failed",
+        "status": "metadata-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -347,12 +345,13 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 2,
-            "visibleSectionCount": 2,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "719cca9b-25fe-43ba-a17c-24407f3f2d36",
@@ -384,13 +383,12 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "074a7240-a254-4ebc-8a09-1d060e057981",
@@ -404,12 +402,12 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 0,
+            "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "mode_root_or_visible_section_missing"
           },
           {
             "mode": "visual",
@@ -422,12 +420,13 @@
           },
           {
             "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 2,
-            "visibleSectionCount": 2,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           }
         ],
         "pageId": "7b23083d-f7cd-481e-8417-fc2278e54466",
@@ -441,12 +440,12 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 1,
+            "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "block_select_missing"
           },
           {
             "mode": "visual",
@@ -478,12 +477,12 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 0,
+            "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "mode_root_or_visible_section_missing"
           },
           {
             "mode": "visual",
@@ -571,13 +570,12 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e",
@@ -637,15 +635,6 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
-          },
-          {
-            "mode": "advanced",
             "status": "failed",
             "rootCount": 0,
             "sectionCount": 0,
@@ -653,6 +642,15 @@
             "writablePaths": [],
             "controlsWithoutPath": 0,
             "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "94e844e2-9287-4aa4-949e-c2ea9d28ca4f",
@@ -665,13 +663,12 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
@@ -694,7 +691,7 @@
         ],
         "pageId": "5958b461-fd78-4b65-b154-64692c0fa474",
         "adminPath": "http://localhost:5173/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474",
-        "status": "failed",
+        "status": "metadata-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -712,12 +709,13 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 7,
-            "visibleSectionCount": 7,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -739,23 +737,21 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "advanced",
@@ -769,7 +765,7 @@
         ],
         "pageId": "3d15559a-c923-49e8-8902-93854a55c734",
         "adminPath": "http://localhost:5173/admin/pages/3d15559a-c923-49e8-8902-93854a55c734",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -787,12 +783,13 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -824,23 +821,21 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "1e0f651b-d7c0-4c03-8e3b-07bff2c1d5ca",
@@ -862,12 +857,13 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 6,
-            "visibleSectionCount": 6,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -881,7 +877,7 @@
         ],
         "pageId": "e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
         "adminPath": "http://localhost:5173/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
-        "status": "passed",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -1078,13 +1074,12 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 5,
+            "visibleSectionCount": 5,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 4
           },
           {
             "mode": "visual",
@@ -1191,13 +1186,12 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
@@ -1220,7 +1214,7 @@
         ],
         "pageId": "9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
         "adminPath": "http://localhost:5173/admin/pages/9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -1317,22 +1311,22 @@
           {
             "mode": "visual",
             "status": "failed",
-            "rootCount": 1,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
-            "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "failed",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
             "error": "block_select_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "failed",
+            "rootCount": 1,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "mode_root_or_visible_section_missing"
           }
         ],
         "pageId": "f22436b5-24db-4536-9dda-07c0ae9cfcdb",
@@ -1345,13 +1339,12 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "visual",
@@ -1374,7 +1367,7 @@
         ],
         "pageId": "fed7fa7d-b498-439c-858d-72ac0a89926f",
         "adminPath": "http://localhost:5173/admin/pages/fed7fa7d-b498-439c-858d-72ac0a89926f",
-        "status": "failed",
+        "status": "passed",
         "duplicateWritablePaths": []
       },
       {
@@ -1391,12 +1384,13 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 8,
-            "visibleSectionCount": 8,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 0
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -1410,7 +1404,7 @@
         ],
         "pageId": "969501e7-887f-458a-887a-1c2725e815d8",
         "adminPath": "http://localhost:5173/admin/pages/969501e7-887f-458a-887a-1c2725e815d8",
-        "status": "passed",
+        "status": "failed",
         "duplicateWritablePaths": []
       },
       {
@@ -1419,22 +1413,21 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 0,
+            "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "mode_root_or_visible_section_missing"
           },
           {
             "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 8,
+            "visibleSectionCount": 8,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 1
           },
           {
             "mode": "advanced",
@@ -1467,12 +1460,13 @@
           },
           {
             "mode": "visual",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 1,
-            "visibleSectionCount": 1,
+            "status": "failed",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
             "writablePaths": [],
-            "controlsWithoutPath": 4
+            "controlsWithoutPath": 0,
+            "error": "block_select_missing"
           },
           {
             "mode": "advanced",
@@ -2002,9 +1996,9 @@
     ]
   },
   "summary": {
-    "adminFailures": 30,
+    "adminFailures": 27,
     "publicFailures": 2,
     "fixtureGaps": 9,
-    "metadataGaps": 9
+    "metadataGaps": 11
   }
 }

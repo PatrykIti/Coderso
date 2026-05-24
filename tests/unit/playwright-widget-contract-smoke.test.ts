@@ -272,14 +272,14 @@ describe("playwright widget contract smoke helpers", () => {
   });
 
   test("records per-mode probe errors without losing required mode coverage", () => {
-    const failed = createFailedAdminMode("advanced", "wrong_widget_selected");
+    const failed = createFailedAdminMode("advanced", "widget_block_type_missing");
 
     expect(failed).toMatchObject({
       mode: "advanced",
       status: "failed",
       rootCount: 0,
       visibleSectionCount: 0,
-      error: "wrong_widget_selected",
+      error: "widget_block_type_missing",
     });
   });
 

@@ -190,6 +190,7 @@ export function BlockList({
                 <button
                   type="button"
                   data-block-select="true"
+                  data-block-widget-type={block.type}
                   className="flex flex-1 items-start gap-3 text-left"
                   onClick={(event) => {
                     event.stopPropagation();

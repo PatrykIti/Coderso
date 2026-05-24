@@ -291,6 +291,8 @@ test("BlockList renders widget labels", () => {
 
   expect(html).toContain("Hero");
   expect(html).toContain("Newsletter");
+  expect(html).toContain('data-block-widget-type="hero"');
+  expect(html).toContain('data-block-widget-type="newsletter"');
   expect(html).toContain("bg-muted/5");
   expect(html).toContain("border-t");
 });

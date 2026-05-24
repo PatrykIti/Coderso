@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { chmod, mkdir, rm } from "node:fs/promises";
 
 type EditorMode = "wizard" | "visual" | "advanced";
 type CssCheck = "body-overflow" | "card-overflow" | "empty-fixture";
@@ -418,7 +418,26 @@ async function writeAdminAuthState(
       2
     )}\n`
   );
+  await chmodAuthState(authStatePath);
   return { attempted: true, authenticated: true };
+}
+
+async function chmodAuthState(authStatePath: string) {
+  await chmod(authStatePath, 0o600).catch(() => undefined);
+}
+
+function installAuthStateSignalCleanup(getPath: () => string | null) {
+  const cleanupAndExit = async (signal: NodeJS.Signals) => {
+    const authStatePath = getPath();
+    if (authStatePath) await rm(authStatePath, { force: true }).catch(() => undefined);
+    process.exit(signal === "SIGINT" ? 130 : 143);
+  };
+  process.once("SIGINT", () => {
+    void cleanupAndExit("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    void cleanupAndExit("SIGTERM");
+  });
 }
 
 function extractCliJson<T>(stdout: string): T {
@@ -514,6 +533,13 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     }
   }
   async function selectFixtureBlock(item) {
+    const typedBlocks = page.locator('[data-block-select][data-block-widget-type="' + item.widgetType + '"]');
+    await typedBlocks.first().waitFor({ state: "visible", timeout: 10000 }).catch(() => undefined);
+    if ((await typedBlocks.count()) > 0) {
+      await typedBlocks.first().click().catch(() => undefined);
+      await settle();
+      return { ok: true, matchedExpectedBlock: true };
+    }
     const blocks = page.locator("[data-block-select]");
     await blocks.first().waitFor({ state: "visible", timeout: 10000 }).catch(() => undefined);
     const blockCount = await blocks.count();
@@ -530,7 +556,7 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
         return { ok: true, matchedExpectedBlock: true };
       }
     }
-    return { ok: false, error: "wrong_widget_selected", matchedExpectedBlock: false };
+    return { ok: false, error: "widget_block_type_missing", matchedExpectedBlock: false };
   }
   async function openFixtureAndSelect(item, pageRow, adminPath) {
     await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 }).catch(async () => {
@@ -994,6 +1020,7 @@ async function main() {
     const scratchDir = ".tmp/playwright-widget-contract-smoke";
     const screenshotDir = `${scratchDir}/screenshots`;
     let authStatePath: string | null = null;
+    installAuthStateSignalCleanup(() => authStatePath);
     await mkdir(scratchDir, { recursive: true });
     await mkdir(screenshotDir, { recursive: true });
     await runCommand(["playwright-cli", `-s=${args.session}`, "open", "about:blank"]);
