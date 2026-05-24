@@ -338,7 +338,7 @@ The drift is inside widget-specific editor implementations.
 | `posts-feed` | Advanced repeats the Visual flow and appends a snapshot. | Source/display ownership remains unclear. |
 | `form-embed` | Closed by TASK-336-10: Advanced is read-only and form selection is Wizard-only. | Targeted smoke has no duplicate writable paths or metadata gaps. |
 | `hero` | Advanced says it owns technical layout controls, but repeats background color, gradient, media, and overlay fields from Visual. | High user-facing widget, high confusion risk. |
-| `stats-kpi` | Advanced repeats alignment, spacing, value color, label color, and card surface from Visual. | Token ownership is not enforceable. |
+| `stats-kpi` | Closed by TASK-336-12: Advanced is read-only diagnostics plus confirmed repair actions, while Visual owns KPI content/style/layout and Wizard overlap is allowlisted until TASK-336-16. | Targeted smoke has no duplicate writable paths or metadata gaps. |
 
 ### P2: Old and New Editor Patterns Coexist
 

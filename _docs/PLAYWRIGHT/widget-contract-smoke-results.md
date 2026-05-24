@@ -29,6 +29,7 @@ Per-widget TASK-336 fixes record targeted reruns separately until the final
 | Date | Widget | Result | Evidence |
 |---|---|---|---|
 | 2026-05-24 | `hero` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-hero-2026-05-24.md` |
+| 2026-05-24 | `stats-kpi` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md` |
 
 ## Admin Mode Contract
 

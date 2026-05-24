@@ -10,6 +10,16 @@
 
 ---
 
+## 0. Addendum TASK-336-12 — 2026-05-24
+
+- Stats KPI ma teraz v2 `editorContract` w `core/widgets/core/statsKpi.tsx`.
+- Wizard jest jawnie opisany jako one-time setup seed z allowlistą overlapów do `TASK-336-16`.
+- Visual jest jedynym daily ownerem treści KPI, linków, typografii, powierzchni kart/ikon i layoutu sekcji.
+- Advanced nie ma już writable metric/style/layout/header/variant paths; pokazuje read-only runtime/style diagnostics, normalized payload, contract summary i potwierdzane repair actions.
+- Targeted smoke: `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md` (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`).
+
+---
+
 ## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
 
 ### Wizard

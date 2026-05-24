@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -307,6 +307,198 @@ export const statsKpiDefaults: StatsKpiData = {
     iconSize: "md",
     iconBorderColor: "var(--color-border)",
   },
+};
+
+const statsKpiWizardMetricSeedPaths = Array.from({ length: statsKpiItemMax }, (_, index) => [
+  `items.${index}.value`,
+  `items.${index}.label`,
+  `items.${index}.description`,
+  `items.${index}.icon`,
+]).flat();
+
+const statsKpiItemDailyWritablePaths = Array.from({ length: statsKpiItemMax }, (_, index) => [
+  `items.${index}.value`,
+  `items.${index}.prefix`,
+  `items.${index}.suffix`,
+  `items.${index}.label`,
+  `items.${index}.description`,
+  `items.${index}.icon`,
+  `items.${index}.accentColor`,
+  `items.${index}.trend.label`,
+  `items.${index}.trend.direction`,
+  `items.${index}.link.href`,
+  `items.${index}.link.label`,
+  `items.${index}.link.openInNewTab`,
+]).flat();
+
+const statsKpiWizardDuplicateAllowanceReason =
+  "Temporary one-time Wizard seed overlap until TASK-336-16 moves Wizard completion out of daily editing.";
+
+const createStatsKpiWizardDuplicateAllowances = (paths: string[]) =>
+  paths.map((path) => ({
+    path,
+    reason: statsKpiWizardDuplicateAllowanceReason,
+    expiresWithTask: "TASK-336-16",
+  }));
+
+const statsKpiWizardSetupPaths = ["variant", "items.count"];
+const statsKpiWizardHeaderPaths = ["header.title", "header.description"];
+
+export const statsKpiEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "stats-kpi.wizard.layout-seed",
+      title: "Layout seed",
+      role: "setup",
+      writablePaths: statsKpiWizardSetupPaths,
+      allowedDuplicateWritablePaths:
+        createStatsKpiWizardDuplicateAllowances(statsKpiWizardSetupPaths),
+    },
+    {
+      mode: "wizard",
+      id: "stats-kpi.wizard.header-seed",
+      title: "Header seed",
+      role: "setup",
+      writablePaths: statsKpiWizardHeaderPaths,
+      allowedDuplicateWritablePaths:
+        createStatsKpiWizardDuplicateAllowances(statsKpiWizardHeaderPaths),
+    },
+    {
+      mode: "wizard",
+      id: "stats-kpi.wizard.metric-seed",
+      title: "Metric seed",
+      role: "setup",
+      writablePaths: statsKpiWizardMetricSeedPaths,
+      allowedDuplicateWritablePaths: createStatsKpiWizardDuplicateAllowances(
+        statsKpiWizardMetricSeedPaths
+      ),
+    },
+    {
+      mode: "wizard",
+      id: "stats-kpi.wizard.spacing-guidance",
+      title: "Spacing guidance",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["style.spacing"],
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.variant-structure",
+      title: "Variant and structure",
+      role: "setup",
+      writablePaths: ["variant", "items.count", "items.order"],
+      allowedDuplicateWritablePaths:
+        createStatsKpiWizardDuplicateAllowances(statsKpiWizardSetupPaths),
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.section-header",
+      title: "Section header",
+      role: "content",
+      writablePaths: statsKpiWizardHeaderPaths,
+      allowedDuplicateWritablePaths:
+        createStatsKpiWizardDuplicateAllowances(statsKpiWizardHeaderPaths),
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.metrics-content",
+      title: "Metrics content and links",
+      role: "content",
+      writablePaths: statsKpiItemDailyWritablePaths,
+      allowedDuplicateWritablePaths: createStatsKpiWizardDuplicateAllowances(
+        statsKpiWizardMetricSeedPaths
+      ),
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.typography",
+      title: "Typography",
+      role: "visual",
+      writablePaths: [
+        "style.valueSize",
+        "style.valueColor",
+        "style.labelColor",
+        "style.descriptionColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.card-icon-surface",
+      title: "Card and icon surfaces",
+      role: "visual",
+      writablePaths: [
+        "style.cardBackground",
+        "style.cardBorderColor",
+        "style.iconSize",
+        "style.iconSurface",
+        "style.iconBorderColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "stats-kpi.visual.layout-spacing",
+      title: "Section layout and spacing",
+      role: "layout",
+      writablePaths: [
+        "style.sectionBackground",
+        "style.maxWidth",
+        "style.padding",
+        "style.minHeight",
+        "style.alignment",
+        "style.spacing",
+        "style.divider",
+        "style.dividerIntensity",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "stats-kpi.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "variant",
+        "items.count",
+        "items.order",
+        "style.alignment",
+        "style.spacing",
+        "style.valueSize",
+        "style.divider",
+        "style.dividerIntensity",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "stats-kpi.advanced.style-diagnostics",
+      title: "Style diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "style.valueColor",
+        "style.labelColor",
+        "style.descriptionColor",
+        "style.sectionBackground",
+        "style.cardBackground",
+        "style.cardBorderColor",
+        "style.iconSize",
+        "style.iconSurface",
+        "style.iconBorderColor",
+        "style.maxWidth",
+        "style.padding",
+        "style.minHeight",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "stats-kpi.advanced.payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["runtime.payload", "runtime.animationPolicy", "runtime.safeLinks"],
+    },
+  ],
 };
 
 const createStatsItemId = (index: number) => `kpi-${index + 1}`;
@@ -889,6 +1081,7 @@ export function createStatsKpiWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
+    editorContract: statsKpiEditorContract,
     render: StatsKpiBlock,
   };
 }

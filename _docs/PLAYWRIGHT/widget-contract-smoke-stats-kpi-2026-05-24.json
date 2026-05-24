@@ -1,0 +1,178 @@
+{
+  "generatedAt": "2026-05-24T12:03:05.244Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-12 --widget stats-kpi --output-json _docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["stats-kpi"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "stats-kpi",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [
+              "variant",
+              "items.count",
+              "header.title",
+              "header.description",
+              "items.0.value",
+              "items.0.label",
+              "items.0.description",
+              "items.0.icon",
+              "items.1.value",
+              "items.1.label",
+              "items.1.description",
+              "items.1.icon",
+              "items.2.value",
+              "items.2.label",
+              "items.2.description",
+              "items.2.icon",
+              "items.3.value",
+              "items.3.label",
+              "items.3.description",
+              "items.3.icon"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [
+              "variant",
+              "items.count",
+              "header.title",
+              "header.description",
+              "items.0.value",
+              "items.0.label",
+              "items.0.prefix",
+              "items.0.suffix",
+              "items.0.description",
+              "items.0.icon",
+              "items.0.accentColor",
+              "items.0.trend.label",
+              "items.0.trend.direction",
+              "items.0.link.href",
+              "items.0.link.label",
+              "items.0.link.openInNewTab",
+              "items.1.value",
+              "items.1.label",
+              "items.1.prefix",
+              "items.1.suffix",
+              "items.1.description",
+              "items.1.icon",
+              "items.1.accentColor",
+              "items.1.trend.label",
+              "items.1.trend.direction",
+              "items.1.link.href",
+              "items.1.link.label",
+              "items.1.link.openInNewTab",
+              "items.2.value",
+              "items.2.label",
+              "items.2.prefix",
+              "items.2.suffix",
+              "items.2.description",
+              "items.2.icon",
+              "items.2.accentColor",
+              "items.2.trend.label",
+              "items.2.trend.direction",
+              "items.2.link.href",
+              "items.2.link.label",
+              "items.2.link.openInNewTab",
+              "items.3.value",
+              "items.3.label",
+              "items.3.prefix",
+              "items.3.suffix",
+              "items.3.description",
+              "items.3.icon",
+              "items.3.accentColor",
+              "items.3.trend.label",
+              "items.3.trend.direction",
+              "items.3.link.href",
+              "items.3.link.label",
+              "items.3.link.openInNewTab",
+              "style.valueSize",
+              "style.valueColor",
+              "style.labelColor",
+              "style.descriptionColor",
+              "style.cardBackground",
+              "style.cardBorderColor",
+              "style.iconSize",
+              "style.iconSurface",
+              "style.iconBorderColor",
+              "style.sectionBackground",
+              "style.maxWidth",
+              "style.padding",
+              "style.minHeight",
+              "style.alignment",
+              "style.spacing",
+              "style.divider"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "3d15559a-c923-49e8-8902-93854a55c734",
+        "adminPath": "http://localhost:5173/admin/pages/3d15559a-c923-49e8-8902-93854a55c734",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "stats-kpi",
+        "publicPath": "/stats-kpi-audit-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

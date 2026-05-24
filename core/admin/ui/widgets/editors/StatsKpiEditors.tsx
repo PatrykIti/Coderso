@@ -34,10 +34,18 @@ import {
   type StatsKpiVariantId,
 } from "../../../../widgets/core/statsKpi";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { WidgetEditorSection } from "./WidgetEditorControls";
-import { ClearableInputField } from "./ClearableFields";
-import { SharedColorControl } from "./SharedColorControl";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow as BaseWidgetControlRow,
+  WidgetEditorSection,
+  type WidgetControlRowProps,
+} from "./WidgetEditorControls";
+import { hasClearableFieldValue, SharedColorFieldInputs } from "./ClearableFields";
 
 const variantOptions: Array<{
   id: StatsKpiVariantId;
@@ -131,21 +139,40 @@ function normalizeValue(value: StatsKpiData): StatsKpiData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
+}
+
+function WidgetControlRow(props: WidgetControlRowProps) {
+  const path =
+    props.path ??
+    (props.ownership === "action" || props.ownership === "preview"
+      ? undefined
+      : props.id.replace(/^stats-kpi\./, ""));
+  return <BaseWidgetControlRow {...props} path={path} />;
 }
 
 function VariantCards({
@@ -182,12 +209,98 @@ function VariantCards({
   );
 }
 
-function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
+function ClearActionButton({
+  value,
+  onClear,
+}: {
+  value: string | undefined;
+  onClear?: () => void;
+}) {
+  if (!onClear) return null;
+
   return (
-    <div className="flex items-center justify-between gap-3">
-      <p className="text-sm font-medium">{title}</p>
-      {action}
-    </div>
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onClear}
+      disabled={!hasClearableFieldValue(value)}
+    >
+      Clear
+    </Button>
+  );
+}
+
+function StatsKpiColorField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  pickerFallback = "#0f172a",
+  onClear,
+}: {
+  id: string;
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  placeholder: string;
+  pickerFallback?: string;
+  onClear?: () => void;
+}) {
+  return (
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={<ClearActionButton value={value} onClear={onClear} />}
+    >
+      {(fieldProps) => (
+        <SharedColorFieldInputs
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          pickerFallback={pickerFallback}
+          inputId={fieldProps.id}
+          ariaLabelledby={fieldProps["aria-labelledby"]}
+          ariaDescribedby={fieldProps["aria-describedby"]}
+        />
+      )}
+    </WidgetControlRow>
+  );
+}
+
+function StatsKpiTokenField({
+  id,
+  label,
+  value,
+  onChange,
+  onClear,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  onClear?: () => void;
+  placeholder: string;
+}) {
+  return (
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={<ClearActionButton value={value} onClear={onClear} />}
+    >
+      {(fieldProps) => (
+        <Input
+          id={fieldProps.id}
+          value={value ?? ""}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          aria-labelledby={fieldProps["aria-labelledby"]}
+          aria-describedby={fieldProps["aria-describedby"]}
+        />
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -420,45 +533,124 @@ function HeaderFields({
   value,
   onChange,
   clearLabel,
+  controlIdPrefix = "stats-kpi.header",
 }: {
   value: StatsKpiData;
   onChange: (next: StatsKpiData) => void;
   clearLabel: string;
+  controlIdPrefix?: string;
 }) {
   const normalized = normalizeValue(value);
 
   return (
     <>
-      <div className="space-y-2">
-        <SectionHeader
-          title="Title"
-          action={
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => clearHeader(value, onChange)}
-            >
-              {clearLabel}
-            </Button>
-          }
-        />
-        <Input
-          value={normalized.header?.title ?? ""}
-          onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-          placeholder="Proof in numbers"
-        />
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Description</p>
-        <Textarea
-          value={normalized.header?.description ?? ""}
-          onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-          placeholder="Show key performance metrics and outcomes."
-        />
-      </div>
+      <WidgetControlRow
+        id={`${controlIdPrefix}.title`}
+        label="Title"
+        path="header.title"
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => clearHeader(value, onChange)}
+          >
+            {clearLabel}
+          </Button>
+        }
+      >
+        {(fieldProps) => (
+          <Input
+            id={fieldProps.id}
+            value={normalized.header?.title ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+            placeholder="Proof in numbers"
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id={`${controlIdPrefix}.description`}
+        label="Description"
+        path="header.description"
+      >
+        {(fieldProps) => (
+          <Textarea
+            id={fieldProps.id}
+            value={normalized.header?.description ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
+            placeholder="Show key performance metrics and outcomes."
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+        )}
+      </WidgetControlRow>
     </>
   );
+}
+
+function RepairActionRow({
+  id,
+  label,
+  description,
+  children,
+}: {
+  id: string;
+  label: string;
+  description: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} help={description} ownership="action">
+      {() => <div className="flex flex-wrap gap-2">{children}</div>}
+    </WidgetControlRow>
+  );
+}
+
+function confirmStatsKpiRepair(message: string) {
+  if (typeof window !== "undefined" && typeof window.confirm === "function") {
+    return window.confirm(message);
+  }
+
+  return true;
+}
+
+function ReadonlyInlineList({ values }: { values: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((value) => (
+        <Badge key={value} variant="outline">
+          {value}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function formatBoolean(value: boolean | undefined) {
+  return value ? "Enabled" : "Disabled";
+}
+
+function summarizeSplitHighlight(items: StatsKpiItem[], variant: StatsKpiVariantId) {
+  if (variant !== "split-highlight") return "Inactive unless Split Highlight is selected.";
+  const secondaryCount = Math.max(0, items.length - 1);
+  const desktopColumns = secondaryCount > 1 && secondaryCount % 2 === 1 ? "3" : "2";
+  return `${secondaryCount} secondary metrics, desktop grid resolves to ${desktopColumns} columns.`;
+}
+
+function summarizeSafeLinks(items: StatsKpiItem[]) {
+  const safeCount = items.filter((item) =>
+    normalizeWidgetSafeHref(item.link?.href, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    })
+  ).length;
+  const configuredCount = items.filter((item) => (item.link?.href ?? "").trim().length > 0).length;
+
+  if (configuredCount === 0) return "No metric links configured.";
+  return `${safeCount}/${configuredCount} configured metric links resolve to safe hrefs.`;
 }
 
 function WizardMetricFields({
@@ -479,46 +671,79 @@ function WizardMetricFields({
         >
           <p className="text-sm font-semibold">Metric {index + 1}</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Value</p>
-              <Input
-                value={item.value ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { value: event.target.value })
-                }
-                placeholder={`Metric ${index + 1} value`}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Label</p>
-              <Input
-                value={item.label ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { label: event.target.value })
-                }
-                placeholder={`Metric ${index + 1} label`}
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <p className="text-sm font-medium">Description</p>
-              <Textarea
-                value={item.description ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { description: event.target.value })
-                }
-                placeholder="Optional supporting context."
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Icon</p>
-              <Input
-                value={item.icon ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { icon: event.target.value })
-                }
-                placeholder="🚀"
-              />
-            </div>
+            <WidgetControlRow
+              id={`stats-kpi.wizard.items.${index}.value`}
+              label="Value"
+              path={`items.${index}.value`}
+            >
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={item.value ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { value: event.target.value })
+                  }
+                  placeholder={`Metric ${index + 1} value`}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id={`stats-kpi.wizard.items.${index}.label`}
+              label="Label"
+              path={`items.${index}.label`}
+            >
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={item.label ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { label: event.target.value })
+                  }
+                  placeholder={`Metric ${index + 1} label`}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id={`stats-kpi.wizard.items.${index}.description`}
+              label="Description"
+              path={`items.${index}.description`}
+              className="sm:col-span-2"
+            >
+              {(fieldProps) => (
+                <Textarea
+                  id={fieldProps.id}
+                  value={item.description ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { description: event.target.value })
+                  }
+                  placeholder="Optional supporting context."
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id={`stats-kpi.wizard.items.${index}.icon`}
+              label="Icon"
+              path={`items.${index}.icon`}
+            >
+              {(fieldProps) => (
+                <Input
+                  id={fieldProps.id}
+                  value={item.icon ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { icon: event.target.value })
+                  }
+                  placeholder="🚀"
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                />
+              )}
+            </WidgetControlRow>
           </div>
         </div>
       ))}
@@ -560,55 +785,86 @@ export function StatsKpiWizardEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Stats layout"
+        id="stats-kpi.wizard.layout-seed"
+        mode="wizard"
+        role="setup"
+        title="Layout seed"
         description="Pick the publishable KPI layout and the number of visible metrics."
       >
-        <VariantCards
-          value={resolveStatsKpiVariant(variant)}
-          onChange={(next) =>
-            applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
-          }
-        />
+        <WidgetControlRow id="stats-kpi.wizard.variant" label="Starter KPI layout" path="variant">
+          {() => (
+            <VariantCards
+              value={resolveStatsKpiVariant(variant)}
+              onChange={(next) =>
+                applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
+              }
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Metric count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="stats-kpi.wizard.items.count" label="Metric count" path="items.count">
+          {(fieldProps) => (
+            <Select
+              value={String(items.length)}
+              onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
-        title="Header copy"
+        id="stats-kpi.wizard.header-seed"
+        mode="wizard"
+        role="setup"
+        title="Header seed"
         description="The Wizard now covers the publishable section heading without leaving onboarding mode."
       >
-        <HeaderFields value={value} onChange={onChange} clearLabel="Clear header" />
+        <HeaderFields
+          value={value}
+          onChange={onChange}
+          clearLabel="Clear header"
+          controlIdPrefix="stats-kpi.wizard.header"
+        />
       </EditorSection>
 
       <EditorSection
-        title="Primary metric content"
+        id="stats-kpi.wizard.metric-seed"
+        mode="wizard"
+        role="setup"
+        title="Metric seed"
         description="Edit the visible value, label, description, and icon fields for the current metric count."
       >
         <WizardMetricFields value={value} onChange={onChange} />
       </EditorSection>
 
       <EditorSection
+        id="stats-kpi.wizard.spacing-guidance"
+        mode="wizard"
+        role="summary"
         title="Spacing guidance"
         description="Spacing still belongs to Visual controls, but the Wizard now explains the active rhythm."
       >
-        <SpacingHelp spacing={normalized.style?.spacing} />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.wizard.style.spacing"
+          label="Active spacing"
+          path="style.spacing"
+          value={<SpacingHelp spacing={normalized.style?.spacing} />}
+        />
       </EditorSection>
     </div>
   );
@@ -638,41 +894,67 @@ export function StatsKpiVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Variant and metric structure"
+        id="stats-kpi.visual.variant-structure"
+        mode="visual"
+        role="setup"
+        title="Variant and structure"
         description="Choose KPI arrangement and deterministic metric count."
       >
-        <VariantCards
-          value={resolvedVariant}
-          onChange={(next) =>
-            applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
-          }
-        />
+        <WidgetControlRow id="stats-kpi.variant" label="KPI layout">
+          {() => (
+            <VariantCards
+              value={resolvedVariant}
+              onChange={(next) =>
+                applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
+              }
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Metrics count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </EditorSection>
-
-      <EditorSection title="Header copy" description="Edit section title and supporting context.">
-        <HeaderFields value={value} onChange={onChange} clearLabel="Clear header" />
+        <WidgetControlRow id="stats-kpi.items.count" label="Metrics count" path="items.count">
+          {(fieldProps) => (
+            <Select
+              value={String(items.length)}
+              onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="stats-kpi.visual.section-header"
+        mode="visual"
+        role="content"
+        title="Section header"
+        description="Edit section title and supporting context."
+      >
+        <HeaderFields
+          value={value}
+          onChange={onChange}
+          clearLabel="Clear header"
+          controlIdPrefix="stats-kpi.header"
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="stats-kpi.visual.metrics-content"
+        mode="visual"
+        role="content"
         title="Metrics content and links"
         description="Manage KPI copy, trends, links, and ordering. Drag for long-distance reorder, or keep using the keyboard-friendly move buttons."
       >
@@ -739,145 +1021,228 @@ export function StatsKpiVisualEditor({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Value</p>
-                  <Input
-                    value={item.value ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { value: event.target.value })
-                    }
-                    placeholder="120"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Label</p>
-                  <Input
-                    value={item.label ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { label: event.target.value })
-                    }
-                    placeholder="Projects launched"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Prefix</p>
-                  <Input
-                    value={item.prefix ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { prefix: event.target.value })
-                    }
-                    placeholder="$"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Suffix</p>
-                  <Input
-                    value={item.suffix ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { suffix: event.target.value })
-                    }
-                    placeholder="%"
-                  />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <p className="text-sm font-medium">Description</p>
-                  <Textarea
-                    value={item.description ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { description: event.target.value })
-                    }
-                    placeholder="Optional supporting context."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Icon</p>
-                  <Input
-                    value={item.icon ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { icon: event.target.value })
-                    }
-                    placeholder="🚀"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use emoji or short plain-text glyphs only. No SVG markup or icon class names.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <SharedColorControl
-                    label="Metric accent color"
-                    value={item.accentColor}
-                    onChange={(next) => updateItem(value, onChange, index, { accentColor: next })}
-                    placeholder="var(--color-accent)"
-                    pickerFallback="#0f172a"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Trend label</p>
-                  <Input
-                    value={item.trend?.label ?? ""}
-                    onChange={(event) =>
-                      updateItemTrend(value, onChange, index, { label: event.target.value })
-                    }
-                    placeholder="+12% MoM"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Trend direction</p>
-                  <Select
-                    value={item.trend?.direction ?? "neutral"}
-                    onValueChange={(next) =>
-                      updateItemTrend(value, onChange, index, {
-                        direction: next as StatsKpiTrendDirection,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select direction" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trendDirectionOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <p className="text-sm font-medium">Metric link URL</p>
-                  <Input
-                    value={href}
-                    onChange={(event) =>
-                      updateItemLink(value, onChange, index, { href: event.target.value })
-                    }
-                    placeholder="/work"
-                  />
-                  {renderLinkValidation(href)}
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Link label</p>
-                  <Input
-                    value={item.link?.label ?? ""}
-                    onChange={(event) =>
-                      updateItemLink(value, onChange, index, { label: event.target.value })
-                    }
-                    placeholder="See launch examples"
-                  />
-                </div>
-                <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                  <div>
-                    <p className="text-sm font-medium">Open in new tab</p>
-                    <p className="text-xs text-muted-foreground">
-                      Shared safe-link handling adds `target` and `rel` only for valid URLs.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={Boolean(item.link?.openInNewTab)}
-                    onCheckedChange={(checked) =>
-                      updateItemLink(value, onChange, index, { openInNewTab: Boolean(checked) })
-                    }
-                  />
-                </div>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.value`}
+                  label="Value"
+                  path={`items.${index}.value`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.value ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { value: event.target.value })
+                      }
+                      placeholder="120"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.label`}
+                  label="Label"
+                  path={`items.${index}.label`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.label ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { label: event.target.value })
+                      }
+                      placeholder="Projects launched"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.prefix`}
+                  label="Prefix"
+                  path={`items.${index}.prefix`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.prefix ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { prefix: event.target.value })
+                      }
+                      placeholder="$"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.suffix`}
+                  label="Suffix"
+                  path={`items.${index}.suffix`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.suffix ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { suffix: event.target.value })
+                      }
+                      placeholder="%"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.description`}
+                  label="Description"
+                  path={`items.${index}.description`}
+                  className="sm:col-span-2"
+                >
+                  {(fieldProps) => (
+                    <Textarea
+                      id={fieldProps.id}
+                      value={item.description ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { description: event.target.value })
+                      }
+                      placeholder="Optional supporting context."
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.icon`}
+                  label="Icon"
+                  path={`items.${index}.icon`}
+                  help="Use emoji or short plain-text glyphs only. No SVG markup or icon class names."
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.icon ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { icon: event.target.value })
+                      }
+                      placeholder="🚀"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <StatsKpiColorField
+                  id={`stats-kpi.items.${index}.accentColor`}
+                  label="Metric accent color"
+                  value={item.accentColor}
+                  onChange={(next) => updateItem(value, onChange, index, { accentColor: next })}
+                  placeholder="var(--color-accent)"
+                />
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.trend.label`}
+                  label="Trend label"
+                  path={`items.${index}.trend.label`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.trend?.label ?? ""}
+                      onChange={(event) =>
+                        updateItemTrend(value, onChange, index, { label: event.target.value })
+                      }
+                      placeholder="+12% MoM"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.trend.direction`}
+                  label="Trend direction"
+                  path={`items.${index}.trend.direction`}
+                >
+                  {(fieldProps) => (
+                    <Select
+                      value={item.trend?.direction ?? "neutral"}
+                      onValueChange={(next) =>
+                        updateItemTrend(value, onChange, index, {
+                          direction: next as StatsKpiTrendDirection,
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                      >
+                        <SelectValue placeholder="Select direction" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {trendDirectionOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.link.href`}
+                  label="Metric link URL"
+                  path={`items.${index}.link.href`}
+                  className="sm:col-span-2"
+                >
+                  {(fieldProps) => (
+                    <>
+                      <Input
+                        id={fieldProps.id}
+                        value={href}
+                        onChange={(event) =>
+                          updateItemLink(value, onChange, index, { href: event.target.value })
+                        }
+                        placeholder="/work"
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                      />
+                      {renderLinkValidation(href)}
+                    </>
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.link.label`}
+                  label="Link label"
+                  path={`items.${index}.link.label`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.link?.label ?? ""}
+                      onChange={(event) =>
+                        updateItemLink(value, onChange, index, { label: event.target.value })
+                      }
+                      placeholder="See launch examples"
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`stats-kpi.items.${index}.link.openInNewTab`}
+                  label="Open in new tab"
+                  path={`items.${index}.link.openInNewTab`}
+                  help="Shared safe-link handling adds target and rel only for valid URLs."
+                  className="rounded-md border px-3 py-2"
+                >
+                  {() => (
+                    <Switch
+                      checked={Boolean(item.link?.openInNewTab)}
+                      onCheckedChange={(checked) =>
+                        updateItemLink(value, onChange, index, { openInNewTab: Boolean(checked) })
+                      }
+                    />
+                  )}
+                </WidgetControlRow>
               </div>
             </div>
           );
@@ -894,98 +1259,118 @@ export function StatsKpiVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="Text and value styling"
+        id="stats-kpi.visual.typography"
+        mode="visual"
+        role="visual"
+        title="Typography"
         description="Tune the KPI typography tokens without mixing in surfaces or layout."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Value size</p>
-          <Select
-            value={normalized.style?.valueSize ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { valueSize: next as StatsKpiValueSize })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select value size" />
-            </SelectTrigger>
-            <SelectContent>
-              {valueSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <SharedColorControl
+        <WidgetControlRow id="stats-kpi.style.valueSize" label="Value size">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.valueSize ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { valueSize: next as StatsKpiValueSize })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select value size" />
+              </SelectTrigger>
+              <SelectContent>
+                {valueSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <StatsKpiColorField
+          id="stats-kpi.style.valueColor"
           label="Value color"
           value={normalized.style?.valueColor}
           onChange={(next) => updateStyle(value, onChange, { valueColor: next })}
           placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
         />
-        <SharedColorControl
+        <StatsKpiColorField
+          id="stats-kpi.style.labelColor"
           label="Label color"
           value={normalized.style?.labelColor}
           onChange={(next) => updateStyle(value, onChange, { labelColor: next })}
           placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
         />
-        <SharedColorControl
+        <StatsKpiColorField
+          id="stats-kpi.style.descriptionColor"
           label="Description color"
           value={normalized.style?.descriptionColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
           placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
         />
       </EditorSection>
 
       <EditorSection
+        id="stats-kpi.visual.card-icon-surface"
+        mode="visual"
+        role="visual"
         title="Card and icon surfaces"
         description="Keep per-card surfaces separate from section layout and text tokens."
       >
-        <ClearableInputField
+        <StatsKpiTokenField
+          id="stats-kpi.style.cardBackground"
           label="Card background"
           value={normalized.style?.cardBackground}
           onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
           onClear={() => clearStyle(value, onChange, "cardBackground")}
           placeholder="var(--color-bg)"
         />
-        <ClearableInputField
+        <StatsKpiTokenField
+          id="stats-kpi.style.cardBorderColor"
           label="Card border"
           value={normalized.style?.cardBorderColor}
           onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
           onClear={() => clearStyle(value, onChange, "cardBorderColor")}
           placeholder="var(--color-border)"
         />
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Icon size</p>
-          <Select
-            value={normalized.style?.iconSize ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { iconSize: next as StatsKpiIconSize })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select icon size" />
-            </SelectTrigger>
-            <SelectContent>
-              {iconSizeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <ClearableInputField
+        <WidgetControlRow id="stats-kpi.style.iconSize" label="Icon size">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.iconSize ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { iconSize: next as StatsKpiIconSize })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select icon size" />
+              </SelectTrigger>
+              <SelectContent>
+                {iconSizeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <StatsKpiTokenField
+          id="stats-kpi.style.iconSurface"
           label="Icon surface"
           value={normalized.style?.iconSurface}
           onChange={(next) => updateStyle(value, onChange, { iconSurface: next })}
           onClear={() => clearStyle(value, onChange, "iconSurface")}
           placeholder="var(--color-bg-muted)"
         />
-        <ClearableInputField
+        <StatsKpiTokenField
+          id="stats-kpi.style.iconBorderColor"
           label="Icon border"
           value={normalized.style?.iconBorderColor}
           onChange={(next) => updateStyle(value, onChange, { iconBorderColor: next })}
@@ -995,260 +1380,362 @@ export function StatsKpiVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="stats-kpi.visual.layout-spacing"
+        mode="visual"
+        role="layout"
         title="Section layout and spacing"
         description="Adjust section surfaces, width, density, and inline divider behavior."
       >
-        <ClearableInputField
+        <StatsKpiTokenField
+          id="stats-kpi.style.sectionBackground"
           label="Section background"
           value={normalized.style?.sectionBackground}
           onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
           onClear={() => clearStyle(value, onChange, "sectionBackground")}
           placeholder="var(--color-bg-subtle)"
         />
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section max width</p>
-          <Select
-            value={normalized.style?.maxWidth ?? "lg"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { maxWidth: next as StatsKpiMaxWidth })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select width" />
-            </SelectTrigger>
-            <SelectContent>
-              {maxWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section padding</p>
-          <Select
-            value={normalized.style?.padding ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { padding: next as StatsKpiPadding })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select padding" />
-            </SelectTrigger>
-            <SelectContent>
-              {paddingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Minimum height</p>
-          <Select
-            value={normalized.style?.minHeight ?? "none"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { minHeight: next as StatsKpiMinHeight })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select minimum height" />
-            </SelectTrigger>
-            <SelectContent>
-              {minHeightOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment</p>
-          <Select
-            value={normalized.style?.alignment ?? "center"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { alignment: next as StatsKpiAlignment })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing</p>
-          <Select
-            value={normalized.style?.spacing ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { spacing: next as StatsKpiSpacing })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <SpacingHelp spacing={normalized.style?.spacing} />
-        </div>
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
-          <div>
-            <p className="text-sm font-medium">Show dividers</p>
-            <p className="text-xs text-muted-foreground">
-              {resolvedVariant === "inline"
-                ? "Inline metrics can use left dividers between items."
-                : "Inline-only. Other variants ignore divider output, so this toggle stays locked."}
-            </p>
-          </div>
-          <Switch
-            disabled={resolvedVariant !== "inline"}
-            checked={Boolean(normalized.style?.divider)}
-            onCheckedChange={(checked) =>
-              updateStyle(value, onChange, { divider: Boolean(checked) })
-            }
-          />
-        </div>
-        {resolvedVariant === "inline" && normalized.style?.divider ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Divider intensity</p>
+        <WidgetControlRow id="stats-kpi.style.maxWidth" label="Section max width">
+          {(fieldProps) => (
             <Select
-              value={normalized.style?.dividerIntensity ?? "default"}
+              value={normalized.style?.maxWidth ?? "lg"}
               onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  dividerIntensity: next as StatsKpiDividerIntensity,
-                })
+                updateStyle(value, onChange, { maxWidth: next as StatsKpiMaxWidth })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select divider intensity" />
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select width" />
               </SelectTrigger>
               <SelectContent>
-                {dividerIntensityOptions.map((option) => (
+                {maxWidthOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="stats-kpi.style.padding" label="Section padding">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.padding ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { padding: next as StatsKpiPadding })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select padding" />
+              </SelectTrigger>
+              <SelectContent>
+                {paddingOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="stats-kpi.style.minHeight" label="Minimum height">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.minHeight ?? "none"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { minHeight: next as StatsKpiMinHeight })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select minimum height" />
+              </SelectTrigger>
+              <SelectContent>
+                {minHeightOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="stats-kpi.style.alignment" label="Alignment">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.alignment ?? "center"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { alignment: next as StatsKpiAlignment })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignmentOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="stats-kpi.style.spacing" label="Spacing">
+          {(fieldProps) => (
+            <>
+              <Select
+                value={normalized.style?.spacing ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { spacing: next as StatsKpiSpacing })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select spacing" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <SpacingHelp spacing={normalized.style?.spacing} />
+            </>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="stats-kpi.style.divider"
+          label="Show dividers"
+          help={
+            resolvedVariant === "inline"
+              ? "Inline metrics can use left dividers between items."
+              : "Inline-only. Other variants ignore divider output, so this toggle stays locked."
+          }
+        >
+          {() => (
+            <Switch
+              disabled={resolvedVariant !== "inline"}
+              checked={Boolean(normalized.style?.divider)}
+              onCheckedChange={(checked) =>
+                updateStyle(value, onChange, { divider: Boolean(checked) })
+              }
+            />
+          )}
+        </WidgetControlRow>
+        {resolvedVariant === "inline" && normalized.style?.divider ? (
+          <WidgetControlRow id="stats-kpi.style.dividerIntensity" label="Divider intensity">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.dividerIntensity ?? "default"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    dividerIntensity: next as StatsKpiDividerIntensity,
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select divider intensity" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dividerIntensityOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         ) : null}
       </EditorSection>
     </div>
   );
 }
 
-export function StatsKpiAdvancedEditor({ value, onChange }: WidgetEditorProps<StatsKpiData>) {
+export function StatsKpiAdvancedEditor({
+  value,
+  onChange,
+  variant,
+}: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
+  const items = normalizeStatsKpiItems(normalized.items);
+  const style = normalized.style ?? {};
+  const resolvedVariant = resolveStatsKpiVariant(variant);
+  const variantLabel =
+    variantOptions.find((option) => option.id === resolvedVariant)?.label ?? resolvedVariant;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Technical spacing and alignment tokens"
-        description="Low-level display controls for layout behavior."
+        id="stats-kpi.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime diagnostics"
+        description="Read-only rendering diagnostics. Daily metric, layout, and style edits belong to Visual."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment token</p>
-          <Select
-            value={normalized.style?.alignment ?? "center"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { alignment: next as StatsKpiAlignment })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing token</p>
-          <Select
-            value={normalized.style?.spacing ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { spacing: next as StatsKpiSpacing })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Value color token</p>
-          <Input
-            value={normalized.style?.valueColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { valueColor: event.target.value })}
-            placeholder="var(--color-text)"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Label color token</p>
-          <Input
-            value={normalized.style?.labelColor ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { labelColor: event.target.value })}
-            placeholder="var(--color-text)"
-          />
-        </div>
-        <ClearableInputField
-          label="Card background token"
-          value={normalized.style?.cardBackground}
-          onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
-          onClear={() => clearStyle(value, onChange, "cardBackground")}
-          placeholder="var(--color-bg)"
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.variant"
+          label="Resolved variant"
+          path="variant"
+          value={variantLabel}
         />
-        <ClearableInputField
-          label="Card border token"
-          value={normalized.style?.cardBorderColor}
-          onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
-          onClear={() => clearStyle(value, onChange, "cardBorderColor")}
-          placeholder="var(--color-border)"
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.items.count"
+          label="Metric count"
+          path="items.count"
+          value={String(items.length)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.split-highlight"
+          label="Split-highlight secondary grid"
+          path="items.order"
+          value={summarizeSplitHighlight(items, resolvedVariant)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.runtime.animationPolicy"
+          label="Animation policy"
+          path="runtime.animationPolicy"
+          value="Static metrics only; count-up animation remains deferred for accessibility and performance."
         />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Apply deterministic fallback values and structure."
+        id="stats-kpi.advanced.style-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Style diagnostics"
+        description="Read-only resolved style tokens mirrored from the Visual owner."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(statsKpiDefaults)}>
-            Reset to defaults
-          </Button>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.style.layout"
+          label="Layout tokens"
+          path="style.alignment"
+          value={
+            <ReadonlyInlineList
+              values={[
+                `alignment: ${style.alignment ?? "center"}`,
+                `spacing: ${style.spacing ?? "md"}`,
+                `maxWidth: ${style.maxWidth ?? "lg"}`,
+                `padding: ${style.padding ?? "md"}`,
+                `minHeight: ${style.minHeight ?? "none"}`,
+              ]}
+            />
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.style.typography"
+          label="Typography tokens"
+          path="style.valueSize"
+          value={
+            <ReadonlyInlineList
+              values={[
+                `valueSize: ${style.valueSize ?? "md"}`,
+                `valueColor: ${style.valueColor ?? "var(--color-text)"}`,
+                `labelColor: ${style.labelColor ?? "var(--color-text)"}`,
+                `descriptionColor: ${style.descriptionColor ?? "var(--color-text)"}`,
+              ]}
+            />
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.style.surfaces"
+          label="Surface tokens"
+          path="style.cardBackground"
+          value={
+            <ReadonlyInlineList
+              values={[
+                `section: ${style.sectionBackground ?? "theme default"}`,
+                `card: ${style.cardBackground ?? "theme default"}`,
+                `cardBorder: ${style.cardBorderColor ?? "theme default"}`,
+                `iconSurface: ${style.iconSurface ?? "theme default"}`,
+                `iconBorder: ${style.iconBorderColor ?? "theme default"}`,
+                `iconSize: ${style.iconSize ?? "md"}`,
+              ]}
+            />
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.style.divider"
+          label="Divider policy"
+          path="style.divider"
+          value={`${formatBoolean(style.divider)}; ${resolvedVariant === "inline" ? `intensity ${style.dividerIntensity ?? "default"}` : "rendered by inline variant only"}`}
+        />
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        id="stats-kpi.advanced.payload"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime payload"
+        description="Inspect normalized output and run explicit repair actions when payloads need deterministic fallback values."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.runtime.safeLinks"
+          label="Safe link status"
+          path="runtime.safeLinks"
+          value={summarizeSafeLinks(items)}
+        />
+        <RepairActionRow
+          id="stats-kpi.advanced.repair-actions"
+          label="Repair actions"
+          description="Actions are intentionally separated from daily editing and require confirmation."
+        >
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!confirmStatsKpiRepair("Normalize this Stats KPI payload now?")) return;
+              onChange(normalizeValue(value));
+            }}
+          >
+            Normalize now
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!confirmStatsKpiRepair("Reset this Stats KPI widget to defaults?")) return;
+              onChange(statsKpiDefaults);
+            }}
+          >
+            Reset to defaults
+          </Button>
+        </RepairActionRow>
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.runtime.payload"
+          label="Normalized payload"
+          path="runtime.payload"
+          value={<DiagnosticsSnapshot value={normalized} />}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.advanced.contract"
+          label="Contract summary"
+          path="runtime.payload"
+          value="Wizard seeds the initial KPI setup, Visual owns daily metric and presentation edits, Advanced is read-only diagnostics plus explicit repair actions."
+        />
       </EditorSection>
     </div>
   );

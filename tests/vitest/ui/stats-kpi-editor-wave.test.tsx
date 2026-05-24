@@ -312,6 +312,12 @@ const getColorInputs = (container: ParentNode) =>
     (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
 
+const getWritableControlPaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => typeof path === "string" && path.length > 0);
+
 const mountStatsKpiHarness = ({
   initialValue,
   initialVariant,
@@ -426,9 +432,12 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Stats layout");
+    expect(view.container.textContent).toContain("Layout seed");
     expect(view.container.textContent).toContain("Metrics content and links");
-    expect(view.container.textContent).toContain("Raw payload snapshot");
+    expect(view.container.textContent).toContain("Runtime payload");
+    expect(
+      view.container.querySelector('[data-widget-editor-section="stats-kpi.wizard.layout-seed"]')
+    ).not.toBeNull();
 
     clickByText(view.container, "Split Highlight");
 
@@ -524,6 +533,12 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     clickByText(view.container, "Reset to defaults");
     const resetPayload = onChangeSpy.mock.lastCall?.[0];
     expect(resetPayload.header?.title).toBe("Proof in numbers");
+
+    const advancedSection = view.container.querySelector(
+      '[data-widget-editor-section="stats-kpi.advanced.runtime-diagnostics"]'
+    );
+    expect(advancedSection).not.toBeNull();
+    expect(getWritableControlPaths(advancedSection ?? view.container)).toEqual([]);
   } finally {
     Object.defineProperty(window, "confirm", {
       configurable: true,
@@ -644,28 +659,22 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
   });
 
   try {
-    setSelectValue(
-      getSelectByOptions(advancedHarness.container, ["start", "center", "end"]),
-      "start"
-    );
-    setSelectValue(getSelectByOptions(advancedHarness.container, ["none", "sm", "md", "lg"]), "sm");
-    setInputValue(
-      getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[0],
-      "#223344"
-    );
-    setInputValue(
-      getInputsByPlaceholder(advancedHarness.container, "var(--color-text)")[1],
-      "var(--metric-label)"
-    );
-
-    expect(advancedHarness.getLatestValue()).toMatchObject({
-      style: expect.objectContaining({
-        alignment: "start",
-        spacing: "sm",
-        valueColor: "#223344",
-        labelColor: "var(--metric-label)",
-      }),
-    });
+    expect(advancedHarness.container.textContent).toContain("Runtime diagnostics");
+    expect(advancedHarness.container.textContent).toContain("Style diagnostics");
+    expect(advancedHarness.container.textContent).toContain("Runtime payload");
+    expect(advancedHarness.container.textContent).toContain("Metric count");
+    expect(getWritableControlPaths(advancedHarness.container)).toEqual([]);
+    expect(
+      advancedHarness.container.querySelector(
+        '[data-widget-control-path="style.alignment"]:not([data-widget-control-readonly="true"])'
+      )
+    ).toBeNull();
+    expect(
+      advancedHarness.container.querySelector(
+        '[data-widget-control-path="style.valueColor"]:not([data-widget-control-readonly="true"])'
+      )
+    ).toBeNull();
+    expect(advancedHarness.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     advancedHarness.cleanup();
   }
@@ -760,15 +769,12 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
   );
 
   try {
-    expect(getSelectByOptions(advancedView.container, ["start", "center", "end"]).value).toBe(
-      "center"
-    );
-    expect(getSelectByOptions(advancedView.container, ["none", "sm", "md", "lg"]).value).toBe("md");
-    expect(
-      getInputsByPlaceholder(advancedView.container, "var(--color-text)").map(
-        (input) => input.value
-      )
-    ).toEqual(["", ""]);
+    expect(advancedView.container.textContent).toContain("Runtime diagnostics");
+    expect(advancedView.container.textContent).toContain("Style diagnostics");
+    expect(advancedView.container.textContent).toContain("Runtime payload");
+    expect(getWritableControlPaths(advancedView.container)).toEqual([]);
+    expect(advancedView.container.querySelectorAll("select")).toHaveLength(0);
+    expect(advancedView.container.querySelectorAll("input")).toHaveLength(0);
   } finally {
     advancedView.cleanup();
     vi.resetModules();

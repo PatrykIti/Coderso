@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 940 | 2026-05-24 | Stats KPI editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 939 | 2026-05-24 | Hero editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 938 | 2026-05-24 | Form Embed editor ownership | CMS Widgets/Forms/Admin UI/Security/QA/Docs |
 | 937 | 2026-05-24 | Posts Feed editor ownership | CMS Widgets/Admin UI/QA/Docs |

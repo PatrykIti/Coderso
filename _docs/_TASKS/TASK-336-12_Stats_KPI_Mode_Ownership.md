@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-287, TASK-331
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -43,14 +43,23 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Compare current Stats KPI editor with TASK-287 and TASK-331 closure.
-- [ ] Add or update `stats-kpi` `editorContract` metadata.
-- [ ] Remove duplicated Visual controls from Advanced.
-- [ ] Add read-only summaries for resolved metrics/layout diagnostics.
-- [ ] Preserve split-highlight secondary-grid behavior.
-- [ ] Add tests that fail if Advanced regains metric/style write controls.
-- [ ] Run existing Stats KPI suites before closure.
-- [ ] Capture Playwright admin/public smoke evidence.
+- [x] Compare current Stats KPI editor with TASK-287 and TASK-331 closure.
+- [x] Add or update `stats-kpi` `editorContract` metadata.
+- [x] Remove duplicated Visual controls from Advanced.
+- [x] Add read-only summaries for resolved metrics/layout diagnostics.
+- [x] Preserve split-highlight secondary-grid behavior.
+- [x] Add tests that fail if Advanced regains metric/style write controls.
+- [x] Run existing Stats KPI suites before closure.
+- [x] Capture Playwright admin/public smoke evidence.
+
+## Status Notes
+
+- 2026-05-24: Done. Stats KPI now has a v2 editor contract with explicit Wizard
+  seed overlap allowances expiring at `TASK-336-16`; Visual owns daily metric,
+  style, layout, and link editing; Advanced exposes read-only diagnostics,
+  normalized payload, contract summary, and confirmed repair actions only.
+  Targeted Playwright evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md`.
 
 ## Files to Change
 

@@ -30,6 +30,12 @@
 - `bun run scan:security:strict` — green.
 - Shared closure pozostaje truthful: `TASK-331` domknął wtórny grid `split-highlight`, a decyzja o braku count-up animation pozostaje bez zmian.
 
+### 0.2 Addendum TASK-336-12 — 2026-05-24
+
+- Advanced duplication from U6 is now closed: `style.alignment`, `style.spacing`, text colors, and card surfaces are no longer writable in Advanced.
+- Stats KPI now exposes v2 editor-contract metadata and `data-widget-control-path` ownership rows, so Playwright smoke can enforce real writable paths.
+- Targeted evidence: `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md` with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`.
+
 
 ## 1. Przegląd widgetu
 

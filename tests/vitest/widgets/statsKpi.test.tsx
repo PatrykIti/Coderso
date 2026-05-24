@@ -14,10 +14,12 @@ import {
   normalizeStatsKpiItemCount,
   normalizeStatsKpiItems,
   statsKpiDefaults,
+  statsKpiEditorContract,
   statsKpiItemMax,
   StatsKpiBlock,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -194,6 +196,8 @@ test("stats kpi validator accepts expanded model", () => {
   ).not.toThrow();
 
   expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract).toBe(statsKpiEditorContract);
+  expect(validateWidgetEditorContract(widget).valid).toBe(true);
 });
 
 test("stats kpi renders safe links but blocks unsafe href output", () => {
@@ -291,11 +295,13 @@ test("stats kpi wizard renders publishable onboarding fields", () => {
     />
   );
 
-  expect(html).toContain("Stats layout");
-  expect(html).toContain("Header copy");
-  expect(html).toContain("Primary metric content");
+  expect(html).toContain("Layout seed");
+  expect(html).toContain("Header seed");
+  expect(html).toContain("Metric seed");
   expect(html).toContain("Clear header");
   expect(html).toContain("Spacing guidance");
+  expect(html).toContain('data-widget-editor-mode="wizard"');
+  expect(html).toContain('data-widget-control-path="items.count"');
 });
 
 test("stats kpi visual renders grouped IA", () => {
@@ -308,12 +314,14 @@ test("stats kpi visual renders grouped IA", () => {
     />
   );
 
-  expect(html).toContain("Variant and metric structure");
-  expect(html).toContain("Header copy");
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Section header");
   expect(html).toContain("Metrics content and links");
-  expect(html).toContain("Text and value styling");
+  expect(html).toContain("Typography");
   expect(html).toContain("Card and icon surfaces");
   expect(html).toContain("Section layout and spacing");
+  expect(html).toContain('data-widget-editor-mode="visual"');
+  expect(html).toContain('data-widget-control-path="style.alignment"');
 });
 
 test("stats kpi advanced keeps technical-only scope", () => {
@@ -326,8 +334,12 @@ test("stats kpi advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Technical spacing and alignment tokens");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Runtime diagnostics");
+  expect(html).toContain("Style diagnostics");
+  expect(html).toContain("Runtime payload");
+  expect(html).toContain('data-widget-editor-mode="advanced"');
+  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).not.toContain("Technical spacing and alignment tokens");
+  expect(html).not.toContain("Alignment token");
   expect(html).not.toContain("Metrics content and links");
 });

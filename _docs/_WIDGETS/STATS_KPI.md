@@ -15,24 +15,26 @@ optional supporting copy, and bounded presentation controls.
 - `inline`: compact KPI row with optional dividers.
 - `split-highlight`: one lead KPI with supporting metrics on the side.
 
-## Editor Modes (current after TASK-287)
+## Editor Modes (current after TASK-336-12)
 
-### Wizard (publishable onboarding)
-- Variant cards.
-- Metric count.
-- Header title and description.
-- Visible metric `value`, `label`, `description`, and `icon` fields for the active count.
-- Header clear action.
-- Icon guidance and spacing guidance.
+### Wizard (one-time setup seed)
+- `Layout seed`: starter variant cards and metric count.
+- `Header seed`: initial section title and description.
+- `Metric seed`: visible metric `value`, `label`, `description`, and `icon` fields for the active count.
+- `Spacing guidance`: read-only explanation of the active Visual-owned rhythm.
 
-The Wizard count selector stays synchronized with the normalized visible item list.
+Wizard intentionally overlaps with Visual for starter fields only until
+`TASK-336-16` moves the Wizard lifecycle out of daily editing. Those overlaps
+are explicitly allowlisted in the v2 editor contract and Playwright inventory.
+The Wizard count selector stays synchronized with the normalized visible item
+list.
 
 ### Visual (primary editing mode)
 Sections:
-1. Variant and metric structure.
-2. Header copy.
+1. Variant and structure.
+2. Section header.
 3. Metrics content and links.
-4. Text and value styling.
+4. Typography.
 5. Card and icon surfaces.
 6. Section layout and spacing.
 
@@ -41,10 +43,14 @@ Notes:
 - Metric management includes drag-friendly reorder, Move up/Move down fallback, and confirmed removal.
 - Per-metric links stay presentational and reuse the shared safe-href contract.
 
-### Advanced (technical-only)
-- Technical spacing and alignment tokens.
-- Normalization and safeguards.
-- Raw payload snapshot.
+### Advanced (read-only diagnostics)
+- Runtime diagnostics: resolved variant, metric count, split-highlight secondary grid, and static-animation policy.
+- Style diagnostics: layout, typography, surface, and divider summaries derived from normalized data.
+- Runtime payload: safe-link status, normalized JSON snapshot, and contract summary.
+- Repair actions: `Normalize now` and `Reset to defaults` are explicit action controls with confirmation, not daily writable owners.
+
+Advanced has no writable metric, style, layout, header, or variant control paths.
+Daily presentation ownership stays in Visual.
 
 ## Runtime Behavior Notes
 

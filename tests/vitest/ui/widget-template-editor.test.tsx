@@ -760,10 +760,10 @@ test("widget template block settings render stats kpi visual sections", () => {
     />
   );
 
-  expect(html).toContain("Variant and metric structure");
-  expect(html).toContain("Header copy");
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Section header");
   expect(html).toContain("Metrics content and links");
-  expect(html).toContain("Text and value styling");
+  expect(html).toContain("Typography");
   expect(html).toContain("Card and icon surfaces");
   expect(html).toContain("Section layout and spacing");
 });
