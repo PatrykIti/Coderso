@@ -17,6 +17,8 @@ import { getFormDetailCached, type FormDetail } from "@/services/formsClient";
 import { useForms } from "@/ui/forms/hooks/useForms";
 
 import {
+  buildContactMapEmbedUrl,
+  buildContactSocialHref,
   contactDefaults,
   contactDetailOptions,
   contactFieldOptions,
@@ -24,6 +26,8 @@ import {
   getContactDiagnosticsSnapshot,
   getContactMapUrlState,
   normalizeContactData,
+  readContactMapLocation,
+  readContactSocialProfile,
   resolveContactVariant,
   type ContactBorderWidth,
   type ContactColumns,
@@ -43,7 +47,11 @@ import {
 } from "../../../../widgets/core/contact";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const fieldLabels: Record<ContactFieldId, string> = {
   name: "Name",
@@ -129,14 +137,25 @@ const paddingXOptions: Array<{ id: ContactPaddingX; label: string }> = [
   { id: "lg", label: "Roomy" },
 ];
 
-const socialPlatformOptions: Array<{ id: ContactSocialPlatform; label: string }> = [
+const socialPlatformOptions: Array<{
+  id: Exclude<ContactSocialPlatform, "custom">;
+  label: string;
+}> = [
   { id: "x", label: "X" },
   { id: "linkedin", label: "LinkedIn" },
   { id: "facebook", label: "Facebook" },
   { id: "instagram", label: "Instagram" },
   { id: "youtube", label: "YouTube" },
-  { id: "custom", label: "Custom" },
 ];
+
+const socialProfilePlaceholders: Record<ContactSocialPlatform, string> = {
+  x: "coderso",
+  linkedin: "coderso",
+  facebook: "coderso",
+  instagram: "coderso",
+  youtube: "coderso",
+  custom: "",
+};
 
 const submissionModeOptions = [
   { id: "static", label: "Static" },
@@ -463,8 +482,8 @@ function addSocialLink(value: ContactData, onChange: (next: ContactData) => void
     const social = [...(current.contact?.social ?? [])];
     social.push({
       id: `contact-social-${social.length + 1}`,
-      platform: "custom",
-      label: "",
+      platform: "linkedin",
+      label: "LinkedIn",
       href: "",
     });
 
@@ -1000,6 +1019,124 @@ function SubmissionRuntimeSection({
   );
 }
 
+function ContactMapLocationField({
+  value,
+  onChange,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+}) {
+  const normalized = normalizeContactData(value);
+  const mapLocation = readContactMapLocation(normalized.map?.embedUrl);
+  const hasLegacyMapSource = Boolean((normalized.map?.embedUrl ?? "").trim()) && !mapLocation;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Map location</p>
+      <Input
+        value={mapLocation}
+        onChange={(event) =>
+          updateMap(value, onChange, {
+            embedUrl: buildContactMapEmbedUrl(event.target.value),
+          })
+        }
+        placeholder="Warsaw, Poland or 123 Market Street"
+      />
+      <p className="text-xs text-muted-foreground">
+        Enter a public place name or address. The editor builds a safe embedded map source.
+      </p>
+      {hasLegacyMapSource ? (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p>
+            A saved custom map source is still stored. Replace it with a location above or clear it
+            before publishing changes.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => updateMap(value, onChange, { embedUrl: "" })}
+          >
+            Clear saved map source
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SocialProfileField({
+  value,
+  onChange,
+  link,
+  index,
+}: {
+  value: ContactData;
+  onChange: (next: ContactData) => void;
+  link: NonNullable<ContactDetails["social"]>[number];
+  index: number;
+}) {
+  const platform = link.platform ?? "custom";
+  const profile = readContactSocialProfile(platform, link.href);
+  const hasLegacyDestination = Boolean((link.href ?? "").trim()) && profile.length === 0;
+
+  if (platform === "custom") {
+    return (
+      <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+        <p className="text-xs font-semibold uppercase text-muted-foreground">Profile destination</p>
+        <p className="text-xs text-muted-foreground">
+          Custom social destinations stay support-only so editors do not need to paste technical
+          links. Choose a known platform above to publish a link from a simple profile name.
+        </p>
+        {hasLegacyDestination ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => updateSocialLink(value, onChange, index, { href: "" })}
+          >
+            Clear saved custom destination
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase text-muted-foreground">Profile name</p>
+      <Input
+        value={profile}
+        onChange={(event) =>
+          updateSocialLink(value, onChange, index, {
+            href: buildContactSocialHref(platform, event.target.value),
+          })
+        }
+        placeholder={socialProfilePlaceholders[platform]}
+      />
+      <p className="text-xs text-muted-foreground">
+        Enter only the public profile name or handle. The editor builds the safe destination.
+      </p>
+      {hasLegacyDestination ? (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p>
+            A saved custom profile destination is still stored. Replace it with a profile name or
+            clear it before publishing changes.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => updateSocialLink(value, onChange, index, { href: "" })}
+          >
+            Clear saved destination
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SocialLinksEditor({
   value,
   onChange,
@@ -1018,7 +1155,7 @@ function SocialLinksEditor({
         </p>
       ) : null}
       {social.map((link, index) => (
-        <div key={link.id ?? `social-${index + 1}`} className="space-y-2 rounded-lg border p-3">
+        <div key={link.id ?? `social-${index + 1}`} className="space-y-3 rounded-lg border p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium">Social link {index + 1}</p>
             <Button
@@ -1037,6 +1174,10 @@ function SocialLinksEditor({
               onValueChange={(next) =>
                 updateSocialLink(value, onChange, index, {
                   platform: next as ContactSocialPlatform,
+                  href: buildContactSocialHref(
+                    next as ContactSocialPlatform,
+                    readContactSocialProfile(link.platform, link.href)
+                  ),
                 })
               }
             >
@@ -1044,6 +1185,11 @@ function SocialLinksEditor({
                 <SelectValue placeholder="Select platform" />
               </SelectTrigger>
               <SelectContent>
+                {(link.platform ?? "custom") === "custom" ? (
+                  <SelectItem value="custom" disabled>
+                    Custom legacy
+                  </SelectItem>
+                ) : null}
                 {socialPlatformOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
@@ -1062,16 +1208,7 @@ function SocialLinksEditor({
               placeholder="LinkedIn"
             />
           </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Profile URL</p>
-            <Input
-              value={link.href ?? ""}
-              onChange={(event) =>
-                updateSocialLink(value, onChange, index, { href: event.target.value })
-              }
-              placeholder="https://example.com/profile"
-            />
-          </div>
+          <SocialProfileField value={value} onChange={onChange} link={link} index={index} />
         </div>
       ))}
       <Button type="button" variant="outline" onClick={() => addSocialLink(value, onChange)}>
@@ -1109,7 +1246,7 @@ export function ContactWizardEditor({
 
       <EditorSection
         title="Contact form"
-        description="Choose the visible fields and keep the static form messaging clear."
+        description="Choose the visible fields and submit button copy."
       >
         {showFormControls ? (
           <>
@@ -1124,19 +1261,8 @@ export function ContactWizardEditor({
                 placeholder="Send message"
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Static status note</p>
-              <Textarea
-                rows={2}
-                value={normalized.form?.submission?.staticMessage ?? ""}
-                onChange={(event) =>
-                  updateSubmission(value, onChange, { staticMessage: event.target.value })
-                }
-                placeholder="This contact form is not connected yet."
-              />
-            </div>
             <p className="text-xs text-muted-foreground">
-              Contact stays presentational in this wave and should never submit a blank GET.
+              Runtime submission setup stays in Visual so Wizard remains a one-time starter flow.
             </p>
           </>
         ) : (
@@ -1219,7 +1345,6 @@ export function ContactVisualEditor({
   const resolvedVariant = resolveContactVariant(variant);
   const mapEnabled = normalized.map?.enabled ?? false;
   const showFormControls = resolvedVariant !== "minimal";
-  const mapUrlState = getContactMapUrlState(normalized.map?.embedUrl);
 
   return (
     <div className="space-y-4">
@@ -1516,8 +1641,8 @@ export function ContactVisualEditor({
           <div>
             <p className="text-sm font-medium">Show map</p>
             <p className="text-xs text-muted-foreground">
-              Runtime renders the map only for valid http:// or https:// embed URLs. HTTPS is
-              recommended when available.
+              Add a public place name or address below. Technical embed details stay out of normal
+              editing.
             </p>
           </div>
           <Switch
@@ -1546,18 +1671,7 @@ export function ContactVisualEditor({
                 placeholder="Optional context for the map panel."
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Map embed URL</p>
-              <Input
-                value={normalized.map?.embedUrl ?? ""}
-                onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
-                placeholder="https://maps.google.com/..."
-                aria-invalid={mapUrlState.valid ? undefined : true}
-              />
-              <p className="text-xs text-muted-foreground" role="status">
-                {mapUrlState.message}
-              </p>
-            </div>
+            <ContactMapLocationField value={value} onChange={onChange} />
             <div className="space-y-2">
               <p className="text-sm font-medium">Map height</p>
               <Select
@@ -1744,59 +1858,80 @@ export function ContactVisualEditor({
 
 export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<ContactData>) {
   const normalized = normalizeContactData(value);
+  const mapLocation = readContactMapLocation(normalized.map?.embedUrl);
+  const mapUrlState = getContactMapUrlState(normalized.map?.embedUrl);
+  const hasMapSource = Boolean((normalized.map?.embedUrl ?? "").trim());
   const [normalizationMessage, setNormalizationMessage] = useState("");
+  const [normalizationArmed, setNormalizationArmed] = useState(false);
 
   return (
     <div className="space-y-4">
       <EditorSection
         title="Map source and runtime metadata"
-        description="Technical map metadata and current Contact payload diagnostics."
+        description="Read-only map metadata and current Contact payload diagnostics."
       >
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Map enabled</p>
-            <p className="text-xs text-muted-foreground">
-              Runtime renders the map only when the URL is valid.
-            </p>
-          </div>
-          <Switch
-            checked={normalized.map?.enabled ?? false}
-            onCheckedChange={(checked) => updateMap(value, onChange, { enabled: checked })}
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Map embed URL</p>
-          <Input
-            value={normalized.map?.embedUrl ?? ""}
-            onChange={(event) => updateMap(value, onChange, { embedUrl: event.target.value })}
-            placeholder="https://maps.google.com/..."
-            aria-invalid={getContactMapUrlState(normalized.map?.embedUrl).valid ? undefined : true}
-          />
-          <p className="text-xs text-muted-foreground" role="status">
-            {getContactMapUrlState(normalized.map?.embedUrl).message}
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="contact-advanced-map-enabled"
+          label="Map visibility"
+          path="map.enabled"
+          value={normalized.map?.enabled ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="contact-advanced-map-source"
+          label="Map source"
+          path="map.embedUrl"
+          help="Visual owns map setup. Advanced only reports the resolved runtime state."
+          value={
+            mapLocation
+              ? `Google Maps location: ${mapLocation}`
+              : hasMapSource
+                ? "Saved custom map source"
+                : "Not configured"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="contact-advanced-map-runtime"
+          label="Runtime status"
+          path="map.embedUrl"
+          value={hasMapSource ? mapUrlState.message : "Map fallback copy renders until configured."}
+        />
       </EditorSection>
 
       <EditorSection
         title="Normalization and fallback controls"
-        description="Apply deterministic normalization and confirm whether it changed the payload."
+        description="Confirmed support action for deterministic payload cleanup."
       >
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            const before = JSON.stringify(value);
-            const next = normalizeContactData(value);
-            const after = JSON.stringify(next);
-            onChange(next);
-            setNormalizationMessage(
-              before === after ? "Already normalized." : "Payload normalized."
-            );
-          }}
+        <WidgetControlRow
+          id="contact-advanced-normalize-action"
+          label="Normalize payload"
+          ownership="action"
+          help="This support action rewrites the payload to deterministic defaults after explicit confirmation."
         >
-          Apply normalization now
-        </Button>
+          {() => (
+            <Button
+              type="button"
+              variant={normalizationArmed ? "default" : "outline"}
+              onClick={() => {
+                if (!normalizationArmed) {
+                  setNormalizationArmed(true);
+                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
+                  return;
+                }
+
+                const before = JSON.stringify(value);
+                const next = normalizeContactData(value);
+                const after = JSON.stringify(next);
+                onChange(next);
+                setNormalizationArmed(false);
+                setNormalizationMessage(
+                  before === after ? "Already normalized." : "Payload normalized."
+                );
+              }}
+            >
+              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
+            </Button>
+          )}
+        </WidgetControlRow>
         <p className="text-xs text-muted-foreground">
           Normalization enforces allowed field IDs, explicit defaults, and safe style tokens.
         </p>

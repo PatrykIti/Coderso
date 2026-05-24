@@ -137,6 +137,27 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `navigation`, `logo-cloud`, and `feature-grid` have `fixtureGaps=0`;
   `cta-banner` and `testimonials` still show unchanged Advanced
   fixture-selection gaps (`block_select_missing`).
+- In Progress (2026-05-24): fourth implementation family resolves the explicit
+  `contact` map/social authoring contradiction. Visual now asks for a public
+  map location/address and known social profile names/handles, then writes the
+  existing `map.embedUrl` and `contact.social[].href` string fields through
+  Contact-owned helpers. Legacy custom map/social destinations remain
+  backward-compatible replace/clear states instead of editable raw URL fields.
+  Advanced map metadata is read-only, and Contact normalization is a
+  confirm-gated support action. Claude recommended a sanitizer-gated paste
+  flow; this slice intentionally uses location/profile-name authoring because
+  the user requirement was stricter than paste-a-URL authoring.
+- In Progress (2026-05-24): Claude post-implementation review flagged three
+  pre-commit blockers, all addressed in this slice: Wizard no longer writes
+  `form.submission.staticMessage` outside its declared contract, the Contact
+  Advanced contract no longer lists the nonexistent `runtime.normalizedData`
+  path, and new social rows start from a known platform instead of a dead-end
+  `custom` choice. Full social URLs pasted into known-platform profile fields
+  are parsed or rejected instead of being encoded as profile handles.
+- In Progress (2026-05-24): targeted authenticated Playwright admin smoke for
+  `contact` reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0` in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-contact-authoring-admin-2026-05-24.*`.
 
 ## Files to Change
 

@@ -148,6 +148,10 @@ Zasady:
   `href` strings. Legacy custom, hash, or external destinations remain
   backward-compatible read-only replace/clear state in beginner modes instead
   of editable raw URL/path inputs.
+- Contact map/social authoring follows the same beginner-safe rule. Visual asks
+  for a public map location/address or a known social profile name/handle and
+  builds the stored string destination itself; legacy custom sources remain
+  replace/clear state, and Advanced reports map metadata read-only.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

@@ -9,11 +9,15 @@ import {
   ContactWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/ContactEditors";
 import {
+  buildContactMapEmbedUrl,
+  buildContactSocialHref,
   ContactBlock,
   contactDefaults,
   createContactWidget,
   getContactDiagnosticsSnapshot,
   normalizeContactData,
+  readContactMapLocation,
+  readContactSocialProfile,
   type ContactData,
 } from "../../../core/widgets/core/contact";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -493,6 +497,30 @@ test("contact normalization keeps bounded defaults, field metadata, and static s
     maxWidth: "xl",
     paddingX: "md",
   });
+});
+
+test("contact editor helpers build map and social destinations from nontechnical inputs", () => {
+  const mapUrl = buildContactMapEmbedUrl("Warsaw, Poland");
+  const parsedMapUrl = new URL(mapUrl);
+
+  expect(parsedMapUrl.hostname).toBe("www.google.com");
+  expect(parsedMapUrl.searchParams.get("q")).toBe("Warsaw, Poland");
+  expect(parsedMapUrl.searchParams.get("output")).toBe("embed");
+  expect(readContactMapLocation(mapUrl)).toBe("Warsaw, Poland");
+
+  const socialHref = buildContactSocialHref("instagram", "@coderso");
+  expect(socialHref).toBe("https://www.instagram.com/coderso");
+  expect(readContactSocialProfile("instagram", socialHref)).toBe("coderso");
+  expect(buildContactSocialHref("instagram", "https://www.instagram.com/coderso/")).toBe(
+    "https://www.instagram.com/coderso"
+  );
+  expect(buildContactSocialHref("linkedin", "in/jane-doe")).toBe(
+    "https://www.linkedin.com/in/jane-doe"
+  );
+  expect(readContactSocialProfile("linkedin", "https://www.linkedin.com/in/jane-doe")).toBe(
+    "in/jane-doe"
+  );
+  expect(buildContactSocialHref("custom", "coderso")).toBe("");
 });
 
 test("contact validator accepts expanded schema and rejects unsupported nested keys", () => {

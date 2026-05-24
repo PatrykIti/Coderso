@@ -582,8 +582,9 @@ lifecycle work.
   `adminFailures=0` and `metadataGaps=0`, with unchanged Advanced
   `block_select_missing` fixture gaps.
 - Remaining explicit raw-link work (`cta.href`, navigation item URLs,
-  logo-cloud partner links, map embed paste flow, and page/link pickers) stays
-  routed to TASK-336-19 follow-up families.
+  logo-cloud partner links, and page/link pickers) stays routed to TASK-336-19
+  follow-up families. Contact map/social authoring is covered by the later
+  Contact evidence section.
 
 ## TASK-336-19 Link Destination Cleanup Evidence (2026-05-24)
 
@@ -608,6 +609,36 @@ normal Wizard/Visual flows while preserving existing runtime schemas.
   `fixtureGaps=0`, and `metadataGaps=0`. `cta-banner` and `testimonials`
   report `adminFailures=0` and `metadataGaps=0`, with unchanged Advanced
   `block_select_missing` fixture gaps.
+
+## TASK-336-19 Contact Map/Social Authoring Evidence (2026-05-24)
+
+The fourth TASK-336-19 implementation family targets the explicit `contact`
+`map.embedUrl` contradiction and related social-profile raw destination drift.
+
+- `contact` Visual no longer exposes editable raw `Map embed URL` or
+  `Profile URL` fields. Map setup asks for a public location/address and writes
+  the existing `map.embedUrl` string through Contact-owned helpers. Known social
+  platforms ask for profile names/handles and write the existing
+  `contact.social[].href` strings.
+- Legacy custom map/social destinations remain backward-compatible persisted
+  data and are shown as replace/clear state instead of normal editable URL
+  controls.
+- `contact` Advanced now reports map visibility/source/runtime status as
+  read-only summary rows. Normalization is a confirm-gated support action
+  instead of a one-click mutation.
+- Claude recommended a sanitizer-gated URL paste flow for compatibility. This
+  slice intentionally chose location/profile-name authoring because the current
+  user requirement is stricter: normal Wizard/Visual users should not have to
+  paste developer-style URLs or embed snippets.
+- Claude post-implementation review flagged three pre-commit blockers that are
+  addressed here: Wizard no longer writes `form.submission.staticMessage`
+  outside its declared contract, the Advanced contract no longer lists
+  nonexistent `runtime.normalizedData`, and new social rows no longer start as a
+  user-selectable dead-end `custom` destination.
+- Targeted authenticated Playwright admin evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-contact-authoring-admin-2026-05-24.*`.
+  `contact` reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
 
 ## Claude and Helper Agent Review Summary
 

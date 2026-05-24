@@ -385,17 +385,10 @@ test("ContactWizardEditor uses variant cards, exposes hours, and shows minimal f
       "Tell us what you need."
     );
     setInputValue(findInputByPlaceholder(view.container, "Mon-Fri 9-5"), "24/7 support");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "This contact form is not connected yet."),
-      "This Contact form stays presentational for now."
-    );
 
     expect(latestValue.title).toBe("Contact us");
     expect(latestValue.description).toBe("Tell us what you need.");
     expect(latestValue.contact?.hours).toBe("24/7 support");
-    expect(latestValue.form?.submission?.staticMessage).toBe(
-      "This Contact form stays presentational for now."
-    );
 
     clickButtonByText(view.container, "Minimal");
     expect(currentVariant).toBe("minimal");
@@ -492,30 +485,31 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     const mapSection = findSection(view.container, "Map source and display behavior");
     if (!mapSection) throw new Error("Missing map section");
     setCheckboxValue(mapSection.querySelector("input[type='checkbox']"), true);
-    setInputValue(findInputByPlaceholder(view.container, "https://maps.google.com/..."), "notaurl");
-    expect(view.container.textContent).toContain(
-      "Use a valid http:// or https:// map embed URL. HTTPS is recommended."
+    setInputValue(
+      findInputByPlaceholder(view.container, "Warsaw, Poland or 123 Market Street"),
+      "Warsaw, Poland"
     );
+    const mapUrl = new URL(latestValue.map?.embedUrl ?? "");
+    expect(mapUrl.hostname).toBe("www.google.com");
+    expect(mapUrl.searchParams.get("q")).toBe("Warsaw, Poland");
+    expect(mapUrl.searchParams.get("output")).toBe("embed");
     setSelectValue(findSelectByOptions(mapSection, ["sm", "md", "lg", "xl"]), "lg");
     expect(latestValue.map?.height).toBe("lg");
 
     clickButtonByText(view.container, "Add social link");
     setInputValue(findInputByPlaceholder(view.container, "LinkedIn"), "Support team");
-    setInputValue(
-      findInputByPlaceholder(view.container, "https://example.com/profile"),
-      "https://example.com/support"
-    );
     const platformSelect = Array.from(view.container.querySelectorAll("select")).find((element) => {
       if (!(element instanceof HTMLSelectElement)) return false;
       const values = Array.from(element.options).map((option) => option.value);
-      return values.includes("linkedin") && values.includes("custom");
+      return values.includes("linkedin") && values.includes("youtube");
     });
     setSelectValue(platformSelect, "linkedin");
+    setInputValue(findInputByPlaceholder(view.container, "coderso"), "support-team");
 
     expect(latestValue.contact?.social?.[0]).toMatchObject({
       platform: "linkedin",
       label: "Support team",
-      href: "https://example.com/support",
+      href: "https://www.linkedin.com/company/support-team",
     });
 
     const maxWidthSelect = findSelectByOptions(view.container, ["none", "md", "lg", "xl", "2xl"]);
@@ -575,7 +569,10 @@ test("ContactAdvancedEditor reports normalization results and redacts diagnostic
 
   try {
     expect(view.container.textContent).toContain("[redacted]");
-    clickButtonByText(view.container, "Apply normalization now");
+    expect(findInputByPlaceholder(view.container, "https://maps.google.com/...")).toBeUndefined();
+    clickButtonByText(view.container, "Review normalization");
+    expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");
+    clickButtonByText(view.container, "Confirm normalization");
     expect(view.container.textContent).toContain("Payload normalized.");
     expect(latestValue.form).toMatchObject({
       fields: ["email"],

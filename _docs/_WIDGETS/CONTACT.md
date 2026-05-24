@@ -26,7 +26,6 @@ Wizard prowadzi szybki setup bez technicznych pol runtime:
 - variant cards (`form-left`, `form-right`, `minimal`)
 - section title + description
 - form fields (`name`, `email`, `phone`, `message`) i submit label
-- static status note dla formularza presentational
 - contact details (`phone`, `email`, `address`, `hours`)
 
 ### Visual
@@ -39,19 +38,29 @@ Glowny tryb codziennej edycji obejmuje:
 1. section header
 2. form fields, required rules, field order, labels/placeholders/layout
 3. submission runtime binding do istniejącego Forms record
-4. contact details, labels, ikony, social links
-5. map source + validation + display controls
+4. contact details, labels, ikony, social links przez platform + profile name
+5. map location + display controls; editor buduje `map.embedUrl`
 6. colors, borders, width, padding, spacing, columns
 
 `minimal` ukrywa form-field controls i pokazuje user-facing copy, zamiast
 pozostawiac mylace ustawienia formularza.
 
+Visual nie prosi nietechnicznego uzytkownika o `iframe`, raw map URL, social
+URL, ani developer-only path. Mapa przyjmuje publiczna lokalizacje/adres i
+zapisuje kompatybilny `map.embedUrl`. Znane platformy social przyjmuja tylko
+profile name/handle i zapisuja bezpieczne `social.href`; legacy custom links sa
+pokazywane jako replace/clear state. Nowe social rows startuja od znanej
+platformy, a nie od `custom`, zeby nie tworzyc martwego beginner flow.
+Jesli uzytkownik wklei pelny link profilu dla znanej platformy, helper probuje
+wydobyc profile name/handle; nieparsowalny link jest odrzucany zamiast
+kodowany jako handle.
+
 ### Advanced
 
 Advanced zostaje techniczny i Contact-local:
 
-- map/runtime diagnostics
-- normalization and fallback controls
+- read-only map/runtime diagnostics
+- confirm-gated normalization support action
 - runtime diagnostics snapshot z redakcja `resolved.submissionNonce`
 
 ## Data Model (summary)
@@ -138,9 +147,13 @@ Advanced zostaje techniczny i Contact-local:
   wartosci. Nieprawidlowe dane zostaja zwyklym tekstem.
 - Social links przechodza przez Contact-local safe href normalization i
   wpuszczaja tylko absolutne linki webowe (`http/https`).
+- Visual authoring dla znanych platform social zapisuje `social.href` z
+  nietechnicznego profile name/handle; custom `href` pozostaje legacy/support.
 - Mapa renderuje sie tylko gdy:
   - `map.enabled = true`
   - `map.embedUrl` jest poprawnym `http/https` URL
+- Visual authoring zapisuje Google Maps embed URL z publicznej lokalizacji lub
+  adresu, bez proszenia uzytkownika o kod osadzenia.
 - Gdy mapa jest wlaczona, ale URL nie przechodzi walidacji runtime, widget
   pokazuje `map.fallbackCopy` zamiast pustego iframe.
 - Iframe mapy dostaje `allowFullScreen` i tytul pochodzacy z `map.title` lub
@@ -226,5 +239,6 @@ renderu zamiast udawac aktywna wysylke.
 - Contract target: Wizard seeds contact/form basics; Visual owns form details,
   field labels, business details, map, social links, and style; Advanced is
   read-only submission/map/runtime diagnostics.
-- Duplicate map embed URL editing and raw form binding details are routed to
-  `TASK-336-19`.
+- TASK-336-19 removes duplicate map editing from Advanced and replaces normal
+  Visual map/social raw URL authoring with location/profile-name flows while
+  preserving the existing string schema.

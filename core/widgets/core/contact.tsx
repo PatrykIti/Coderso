@@ -412,6 +412,107 @@ export const getContactMapUrlState = (value: string | undefined) => {
   };
 };
 
+export const buildContactMapEmbedUrl = (location: string | undefined) => {
+  const trimmed = typeof location === "string" ? location.trim() : "";
+  if (!trimmed) return "";
+
+  const url = new URL("https://www.google.com/maps");
+  url.searchParams.set("q", trimmed.slice(0, 200));
+  url.searchParams.set("output", "embed");
+  return url.toString();
+};
+
+export const readContactMapLocation = (embedUrl: string | undefined) => {
+  if (typeof embedUrl !== "string" || embedUrl.trim().length === 0) return "";
+
+  try {
+    const parsed = new URL(embedUrl);
+    const host = parsed.hostname.toLowerCase();
+    if (!host.includes("google.") && host !== "maps.google.com") return "";
+    return parsed.searchParams.get("q")?.trim() ?? "";
+  } catch {
+    return "";
+  }
+};
+
+export const buildContactSocialHref = (
+  platform: ContactSocialPlatform | undefined,
+  profile: string | undefined
+) => {
+  const normalizedPlatform = socialPlatformSet.has(platform ?? "custom")
+    ? (platform ?? "custom")
+    : "custom";
+  const trimmedProfile = typeof profile === "string" ? profile.trim() : "";
+  if (!trimmedProfile || normalizedPlatform === "custom") return "";
+  let profileSource = trimmedProfile;
+
+  if (/^https?:\/\//i.test(trimmedProfile)) {
+    profileSource = readContactSocialProfile(normalizedPlatform, trimmedProfile);
+    if (!profileSource) return "";
+  }
+
+  const handle = profileSource.replace(/^@+/, "").replace(/^\/+|\/+$/g, "");
+  if (!handle) return "";
+  const encodedHandle = handle
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+
+  switch (normalizedPlatform) {
+    case "x":
+      return `https://x.com/${encodedHandle}`;
+    case "linkedin": {
+      const parts = handle.split("/").filter(Boolean);
+      if ((parts[0] === "company" || parts[0] === "in") && parts[1]) {
+        return `https://www.linkedin.com/${parts[0]}/${encodeURIComponent(parts[1])}`;
+      }
+      return `https://www.linkedin.com/company/${encodedHandle}`;
+    }
+    case "facebook":
+      return `https://www.facebook.com/${encodedHandle}`;
+    case "instagram":
+      return `https://www.instagram.com/${encodedHandle}`;
+    case "youtube":
+      return `https://www.youtube.com/@${encodedHandle}`;
+    default:
+      return "";
+  }
+};
+
+export const readContactSocialProfile = (
+  platform: ContactSocialPlatform | undefined,
+  href: string | undefined
+) => {
+  if (typeof href !== "string" || href.trim().length === 0) return "";
+
+  try {
+    const parsed = new URL(href);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const parts = parsed.pathname.split("/").filter(Boolean);
+
+    switch (platform) {
+      case "x":
+        return host === "x.com" || host === "twitter.com" ? (parts[0] ?? "") : "";
+      case "linkedin":
+        if (host !== "linkedin.com") return "";
+        if (parts[0] === "company") return parts[1] ?? "";
+        if (parts[0] === "in" && parts[1]) return `in/${parts[1]}`;
+        return "";
+      case "facebook":
+        return host === "facebook.com" ? (parts[0] ?? "") : "";
+      case "instagram":
+        return host === "instagram.com" ? (parts[0] ?? "") : "";
+      case "youtube":
+        return host === "youtube.com" ? (parts[0]?.replace(/^@/, "") ?? "") : "";
+      default:
+        return "";
+    }
+  } catch {
+    return "";
+  }
+};
+
 const normalizeContactSocialHref = (value: string | undefined) =>
   resolveWidgetLinkAttrs(value, {
     allowHttp: true,
@@ -858,7 +959,7 @@ export const contactEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["form.submission", "map.embedUrl", "resolved", "runtime.normalizedData"],
+      readOnlyPaths: ["form.submission", "map.embedUrl", "resolved"],
     },
   ],
 };
