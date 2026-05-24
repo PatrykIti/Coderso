@@ -655,68 +655,76 @@ export function TeamWizardEditor({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Team layout</p>
-        <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <WidgetEditorSection
+      id="team.wizard.starter-team"
+      mode="wizard"
+      role="setup"
+      title="Starter team"
+      description="Seed the layout, member count, and first member names."
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Team layout</p>
+          <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Members count</p>
-        <Select
-          value={String(members.length)}
-          onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select count" />
-          </SelectTrigger>
-          <SelectContent>
-            {memberCountOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Team intentionally supports up to 12 members. Use multiple Team sections for larger
-          directories.
-        </p>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Members count</p>
+          <Select
+            value={String(members.length)}
+            onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select count" />
+            </SelectTrigger>
+            <SelectContent>
+              {memberCountOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Team intentionally supports up to 12 members. Use multiple Team sections for larger
+            directories.
+          </p>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Primary member names</p>
-        {members.slice(0, 3).map((member, index) => (
-          <div key={member.id} className="grid gap-3 sm:grid-cols-2">
-            <Input
-              value={member.name ?? ""}
-              onChange={(event) =>
-                updateMember(value, onChange, index, { name: event.target.value })
-              }
-              placeholder={`Member ${index + 1} name`}
-            />
-            <Input
-              value={member.role ?? ""}
-              onChange={(event) =>
-                updateMember(value, onChange, index, { role: event.target.value })
-              }
-              placeholder={`Member ${index + 1} role`}
-            />
-          </div>
-        ))}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Primary member names</p>
+          {members.slice(0, 3).map((member, index) => (
+            <div key={member.id} className="grid gap-3 sm:grid-cols-2">
+              <Input
+                value={member.name ?? ""}
+                onChange={(event) =>
+                  updateMember(value, onChange, index, { name: event.target.value })
+                }
+                placeholder={`Member ${index + 1} name`}
+              />
+              <Input
+                value={member.role ?? ""}
+                onChange={(event) =>
+                  updateMember(value, onChange, index, { role: event.target.value })
+                }
+                placeholder={`Member ${index + 1} role`}
+              />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </WidgetEditorSection>
   );
 }
 

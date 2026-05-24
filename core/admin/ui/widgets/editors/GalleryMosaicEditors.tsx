@@ -675,75 +675,83 @@ export function GalleryMosaicWizardEditor({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Gallery layout</p>
-        <Select
-          value={resolveGalleryMosaicVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <WidgetEditorSection
+      id="gallery-mosaic.wizard.starter-media"
+      mode="wizard"
+      role="setup"
+      title="Starter media"
+      description="Seed the gallery layout, heading, and initial media selection."
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Gallery layout</p>
+          <Select
+            value={resolveGalleryMosaicVariant(variant)}
+            onValueChange={(next) => onVariantChange?.(next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section title</p>
-        <Input
-          value={normalized.header?.title ?? ""}
-          onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-          placeholder="Gallery highlights"
-        />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section title</p>
+          <Input
+            value={normalized.header?.title ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+            placeholder="Gallery highlights"
+          />
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Initial media count</p>
-        <Select
-          value={String(items.length)}
-          onValueChange={(next) => setItemCount(value, onChange, Number(next))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select count" />
-          </SelectTrigger>
-          <SelectContent>
-            {itemCountOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Initial media count</p>
+          <Select
+            value={String(items.length)}
+            onValueChange={(next) => setItemCount(value, onChange, Number(next))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select count" />
+            </SelectTrigger>
+            <SelectContent>
+              {itemCountOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Media library</p>
-        <MediaPicker
-          value={selectedMediaIds}
-          onChange={(next) => {
-            void handleMediaSelection(next);
-          }}
-          multiple
-          accept={["image/*", "video/*"]}
-          maxItems={galleryMosaicItemMax}
-        />
-        <p className="text-xs text-muted-foreground">
-          Selected media is saved as public image or video URLs in gallery items.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          After Wizard, use Visual for per-item alt, poster, lightbox, density, and motion controls,
-          or Advanced to import/export JSON.
-        </p>
-        {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Media library</p>
+          <MediaPicker
+            value={selectedMediaIds}
+            onChange={(next) => {
+              void handleMediaSelection(next);
+            }}
+            multiple
+            accept={["image/*", "video/*"]}
+            maxItems={galleryMosaicItemMax}
+          />
+          <p className="text-xs text-muted-foreground">
+            Selected media is saved as public image or video URLs in gallery items.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            After Wizard, use Visual for per-item alt, poster, lightbox, density, and motion
+            controls, or Advanced to import/export JSON.
+          </p>
+          {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
+        </div>
       </div>
-    </div>
+    </WidgetEditorSection>
   );
 }
 

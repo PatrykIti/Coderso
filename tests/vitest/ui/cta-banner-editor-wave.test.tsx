@@ -279,8 +279,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(candidate.querySelectorAll("h3, p")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
     )
   );
   if (!(section instanceof HTMLElement)) {

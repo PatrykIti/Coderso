@@ -224,6 +224,7 @@ function VariantCards({
           type="button"
           onClick={() => onChange?.(option.id)}
           data-widget-control={`feature-grid-variant-${option.id}`}
+          data-widget-control-ownership="action"
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
@@ -241,6 +242,7 @@ function VariantCards({
           <span
             aria-hidden="true"
             data-widget-control={`feature-grid-variant-preview-${option.id}`}
+            data-widget-control-ownership="preview"
             className="mt-3 block rounded-md border border-border/60 bg-muted/30 p-2"
           >
             <span className="grid grid-cols-4 gap-1">
@@ -463,96 +465,104 @@ export function FeatureGridWizardEditor({
   const items = normalizeFeatureGridItems(normalized.items);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Feature grid style</p>
-        <Select
-          value={resolveFeatureGridVariant(variant)}
-          onValueChange={(next) =>
-            applyVariantDataPatch(
-              next as FeatureGridVariantId,
-              buildVariantSyncedFeatureGridData(value, next as FeatureGridVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section title</p>
-        <Input
-          value={normalized.header?.title ?? ""}
-          onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-          placeholder="Everything your team needs"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Section description</p>
-        <Textarea
-          value={normalized.header?.description ?? ""}
-          onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-          placeholder="Use focused cards to explain your strongest product capabilities."
-        />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Cards count</p>
-        <Select
-          value={String(items.length)}
-          onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select count" />
-          </SelectTrigger>
-          <SelectContent>
-            {itemCountOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Basic card labels</p>
-        {items.map((item, index) => (
-          <div
-            key={item.id ?? `wizard-item-${index + 1}`}
-            className="space-y-2 rounded-lg border p-3"
+    <WidgetEditorSection
+      id="feature-grid.wizard.starter-setup"
+      mode="wizard"
+      role="setup"
+      title="Starter setup"
+      description="Pick the starting layout, headline, and starter card labels."
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Feature grid style</p>
+          <Select
+            value={resolveFeatureGridVariant(variant)}
+            onValueChange={(next) =>
+              applyVariantDataPatch(
+                next as FeatureGridVariantId,
+                buildVariantSyncedFeatureGridData(value, next as FeatureGridVariantId),
+                onChange,
+                onVariantChange,
+                onBlockPatch
+              )
+            }
           >
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Card {index + 1}
-            </p>
-            <Input
-              value={item.title ?? ""}
-              onChange={(event) =>
-                updateItem(value, onChange, index, { title: event.target.value })
-              }
-              placeholder={`Feature ${index + 1}`}
-            />
-          </div>
-        ))}
-      </div>
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {variantOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <p className="text-xs text-muted-foreground">
-        Use Visual for card descriptions, media, CTA links, layout, and styling.
-      </p>
-    </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section title</p>
+          <Input
+            value={normalized.header?.title ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+            placeholder="Everything your team needs"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Section description</p>
+          <Textarea
+            value={normalized.header?.description ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
+            placeholder="Use focused cards to explain your strongest product capabilities."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Cards count</p>
+          <Select
+            value={String(items.length)}
+            onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select count" />
+            </SelectTrigger>
+            <SelectContent>
+              {itemCountOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Basic card labels</p>
+          {items.map((item, index) => (
+            <div
+              key={item.id ?? `wizard-item-${index + 1}`}
+              className="space-y-2 rounded-lg border p-3"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Card {index + 1}
+              </p>
+              <Input
+                value={item.title ?? ""}
+                onChange={(event) =>
+                  updateItem(value, onChange, index, { title: event.target.value })
+                }
+                placeholder={`Feature ${index + 1}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Use Visual for card descriptions, media, CTA links, layout, and styling.
+        </p>
+      </div>
+    </WidgetEditorSection>
   );
 }
 

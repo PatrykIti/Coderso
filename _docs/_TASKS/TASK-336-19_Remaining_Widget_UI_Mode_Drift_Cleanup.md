@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-336-18
-**Status:** To Do
+**Status:** In Progress (2026-05-24)
 
 ---
 
@@ -72,6 +72,9 @@ read-only diagnostics. It added these concrete cleanup requirements:
 
 ## Sub-Tasks
 
+- [x] Add missing Wizard/Advanced section DOM metadata and classify
+  non-persisted custom controls as `preview` or `action` so Playwright can
+  distinguish metadata drift from real editable controls.
 - [ ] Remove Wizard ownership of style/layout fields that were only tolerated
   during replayable setup.
 - [ ] Move daily content/style/behavior controls from Advanced into Visual or
@@ -85,6 +88,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
 - [ ] Re-run Playwright CLI smoke for the affected widgets and ensure no
   duplicate writable owners remain outside explicit temporary allowances.
 - [ ] Record accepted/rejected Claude UX review feedback in the task notes.
+
+## Status Notes
+
+- In Progress (2026-05-24): first implementation family targets DOM metadata
+  drift from the authenticated Playwright baseline. It adds missing Wizard or
+  Advanced `WidgetEditorSection` markers for `feature-grid`, `pricing-plans`,
+  `faq-accordion`, `cta-banner`, `gallery-mosaic`, `team`,
+  `rich-text-section`, `navigation`, and `footer`, and classifies non-persisted
+  custom controls in `toggle-block`, `logo-cloud`, and `feature-grid` as
+  `preview` or `action`.
+- In Progress (2026-05-24): fresh helper-agent refinement accepted this family
+  as safe DOM metadata cleanup and separately queued raw media URL replacement
+  with existing `MediaPicker` surfaces for the next family.
+- In Progress (2026-05-24): targeted authenticated Playwright admin smoke for
+  the 11 touched widgets now reports `adminFailures=0` and `metadataGaps=0` for
+  each widget. Remaining fixture gaps are still visible for the `advanced`
+  probes of `pricing-plans`, `cta-banner`, `team`, `navigation`, and
+  `toggle-block`; these are not closed by the DOM metadata family.
+- In Progress (2026-05-24): full 38-widget admin smoke was attempted but
+  stopped after the unchanged `spacer` advanced probe hung without producing a
+  report. Targeted widget evidence is recorded under
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-*-2026-05-24.*`.
 
 ## Files to Change
 

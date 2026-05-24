@@ -562,100 +562,108 @@ export function RichTextSectionWizardEditor({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Rich text layout</p>
-        <VariantCards
-          value={resolveRichTextSectionVariant(variant)}
-          onChange={onVariantChange}
-          compact
-        />
-      </div>
+    <WidgetEditorSection
+      id="rich-text-section.wizard.starter-copy"
+      mode="wizard"
+      role="setup"
+      title="Starter copy"
+      description="Seed the layout, title, and first structured text blocks."
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Rich text layout</p>
+          <VariantCards
+            value={resolveRichTextSectionVariant(variant)}
+            onChange={onVariantChange}
+            compact
+          />
+        </div>
 
-      <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
-        <p className="text-sm font-medium">Output mode stays untouched in Wizard</p>
-        <p className="text-xs text-muted-foreground">
-          Current mode: {source.mode}. Wizard updates the first two structured text blocks without
-          changing which source renders publicly.
-        </p>
-      </div>
+        <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
+          <p className="text-sm font-medium">Output mode stays untouched in Wizard</p>
+          <p className="text-xs text-muted-foreground">
+            Current mode: {source.mode}. Wizard updates the first two structured text blocks without
+            changing which source renders publicly.
+          </p>
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Eyebrow</p>
-        <Input
-          value={normalized.titleBlock?.eyebrow ?? ""}
-          onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
-          placeholder="Editorial"
-        />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Eyebrow</p>
+          <Input
+            value={normalized.titleBlock?.eyebrow ?? ""}
+            onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
+            placeholder="Editorial"
+          />
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Title</p>
-        <Input
-          value={normalized.titleBlock?.title ?? ""}
-          onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
-          placeholder="Long-form content section"
-        />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Title</p>
+          <Input
+            value={normalized.titleBlock?.title ?? ""}
+            onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
+            placeholder="Long-form content section"
+          />
+        </div>
 
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Structured quick-start blocks</p>
-        <p className="text-xs text-muted-foreground">
-          Wizard keeps the first two text blocks beginner-friendly. Media, attachments, embeds, and
-          raw HTML stay in Visual and Advanced.
-        </p>
-        {blocks.slice(0, 2).map((block, index) => {
-          if (block.kind && block.kind !== "text") {
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Structured quick-start blocks</p>
+          <p className="text-xs text-muted-foreground">
+            Wizard keeps the first two text blocks beginner-friendly. Media, attachments, embeds,
+            and raw HTML stay in Visual and Advanced.
+          </p>
+          {blocks.slice(0, 2).map((block, index) => {
+            if (block.kind && block.kind !== "text") {
+              return (
+                <div
+                  key={block.id ?? `wizard-block-${index + 1}`}
+                  className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground"
+                >
+                  Block {index + 1} currently contains {resolveBlockKindLabel(block).toLowerCase()}.
+                  Use Visual mode to edit non-text structured blocks.
+                </div>
+              );
+            }
+
             return (
-              <div
-                key={block.id ?? `wizard-block-${index + 1}`}
-                className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground"
-              >
-                Block {index + 1} currently contains {resolveBlockKindLabel(block).toLowerCase()}.
-                Use Visual mode to edit non-text structured blocks.
+              <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
+                <Input
+                  value={block.heading ?? ""}
+                  onChange={(event) =>
+                    updateBlocks(value, onChange, (currentBlocks) => {
+                      const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
+                      nextBlocks[index] = {
+                        ...(nextBlocks[index] as RichTextSectionTextBlock),
+                        kind: "text",
+                        heading: event.target.value,
+                      };
+                      return nextBlocks;
+                    })
+                  }
+                  placeholder={`Heading ${index + 1}`}
+                />
+                <Textarea
+                  value={(block.contentHtml ? "" : block.content) ?? ""}
+                  onChange={(event) =>
+                    updateBlocks(value, onChange, (currentBlocks) => {
+                      const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
+                      nextBlocks[index] = {
+                        ...(nextBlocks[index] as RichTextSectionTextBlock),
+                        kind: "text",
+                        content: event.target.value,
+                        contentHtml: undefined,
+                      };
+                      return nextBlocks;
+                    })
+                  }
+                  placeholder={`Paragraph ${index + 1}`}
+                  className="min-h-28"
+                />
               </div>
             );
-          }
-
-          return (
-            <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
-              <Input
-                value={block.heading ?? ""}
-                onChange={(event) =>
-                  updateBlocks(value, onChange, (currentBlocks) => {
-                    const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
-                    nextBlocks[index] = {
-                      ...(nextBlocks[index] as RichTextSectionTextBlock),
-                      kind: "text",
-                      heading: event.target.value,
-                    };
-                    return nextBlocks;
-                  })
-                }
-                placeholder={`Heading ${index + 1}`}
-              />
-              <Textarea
-                value={(block.contentHtml ? "" : block.content) ?? ""}
-                onChange={(event) =>
-                  updateBlocks(value, onChange, (currentBlocks) => {
-                    const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
-                    nextBlocks[index] = {
-                      ...(nextBlocks[index] as RichTextSectionTextBlock),
-                      kind: "text",
-                      content: event.target.value,
-                      contentHtml: undefined,
-                    };
-                    return nextBlocks;
-                  })
-                }
-                placeholder={`Paragraph ${index + 1}`}
-                className="min-h-28"
-              />
-            </div>
-          );
-        })}
+          })}
+        </div>
       </div>
-    </div>
+    </WidgetEditorSection>
   );
 }
 

@@ -29,6 +29,7 @@ import {
 } from "../../../../widgets/core/footer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
+import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions = [
   { id: "columns-2", label: "Columns 2" },
@@ -852,39 +853,47 @@ export function FooterWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<FooterData>) {
   return (
-    <div className="space-y-5">
-      <FooterVariantSelect value={variant} onChange={onVariantChange} />
+    <WidgetEditorSection
+      id="footer.wizard.starter-footer"
+      mode="wizard"
+      role="setup"
+      title="Starter footer"
+      description="Seed visible columns, brand, legal text, and social links."
+    >
+      <div className="space-y-5">
+        <FooterVariantSelect value={variant} onChange={onVariantChange} />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Columns quick setup</p>
-        <p className="text-xs text-muted-foreground">
-          Configure titles and the first link for each visible column. Additional links stay
-          preserved and remain editable in Visual mode.
-        </p>
-        <ColumnsQuickSetup value={value} onChange={onChange} variant={variant} />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Columns quick setup</p>
+          <p className="text-xs text-muted-foreground">
+            Configure titles and the first link for each visible column. Additional links stay
+            preserved and remain editable in Visual mode.
+          </p>
+          <ColumnsQuickSetup value={value} onChange={onChange} variant={variant} />
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Brand basics</p>
-        <BrandEditor value={value} onChange={onChange} />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Brand basics</p>
+          <BrandEditor value={value} onChange={onChange} />
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Legal basics</p>
-        <LegalEditor value={value} onChange={onChange} showVisibilityToggle />
-      </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Legal basics</p>
+          <LegalEditor value={value} onChange={onChange} showVisibilityToggle />
+        </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Social basics</p>
-        <SwitchField
-          label="Show social links"
-          description="Hide social icons without deleting the current platform entries."
-          checked={value.socialEnabled !== false}
-          onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
-        />
-        <SocialLinksEditor value={value} onChange={onChange} limit={8} />
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Social basics</p>
+          <SwitchField
+            label="Show social links"
+            description="Hide social icons without deleting the current platform entries."
+            checked={value.socialEnabled !== false}
+            onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
+          />
+          <SocialLinksEditor value={value} onChange={onChange} limit={8} />
+        </div>
       </div>
-    </div>
+    </WidgetEditorSection>
   );
 }
 
@@ -1318,6 +1327,33 @@ export function FooterVisualEditor({
 export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<FooterData>) {
   return (
     <div className="space-y-5">
+      <WidgetEditorSection
+        id="footer.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only footer structure and slot ownership overview."
+      >
+        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-foreground">Columns</dt>
+            <dd>{value.columns?.length ?? 0}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Social links</dt>
+            <dd>{value.social?.length ?? 0}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Legal row</dt>
+            <dd>{value.legal?.enabled === false ? "Hidden" : "Visible"}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Back to top</dt>
+            <dd>{value.backToTop?.enabled ? "Enabled" : "Disabled"}</dd>
+          </div>
+        </dl>
+      </WidgetEditorSection>
+
       <div className="space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold">Layout tokens</p>
         <p className="text-xs text-muted-foreground">

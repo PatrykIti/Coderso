@@ -692,113 +692,121 @@ export function CtaBannerWizardEditor({
   const secondary = normalized.actions?.secondaryCta;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Banner layout</p>
-        <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
+    <WidgetEditorSection
+      id="cta-banner.wizard.starter-conversion"
+      mode="wizard"
+      role="setup"
+      title="Starter conversion"
+      description="Choose the banner layout and seed the primary conversion copy."
+    >
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Banner layout</p>
+          <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
+        </div>
+
+        <label className="space-y-1">
+          <span className="text-sm font-medium">Headline</span>
+          <Input
+            value={normalized.content?.title ?? ""}
+            onChange={(event) => updateContent(value, onChange, { title: event.target.value })}
+            placeholder="Ready to launch your next campaign?"
+          />
+        </label>
+
+        <label className="space-y-1">
+          <span className="text-sm font-medium">Primary CTA label</span>
+          <Input
+            value={primary?.label ?? ""}
+            onChange={(event) =>
+              updateActions(value, onChange, {
+                primaryCta: {
+                  ...primary,
+                  label: event.target.value,
+                },
+              })
+            }
+            placeholder="Get started"
+          />
+        </label>
+
+        <label className="space-y-1">
+          <span className="text-sm font-medium">Primary CTA URL</span>
+          <Input
+            value={primary?.href ?? ""}
+            onChange={(event) =>
+              updateActions(value, onChange, {
+                primaryCta: {
+                  ...primary,
+                  href: event.target.value,
+                },
+              })
+            }
+            placeholder="/start"
+          />
+          {getCtaHrefWarning(primary?.href) ? (
+            <p className="text-xs text-destructive">{getCtaHrefWarning(primary?.href)}</p>
+          ) : null}
+        </label>
+
+        <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+          <span>Enable secondary CTA</span>
+          <Switch
+            checked={secondary?.enabled !== false}
+            onCheckedChange={(next) =>
+              updateActions(value, onChange, {
+                secondaryCta: {
+                  ...secondary,
+                  enabled: next,
+                },
+              })
+            }
+          />
+        </label>
+
+        {secondary?.enabled !== false ? (
+          <>
+            <label className="space-y-1">
+              <span className="text-sm font-medium">Secondary CTA label</span>
+              <Input
+                value={secondary?.label ?? ""}
+                onChange={(event) =>
+                  updateActions(value, onChange, {
+                    secondaryCta: {
+                      ...secondary,
+                      label: event.target.value,
+                    },
+                  })
+                }
+                placeholder="Contact sales"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sm font-medium">Secondary CTA URL</span>
+              <Input
+                value={secondary?.href ?? ""}
+                onChange={(event) =>
+                  updateActions(value, onChange, {
+                    secondaryCta: {
+                      ...secondary,
+                      href: event.target.value,
+                    },
+                  })
+                }
+                placeholder="/contact"
+              />
+              {getCtaHrefWarning(secondary?.href) ? (
+                <p className="text-xs text-destructive">{getCtaHrefWarning(secondary?.href)}</p>
+              ) : null}
+            </label>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Saved secondary label and URL stay intact while the CTA is hidden.
+          </p>
+        )}
       </div>
-
-      <label className="space-y-1">
-        <span className="text-sm font-medium">Headline</span>
-        <Input
-          value={normalized.content?.title ?? ""}
-          onChange={(event) => updateContent(value, onChange, { title: event.target.value })}
-          placeholder="Ready to launch your next campaign?"
-        />
-      </label>
-
-      <label className="space-y-1">
-        <span className="text-sm font-medium">Primary CTA label</span>
-        <Input
-          value={primary?.label ?? ""}
-          onChange={(event) =>
-            updateActions(value, onChange, {
-              primaryCta: {
-                ...primary,
-                label: event.target.value,
-              },
-            })
-          }
-          placeholder="Get started"
-        />
-      </label>
-
-      <label className="space-y-1">
-        <span className="text-sm font-medium">Primary CTA URL</span>
-        <Input
-          value={primary?.href ?? ""}
-          onChange={(event) =>
-            updateActions(value, onChange, {
-              primaryCta: {
-                ...primary,
-                href: event.target.value,
-              },
-            })
-          }
-          placeholder="/start"
-        />
-        {getCtaHrefWarning(primary?.href) ? (
-          <p className="text-xs text-destructive">{getCtaHrefWarning(primary?.href)}</p>
-        ) : null}
-      </label>
-
-      <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-        <span>Enable secondary CTA</span>
-        <Switch
-          checked={secondary?.enabled !== false}
-          onCheckedChange={(next) =>
-            updateActions(value, onChange, {
-              secondaryCta: {
-                ...secondary,
-                enabled: next,
-              },
-            })
-          }
-        />
-      </label>
-
-      {secondary?.enabled !== false ? (
-        <>
-          <label className="space-y-1">
-            <span className="text-sm font-medium">Secondary CTA label</span>
-            <Input
-              value={secondary?.label ?? ""}
-              onChange={(event) =>
-                updateActions(value, onChange, {
-                  secondaryCta: {
-                    ...secondary,
-                    label: event.target.value,
-                  },
-                })
-              }
-              placeholder="Contact sales"
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-sm font-medium">Secondary CTA URL</span>
-            <Input
-              value={secondary?.href ?? ""}
-              onChange={(event) =>
-                updateActions(value, onChange, {
-                  secondaryCta: {
-                    ...secondary,
-                    href: event.target.value,
-                  },
-                })
-              }
-              placeholder="/contact"
-            />
-            {getCtaHrefWarning(secondary?.href) ? (
-              <p className="text-xs text-destructive">{getCtaHrefWarning(secondary?.href)}</p>
-            ) : null}
-          </label>
-        </>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Saved secondary label and URL stay intact while the CTA is hidden.
-        </p>
-      )}
-    </div>
+    </WidgetEditorSection>
   );
 }
 

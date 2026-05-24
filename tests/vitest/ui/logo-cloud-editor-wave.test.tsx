@@ -408,8 +408,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(candidate.querySelectorAll("h3, p")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
     )
   );
   if (!(section instanceof HTMLElement)) {
@@ -1217,6 +1217,29 @@ test("LogoCloud editors ignore variant changes safely when no handler is provide
     expect(normalizeText(stripButton.textContent)).toContain("pick");
   } finally {
     visualView.cleanup();
+  }
+});
+
+test("LogoCloud visual editor classifies non-persisted DOM controls", async () => {
+  const { LogoCloudVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+
+  const view = mount(
+    <LogoCloudVisualEditor value={logoCloudDefaults} onChange={() => undefined} variant="grid" />
+  );
+
+  try {
+    const unclassifiedControls = Array.from(
+      view.container.querySelectorAll("[data-widget-control]")
+    ).filter((control) => {
+      if (control.hasAttribute("data-widget-control-path")) return false;
+      const ownership = control.getAttribute("data-widget-control-ownership");
+      return ownership !== "action" && ownership !== "preview" && ownership !== "readonly";
+    });
+
+    expect(unclassifiedControls).toHaveLength(0);
+  } finally {
+    view.cleanup();
   }
 });
 

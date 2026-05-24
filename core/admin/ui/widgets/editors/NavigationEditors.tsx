@@ -688,203 +688,213 @@ export function NavigationWizardEditor({
   };
 
   return (
-    <div className="space-y-4">
-      <NavigationVariantSelect value={variant} onChange={onVariantChange} />
+    <WidgetEditorSection
+      id="navigation.wizard.starter-menu"
+      mode="wizard"
+      role="setup"
+      title="Starter menu"
+      description="Seed the logo, link source, first links, and optional primary CTA."
+    >
+      <div className="space-y-4">
+        <NavigationVariantSelect value={variant} onChange={onVariantChange} />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Links source</p>
-        <Select
-          value={linksSource}
-          onValueChange={(next) =>
-            update({
-              linksSource: next as NavigationData["linksSource"],
-              menuKey: next === "menu" ? value.menuKey : undefined,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select links source" />
-          </SelectTrigger>
-          <SelectContent>
-            {linkSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads
-          published pages that are enabled for navigation.
-        </p>
-      </div>
-
-      {linksSource === "menu" ? (
-        <div className="space-y-3">
-          <MenuSelectField
-            menuId={value.menuKey}
-            onSelectionChange={({ menuId, items }) =>
-              update(buildMenuSelectionPatch(menuId, items))
-            }
-          />
-          <NavigationItemPreviewList
-            title="Synced menu preview"
-            items={items}
-            emptyLabel="Select a menu to preview its current links."
-          />
-        </div>
-      ) : (
         <div className="space-y-2">
-          <p className="text-sm font-medium">{usesPagesIndex ? "Fallback links" : "Quick links"}</p>
-          {usesPagesIndex ? (
-            <p className="text-xs text-muted-foreground">
-              Pages index uses published pages with{" "}
-              <span className="font-medium">Show in navigation</span> enabled. Fallback links appear
-              when no pages match.
-            </p>
-          ) : null}
-          <div className="space-y-2">
-            {items.slice(0, 3).map((item, index) => (
-              <div
-                key={`${item.href || item.label}-${index}`}
-                className="grid gap-2 sm:grid-cols-2"
-              >
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium text-foreground">Link {index + 1} label</span>
-                  <Input
-                    value={item.label}
-                    onChange={(event) => updateItem(index, { label: event.target.value })}
-                    placeholder={`Item ${index + 1} label`}
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium text-foreground">Link {index + 1} URL</span>
-                  <Input
-                    value={item.href}
-                    onChange={(event) => updateItem(index, { href: event.target.value })}
-                    placeholder="/path"
-                  />
-                </label>
-              </div>
-            ))}
-          </div>
-          {items.length > 3 ? (
-            <p className="text-xs text-muted-foreground">
-              Showing the first 3 links here. {items.length - 3} additional link
-              {items.length - 3 === 1 ? "" : "s"} continue in Visual mode.
-            </p>
-          ) : null}
+          <p className="text-sm font-medium">Links source</p>
+          <Select
+            value={linksSource}
+            onValueChange={(next) =>
+              update({
+                linksSource: next as NavigationData["linksSource"],
+                menuKey: next === "menu" ? value.menuKey : undefined,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select links source" />
+            </SelectTrigger>
+            <SelectContent>
+              {linkSourceOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads
+            published pages that are enabled for navigation.
+          </p>
         </div>
-      )}
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Logo type</p>
-        <Select
-          value={logo.type}
-          onValueChange={(next) =>
-            updateLogo({
-              type: next as NavigationLogo["type"],
-              value: next === "text" ? logo.value || "Coderso" : logo.value,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Choose logo type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="text">Text logo</SelectItem>
-            <SelectItem value="image">Image logo</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        {logo.type === "text" ? (
-          <>
-            <p className="text-sm font-medium">Logo text</p>
-            <Input
-              value={logo.value}
-              onChange={(event) => updateLogo({ value: event.target.value })}
-              placeholder="Coderso"
+        {linksSource === "menu" ? (
+          <div className="space-y-3">
+            <MenuSelectField
+              menuId={value.menuKey}
+              onSelectionChange={({ menuId, items }) =>
+                update(buildMenuSelectionPatch(menuId, items))
+              }
             />
-          </>
-        ) : (
-          <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
-        )}
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Logo link</span>
-          <Input
-            value={logo.href ?? ""}
-            onChange={(event) => updateLogo({ href: event.target.value })}
-            placeholder="Logo link (e.g. /)"
-          />
-        </label>
-        {logo.type === "image" ? (
-          <Input
-            value={logo.alt ?? ""}
-            onChange={(event) => updateLogo({ alt: event.target.value })}
-            placeholder="Logo alt text"
-          />
-        ) : null}
-      </div>
-
-      <div className="rounded-lg border p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-sm font-medium">CTA enabled</p>
-            <p className="text-xs text-muted-foreground">
-              Toggle CTA capability for this navigation variant.
-            </p>
+            <NavigationItemPreviewList
+              title="Synced menu preview"
+              items={items}
+              emptyLabel="Select a menu to preview its current links."
+            />
           </div>
-          <Switch
-            checked={ctaEnabled}
-            onCheckedChange={(checked) => {
-              if (checked && !variantSupportsCta(variant)) {
-                onVariantChange?.("with-cta");
-              }
-              if (!checked && variantSupportsCta(variant)) {
-                onVariantChange?.("simple");
-              }
-            }}
-          />
-        </div>
-      </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
+              {usesPagesIndex ? "Fallback links" : "Quick links"}
+            </p>
+            {usesPagesIndex ? (
+              <p className="text-xs text-muted-foreground">
+                Pages index uses published pages with{" "}
+                <span className="font-medium">Show in navigation</span> enabled. Fallback links
+                appear when no pages match.
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              {items.slice(0, 3).map((item, index) => (
+                <div
+                  key={`${item.href || item.label}-${index}`}
+                  className="grid gap-2 sm:grid-cols-2"
+                >
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium text-foreground">Link {index + 1} label</span>
+                    <Input
+                      value={item.label}
+                      onChange={(event) => updateItem(index, { label: event.target.value })}
+                      placeholder={`Item ${index + 1} label`}
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium text-foreground">Link {index + 1} URL</span>
+                    <Input
+                      value={item.href}
+                      onChange={(event) => updateItem(index, { href: event.target.value })}
+                      placeholder="/path"
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+            {items.length > 3 ? (
+              <p className="text-xs text-muted-foreground">
+                Showing the first 3 links here. {items.length - 3} additional link
+                {items.length - 3 === 1 ? "" : "s"} continue in Visual mode.
+              </p>
+            ) : null}
+          </div>
+        )}
 
-      {ctaEnabled ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Primary CTA</p>
-          <Input
-            value={value.cta?.label ?? ""}
-            onChange={(event) =>
-              update({
-                cta: {
-                  label: event.target.value,
-                  href: value.cta?.href ?? "",
-                },
+          <p className="text-sm font-medium">Logo type</p>
+          <Select
+            value={logo.type}
+            onValueChange={(next) =>
+              updateLogo({
+                type: next as NavigationLogo["type"],
+                value: next === "text" ? logo.value || "Coderso" : logo.value,
               })
             }
-            placeholder="Get started"
-          />
-          <Input
-            value={value.cta?.href ?? ""}
-            onChange={(event) =>
-              update({
-                cta: {
-                  label: value.cta?.label ?? "",
-                  href: event.target.value,
-                },
-              })
-            }
-            placeholder="/start"
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Choose logo type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="text">Text logo</SelectItem>
+              <SelectItem value="image">Image logo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Simple variant hides CTA in runtime output. Use the `Right Actions` slot later if the
-          layout needs extra actions without enabling a primary CTA.
-        </p>
-      )}
-    </div>
+
+        <div className="space-y-2">
+          {logo.type === "text" ? (
+            <>
+              <p className="text-sm font-medium">Logo text</p>
+              <Input
+                value={logo.value}
+                onChange={(event) => updateLogo({ value: event.target.value })}
+                placeholder="Coderso"
+              />
+            </>
+          ) : (
+            <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
+          )}
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-foreground">Logo link</span>
+            <Input
+              value={logo.href ?? ""}
+              onChange={(event) => updateLogo({ href: event.target.value })}
+              placeholder="Logo link (e.g. /)"
+            />
+          </label>
+          {logo.type === "image" ? (
+            <Input
+              value={logo.alt ?? ""}
+              onChange={(event) => updateLogo({ alt: event.target.value })}
+              placeholder="Logo alt text"
+            />
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium">CTA enabled</p>
+              <p className="text-xs text-muted-foreground">
+                Toggle CTA capability for this navigation variant.
+              </p>
+            </div>
+            <Switch
+              checked={ctaEnabled}
+              onCheckedChange={(checked) => {
+                if (checked && !variantSupportsCta(variant)) {
+                  onVariantChange?.("with-cta");
+                }
+                if (!checked && variantSupportsCta(variant)) {
+                  onVariantChange?.("simple");
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        {ctaEnabled ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Primary CTA</p>
+            <Input
+              value={value.cta?.label ?? ""}
+              onChange={(event) =>
+                update({
+                  cta: {
+                    label: event.target.value,
+                    href: value.cta?.href ?? "",
+                  },
+                })
+              }
+              placeholder="Get started"
+            />
+            <Input
+              value={value.cta?.href ?? ""}
+              onChange={(event) =>
+                update({
+                  cta: {
+                    label: value.cta?.label ?? "",
+                    href: event.target.value,
+                  },
+                })
+              }
+              placeholder="/start"
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Simple variant hides CTA in runtime output. Use the `Right Actions` slot later if the
+            layout needs extra actions without enabling a primary CTA.
+          </p>
+        )}
+      </div>
+    </WidgetEditorSection>
   );
 }
 
@@ -1857,6 +1867,33 @@ export function NavigationAdvancedEditor({ value, onChange }: WidgetEditorProps<
 
   return (
     <div className="space-y-4">
+      <WidgetEditorSection
+        id="navigation.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only navigation source and runtime ownership overview."
+      >
+        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-foreground">Links source</dt>
+            <dd>{value.linksSource ?? "manual"}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Menu key</dt>
+            <dd>{value.menuKey?.trim() || "Not configured"}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Manual links</dt>
+            <dd>{value.items.length}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">CTA</dt>
+            <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
+          </div>
+        </dl>
+      </WidgetEditorSection>
+
       <div className="rounded-lg border border-border/70 bg-background/50 p-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Layout Tokens

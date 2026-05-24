@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-05-24T16:05:16.442Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-19-dom-pricing-plans --widget pricing-plans --skip-front --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-pricing-plans-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-pricing-plans-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["pricing-plans"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": null,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "pricing-plans",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "admin_fixture_unopenable:block_select_missing"
+          }
+        ],
+        "pageId": "21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e",
+        "adminPath": "http://localhost:5173/admin/pages/21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e",
+        "status": "fixture-gap",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": true,
+    "results": []
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 1,
+    "metadataGaps": 0
+  }
+}

@@ -523,7 +523,7 @@ const findSelectByOptions = (container: ParentNode, values: string[], index = 0)
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find(
-    (section) => normalizeText(section.querySelector("p")?.textContent) === normalizeText(title)
+    (section) => normalizeText(section.querySelector("h3, p")?.textContent) === normalizeText(title)
   );
 
 const findCheckboxes = (container: ParentNode) =>

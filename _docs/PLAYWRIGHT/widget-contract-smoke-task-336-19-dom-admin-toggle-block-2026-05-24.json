@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-05-24T16:12:10.816Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-19-dom-toggle-block --widget toggle-block --skip-front --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-toggle-block-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-toggle-block-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["toggle-block"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": null,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "toggle-block",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "admin_fixture_unopenable:block_select_missing"
+          }
+        ],
+        "pageId": "12d1d6fb-2aeb-46db-8775-088e87d8b70b",
+        "adminPath": "http://localhost:5173/admin/pages/12d1d6fb-2aeb-46db-8775-088e87d8b70b",
+        "status": "fixture-gap",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": true,
+    "results": []
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 1,
+    "metadataGaps": 0
+  }
+}

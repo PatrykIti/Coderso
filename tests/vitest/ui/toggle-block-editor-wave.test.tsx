@@ -185,8 +185,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(candidate.querySelectorAll("h3, p")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
     )
   );
   if (!(section instanceof HTMLElement)) {
@@ -327,11 +327,15 @@ test("ToggleBlock wizard editor guides setup through variant, labels, and starti
     expect(view.container.textContent).not.toContain("Theme");
     expect(view.container.textContent).not.toContain("Diagnostics");
     expect(
-      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
-    ).not.toBeNull();
+      view.container
+        .querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
     expect(
-      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.cards"]')
-    ).not.toBeNull();
+      view.container
+        .querySelector('[data-widget-control="toggle-block.variant-preview.cards"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
 
     clickButton(findButtonByText(view.container, "Cards"));
     expect(view.getVariant()).toBe("cards");

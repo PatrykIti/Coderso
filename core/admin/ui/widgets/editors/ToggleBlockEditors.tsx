@@ -229,6 +229,7 @@ function ToggleBlockVariantPreview({ variant }: { variant: ToggleBlockVariantId 
     <span
       aria-hidden="true"
       data-widget-control={`toggle-block.variant-preview.${variant}`}
+      data-widget-control-ownership="preview"
       className={cn(
         "grid w-full gap-2 rounded-lg border p-2",
         variant === "cards" ? "grid-cols-2 bg-muted/30" : "grid-cols-1 bg-background"
@@ -303,6 +304,7 @@ function DefaultStateNotice({ value }: { value: ToggleBlockData }) {
     <p
       className="text-xs text-muted-foreground"
       data-widget-control="toggle-block.default-state.preview"
+      data-widget-control-ownership="preview"
     >
       {pane} pane opens first in preview and runtime: {label}.
     </p>
@@ -776,6 +778,7 @@ function AdvancedToolsSection({
           variant="outline"
           onClick={() => resetEditorValue(value, onChange)}
           data-widget-control="toggle-block.reset-defaults"
+          data-widget-control-ownership="action"
         >
           Reset to defaults
         </Button>

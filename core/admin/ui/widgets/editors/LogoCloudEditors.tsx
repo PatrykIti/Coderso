@@ -858,6 +858,7 @@ function LogoRemovalUndoNotice({
       aria-live="polite"
       className="flex items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/10 p-3"
       data-widget-control="logo-cloud-remove-undo"
+      data-widget-control-ownership="action"
     >
       <p className="text-sm text-foreground/80">{label} removed. Undo is available.</p>
       <div className="flex gap-2">
@@ -1080,6 +1081,7 @@ export function LogoCloudVisualEditor({
                 : undefined
             )}
             data-widget-control="logo-cloud-logo-card"
+            data-widget-control-ownership="preview"
             data-logo-cloud-logo-key={resolveLogoDragKey(index, logo)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
@@ -1096,6 +1098,7 @@ export function LogoCloudVisualEditor({
                   draggable
                   aria-label={`Drag logo ${index + 1} to reorder`}
                   data-widget-control="logo-cloud-drag-handle"
+                  data-widget-control-ownership="action"
                   onDragStart={() => startLogoDrag(index, logo)}
                   onDragEnd={endLogoDrag}
                 >
@@ -1109,6 +1112,7 @@ export function LogoCloudVisualEditor({
                   variant="outline"
                   size="sm"
                   data-widget-control="logo-cloud-move-up"
+                  data-widget-control-ownership="action"
                   onClick={() =>
                     commitLogoMutation((current) => moveLogoInData(current, index, index - 1), {
                       structural: true,
@@ -1123,6 +1127,7 @@ export function LogoCloudVisualEditor({
                   variant="outline"
                   size="sm"
                   data-widget-control="logo-cloud-move-down"
+                  data-widget-control-ownership="action"
                   onClick={() =>
                     commitLogoMutation((current) => moveLogoInData(current, index, index + 1), {
                       structural: true,
@@ -1137,6 +1142,7 @@ export function LogoCloudVisualEditor({
                   variant="outline"
                   size="sm"
                   data-widget-control="logo-cloud-remove"
+                  data-widget-control-ownership="action"
                   onClick={() => removeLogoWithUndo(index)}
                   disabled={logos.length <= 1}
                 >

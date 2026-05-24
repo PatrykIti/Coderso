@@ -537,6 +537,27 @@ users. The fresh Claude rerun also routed raw `formId`, `menuKey`, `assetId`,
 item-id, `map.embedUrl`, rich HTML, FAQ JSON-LD, and contact nonce diagnostics
 to `TASK-336-19`.
 
+## TASK-336-19 DOM Metadata Cleanup Evidence (2026-05-24)
+
+The first TASK-336-19 implementation family targets admin DOM metadata drift,
+not the full raw-input or one-time Wizard lifecycle cleanup.
+
+- Missing Wizard or Advanced `WidgetEditorSection` markers were added for
+  `feature-grid`, `pricing-plans`, `faq-accordion`, `cta-banner`,
+  `gallery-mosaic`, `team`, `rich-text-section`, `navigation`, and `footer`.
+- Non-persisted custom controls in `feature-grid`, `toggle-block`, and
+  `logo-cloud` are now explicitly marked as `preview` or `action`, so the smoke
+  harness does not count variant previews, undo notices, drag handles, move
+  buttons, or remove buttons as unowned writable controls.
+- Targeted authenticated admin smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-dom-admin-*-2026-05-24.*`.
+  All 11 touched widgets report `adminFailures=0` and `metadataGaps=0`.
+- Fixture gaps remain in the targeted runs for the `advanced` probes of
+  `pricing-plans`, `cta-banner`, `team`, `navigation`, and `toggle-block`.
+  These are still TASK-336-19 work and are not hidden by this metadata cleanup.
+- A full 38-widget admin smoke rerun was attempted but stopped after the
+  unchanged `spacer` advanced probe hung without writing a final report.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

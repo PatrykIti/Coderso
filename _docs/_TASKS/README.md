@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 12 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1936 tasks
 
 ---
@@ -41,7 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Harden the existing `WidgetBlock.editor.wizardCompleted` lifecycle only after widget owner contracts are strict |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
-| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | Bring the actual remaining widget editors into the TASK-336-18 contract: no raw CSS/JSON/HTML/IDs in normal Wizard/Visual and read-only Advanced diagnostics |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -60,6 +59,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
+| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | In progress (2026-05-24): first family is removing admin DOM metadata drift, then raw media URL inputs, Advanced writable drift, and one-time Wizard duplicate exposure follow in dependency order |
 ---
 
 ## Done

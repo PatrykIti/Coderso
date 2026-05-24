@@ -355,8 +355,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
     )
   );
 
@@ -492,16 +492,20 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     expect(sectionStyleSection).toBeTruthy();
     expect(advancedSection).toBeTruthy();
     expect(
-      view.container.querySelector('[data-widget-control="feature-grid-variant-preview-cards-3"]')
-    ).toBeTruthy();
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-cards-3"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
     expect(
-      view.container.querySelector('[data-widget-control="feature-grid-variant-preview-cards-4"]')
-    ).toBeTruthy();
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-cards-4"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
     expect(
-      view.container.querySelector(
-        '[data-widget-control="feature-grid-variant-preview-highlight-first"]'
-      )
-    ).toBeTruthy();
+      view.container
+        .querySelector('[data-widget-control="feature-grid-variant-preview-highlight-first"]')
+        ?.getAttribute("data-widget-control-ownership")
+    ).toBe("preview");
 
     clickByText(layoutSection as ParentNode, "Highlight First");
     expect(currentVariant).toBe("highlight-first");
