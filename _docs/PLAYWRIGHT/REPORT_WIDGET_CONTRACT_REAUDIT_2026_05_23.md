@@ -640,6 +640,31 @@ The fourth TASK-336-19 implementation family targets the explicit `contact`
   `contact` reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
   and `metadataGaps=0`.
 
+## TASK-336-19 Advanced Read-Only Batch 1 Evidence (2026-05-24)
+
+The fifth TASK-336-19 implementation family targets Advanced tabs that still
+behaved as a second Visual editor despite `writablePaths: []` contracts.
+
+- `faq-accordion` Advanced no longer edits open-state selectors, raw default
+  indexes, or style tokens. It reports open-state/style diagnostics and keeps a
+  two-step confirmed normalization support action. FAQ Visual search controls
+  now use beginner-facing wording instead of raw `JSON-LD` terminology.
+- `newsletter` Advanced no longer edits raw action URL or webhook ID fields. It
+  reports transport/integration status without exposing the stored URL or
+  webhook value, and keeps a two-step confirmed normalization support action.
+- `navigation` Advanced no longer mutates layout or runtime behavior. Friendly
+  layout width/spacing and sticky/collapse controls moved into Visual, raw menu
+  keys are redacted to configured/not-configured status in Advanced, and
+  nonexistent `cta.target`/`cta.enabled` paths were removed from the contract.
+- Claude and helper-agent review agreed the one-time Wizard lifecycle remains a
+  separate `TASK-336-16` concern. This batch closes Advanced drift only.
+- Targeted authenticated Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-advanced-readonly-admin-*-2026-05-24.*`.
+  `faq-accordion` and `navigation` report `adminFailures=0`,
+  `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. `newsletter`
+  reports `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with an
+  unchanged `block_select_missing` admin fixture gap.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

@@ -39,7 +39,7 @@ import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 type NavigationLayout = NonNullable<NavigationData["layout"]>;
 type NavigationBehavior = NonNullable<NavigationData["behavior"]>;
@@ -903,6 +903,13 @@ export function NavigationVisualEditor({
     activeLinkMode: "none",
     ...value.behavior,
   };
+  const layout: NavigationLayout = {
+    alignment: "right",
+    maxWidth: "6xl",
+    paddingY: "4",
+    itemGap: "4",
+    ...value.layout,
+  };
   const style: NavigationStyle = { ...value.style };
   const ctaEnabled = variantSupportsCta(variant);
 
@@ -931,6 +938,13 @@ export function NavigationVisualEditor({
     update({
       behavior: {
         ...value.behavior,
+        ...patch,
+      },
+    });
+  const updateLayout = (patch: Partial<NavigationLayout>) =>
+    update({
+      layout: {
+        ...value.layout,
         ...patch,
       },
     });
@@ -1812,84 +1826,13 @@ export function NavigationVisualEditor({
 
       <EditorSection
         title="Surface and Runtime Behavior"
-        description="Control overlay behavior on top of hero sections."
+        description="Control layout width, spacing, and overlay behavior on top of hero sections."
       >
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Transparent surface</p>
-            <p className="text-xs text-muted-foreground">
-              Ignore surface color and render transparent background.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.transparent ?? false}
-            onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Sticky and collapse behavior are in Advanced because they are technical runtime toggles.
-        </p>
-      </EditorSection>
-    </div>
-  );
-}
-
-export function NavigationAdvancedEditor({ value, onChange }: WidgetEditorProps<NavigationData>) {
-  const updateLayout = (patch: Partial<NavigationLayout>) =>
-    onChange({
-      ...value,
-      layout: {
-        ...value.layout,
-        ...patch,
-      },
-    });
-  const updateBehavior = (patch: Partial<NavigationBehavior>) =>
-    onChange({
-      ...value,
-      behavior: {
-        ...value.behavior,
-        ...patch,
-      },
-    });
-
-  return (
-    <div className="space-y-4">
-      <WidgetEditorSection
-        id="navigation.advanced.runtime-summary"
-        mode="advanced"
-        role="diagnostics"
-        title="Runtime summary"
-        description="Read-only navigation source and runtime ownership overview."
-      >
-        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <div>
-            <dt className="font-medium text-foreground">Links source</dt>
-            <dd>{value.linksSource ?? "manual"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Menu key</dt>
-            <dd>{value.menuKey?.trim() || "Not configured"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Manual links</dt>
-            <dd>{value.items.length}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">CTA</dt>
-            <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
-          </div>
-        </dl>
-      </WidgetEditorSection>
-
-      <div className="rounded-lg border border-border/70 bg-background/50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Layout Tokens
-        </p>
-        <div className="mt-3 space-y-3">
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm font-medium">Alignment</p>
             <Select
-              value={value.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "right"}
+              value={layout.alignment}
               onValueChange={(next) =>
                 updateLayout({ alignment: next as NavigationLayout["alignment"] })
               }
@@ -1906,102 +1849,191 @@ export function NavigationAdvancedEditor({ value, onChange }: WidgetEditorProps<
               </SelectContent>
             </Select>
           </div>
-
-          <div className="grid gap-2 md:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Max width</p>
-              <Select
-                value={value.layout?.maxWidth ?? "6xl"}
-                onValueChange={(next) =>
-                  updateLayout({ maxWidth: next as NavigationLayout["maxWidth"] })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Max width" />
-                </SelectTrigger>
-                <SelectContent>
-                  {maxWidthOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {formatTokenOptionLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Vertical padding</p>
-              <Select
-                value={value.layout?.paddingY ?? "4"}
-                onValueChange={(next) =>
-                  updateLayout({ paddingY: next as NavigationLayout["paddingY"] })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Padding Y" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paddingYOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {formatTokenOptionLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Links gap</p>
-              <Select
-                value={value.layout?.itemGap ?? "4"}
-                onValueChange={(next) =>
-                  updateLayout({ itemGap: next as NavigationLayout["itemGap"] })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Gap" />
-                </SelectTrigger>
-                <SelectContent>
-                  {itemGapOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {formatTokenOptionLabel(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Max width</p>
+            <Select
+              value={layout.maxWidth}
+              onValueChange={(next) =>
+                updateLayout({ maxWidth: next as NavigationLayout["maxWidth"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Max width" />
+              </SelectTrigger>
+              <SelectContent>
+                {maxWidthOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Vertical padding</p>
+            <Select
+              value={layout.paddingY}
+              onValueChange={(next) =>
+                updateLayout({ paddingY: next as NavigationLayout["paddingY"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Padding Y" />
+              </SelectTrigger>
+              <SelectContent>
+                {paddingYOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Links gap</p>
+            <Select
+              value={layout.itemGap}
+              onValueChange={(next) =>
+                updateLayout({ itemGap: next as NavigationLayout["itemGap"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Gap" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemGapOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {formatTokenOptionLabel(option)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </div>
-
-      <div className="rounded-lg border border-border/70 bg-background/50 p-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Runtime Behavior
-        </p>
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Sticky navigation</p>
-              <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
-            </div>
-            <Switch
-              checked={value.behavior?.sticky ?? false}
-              onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
-            />
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Transparent surface</p>
+            <p className="text-xs text-muted-foreground">
+              Ignore surface color and render transparent background.
+            </p>
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Collapse on scroll</p>
-              <p className="text-xs text-muted-foreground">
-                Shrink the Navigation header while scrolling down. Shared Section/page-shell sticky
-                blockers are owned separately.
-              </p>
-            </div>
-            <Switch
-              checked={value.behavior?.collapseOnScroll ?? false}
-              onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
-            />
-          </div>
+          <Switch
+            checked={behavior.transparent ?? false}
+            onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
+          />
         </div>
-      </div>
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Sticky navigation</p>
+            <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
+          </div>
+          <Switch
+            checked={behavior.sticky ?? false}
+            onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
+          />
+        </div>
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <p className="text-sm font-medium">Collapse on scroll</p>
+            <p className="text-xs text-muted-foreground">
+              Shrink the Navigation header while scrolling down.
+            </p>
+          </div>
+          <Switch
+            checked={behavior.collapseOnScroll ?? false}
+            onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
+          />
+        </div>
+      </EditorSection>
+    </div>
+  );
+}
+
+export function NavigationAdvancedEditor({ value }: WidgetEditorProps<NavigationData>) {
+  return (
+    <div className="space-y-4">
+      <WidgetEditorSection
+        id="navigation.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only navigation source and runtime ownership overview."
+      >
+        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-foreground">Links source</dt>
+            <dd>{value.linksSource ?? "manual"}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Menu key</dt>
+            <dd>{value.menuKey?.trim() ? "Custom menu configured" : "Not configured"}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">Manual links</dt>
+            <dd>{value.items.length}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-foreground">CTA</dt>
+            <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
+          </div>
+        </dl>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="navigation.advanced.layout-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Layout token summary"
+        description="Read-only layout tokens. Visual owns normal layout changes."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-layout-alignment"
+          label="Alignment"
+          path="layout.alignment"
+          value={formatTokenOptionLabel(
+            value.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "right"
+          )}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-layout-max-width"
+          label="Max width"
+          path="layout.maxWidth"
+          value={formatTokenOptionLabel(value.layout?.maxWidth ?? "6xl")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-layout-padding-y"
+          label="Vertical padding"
+          path="layout.paddingY"
+          value={formatTokenOptionLabel(value.layout?.paddingY ?? "4")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-layout-item-gap"
+          label="Links gap"
+          path="layout.itemGap"
+          value={formatTokenOptionLabel(value.layout?.itemGap ?? "4")}
+        />
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="navigation.advanced.behavior-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime behavior summary"
+        description="Read-only behavior diagnostics. Visual owns runtime toggles."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-sticky"
+          label="Sticky navigation"
+          path="behavior.sticky"
+          value={value.behavior?.sticky ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-collapse"
+          label="Collapse on scroll"
+          path="behavior.collapseOnScroll"
+          value={value.behavior?.collapseOnScroll ? "Enabled" : "Disabled"}
+        />
+      </WidgetEditorSection>
     </div>
   );
 }

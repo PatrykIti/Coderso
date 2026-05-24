@@ -370,8 +370,6 @@ export const navigationEditorContract: WidgetEditorContract = {
         "items",
         "cta.label",
         "cta.href",
-        "cta.target",
-        "cta.enabled",
       ],
       allowedDuplicateWritablePaths: navigationWizardVisualDuplicateAllowances,
     },

@@ -48,8 +48,11 @@ Notes:
 ### Advanced
 
 - Transport diagnostics
-- Raw integration metadata
-- Normalization action
+- Read-only integration metadata summary
+- Confirm-gated normalization support action
+
+Advanced reports whether raw transport fields are configured without exposing
+or editing the stored action URL or webhook ID. Visual owns integration setup.
 
 ## Runtime Contract
 
@@ -212,5 +215,7 @@ The renderer emits bounded data markers including:
 - Contract target: Wizard seeds signup copy, placeholder, consent, and submit
   label; Visual owns field labels, state copy, submission behavior, opt-in, and
   style; Advanced is read-only transport diagnostics.
-- Raw action URL/webhook ID and analytics-event editing drift is routed to
-  `TASK-336-19`.
+- TASK-336-19 converts Advanced raw action URL/webhook ID editing into
+  read-only configured/not-configured diagnostics plus a confirm-gated
+  normalization support action. Remaining Visual raw integration authoring is
+  tracked as follow-up drift.

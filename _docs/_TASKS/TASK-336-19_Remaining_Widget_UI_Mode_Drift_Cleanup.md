@@ -158,6 +158,25 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `contact` reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
   and `metadataGaps=0` in
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-contact-authoring-admin-2026-05-24.*`.
+- In Progress (2026-05-24): fifth implementation family converts Advanced
+  second-editor controls in `faq-accordion`, `newsletter`, and `navigation` to
+  read-only diagnostics. FAQ and Newsletter keep only two-step confirmed
+  normalization support actions. Navigation layout width/spacing and
+  sticky/collapse behavior move into Visual, Advanced redacts raw `menuKey` to
+  configured/not-configured status, and the contract no longer declares
+  nonexistent `cta.target` or `cta.enabled` paths. Claude and helper-agent
+  review agreed the one-time Wizard lifecycle remains separate under
+  `TASK-336-16`; this batch only addresses Advanced drift. FAQ Visual SEO copy
+  now uses beginner-facing search visibility wording instead of raw `JSON-LD`
+  terminology.
+- In Progress (2026-05-24): targeted authenticated Playwright admin smoke for
+  the Advanced read-only batch is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-advanced-readonly-admin-*-2026-05-24.*`.
+  `faq-accordion` and `navigation` report `adminFailures=0`,
+  `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. `newsletter`
+  reports `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with an
+  unchanged admin fixture gap (`block_select_missing`) that prevents opening
+  widget modes in the harness.
 
 ## Files to Change
 

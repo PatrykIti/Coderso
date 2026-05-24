@@ -1472,7 +1472,7 @@ test("NavigationVisualEditor reorders top-level links with move controls", async
   }
 });
 
-test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async () => {
+test("NavigationAdvancedEditor keeps layout and runtime behavior diagnostics read-only", async () => {
   const { NavigationAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
 
@@ -1480,14 +1480,12 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
     layout: {},
     behavior: {},
   });
+  const handleChange = vi.fn((next: NavigationData) => {
+    latestValue = next;
+  });
 
   const Harness = () => {
-    const [value, setValue] = useState<NavigationData>(latestValue);
-
-    const handleChange = (next: NavigationData) => {
-      latestValue = next;
-      setValue(next);
-    };
+    const [value] = useState<NavigationData>(latestValue);
 
     return (
       <NavigationAdvancedEditor
@@ -1502,34 +1500,25 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
   const view = mount(<Harness />);
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Runtime Behavior"));
-
-    setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "center");
-    const maxWidthSelect = findSelectByOptions(view.container, ["5xl", "6xl", "7xl"]);
-    const paddingYSelect = findSelectByOptions(view.container, ["2", "3", "4", "5"]);
-    const itemGapSelect = findSelectByOptions(view.container, ["2", "3", "4", "6"]);
-    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
-      expect(
-        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-    }
-    setSelectValue(maxWidthSelect, "7xl");
-    setSelectValue(paddingYSelect, "5");
-    setSelectValue(itemGapSelect, "6");
-
-    const checkboxes = findCheckboxes(view.container);
-    clickElement(checkboxes[0]);
-    clickElement(checkboxes[1]);
-
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Layout token summary")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Runtime behavior summary")
+    );
+    expect(findSelectByOptions(view.container, ["left", "center", "right"])).toBeUndefined();
+    expect(findSelectByOptions(view.container, ["5xl", "6xl", "7xl"])).toBeUndefined();
+    expect(findCheckboxes(view.container)).toHaveLength(0);
+    expect(handleChange).not.toHaveBeenCalled();
     expect(latestValue.layout).toEqual({
-      alignment: "center",
-      maxWidth: "7xl",
-      paddingY: "5",
-      itemGap: "6",
+      alignment: "right",
+      maxWidth: "6xl",
+      paddingY: "4",
+      itemGap: "4",
     });
     expect(latestValue.behavior).toMatchObject({
-      sticky: true,
-      collapseOnScroll: true,
+      sticky: false,
+      collapseOnScroll: false,
     });
   } finally {
     view.cleanup();
@@ -1669,27 +1658,15 @@ test("Navigation editors fall back to default source, items, behavior, and layou
 
   try {
     expect(
-      (
-        findSelectByOptions(advancedView.container, ["left", "center", "right"]) as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("right");
-    const maxWidthSelect = findSelectByOptions(advancedView.container, ["5xl", "6xl", "7xl"]);
-    const paddingYSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "5"]);
-    const itemGapSelect = findSelectByOptions(advancedView.container, ["2", "3", "4", "6"]);
-    for (const select of [maxWidthSelect, paddingYSelect, itemGapSelect]) {
-      expect(
-        Array.from((select as HTMLSelectElement).options).map((option) => option.value)
-      ).toContain("none");
-    }
-    expect((maxWidthSelect as HTMLSelectElement | null | undefined)?.value).toBe("6xl");
-    expect((paddingYSelect as HTMLSelectElement | undefined)?.value).toBe("4");
-    expect((itemGapSelect as HTMLSelectElement | undefined)?.value).toBe("4");
-    const toggles = findCheckboxes(advancedView.container);
-    expect(toggles[0]?.checked).toBe(false);
-    expect(toggles[1]?.checked).toBe(false);
+      findSelectByOptions(advancedView.container, ["left", "center", "right"])
+    ).toBeUndefined();
+    expect(findSelectByOptions(advancedView.container, ["5xl", "6xl", "7xl"])).toBeUndefined();
+    expect(findCheckboxes(advancedView.container)).toHaveLength(0);
+    expect(advancedView.container.textContent).toContain("Layout token summary");
+    expect(advancedView.container.textContent).toContain("right");
+    expect(advancedView.container.textContent).toContain("6xl");
+    expect(advancedView.container.textContent).toContain("Runtime behavior summary");
+    expect(advancedView.container.textContent).toContain("Disabled");
   } finally {
     advancedView.cleanup();
   }

@@ -15,7 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
-  faqAccordionDefaults,
   faqAccordionItemMax,
   resolveFaqAccordionSpacing,
   normalizeFaqAccordionData,
@@ -38,7 +37,11 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: FaqAccordionVariantId;
@@ -1149,14 +1152,15 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="SEO and structured data"
-        description="Optionally expose a public FAQPage schema for search engines."
+        title="Search visibility"
+        description="Optionally let search engines understand the published FAQ answers."
       >
         <div className="flex items-center justify-between rounded-md border px-3 py-2">
           <div>
-            <p className="text-sm font-medium">Emit FAQPage JSON-LD</p>
+            <p className="text-sm font-medium">Enable FAQ search enhancement</p>
             <p className="text-xs text-muted-foreground">
-              Publishes normalized question and answer text in page source.
+              Publishes normalized question and answer text for search engines without requiring
+              custom code.
             </p>
           </div>
           <Switch
@@ -1223,138 +1227,108 @@ export function FaqAccordionAdvancedEditor({
 }: WidgetEditorProps<FaqAccordionData>) {
   const normalized = normalizeValue(value);
   const items = normalizeFaqAccordionItems(normalized.items);
+  const [normalizationArmed, setNormalizationArmed] = useState(false);
+  const [normalizationMessage, setNormalizationMessage] = useState("");
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Open-state and fallback controls"
-        description="Technical controls for default open item normalization."
+        title="Open-state diagnostics"
+        description="Read-only summary of runtime open-state behavior."
       >
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
-          <div>
-            <p className="text-sm font-medium">Allow multiple items open</p>
-            <p className="text-xs text-muted-foreground">
-              Runtime keeps deterministic markers even when enabled.
-            </p>
-          </div>
-          <Switch
-            checked={Boolean(normalized.options?.allowMultipleOpen)}
-            onCheckedChange={(checked) =>
-              updateOptions(value, onChange, { allowMultipleOpen: Boolean(checked) })
-            }
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Default open item</p>
-          <Select
-            value={String(normalized.options?.defaultOpenIndex ?? 0)}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { defaultOpenIndex: Number(next) })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select default item" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="-1">None - all collapsed</SelectItem>
-              {items.map((item, index) => (
-                <SelectItem key={item.id ?? `advanced-open-${index + 1}`} value={String(index)}>
-                  {getFaqItemEditorLabel(item, index)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Use the bounded selector above for normal editing, or adjust the raw index below for
-            diagnostics.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Raw default open index</p>
-          <Input
-            type="number"
-            value={String(normalized.options?.defaultOpenIndex ?? 0)}
-            onChange={(event) =>
-              updateOptions(value, onChange, {
-                defaultOpenIndex: Number(event.target.value),
-              })
-            }
-            min={-1}
-            max={Math.max(0, items.length - 1)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Use <code>-1</code> to collapse all items by default.
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-allow-multiple-open"
+          label="Allow multiple items open"
+          path="options.allowMultipleOpen"
+          value={normalized.options?.allowMultipleOpen ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-default-open-item"
+          label="Default open item"
+          path="options.defaultOpenIndex"
+          value={
+            normalized.options?.defaultOpenIndex === -1
+              ? "All collapsed"
+              : items[normalized.options?.defaultOpenIndex ?? 0]
+                ? getFaqItemEditorLabel(
+                    items[normalized.options?.defaultOpenIndex ?? 0],
+                    normalized.options?.defaultOpenIndex ?? 0
+                  )
+                : "Fallback to first item"
+          }
+        />
       </EditorSection>
 
       <EditorSection
-        title="Technical style tokens"
-        description="Raw token values used by renderer for panel colors and spacing."
+        title="Style token diagnostics"
+        description="Read-only renderer token summary. Visual owns normal style changes."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Panel surface token</p>
-          <Input
-            value={normalized.style?.surface ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { surface: event.target.value })}
-            placeholder="var(--color-bg)"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Panel border token</p>
-          <Input
-            value={normalized.style?.border ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { border: event.target.value })}
-            placeholder="var(--color-border)"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Divider token</p>
-          <Input
-            value={normalized.style?.divider ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { divider: event.target.value })}
-            placeholder="var(--color-border)"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing token</p>
-          <Select
-            value={resolveFaqAccordionSpacing(normalized.style?.spacing)}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { spacing: next as FaqAccordionSpacing })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select spacing" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-surface-token"
+          label="Panel surface"
+          path="style.surface"
+          value={normalized.style?.surface || "Default surface"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-border-token"
+          label="Panel border"
+          path="style.border"
+          value={normalized.style?.border || "Default border"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-divider-token"
+          label="Divider"
+          path="style.divider"
+          value={normalized.style?.divider || "Default divider"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-spacing-token"
+          label="Spacing"
+          path="style.spacing"
+          value={resolveFaqAccordionSpacing(normalized.style?.spacing)}
+        />
       </EditorSection>
 
       <EditorSection
         title="Normalization and safeguards"
-        description="Apply deterministic fallback values for IDs and missing content."
+        description="Confirmed support action for deterministic payload cleanup."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(faqAccordionDefaults)}>
-            Reset to defaults
-          </Button>
-        </div>
+        <WidgetControlRow
+          id="faq-advanced-normalize-action"
+          label="Normalize payload"
+          ownership="action"
+          help="This support action rewrites missing IDs and fallback content after explicit confirmation."
+        >
+          {() => (
+            <Button
+              type="button"
+              variant={normalizationArmed ? "default" : "outline"}
+              onClick={() => {
+                if (!normalizationArmed) {
+                  setNormalizationArmed(true);
+                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
+                  return;
+                }
+
+                const before = JSON.stringify(value);
+                const next = normalizeValue(value);
+                const after = JSON.stringify(next);
+                onChange(next);
+                setNormalizationArmed(false);
+                setNormalizationMessage(
+                  before === after ? "Already normalized." : "Payload normalized."
+                );
+              }}
+            >
+              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
+            </Button>
+          )}
+        </WidgetControlRow>
+        {normalizationMessage ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {normalizationMessage}
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection title="Raw payload snapshot">

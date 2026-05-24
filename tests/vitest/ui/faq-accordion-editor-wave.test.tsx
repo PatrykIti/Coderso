@@ -707,7 +707,7 @@ test("FaqAccordion visual editor keeps item count capped when add item is used a
   }
 });
 
-test("FaqAccordion advanced editor normalizes malformed payloads, applies technical overrides, and resets to defaults", async () => {
+test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates normalization", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "compact",
@@ -738,50 +738,19 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
     expect(snapshot?.textContent).toContain('"spacing": "md"');
     expect(snapshot?.textContent).toContain('"id": "faq-2"');
 
-    const numberInput = view.container.querySelector("input[type='number']");
-    expect((numberInput as HTMLInputElement | null)?.max).toBe("1");
+    expect(view.container.querySelector("input[type='number']")).toBeNull();
+    expect(findSelectByOptions(view.container, ["-1", "0", "1"])).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
+    expect(findButtonByText(view.container, "Reset to defaults")).toBeUndefined();
 
-    clickElement(findButtonByText(view.container, "Normalize now"));
+    clickElement(findButtonByText(view.container, "Review normalization"));
+    expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");
+    clickElement(findButtonByText(view.container, "Confirm normalization"));
     expect(view.getValue().items[0]?.question).toBe("How long does setup take?");
     expect(view.getValue().items[1]?.id).toBe("faq-2");
     expect(view.getValue().options?.defaultOpenIndex).toBe(1);
     expect(view.getValue().style?.spacing).toBe("md");
-
-    const checkbox = findUnnamedCheckboxes(view.container)[0];
-    toggleCheckbox(checkbox, true);
-
-    setSelectValue(findSelectByOptions(view.container, ["-1", "0", "1"]), "-1");
-    setInputValue(view.container.querySelector("input[type='number']"), "-1");
-
-    const surfaceInput = findInputByPlaceholder(view.container, "var(--color-bg)");
-    const borderAndDividerInputs = findAllInputsByPlaceholder(
-      view.container,
-      "var(--color-border)"
-    );
-
-    setInputValue(surfaceInput, "var(--faq-surface)");
-    setInputValue(borderAndDividerInputs[0], "var(--faq-border)");
-    setInputValue(borderAndDividerInputs[1], "var(--faq-divider)");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
-
-    expect(view.getValue()).toEqual(
-      expect.objectContaining({
-        options: expect.objectContaining({
-          allowMultipleOpen: true,
-          defaultOpenIndex: -1,
-        }),
-        style: expect.objectContaining({
-          surface: "var(--faq-surface)",
-          border: "var(--faq-border)",
-          divider: "var(--faq-divider)",
-          spacing: "lg",
-        }),
-      })
-    );
-
-    clickElement(findButtonByText(view.container, "Reset to defaults"));
-    expect(view.getValue()).toEqual(faqAccordionDefaults);
-    expect(view.container.textContent).toContain("Frequently asked questions");
   } finally {
     view.cleanup();
   }
@@ -903,19 +872,16 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
           | undefined
       )?.value
     ).toBe("xl");
-    expect(
-      (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value
-    ).toBe("0");
-    expect(
-      (findUnnamedCheckboxes(view.container)[0] as HTMLInputElement | undefined)?.checked
-    ).toBe(false);
-    expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
-    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 0).value).toBe(
-      "#e2e8f0"
+    const advancedSection = Array.from(view.container.querySelectorAll("section")).find((section) =>
+      section.textContent?.includes("Style token diagnostics")
     );
-    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 1).value).toBe(
-      "#e2e8f0"
-    );
+    if (!advancedSection) throw new Error("Missing Advanced style diagnostics");
+    expect(advancedSection.querySelector("input[type='number']")).toBeNull();
+    expect(advancedSection.querySelectorAll("input[type='checkbox']")).toHaveLength(0);
+    expect(advancedSection.textContent).toContain("Default surface");
+    expect(advancedSection.textContent).toContain("Default border");
+    expect(advancedSection.textContent).toContain("Default divider");
+    expect(advancedSection.querySelectorAll("input[type='color']")).toHaveLength(0);
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/faqAccordion");

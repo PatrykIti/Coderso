@@ -355,8 +355,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(candidate.querySelectorAll("h3,p")).some(
+      (element) => normalizeText(element.textContent) === normalizeText(title)
     )
   );
   if (!(section instanceof HTMLElement)) {
@@ -920,26 +920,25 @@ test("Newsletter advanced editor summarizes the active transport and normalizes 
   });
 
   try {
-    expect(normalizeText(container.textContent)).toContain("active integration field: actionurl");
+    const diagnosticsText = normalizeText(container.textContent);
+    expect(diagnosticsText).toContain("active integration field: action url");
     expect(normalizeText(container.textContent)).toContain("action status: invalid");
-    expect(normalizeText(container.textContent)).toContain("ignored field: webhookid");
+    expect(diagnosticsText).toContain("ignored field: webhook id");
+    expect(diagnosticsText).not.toContain("active integration field: actionurl");
+    expect(diagnosticsText).not.toContain("ignored field: webhookid");
 
-    const metadataSection = getSectionByTitle(container, "Raw integration metadata");
-    setInputValue(
-      getInputByPlaceholder(metadataSection, "https://example.com/subscribe"),
-      "https://example.com/newsletter"
-    );
-    setInputValue(
-      getInputByPlaceholder(metadataSection, "webhook_newsletter_signup"),
-      "hook_override"
-    );
+    const metadataSection = getSectionByTitle(container, "Integration metadata summary");
+    expect(metadataSection.textContent).toContain("Configured");
+    expect(() => getInputByPlaceholder(metadataSection, "https://example.com/subscribe")).toThrow();
+    expect(() => getInputByPlaceholder(metadataSection, "webhook_newsletter_signup")).toThrow();
 
-    clickButton(getButtonsByText(container, "Normalize newsletter payload")[0]);
-
+    clickButton(getButtonsByText(container, "Review normalization")[0]);
+    expect(container.textContent).toContain("Review diagnostics, then confirm normalization.");
+    clickButton(getButtonsByText(container, "Confirm normalization")[0]);
     expect(getLatestValue()).toMatchObject({
       integration: {
-        actionUrl: "https://example.com/newsletter",
-        webhookId: "hook_override",
+        actionUrl: "example.com",
+        webhookId: "legacy-webhook",
       },
     });
     expect(onChangeSpy).toHaveBeenCalled();
@@ -974,10 +973,13 @@ test("Newsletter advanced editor explains that forms-runtime owns submit", async
   );
 
   try {
-    expect(normalizeText(view.container.textContent)).toContain("active integration field: formid");
-    expect(normalizeText(view.container.textContent)).toContain(
-      "ignored field: actionurl and webhookid stay inactive while the bound form owns submit."
+    const diagnosticsText = normalizeText(view.container.textContent);
+    expect(diagnosticsText).toContain("active integration field: bound forms record");
+    expect(diagnosticsText).toContain(
+      "ignored field: the action url and webhook id stay inactive while the bound form owns submit."
     );
+    expect(diagnosticsText).not.toContain("active integration field: formid");
+    expect(diagnosticsText).not.toContain("ignored field: actionurl and webhookid");
   } finally {
     view.cleanup();
   }

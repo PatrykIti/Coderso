@@ -37,7 +37,11 @@ import {
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import { resolveColorContrastAdvisory, resolveColorPickerValue } from "./ClearableFields";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: NewsletterVariantId;
@@ -1371,6 +1375,8 @@ export function NewsletterAdvancedEditor({
   const formsRuntimeActive = normalized.submission.mode === "forms-runtime";
   const actionTargetsSharedFormsRoute =
     action.status === "valid" && normalized.integration.actionUrl.trim().startsWith("/forms/");
+  const [normalizationArmed, setNormalizationArmed] = useState(false);
+  const [normalizationMessage, setNormalizationMessage] = useState("");
 
   return (
     <div className="space-y-4">
@@ -1381,7 +1387,15 @@ export function NewsletterAdvancedEditor({
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           <p>Resolved variant: {resolveNewsletterVariant(variant)}.</p>
           <p>Submission mode: {normalized.submission.mode}.</p>
-          <p>Active integration field: {formsRuntimeActive ? "formId" : transport.activeField}.</p>
+          <p>
+            Active integration field:{" "}
+            {formsRuntimeActive
+              ? "bound Forms record"
+              : transport.activeField === "actionUrl"
+                ? "action URL"
+                : "webhook ID"}
+            .
+          </p>
           <p>Action status: {formsRuntimeActive ? "runtime-owned" : action.status}.</p>
           <p>Method: {formsRuntimeActive ? "post via shared runtime" : transport.method}.</p>
           <p>
@@ -1400,51 +1414,84 @@ export function NewsletterAdvancedEditor({
           <p>
             Ignored field:{" "}
             {formsRuntimeActive
-              ? "actionUrl and webhookId stay inactive while the bound Form owns submit."
+              ? "the action URL and webhook ID stay inactive while the bound Form owns submit."
               : transport.activeField === "actionUrl"
-                ? "webhookId"
-                : "actionUrl"}
+                ? "webhook ID"
+                : "action URL"}
             .
           </p>
         </div>
       </EditorSection>
 
       <EditorSection
-        title="Raw integration metadata"
-        description="Expert-only transport metadata. The active field stays explicit in the diagnostics above."
+        title="Integration metadata summary"
+        description="Read-only transport metadata. Visual owns integration setup."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Action URL (raw)</p>
-            <Input
-              value={normalized.integration.actionUrl}
-              onChange={(event) =>
-                updateIntegration(value, onChange, { actionUrl: event.target.value })
-              }
-              placeholder="https://example.com/subscribe"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Webhook ID (raw)</p>
-            <Input
-              value={normalized.integration.webhookId}
-              onChange={(event) =>
-                updateIntegration(value, onChange, { webhookId: event.target.value })
-              }
-              placeholder="webhook_newsletter_signup"
-            />
-          </div>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-integration-mode"
+          label="Integration mode"
+          path="integration.mode"
+          value={normalized.integration.mode}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-action-status"
+          label="Action status"
+          path="integration.actionUrl"
+          value={formsRuntimeActive ? "Runtime-owned" : action.status}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-webhook"
+          label="Webhook"
+          path="integration.webhookId"
+          value={normalized.integration.webhookId ? "Configured" : "Not configured"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-method"
+          label="HTTP method"
+          path="integration.method"
+          value={formsRuntimeActive ? "POST via shared runtime" : transport.method}
+        />
       </EditorSection>
 
       <EditorSection
         title="Normalization and fallback"
-        description="Normalize the payload after editing raw metadata."
+        description="Confirmed support action for deterministic payload cleanup."
       >
-        <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
-          Normalize newsletter payload
-        </Button>
+        <WidgetControlRow
+          id="newsletter-advanced-normalize-action"
+          label="Normalize payload"
+          ownership="action"
+          help="This support action rewrites fallback values after explicit confirmation."
+        >
+          {() => (
+            <Button
+              type="button"
+              variant={normalizationArmed ? "default" : "outline"}
+              onClick={() => {
+                if (!normalizationArmed) {
+                  setNormalizationArmed(true);
+                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
+                  return;
+                }
+
+                const before = JSON.stringify(value);
+                const after = JSON.stringify(normalized);
+                onChange(normalized);
+                setNormalizationArmed(false);
+                setNormalizationMessage(
+                  before === after ? "Already normalized." : "Payload normalized."
+                );
+              }}
+            >
+              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
+            </Button>
+          )}
+        </WidgetControlRow>
+        {normalizationMessage ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {normalizationMessage}
+          </p>
+        ) : null}
       </EditorSection>
     </div>
   );

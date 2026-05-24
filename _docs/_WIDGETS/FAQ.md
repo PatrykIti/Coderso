@@ -34,7 +34,7 @@ Sections:
 4. Display behavior
 5. Layout and typography
 6. Colors and panel style
-7. SEO and structured data
+7. Search visibility
 
 Notes:
 - FAQ owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -47,11 +47,14 @@ Notes:
   - bounded bulk delete that keeps the min-one-item guard.
 
 ### Advanced (technical-only)
-- Open-state and fallback controls
-- bounded default-open selector plus raw index diagnostics
-- Technical style tokens
-- Normalization and safeguards
+- Read-only open-state diagnostics
+- Read-only style token diagnostics
+- Confirm-gated normalization support action
 - Raw payload snapshot
+
+Advanced does not duplicate Visual's open-state, spacing, or color controls.
+Visual owns normal editing; Advanced reports resolved runtime state and keeps
+payload repair behind explicit confirmation.
 
 ## Runtime Behavior Notes
 

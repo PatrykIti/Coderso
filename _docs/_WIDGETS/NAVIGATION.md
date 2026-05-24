@@ -44,17 +44,18 @@ Primary CTA jest renderowane tylko dla:
   6. Colors, Borders, Typography
   7. Surface and Runtime Behavior
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
-  mobile copy, Media Library logo replacement, and bounded style/brand controls
+  mobile copy, Media Library logo replacement, bounded style/brand controls,
+  layout width/spacing, sticky behavior, and collapse-on-scroll behavior
 - manual link, child link, logo and CTA destinations use the shared
   published-page destination picker. Existing custom/hash/external `href`
   values remain read-only replace/clear state in Visual.
 
 ### Advanced
 
-- tylko techniczne layout/runtime toggles
-- layout: `alignment`, `maxWidth`, `paddingY`, `itemGap`
-- runtime: `sticky`, `collapseOnScroll`
-- bez duplikowania content/style editing z Visual
+- read-only source/runtime summary
+- read-only layout token summary
+- read-only runtime behavior summary
+- bez duplikowania content/style/layout/behavior editing z Visual
 
 ## Supported Fields
 
@@ -277,5 +278,7 @@ Primary CTA jest renderowane tylko dla:
 - Contract target: Wizard seeds brand/menu source/links/CTA; Visual owns brand,
   links, CTA, mobile behavior, layout, and style; Advanced is read-only runtime
   diagnostics.
-- Raw source keys, slot copy, and writable Advanced layout behavior are routed
-  to `TASK-336-19`.
+- TASK-336-19 converts writable Advanced layout/runtime behavior into read-only
+  summaries, moves the friendly controls to Visual, redacts raw menu keys in
+  Advanced summaries, and removes nonexistent `cta.target`/`cta.enabled`
+  contract paths.

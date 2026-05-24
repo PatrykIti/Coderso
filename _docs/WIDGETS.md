@@ -152,6 +152,10 @@ Zasady:
   for a public map location/address or a known social profile name/handle and
   builds the stored string destination itself; legacy custom sources remain
   replace/clear state, and Advanced reports map metadata read-only.
+- Advanced cleanup slices convert second-editor controls into diagnostics.
+  FAQ Accordion and Newsletter keep only confirm-gated normalization support
+  actions in Advanced; Navigation layout/sticky/collapse controls live in
+  Visual and Advanced reports summaries only.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,
