@@ -13,6 +13,27 @@ vi.mock("@/services/mediaClient", () => ({
   listMediaCached: vi.fn(),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "careers-page",
+      title: "Careers",
+      slug: "careers",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "draft-page",
+      title: "Draft careers",
+      slug: "draft-careers",
+      status: "draft",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({ value, onChange }: { value: unknown; onChange?: (value: unknown) => void }) => (
     <div>
@@ -422,20 +443,28 @@ test("Team visual editor integrates social links into member panels and confirms
     expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
     expect(latestValue.members[0]?.socialLinks?.[0]?.url).toBeUndefined();
 
-    setInputValue(findInputsByPlaceholder(view.container, "LinkedIn")[0], "GitHub");
-    setInputValue(
-      findInputsByPlaceholder(view.container, "https://...")[0],
-      "https://github.com/ada"
+    setSelectValue(
+      findSelectByOptions(view.container, [
+        "linkedin",
+        "x",
+        "github",
+        "instagram",
+        "facebook",
+        "youtube",
+      ]),
+      "github"
     );
+    setInputValue(findInputsByPlaceholder(view.container, "ada-lovelace")[0], "ada");
     expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
       expect.objectContaining({
         label: "GitHub",
         url: "https://github.com/ada",
       })
     );
+    expect(findInputsByPlaceholder(view.container, "https://...")).toHaveLength(0);
 
-    const socialUrlInput = findInputsByPlaceholder(view.container, "https://...")[0];
-    const socialRow = socialUrlInput?.closest("div");
+    const socialProfileInput = findInputsByPlaceholder(view.container, "ada-lovelace")[0];
+    const socialRow = socialProfileInput?.closest("[data-team-social-link]");
     clickButtonByText(socialRow as ParentNode, "Remove");
     expect(view.container.textContent).toContain("Remove this social link from Ada?");
     clickButtonByText(socialRow as ParentNode, "Cancel");
@@ -534,6 +563,9 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
     const browseButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
       button.textContent?.includes("Browse media")
     );
+    expect(
+      findInputByPlaceholder(view.container, "https://images.unsplash.com/...")
+    ).toBeUndefined();
     clickElement(browseButtons[0]);
     expect(listMediaCached).toHaveBeenCalled();
     await flushAsyncUpdates();
@@ -546,9 +578,13 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
     setInputValue(findInputByPlaceholder(view.container, "Our team"), "Leadership");
     setInputValue(findInputByPlaceholder(view.container, "Meet the team"), "Meet leadership");
     setInputValue(findInputByPlaceholder(view.container, "See all positions"), "Join us");
-    setInputValue(findInputByPlaceholder(view.container, "/careers"), "javascript:alert(1)");
-    expect(view.container.textContent).toContain("Use a relative path, `#`, or full URL.");
-    setInputValue(findInputByPlaceholder(view.container, "/careers"), "/careers");
+    await flushAsyncUpdates();
+    setSelectValue(
+      findSelectByOptions(view.container, ["__coderso_link_empty__", "careers-page"]),
+      "careers-page"
+    );
+    expect(findInputByPlaceholder(view.container, "/careers")).toBeUndefined();
+    expect(view.container.textContent).toContain("Links to selected site page: Careers.");
 
     const styleSection = findSectionByTitle(view.container, "Section and card style");
     setInputValue(
@@ -636,7 +672,9 @@ test("Team visual editor clears stale picked-media state when media resolution f
     expect(listMediaCached).toHaveBeenCalled();
     expect(latestValue.members[0]?.photo).toBe("https://cdn.example.com/direct-ada.jpg");
     expect(view.container.textContent).toContain("Failed to resolve selected media.");
-    expect(view.container.textContent).toContain("Using a direct photo URL for this member.");
+    expect(view.container.textContent).toContain(
+      "A saved photo is configured. Browse media to replace it or clear the photo."
+    );
     expect(view.container.textContent).not.toContain("Selected: media-1");
   } finally {
     view.cleanup();

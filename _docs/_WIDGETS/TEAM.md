@@ -15,7 +15,7 @@ links, and an optional section CTA.
 - `compact-list`: stacked compact member rows
 - `spotlight`: highlighted lead member plus supporting profiles
 
-## Editor Modes (current after TASK-289 + TASK-256-06-04)
+## Editor Modes (current after TASK-289 + TASK-256-06-04 + TASK-336-19)
 
 ### Wizard (minimal onboarding)
 - Team layout variant
@@ -45,8 +45,14 @@ Notes:
   section.
 - Spotlight exposes an explicit `Set as spotlight lead` action plus an active
   lead badge.
-- Photo authoring supports direct URL entry, media-library picking, inline
-  preview, invalid-URL feedback, and clear-photo recovery.
+- CTA destination authoring uses the shared page-first destination picker.
+  Legacy custom destinations remain replace-or-clear compatibility state.
+- Photo authoring uses media-library picking, inline preview, saved-photo
+  compatibility copy, and clear-photo recovery. Visual no longer asks authors
+  to paste image URLs.
+- Social authoring uses known platform choices plus profile names/handles.
+  Legacy custom social destinations remain clearable compatibility state
+  instead of editable raw URL fields.
 - Color controls surface contrast advisories against the default theme text
   color for Team-local presentation changes.
 

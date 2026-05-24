@@ -63,8 +63,8 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
 2) Visual (warianty + podglad)
 - Uzytkownik wybiera wariant na podstawie podgladu.
 - To jest glowny tryb codziennej edycji:
-  - content i CTA
-  - media
+  - content i CTA przez przyjazne pola oraz pickery stron/linkow
+  - media przez biblioteke mediow i czytelne stany zastap/wyczysc
   - typography
   - colors/borders/background
 - Widget moze przejac kontrole nad selektorem wariantu (bez generycznego duplikatu)

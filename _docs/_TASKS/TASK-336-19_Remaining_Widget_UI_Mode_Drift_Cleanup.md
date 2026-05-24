@@ -264,6 +264,19 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Claude read-only review was attempted for this slice, but
   the process exited with code 143 and produced no review output.
+- In Progress (2026-05-24): eleventh implementation family targets Team Visual
+  CTA, photo, and social destination authoring. Team CTA now uses the shared
+  page-first `LinkDestinationField`, member photos are managed through the
+  Media Library with saved-photo replace/clear compatibility state, and member
+  social links use known platform choices plus profile names/handles instead
+  of visible raw URL fields. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-team-authoring-2026-05-24.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude review was attempted twice; the budget-limited
+  invocation exited with `Exceeded USD budget (1)`, and the no-budget retry
+  produced no output before being stopped with code 143.
 
 ## Files to Change
 

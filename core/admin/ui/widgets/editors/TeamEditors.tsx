@@ -40,6 +40,7 @@ import {
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader, resolveColorContrastAdvisory } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -112,6 +113,29 @@ const compactMobileBioOptions: Array<{ id: TeamCompactMobileBio; label: string }
 
 const memberCountOptions = Array.from({ length: teamMemberMax }, (_, index) => String(index + 1));
 const estimatedTeamTextColor = "#111827";
+
+type TeamSocialPlatform = "linkedin" | "x" | "github" | "instagram" | "facebook" | "youtube";
+
+const teamSocialPlatformOptions: Array<{
+  id: TeamSocialPlatform;
+  label: string;
+  placeholder: string;
+}> = [
+  { id: "linkedin", label: "LinkedIn", placeholder: "in/ada-lovelace" },
+  { id: "x", label: "X", placeholder: "ada_lovelace" },
+  { id: "github", label: "GitHub", placeholder: "ada-lovelace" },
+  { id: "instagram", label: "Instagram", placeholder: "ada_lovelace" },
+  { id: "facebook", label: "Facebook", placeholder: "ada.lovelace" },
+  { id: "youtube", label: "YouTube", placeholder: "ada-lovelace" },
+];
+
+const teamSocialPlatformLabels = Object.fromEntries(
+  teamSocialPlatformOptions.map((option) => [option.id, option.label])
+) as Record<TeamSocialPlatform, string>;
+
+const teamSocialProfilePlaceholders = Object.fromEntries(
+  teamSocialPlatformOptions.map((option) => [option.id, option.placeholder])
+) as Record<TeamSocialPlatform, string>;
 
 type HeaderData = NonNullable<TeamData["header"]>;
 type StyleData = NonNullable<TeamData["style"]>;
@@ -329,6 +353,137 @@ function updateMemberSocialLink(
   });
 }
 
+function detectTeamSocialPlatformFromHref(value: string | undefined): TeamSocialPlatform | null {
+  if (typeof value !== "string" || value.trim().length === 0) return null;
+
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "linkedin.com") return "linkedin";
+    if (host === "x.com" || host === "twitter.com") return "x";
+    if (host === "github.com") return "github";
+    if (host === "instagram.com") return "instagram";
+    if (host === "facebook.com") return "facebook";
+    if (host === "youtube.com") return "youtube";
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function detectTeamSocialPlatformFromLabel(value: string | undefined): TeamSocialPlatform | null {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!normalized) return null;
+  if (normalized.includes("linkedin")) return "linkedin";
+  if (normalized === "x" || normalized.includes("twitter")) return "x";
+  if (normalized.includes("github")) return "github";
+  if (normalized.includes("instagram")) return "instagram";
+  if (normalized.includes("facebook")) return "facebook";
+  if (normalized.includes("youtube")) return "youtube";
+  return null;
+}
+
+function resolveTeamSocialPlatform(link: TeamSocialLink): TeamSocialPlatform | "custom" {
+  return (
+    detectTeamSocialPlatformFromHref(link.url) ??
+    detectTeamSocialPlatformFromLabel(link.label) ??
+    "custom"
+  );
+}
+
+function encodeTeamSocialPath(value: string) {
+  return value
+    .split("/")
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+}
+
+function readTeamSocialProfile(platform: TeamSocialPlatform | "custom", href: string | undefined) {
+  if (platform === "custom" || typeof href !== "string" || href.trim().length === 0) return "";
+
+  try {
+    const parsed = new URL(href);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const parts = parsed.pathname.split("/").filter(Boolean);
+
+    switch (platform) {
+      case "linkedin":
+        if (host !== "linkedin.com") return "";
+        if ((parts[0] === "in" || parts[0] === "company") && parts[1]) {
+          return `${parts[0]}/${parts[1]}`;
+        }
+        return "";
+      case "x":
+        return host === "x.com" || host === "twitter.com" ? (parts[0] ?? "") : "";
+      case "github":
+        return host === "github.com" ? (parts[0] ?? "") : "";
+      case "instagram":
+        return host === "instagram.com" ? (parts[0] ?? "") : "";
+      case "facebook":
+        return host === "facebook.com" ? (parts[0] ?? "") : "";
+      case "youtube":
+        return host === "youtube.com" ? (parts[0]?.replace(/^@/, "") ?? "") : "";
+    }
+  } catch {
+    return "";
+  }
+}
+
+function buildTeamSocialHref(platform: TeamSocialPlatform, profile: string | undefined) {
+  const trimmedProfile = typeof profile === "string" ? profile.trim() : "";
+  if (!trimmedProfile) return "";
+
+  let profileSource = trimmedProfile;
+  if (/^https?:\/\//i.test(trimmedProfile)) {
+    profileSource = readTeamSocialProfile(platform, trimmedProfile);
+    if (!profileSource) return "";
+  }
+
+  const handle = profileSource.replace(/^@+/, "").replace(/^\/+|\/+$/g, "");
+  if (!handle) return "";
+
+  switch (platform) {
+    case "linkedin": {
+      const parts = handle.split("/").filter(Boolean);
+      if ((parts[0] === "in" || parts[0] === "company") && parts[1]) {
+        return `https://www.linkedin.com/${parts[0]}/${encodeURIComponent(parts[1])}`;
+      }
+      return `https://www.linkedin.com/in/${encodeURIComponent(handle)}`;
+    }
+    case "x":
+      return `https://x.com/${encodeURIComponent(handle)}`;
+    case "github":
+      return `https://github.com/${encodeURIComponent(handle.split("/")[0] ?? "")}`;
+    case "instagram":
+      return `https://www.instagram.com/${encodeURIComponent(handle)}`;
+    case "facebook":
+      return `https://www.facebook.com/${encodeTeamSocialPath(handle)}`;
+    case "youtube":
+      return `https://www.youtube.com/@${encodeURIComponent(handle)}`;
+  }
+}
+
+function updateMemberSocialPlatform(
+  value: TeamData,
+  onChange: (next: TeamData) => void,
+  memberIndex: number,
+  socialIndex: number,
+  nextPlatform: TeamSocialPlatform
+) {
+  const member = normalizeTeamMembers(value.members)[memberIndex];
+  const link = member ? normalizeTeamSocialLinks(member.socialLinks)[socialIndex] : undefined;
+  if (!link) return;
+
+  const currentPlatform = resolveTeamSocialPlatform(link);
+  const profile = readTeamSocialProfile(currentPlatform, link.url);
+  updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+    label: teamSocialPlatformLabels[nextPlatform],
+    url: buildTeamSocialHref(nextPlatform, profile),
+  });
+}
+
 function setSpotlightLead(value: TeamData, onChange: (next: TeamData) => void, memberId: string) {
   updateValue(value, onChange, (current) => ({
     ...current,
@@ -514,7 +669,7 @@ function resolveTeamPhotoState(
   member: TeamMember,
   selectedMediaId: string | null | undefined
 ): {
-  kind: "empty" | "invalid" | "url" | "picked";
+  kind: "empty" | "invalid" | "saved" | "picked";
   previewUrl?: string;
   message: string;
 } {
@@ -526,11 +681,11 @@ function resolveTeamPhotoState(
 
   if (safePhoto) {
     return {
-      kind: selectedMediaId ? "picked" : "url",
+      kind: selectedMediaId ? "picked" : "saved",
       previewUrl: safePhoto,
       message: selectedMediaId
         ? "Using the selected media-library image for this member."
-        : "Using a direct photo URL for this member.",
+        : "A saved photo is configured. Browse media to replace it or clear the photo.",
     };
   }
 
@@ -538,7 +693,7 @@ function resolveTeamPhotoState(
     return {
       kind: "invalid",
       message:
-        "Use a relative path or http/https image URL. Invalid values fall back to initials in runtime.",
+        "The saved photo cannot be used. Runtime falls back to initials until it is cleared.",
     };
   }
 
@@ -579,6 +734,102 @@ function TeamPhotoPreview({
         </div>
       </div>
       {state.kind === "invalid" ? <p className="text-xs text-amber-700">{state.message}</p> : null}
+    </div>
+  );
+}
+
+function TeamSocialProfileField({
+  value,
+  onChange,
+  memberIndex,
+  socialIndex,
+  link,
+}: {
+  value: TeamData;
+  onChange: (next: TeamData) => void;
+  memberIndex: number;
+  socialIndex: number;
+  link: TeamSocialLink;
+}) {
+  const platform = resolveTeamSocialPlatform(link);
+  const profile = readTeamSocialProfile(platform, link.url);
+  const hasSavedDestination = (link.url ?? "").trim().length > 0;
+  const hasLegacyDestination = hasSavedDestination && profile.length === 0;
+  const hasUnsafeDestination =
+    hasSavedDestination &&
+    !normalizeWidgetSafeHref(link.url, {
+      allowRelative: true,
+      allowHash: true,
+      allowHttp: true,
+    });
+
+  if (platform === "custom") {
+    return (
+      <div className="space-y-2 rounded-md border border-dashed bg-muted/20 p-3">
+        <p className="text-xs font-semibold uppercase text-muted-foreground">Profile destination</p>
+        <p className="text-xs text-muted-foreground">
+          Pick a known platform to create a safe destination from a profile name. Saved custom
+          destinations stay compatible and can be cleared here.
+        </p>
+        {hasSavedDestination ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, { url: "" })
+            }
+          >
+            Clear saved destination
+          </Button>
+        ) : null}
+        {hasUnsafeDestination ? (
+          <p className="text-xs text-amber-700">
+            The saved destination is unsafe and will not render publicly.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase text-muted-foreground">Profile name</p>
+      <Input
+        value={profile}
+        onChange={(event) =>
+          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+            url: buildTeamSocialHref(platform, event.target.value),
+          })
+        }
+        placeholder={teamSocialProfilePlaceholders[platform]}
+      />
+      <p className="text-xs text-muted-foreground">
+        Enter only the public profile name or handle. The editor builds the safe destination.
+      </p>
+      {hasLegacyDestination ? (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <p>
+            A saved destination is still stored for this social link. Replace it with a profile name
+            or clear it before publishing changes.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, { url: "" })
+            }
+          >
+            Clear saved destination
+          </Button>
+        </div>
+      ) : null}
+      {hasUnsafeDestination ? (
+        <p className="text-xs text-amber-700">
+          The saved destination is unsafe and will not render publicly.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -803,12 +1054,6 @@ export function TeamVisualEditor({
     }
   };
 
-  const handlePhotoInputChange = (memberId: string, memberIndex: number, nextValue: string) => {
-    clearSelectedPhotoMedia(memberId);
-    clearPhotoPickerError(memberId);
-    updateMember(value, onChange, memberIndex, { photo: nextValue });
-  };
-
   const handleClearPhoto = (memberId: string, memberIndex: number) => {
     clearSelectedPhotoMedia(memberId);
     clearPhotoPickerError(memberId);
@@ -949,23 +1194,30 @@ export function TeamVisualEditor({
               placeholder="See all positions"
             />
           </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA URL</p>
-            <Input
-              value={cta.url ?? ""}
-              onChange={(event) => updateCta(value, onChange, { url: event.target.value })}
-              placeholder="/careers"
-            />
-          </div>
+          <LinkDestinationField
+            fieldId="team-cta-destination"
+            label="CTA destination"
+            value={cta.url}
+            onChange={(next) => updateCta(value, onChange, { url: next })}
+            emptyLabel="No destination"
+            helpText="Pick a site page for the Team CTA. Hand-typed links from older edits stay until you replace or clear them."
+            feedback={
+              (cta.url ?? "").trim().length > 0 && !ctaHref
+                ? "The saved CTA destination is unsafe and will not render publicly."
+                : null
+            }
+            feedbackTone="destructive"
+          />
         </div>
         {showCtaGuidance && !(cta.label ?? "").trim().length ? (
-          <p className="text-xs text-muted-foreground">CTA requires both a label and a safe URL.</p>
+          <p className="text-xs text-muted-foreground">
+            CTA requires both a label and a safe destination.
+          </p>
         ) : null}
         {showCtaGuidance && !(cta.url ?? "").trim().length ? (
-          <p className="text-xs text-muted-foreground">CTA requires both a label and a safe URL.</p>
-        ) : null}
-        {(cta.url ?? "").trim().length > 0 && !ctaHref ? (
-          <p className="text-xs text-destructive">Use a relative path, `#`, or full URL.</p>
+          <p className="text-xs text-muted-foreground">
+            CTA requires both a label and a safe destination.
+          </p>
         ) : null}
       </EditorSection>
 
@@ -1113,13 +1365,6 @@ export function TeamVisualEditor({
                   member={member}
                   selectedMediaId={selectedPhotoMediaIds[memberId] ?? null}
                 />
-                <Input
-                  value={member.photo ?? ""}
-                  onChange={(event) =>
-                    handlePhotoInputChange(memberId, memberIndex, event.target.value)
-                  }
-                  placeholder="https://images.unsplash.com/..."
-                />
                 <div className="flex flex-wrap gap-2">
                   <MediaPicker
                     value={selectedPhotoMediaIds[memberId] ?? null}
@@ -1164,6 +1409,7 @@ export function TeamVisualEditor({
                   <div className="space-y-2">
                     {socialLinks.map((link, socialIndex) => {
                       const socialId = link.id ?? `social-${socialIndex + 1}`;
+                      const platform = resolveTeamSocialPlatform(link);
                       const pendingSocialRemoval =
                         activePendingRemoval?.type === "social" &&
                         activePendingRemoval.memberId === memberId &&
@@ -1172,70 +1418,107 @@ export function TeamVisualEditor({
                       return (
                         <div
                           key={socialId}
-                          className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-[1fr_1fr_auto]"
+                          className="space-y-3 rounded-md border p-3"
+                          data-team-social-link={socialId}
                         >
-                          <Input
-                            value={link.label}
-                            onChange={(event) =>
-                              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
-                                label: event.target.value,
-                              })
-                            }
-                            placeholder="LinkedIn"
-                          />
-                          <Input
-                            value={link.url ?? ""}
-                            onChange={(event) =>
-                              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
-                                url: event.target.value,
-                              })
-                            }
-                            placeholder="https://..."
-                          />
-                          {pendingSocialRemoval ? (
-                            <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-medium">Social link {socialIndex + 1}</p>
+                            {pendingSocialRemoval ? (
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={confirmPendingRemoval}
+                                >
+                                  Confirm remove
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setPendingRemoval(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={confirmPendingRemoval}
+                                onClick={() =>
+                                  setPendingRemoval({ type: "social", memberId, socialId })
+                                }
                               >
-                                Confirm remove
+                                Remove
                               </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPendingRemoval(null)}
+                            )}
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold uppercase text-muted-foreground">
+                                Platform
+                              </p>
+                              <Select
+                                value={platform}
+                                onValueChange={(next) =>
+                                  updateMemberSocialPlatform(
+                                    value,
+                                    onChange,
+                                    memberIndex,
+                                    socialIndex,
+                                    next as TeamSocialPlatform
+                                  )
+                                }
                               >
-                                Cancel
-                              </Button>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select platform" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {platform === "custom" ? (
+                                    <SelectItem value="custom" disabled>
+                                      Custom saved destination
+                                    </SelectItem>
+                                  ) : null}
+                                  {teamSocialPlatformOptions.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setPendingRemoval({ type: "social", memberId, socialId })
-                              }
-                            >
-                              Remove
-                            </Button>
-                          )}
-                          {(link.url ?? "").trim().length > 0 &&
-                          !normalizeWidgetSafeHref(link.url, {
-                            allowRelative: true,
-                            allowHash: true,
-                            allowHttp: true,
-                          }) ? (
-                            <p className="text-xs text-amber-700 sm:col-span-2">
-                              Use a relative path, `#`, or http/https URL. Unsafe links are not
-                              rendered publicly.
-                            </p>
-                          ) : null}
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold uppercase text-muted-foreground">
+                                Public label
+                              </p>
+                              <Input
+                                value={link.label}
+                                onChange={(event) =>
+                                  updateMemberSocialLink(
+                                    value,
+                                    onChange,
+                                    memberIndex,
+                                    socialIndex,
+                                    {
+                                      label: event.target.value,
+                                    }
+                                  )
+                                }
+                                placeholder="LinkedIn"
+                              />
+                            </div>
+                          </div>
+                          <TeamSocialProfileField
+                            value={value}
+                            onChange={onChange}
+                            memberIndex={memberIndex}
+                            socialIndex={socialIndex}
+                            link={link}
+                          />
                           {pendingSocialRemoval ? (
-                            <p className="text-xs text-muted-foreground sm:col-span-2">
+                            <p className="text-xs text-muted-foreground">
                               Remove this social link from {memberName}?
                             </p>
                           ) : null}

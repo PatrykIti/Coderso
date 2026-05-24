@@ -825,6 +825,29 @@ authoring drift.
   separately confirmed the CTA, default `#`, color-token, and contract drifts
   addressed here.
 
+## TASK-336-19 Team Visual Destination Authoring Evidence (2026-05-24)
+
+The eleventh TASK-336-19 implementation family targets Team Visual CTA, photo,
+and social destination authoring drift.
+
+- Team Visual no longer exposes raw `CTA URL`, direct photo URL, or social
+  `https://...` inputs. CTA destination authoring uses the shared page-first
+  `LinkDestinationField`, member photo authoring uses Media Library picking,
+  and social authoring uses known platform choices plus profile names/handles.
+- Saved custom CTA/photo/social destinations stay backward-compatible as
+  replace-or-clear state instead of editable raw URL fields.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-team-authoring-2026-05-24.*`.
+  Team reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude review was attempted twice for this slice. The first invocation
+  exited with `Exceeded USD budget (1)`; the no-budget retry produced no output
+  before being stopped with code 143. No Claude blocker output was available
+  for this Team slice.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
