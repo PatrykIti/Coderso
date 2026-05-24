@@ -263,8 +263,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(candidate.querySelectorAll("h1,h2,h3,h4,p,span")).some(
+      (element) => normalizeText(element.textContent) === normalizeText(title)
     )
   );
   if (!(section instanceof HTMLElement)) {
@@ -403,7 +403,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FormEmbed wizard editor normalizes content defaults and updates layout and field toggles", async () => {
+test("FormEmbed wizard owns only form selection and setup diagnostics", async () => {
   formsState.current = {
     items: [makeForm({ id: "form-public", name: "Public contact" })],
     isLoading: false,
@@ -415,131 +415,44 @@ test("FormEmbed wizard editor normalizes content defaults and updates layout and
     editor: "wizard",
     initialValue: {
       formId: "   ",
-      title: "   ",
-      description: "   ",
-      submitLabel: "   ",
+      title: "Existing title",
       layout: {
         alignment: "bad" as never,
         width: "bad" as never,
-        spacing: "bad" as never,
-        buttonAlignment: "bad" as never,
       },
-      fields: {},
-      resolved: {
-        successMessage: "Resolved fallback",
+      style: {
+        background: "#ffffff",
       },
     },
   });
 
   try {
+    const formSection = getSectionByTitle(view.container, "Form selection");
+    const diagnosticsSection = getSectionByTitle(view.container, "Setup diagnostics");
+
+    expect(formSection.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(formSection.getAttribute("data-widget-editor-section-role")).toBe("setup");
+    expect(diagnosticsSection.getAttribute("data-widget-control-ownership")).toBeNull();
     expect(view.container.textContent).toContain("Select form");
+    expect(view.container.textContent).not.toContain("Content");
+    expect(view.container.textContent).not.toContain("Layout");
+    expect(view.container.textContent).not.toContain("Field labels");
+    expect(view.container.textContent).not.toContain("Style");
+    expect(view.container.textContent).not.toContain("Submit behavior");
 
-    const contentSection = getSectionByTitle(view.container, "Content");
-    const contentInputs = Array.from(contentSection.querySelectorAll("input")).filter(
-      (element): element is HTMLInputElement =>
-        element instanceof HTMLInputElement && element.type !== "color"
-    );
-    const descriptionTextarea = getTextareaByPlaceholder(
-      contentSection,
-      "Optional description text"
-    );
-    const successTextarea = getTextareaByPlaceholder(
-      contentSection,
-      "Leave blank to use form fallback"
-    );
+    const writablePaths = Array.from(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    ).map((element) => element.getAttribute("data-widget-control-path"));
+    expect(writablePaths).toEqual(["formId"]);
 
-    expect(contentInputs[0]?.value).toBe("");
-    expect(contentInputs[1]?.value).toBe("Send message");
-    expect(descriptionTextarea.value).toBe("");
-    expect(successTextarea.value).toBe("Resolved fallback");
-
-    const layoutSection = getSectionByTitle(view.container, "Layout");
-    const layoutSelects = getSelects(layoutSection);
-
-    expect(Array.from(layoutSelects[1]!.options).map((option) => option.value)).toContain("none");
-    expect(Array.from(layoutSelects[2]!.options).map((option) => option.value)).toContain("none");
-    expect(layoutSelects.slice(0, 4).map((select) => select.value)).toEqual([
-      "start",
-      "md",
-      "md",
-      "start",
-    ]);
-    expect(layoutSelects.slice(4).map((select) => select.value)).toEqual(["sm", "md", "md"]);
-
-    const fieldsSection = getSectionByTitle(view.container, "Field labels");
-    const fieldToggles = getCheckboxes(fieldsSection);
-
-    expect(fieldToggles.map((toggle) => toggle.checked)).toEqual([true, true]);
-
-    setSelectValue(
-      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
-      "form-public"
-    );
-    expect(view.getLatestValue()).toMatchObject({
-      formId: "form-public",
-      layout: {
-        alignment: "start",
-        width: "md",
-        spacing: "md",
-        buttonAlignment: "start",
-      },
-      fields: {
-        showLabels: true,
-        showRequiredIndicator: true,
-      },
-    });
-
-    setSelectValue(layoutSelects[0], "");
-    setSelectValue(layoutSelects[1], "");
-    setSelectValue(layoutSelects[2], "");
-    setSelectValue(layoutSelects[3], "");
-
-    expect(view.getLatestValue()).toMatchObject({
-      layout: {
-        alignment: "start",
-        width: "md",
-        spacing: "md",
-        buttonAlignment: "start",
-      },
-    });
-
-    setInputValue(contentInputs[0], "Lead form");
-    setTextareaValue(descriptionTextarea, "Ask anything");
-    setInputValue(contentInputs[1], "Request demo");
-    setTextareaValue(successTextarea, "We received your request.");
-    setSelectValue(layoutSelects[0], "center");
-    setSelectValue(layoutSelects[1], "xl");
-    setSelectValue(layoutSelects[2], "lg");
-    setSelectValue(layoutSelects[3], "end");
-    setCheckboxValue(fieldToggles[0], false);
-    setCheckboxValue(fieldToggles[1], false);
-
-    expect(view.getLatestValue()).toMatchObject({
-      fields: {
-        showLabels: false,
-        showRequiredIndicator: false,
-      },
-    });
-
-    setCheckboxValue(fieldToggles[0], true);
-    setCheckboxValue(fieldToggles[1], true);
+    setSelectValue(getSelects(formSection)[0], "form-public");
 
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(view.getLatestValue()).toMatchObject({
       formId: "form-public",
-      title: "Lead form",
-      description: "Ask anything",
-      submitLabel: "Request demo",
-      successMessage: "We received your request.",
-      layout: {
-        alignment: "center",
-        width: "xl",
-        spacing: "lg",
-        buttonAlignment: "end",
-      },
-      fields: {
-        showLabels: true,
-        showRequiredIndicator: true,
+      title: "Existing title",
+      style: {
+        background: "#ffffff",
       },
     });
   } finally {
@@ -547,18 +460,13 @@ test("FormEmbed wizard editor normalizes content defaults and updates layout and
   }
 });
 
-test("FormEmbed visual editor shows the internal access warning and updates style controls", async () => {
+test("FormEmbed visual owns public copy and presentation without changing selected form", async () => {
   formsState.current = {
     items: [
       makeForm({
         id: "form-internal",
         name: "Staff intake",
         submissionAccess: "internal",
-      }),
-      makeForm({
-        id: "form-public",
-        name: "Public request",
-        submissionAccess: "public",
       }),
     ],
     isLoading: false,
@@ -582,8 +490,68 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
   });
 
   try {
+    expect(() => getSectionByTitle(view.container, "Form selection")).toThrow();
+    expect(view.container.textContent).toContain("Selected form");
     expect(view.container.textContent).toContain("Internal submissions require");
     expect(view.container.textContent).toContain("forms.submit");
+
+    const writablePaths = Array.from(
+      view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
+    ).map((element) => element.getAttribute("data-widget-control-path"));
+    expect(writablePaths).toEqual(
+      expect.arrayContaining([
+        "title",
+        "description",
+        "submitLabel",
+        "successMessage",
+        "layout.alignment",
+        "layout.width",
+        "layout.spacing",
+        "layout.buttonAlignment",
+        "fields.showLabels",
+        "fields.showRequiredIndicator",
+        "style.background",
+        "style.surface",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+        "style.inputSize",
+        "navigation.backLabel",
+        "navigation.nextLabel",
+        "submitBehavior.loadingLabel",
+        "submitBehavior.successBehavior",
+      ])
+    );
+    expect(writablePaths).not.toContain("formId");
+
+    const contentSection = getSectionByTitle(view.container, "Content");
+    const contentInputs = Array.from(contentSection.querySelectorAll("input")).filter(
+      (element): element is HTMLInputElement =>
+        element instanceof HTMLInputElement && element.type !== "color"
+    );
+    const descriptionTextarea = getTextareaByPlaceholder(
+      contentSection,
+      "Optional description text"
+    );
+    const successTextarea = getTextareaByPlaceholder(
+      contentSection,
+      "Leave blank to use form fallback"
+    );
+
+    setInputValue(contentInputs[0], "Lead form");
+    setTextareaValue(descriptionTextarea, "Ask anything");
+    setInputValue(contentInputs[1], "Request demo");
+    setTextareaValue(successTextarea, "We received your request.");
+
+    const layoutSelects = getSelects(getSectionByTitle(view.container, "Layout"));
+    setSelectValue(layoutSelects[0], "center");
+    setSelectValue(layoutSelects[1], "xl");
+    setSelectValue(layoutSelects[2], "lg");
+    setSelectValue(layoutSelects[3], "end");
+
+    const fieldToggles = getCheckboxes(getSectionByTitle(view.container, "Field labels"));
+    setCheckboxValue(fieldToggles[0], false);
+    setCheckboxValue(fieldToggles[1], false);
 
     const styleSection = getSectionByTitle(view.container, "Style");
     const colorInputs = getColorInputs(styleSection);
@@ -601,34 +569,6 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
     expect(styleSection.textContent).toContain("Custom token active");
     expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
     expect(Array.from(styleSelects[2]!.options).map((option) => option.value)).toContain("none");
-    expect(styleSelects.slice(0, 3).map((select) => select.value)).toEqual(["1", "md", "md"]);
-    expect(styleSelects.slice(3).map((select) => select.value)).toEqual(["md", "semibold", "2"]);
-
-    setSelectValue(
-      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
-      "form-public"
-    );
-    expect(view.container.textContent).not.toContain("Internal submissions require");
-    expect(view.getLatestValue()).toMatchObject({
-      formId: "form-public",
-      style: {
-        borderWidth: "1",
-        radius: "md",
-        inputSize: "md",
-      },
-    });
-
-    setSelectValue(styleSelects[0], "");
-    setSelectValue(styleSelects[1], "");
-    setSelectValue(styleSelects[2], "");
-
-    expect(view.getLatestValue()).toMatchObject({
-      style: {
-        borderWidth: "1",
-        radius: "md",
-        inputSize: "md",
-      },
-    });
 
     setInputValue(backgroundTextInput, "#abcdef");
     setInputValue(surfaceTextInput, "var(--surface-card)");
@@ -637,8 +577,39 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
     setSelectValue(styleSelects[1], "lg");
     setSelectValue(styleSelects[2], "sm");
 
+    const navigationInputs = Array.from(
+      getSectionByTitle(view.container, "Multi-step navigation").querySelectorAll("input")
+    ).filter(
+      (element): element is HTMLInputElement =>
+        element instanceof HTMLInputElement && element.type !== "checkbox"
+    );
+    setInputValue(navigationInputs[0], "Previous");
+    setInputValue(navigationInputs[1], "Continue");
+    setInputValue(navigationInputs[2], "14");
+
+    const submitSection = getSectionByTitle(view.container, "Submit behavior");
+    const submitInputs = Array.from(submitSection.querySelectorAll("input")).filter(
+      (element): element is HTMLInputElement => element instanceof HTMLInputElement
+    );
+    setInputValue(submitInputs[0], "Sending...");
+    setSelectValue(getSelects(submitSection)[0], "show-message-keep-form");
+
     expect(view.getLatestValue()).toMatchObject({
-      formId: "form-public",
+      formId: "form-internal",
+      title: "Lead form",
+      description: "Ask anything",
+      submitLabel: "Request demo",
+      successMessage: "We received your request.",
+      layout: {
+        alignment: "center",
+        width: "xl",
+        spacing: "lg",
+        buttonAlignment: "end",
+      },
+      fields: {
+        showLabels: false,
+        showRequiredIndicator: false,
+      },
       style: {
         background: "#abcdef",
         surface: "var(--surface-card)",
@@ -647,20 +618,14 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
         radius: "lg",
         inputSize: "sm",
       },
-    });
-
-    const clearButtons = Array.from(styleSection.querySelectorAll("button"));
-    React.act(() => {
-      (clearButtons[2] as HTMLButtonElement | undefined)?.click();
-    });
-
-    expect(view.getLatestValue()).toMatchObject({
-      style: {
-        background: "#abcdef",
-        surface: "var(--surface-card)",
-        borderWidth: "2",
-        radius: "lg",
-        inputSize: "sm",
+      navigation: {
+        backLabel: "Previous",
+        nextLabel: "Continue",
+        savedProgressTtlDays: 14,
+      },
+      submitBehavior: {
+        loadingLabel: "Sending...",
+        successBehavior: "show-message-keep-form",
       },
     });
   } finally {
@@ -668,55 +633,55 @@ test("FormEmbed visual editor shows the internal access warning and updates styl
   }
 });
 
-test("FormEmbed advanced editor covers loading and empty form states before selecting an internal form", async () => {
+test("FormEmbed advanced is read-only and redacts runtime security values", async () => {
   formsState.current = {
-    items: [],
-    isLoading: true,
+    items: [
+      makeForm({
+        id: "form-public",
+        name: "Public request",
+        submissionAccess: "public",
+      }),
+    ],
+    isLoading: false,
     error: null,
     refresh: vi.fn(),
   };
 
   const view = await renderEditor({
     editor: "advanced",
-    initialValue: {},
+    initialValue: {
+      formId: "form-public",
+      resolved: {
+        formName: "Public request",
+        submissionAccess: "public",
+        submissionNonce: "raw-nonce-secret",
+        botProtection: {
+          provider: "recaptcha_v3",
+          siteKey: "site-key-1",
+          action: "public_write",
+        },
+      },
+    },
   });
 
   try {
-    const formSection = getSectionByTitle(view.container, "Form selection");
-    const formSelect = getSelects(formSection)[0];
-
-    expect(view.container.textContent).toContain("Loading forms...");
-    expect(formSelect.options).toHaveLength(1);
-    expect(formSelect.options[0]?.textContent).toBe("Loading forms...");
-    expect(formSelect.options[0]?.disabled).toBe(true);
-
-    formsState.current = {
-      items: [
-        makeForm({
-          id: "form-internal",
-          name: "Internal request",
-          submissionAccess: "internal",
-        }),
-      ],
-      isLoading: false,
-      error: null,
-      refresh: vi.fn(),
-    };
-
-    await view.rerender();
-
-    expect(view.container.textContent).toContain("Select form");
-
-    setSelectValue(
-      getSelects(getSectionByTitle(view.container, "Form selection"))[0],
-      "form-internal"
+    expect(view.container.textContent).toContain("Runtime diagnostics");
+    expect(view.container.textContent).toContain("Submission security");
+    expect(view.container.textContent).toContain("Normalized payload snapshot");
+    expect(view.container.textContent).toContain("Contract summary");
+    expect(() => getSectionByTitle(view.container, "Form selection")).toThrow();
+    expect(view.container.querySelector('[data-widget-control-ownership="writable"]')).toBeNull();
+    expect(getSelects(view.container)).toHaveLength(0);
+    expect(view.container.querySelectorAll("input,textarea,button")).toHaveLength(0);
+    expect(view.container.textContent).toContain(
+      "public runtime nonce projected; raw value redacted"
     );
-
-    expect(view.onChangeSpy).toHaveBeenCalled();
-    expect(view.getLatestValue()).toMatchObject({
-      formId: "form-internal",
-    });
-    expect(view.container.textContent).toContain("Internal submissions require");
+    expect(view.container.textContent).toContain("recaptcha_v3 configured; public key redacted");
+    expect(view.container.textContent).toContain("[redacted]");
+    expect(view.container.textContent).toContain("[public site key configured]");
+    expect(view.container.textContent).not.toContain("raw-nonce-secret");
+    expect(view.container.textContent).not.toContain("site-key-1");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -788,7 +753,8 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
     expect(wizard.container.textContent).toContain("Multi-step");
     expect(wizard.container.textContent).toContain("Save progress");
     expect(wizard.container.textContent).toContain("Runtime resolver reports: form_unpublished");
-    expect(wizard.container.textContent).toContain("Content");
+    expect(wizard.container.textContent).toContain("Setup diagnostics");
+    expect(wizard.container.textContent).not.toContain("Content");
     expect(wizard.container.textContent).not.toContain("Style");
   } finally {
     wizard.cleanup();
@@ -802,10 +768,13 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
   });
 
   try {
+    expect(visual.container.textContent).toContain("Selected form");
+    expect(visual.container.textContent).toContain("Content");
     expect(visual.container.textContent).toContain("Style");
     expect(visual.container.textContent).toContain("Submit behavior");
     expect(visual.container.textContent).toContain("Multi-step navigation");
     expect(visual.container.textContent).toContain("Title color");
+    expect(() => getSectionByTitle(visual.container, "Form selection")).toThrow();
   } finally {
     visual.cleanup();
   }
@@ -825,11 +794,17 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
   });
 
   try {
-    expect(advanced.container.textContent).toContain("Diagnostics");
+    expect(advanced.container.textContent).toContain("Runtime diagnostics");
+    expect(advanced.container.textContent).toContain("Submission security");
     expect(advanced.container.textContent).toContain("Normalized payload snapshot");
-    expect(advanced.container.textContent).toContain("Selected form id: form-public");
-    expect(advanced.container.textContent).toContain("Detail cache status: loaded");
-    expect(advanced.container.textContent).toContain("Captcha site key projected: yes");
+    expect(advanced.container.textContent).toContain("Selected form id");
+    expect(advanced.container.textContent).toContain("form-public");
+    expect(advanced.container.textContent).toContain("Detail cache status");
+    expect(advanced.container.textContent).toContain("loaded");
+    expect(advanced.container.textContent).toContain(
+      "recaptcha_v3 configured; public key redacted"
+    );
+    expect(advanced.container.textContent).not.toContain("site-key-1");
   } finally {
     advanced.cleanup();
   }

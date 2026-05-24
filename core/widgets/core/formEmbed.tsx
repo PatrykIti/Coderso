@@ -1,5 +1,5 @@
 import { useId, type CSSProperties, type ComponentType } from "react";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import {
@@ -1197,6 +1197,163 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   );
 }
 
+export const formEmbedEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "form-embed.wizard.form-selection",
+      title: "Form selection",
+      role: "setup",
+      writablePaths: ["formId"],
+      readOnlyPaths: ["resolved.formName", "resolved.status", "resolved.submissionAccess"],
+    },
+    {
+      mode: "wizard",
+      id: "form-embed.wizard.setup-diagnostics",
+      title: "Setup diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "formId",
+        "resolved.fields",
+        "resolved.settings.layoutMode",
+        "resolved.settings.saveProgress",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.form-status",
+      title: "Selected form",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "formId",
+        "resolved.formName",
+        "resolved.status",
+        "resolved.submissionAccess",
+        "resolved.fields",
+        "resolved.settings.layoutMode",
+        "resolved.settings.saveProgress",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.content",
+      title: "Content",
+      role: "content",
+      writablePaths: ["title", "description", "submitLabel", "successMessage"],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.layout",
+      title: "Layout",
+      role: "layout",
+      writablePaths: [
+        "layout.alignment",
+        "layout.width",
+        "layout.spacing",
+        "layout.buttonAlignment",
+        "layout.sectionPaddingX",
+        "layout.sectionPaddingY",
+        "layout.fieldGap",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.field-labels",
+      title: "Field labels",
+      role: "content",
+      writablePaths: ["fields.showLabels", "fields.showRequiredIndicator"],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.style",
+      title: "Style",
+      role: "visual",
+      writablePaths: [
+        "style.background",
+        "style.surface",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+        "style.inputSize",
+        "style.titleColor",
+        "style.titleSize",
+        "style.titleWeight",
+        "style.labelColor",
+        "style.helperColor",
+        "style.submitBackground",
+        "style.submitTextColor",
+        "layout.headingLevel",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.navigation",
+      title: "Multi-step navigation",
+      role: "visual",
+      writablePaths: [
+        "navigation.backLabel",
+        "navigation.nextLabel",
+        "navigation.showProgress",
+        "navigation.savedProgressTtlDays",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "form-embed.visual.submit-behavior",
+      title: "Submit behavior",
+      role: "visual",
+      writablePaths: ["submitBehavior.loadingLabel", "submitBehavior.successBehavior"],
+    },
+    {
+      mode: "advanced",
+      id: "form-embed.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "formId",
+        "resolved.fields",
+        "resolved.settings.layoutMode",
+        "resolved.settings.saveProgress",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "form-embed.advanced.submission-security",
+      title: "Submission security",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "resolved.submissionAccess",
+        "resolved.submissionNonce",
+        "resolved.botProtection",
+        "submitBehavior.successBehavior",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "form-embed.advanced.payload-snapshot",
+      title: "Normalized payload snapshot",
+      role: "technical",
+      writablePaths: [],
+      readOnlyPaths: ["resolved"],
+    },
+    {
+      mode: "advanced",
+      id: "form-embed.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
+};
+
 export function createFormEmbedWidget(editors: {
   wizard: ComponentType<WidgetEditorProps<FormEmbedData>>;
   visual: ComponentType<WidgetEditorProps<FormEmbedData>>;
@@ -1221,6 +1378,7 @@ export function createFormEmbedWidget(editors: {
       visual: editors.visual,
       advanced: editors.advanced,
     },
+    editorContract: formEmbedEditorContract,
     render: FormEmbedBlock,
   };
 }

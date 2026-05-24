@@ -6,7 +6,7 @@
 **Category:** Widgets + Forms + Admin UI + Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -34,15 +34,29 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Audit current Form Embed editor paths and public form dependencies.
-- [ ] Add or update `form-embed` `editorContract` metadata.
-- [ ] Move form selection/setup into Wizard.
-- [ ] Move public-facing wrapper copy/surface into Visual.
-- [ ] Convert Advanced form/source/style duplicates into read-only diagnostics.
-- [ ] Preserve all existing public write protections.
-- [ ] Add Vitest UI tests for mode ownership.
-- [ ] Publish a public test fixture page for `form-embed` or explicitly defer
+- [x] Audit current Form Embed editor paths and public form dependencies.
+- [x] Add or update `form-embed` `editorContract` metadata.
+- [x] Move form selection/setup into Wizard.
+- [x] Move public-facing wrapper copy/surface into Visual.
+- [x] Convert Advanced form/source/style duplicates into read-only diagnostics.
+- [x] Preserve all existing public write protections.
+- [x] Add Vitest UI tests for mode ownership.
+- [x] Publish a public test fixture page for `form-embed` or explicitly defer
   it with a follow-up task before TASK-336-17 closure.
+
+## Status Notes
+
+2026-05-24:
+
+- Form Embed now has a v2 `editorContract`.
+- Wizard owns only `formId` and setup diagnostics.
+- Visual owns public copy, layout, field-label visibility, style, navigation,
+  and submit behavior.
+- Advanced is read-only runtime/security diagnostics, redacted normalized
+  payload, and contract summary; raw nonce and public site-key values are not
+  exposed.
+- The existing `/ctr-form-embed-2305` fixture was published for public CSS
+  smoke coverage.
 
 ## Files to Change
 
@@ -136,3 +150,13 @@ Regression-test shape:
 - Form Embed mode ownership is clear and test-backed.
 - Advanced does not duplicate form selection or visual wrapper controls.
 - Existing public form security contract remains intact.
+- Playwright smoke passes for admin ownership and public CSS/overflow with zero
+  fixture gaps.
+
+## Validation Results
+
+- 2026-05-24: `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/editorContract.test.ts` passed (`36` tests).
+- 2026-05-24: `bun --cwd core lint` passed.
+- 2026-05-24: `bun --cwd core lint:types` passed.
+- 2026-05-24: `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-10-public --widget form-embed --output-json .tmp/widget-smoke-form-embed.json --output-md .tmp/widget-smoke-form-embed.md` passed with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`.
+- 2026-05-24: `bun run gates:coderso` passed all gates (`functional`, `ux`, `performance`, `security`, `reliability`).

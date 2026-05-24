@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 import {
   normalizeFormEmbedData,
@@ -20,11 +22,19 @@ import {
   type FormEmbedSubmitBehavior,
   type FormEmbedStyle,
 } from "../../../../widgets/core/formEmbed";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { hasClearableFieldValue, SharedColorFieldInputs } from "./ClearableFields";
 import { getFormDetailCached, type FormDetail, type FormRecord } from "@/services/formsClient";
 import { useForms } from "@/ui/forms/hooks/useForms";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const alignmentOptions = [
   { id: "start", label: "Start" },
@@ -177,18 +187,21 @@ function normalizeValue(value: FormEmbedData): FormEmbedData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
-  id?: string;
+  id: string;
+  mode: EditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
-  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -358,6 +371,7 @@ function FormDiagnostics({
   const isMissingSelected = normalizedFormId.length > 0 && !selectedForm;
   const status = selectedForm?.status ?? resolved?.status ?? null;
   const resolvedError = resolved?.error ?? null;
+  const submissionAccess = selectedForm?.submissionAccess ?? resolved?.submissionAccess ?? null;
 
   if (!normalizedFormId) {
     return (
@@ -376,9 +390,7 @@ function FormDiagnostics({
         {status ? (
           <Badge variant={status === "published" ? "default" : "outline"}>{status}</Badge>
         ) : null}
-        {(selectedForm?.submissionAccess ?? resolved?.submissionAccess) === "internal" ? (
-          <Badge variant="outline">Internal</Badge>
-        ) : null}
+        {submissionAccess === "internal" ? <Badge variant="outline">Internal</Badge> : null}
         {layoutMode === "multi_step" ? <Badge variant="outline">Multi-step</Badge> : null}
         {saveProgress ? <Badge variant="outline">Save progress</Badge> : null}
       </div>
@@ -386,6 +398,14 @@ function FormDiagnostics({
       {status && status !== "published" ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           This form is not published yet, so public runtime may show unavailable state.
+        </div>
+      ) : null}
+
+      {submissionAccess === "internal" ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Internal submissions require an authenticated admin session or an API key with the
+          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on
+          public pages.
         </div>
       ) : null}
 
@@ -447,35 +467,71 @@ function NormalizationHints({ value }: { value: FormEmbedData }) {
 }
 
 function ColorField({
+  id,
   label,
+  path,
   value,
   onChange,
   placeholder,
   pickerFallback,
   onClear,
 }: {
+  id: string;
   label: string;
+  path: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
 }) {
+  const handleClear = () => {
+    if (!onClear) return;
+    const previousValue = typeof value === "string" && value.trim().length > 0 ? value : undefined;
+    onClear();
+    if (previousValue) {
+      toast.info(`${label} cleared.`, {
+        action: {
+          label: "Undo",
+          onClick: () => onChange(previousValue),
+        },
+      });
+      return;
+    }
+    toast.info(`${label} cleared.`);
+  };
+
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
-        label={label}
-        value={value}
-        onClear={onClear}
-        onRestoreValue={onChange}
-      />
-      <SharedColorFieldInputs
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        pickerFallback={pickerFallback}
-      />
-    </div>
+    <WidgetControlRow
+      id={id}
+      label={label}
+      path={path}
+      actions={
+        onClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            disabled={!hasClearableFieldValue(value)}
+          >
+            Clear
+          </Button>
+        ) : undefined
+      }
+    >
+      {(fieldProps) => (
+        <SharedColorFieldInputs
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          pickerFallback={pickerFallback}
+          inputId={fieldProps.id}
+          ariaLabelledby={fieldProps["aria-labelledby"]}
+          ariaDescribedby={fieldProps["aria-describedby"]}
+        />
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -494,44 +550,54 @@ function FormSelection({
   const isInternal = selectedForm?.submissionAccess === "internal";
 
   return (
-    <EditorSection title="Form selection" description="Pick the saved form to embed.">
-      <Select
-        value={selectedValue}
-        onValueChange={(formId) =>
-          updateValue(value, onChange, (current) => ({
-            ...current,
-            formId: formId === NO_FORM_VALUE ? "" : formId,
-          }))
-        }
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={isLoading ? "Loading forms..." : "Select form"} />
-        </SelectTrigger>
-        <SelectContent>
-          {selectedValue === NO_FORM_VALUE ? (
-            <SelectItem value={NO_FORM_VALUE} disabled>
-              {forms.length === 0
-                ? isLoading
-                  ? "Loading forms..."
-                  : "No forms found"
-                : "Select form"}
-            </SelectItem>
-          ) : null}
-          {forms.map((form) => (
-            <SelectItem key={form.id} value={form.id}>
-              <div className="flex items-center gap-2">
-                <span>{form.name}</span>
-                <Badge variant={form.status === "published" ? "default" : "outline"}>
-                  {form.status}
-                </Badge>
-                {form.submissionAccess === "internal" ? (
-                  <Badge variant="outline">Internal</Badge>
-                ) : null}
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <EditorSection
+      id="form-embed.wizard.form-selection"
+      mode="wizard"
+      role="setup"
+      title="Form selection"
+      description="Pick the saved form to embed."
+    >
+      <WidgetControlRow id="form-embed.form-id" label="Saved form" path="formId">
+        {(fieldProps) => (
+          <Select
+            value={selectedValue}
+            onValueChange={(formId) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                formId: formId === NO_FORM_VALUE ? "" : formId,
+              }))
+            }
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder={isLoading ? "Loading forms..." : "Select form"} />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedValue === NO_FORM_VALUE ? (
+                <SelectItem value={NO_FORM_VALUE} disabled>
+                  {forms.length === 0
+                    ? isLoading
+                      ? "Loading forms..."
+                      : "No forms found"
+                    : "Select form"}
+                </SelectItem>
+              ) : null}
+              {forms.map((form) => (
+                <SelectItem key={form.id} value={form.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{form.name}</span>
+                    <Badge variant={form.status === "published" ? "default" : "outline"}>
+                      {form.status}
+                    </Badge>
+                    {form.submissionAccess === "internal" ? (
+                      <Badge variant="outline">Internal</Badge>
+                    ) : null}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {isInternal ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           Internal submissions require an authenticated admin session or an API key with the
@@ -552,64 +618,78 @@ function ContentSection({
 }) {
   const normalized = normalizeValue(value);
   return (
-    <EditorSection title="Content" description="Override the title and messaging.">
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Title</label>
-        <Input
-          value={normalized.title ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              title: event.target.value,
-            }))
-          }
-          placeholder="Optional custom title"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Description</label>
-        <Textarea
-          rows={3}
-          value={normalized.description ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              description: event.target.value,
-            }))
-          }
-          placeholder="Optional description text"
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Submit label
-        </label>
-        <Input
-          value={normalized.submitLabel ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              submitLabel: event.target.value,
-            }))
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Success message
-        </label>
-        <Textarea
-          rows={2}
-          value={normalized.successMessage ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              successMessage: event.target.value,
-            }))
-          }
-          placeholder="Leave blank to use form fallback"
-        />
-      </div>
+    <EditorSection
+      id="form-embed.visual.content"
+      mode="visual"
+      role="content"
+      title="Content"
+      description="Override the title and messaging."
+    >
+      <WidgetControlRow id="form-embed.title" label="Title" path="title">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Optional custom title"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.description" label="Description" path="description">
+        {(fieldProps) => (
+          <Textarea
+            {...fieldProps}
+            rows={3}
+            value={normalized.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            placeholder="Optional description text"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.submit-label" label="Submit label" path="submitLabel">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.submitLabel ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                submitLabel: event.target.value,
+              }))
+            }
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.success-message"
+        label="Success message"
+        path="successMessage"
+      >
+        {(fieldProps) => (
+          <Textarea
+            {...fieldProps}
+            rows={2}
+            value={normalized.successMessage ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                successMessage: event.target.value,
+              }))
+            }
+            placeholder="Leave blank to use form fallback"
+          />
+        )}
+      </WidgetControlRow>
       <NormalizationHints value={value} />
     </EditorSection>
   );
@@ -624,160 +704,179 @@ function LayoutSection({
 }) {
   const normalized = normalizeValue(value);
   return (
-    <EditorSection title="Layout" description="Control spacing and alignment.">
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Alignment</label>
-        <Select
-          value={normalized.layout?.alignment ?? "start"}
-          onValueChange={(alignment) => {
-            if (!isAlignmentValue(alignment)) return;
-            updateLayout(value, onChange, { alignment });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Alignment" />
-          </SelectTrigger>
-          <SelectContent>
-            {alignmentOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Width</label>
-        <Select
-          value={normalized.layout?.width ?? "md"}
-          onValueChange={(width) => {
-            if (!isWidthValue(width)) return;
-            updateLayout(value, onChange, { width });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Width" />
-          </SelectTrigger>
-          <SelectContent>
-            {widthOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Spacing</label>
-        <Select
-          value={normalized.layout?.spacing ?? "md"}
-          onValueChange={(spacing) => {
-            if (!isSpacingValue(spacing)) return;
-            updateLayout(value, onChange, { spacing });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Spacing" />
-          </SelectTrigger>
-          <SelectContent>
-            {spacingOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Button alignment
-        </label>
-        <Select
-          value={normalized.layout?.buttonAlignment ?? "start"}
-          onValueChange={(buttonAlignment) => {
-            if (!isButtonAlignmentValue(buttonAlignment)) return;
-            updateLayout(value, onChange, { buttonAlignment });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Button alignment" />
-          </SelectTrigger>
-          <SelectContent>
-            {alignmentOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Side padding
-        </label>
-        <Select
-          value={normalized.layout?.sectionPaddingX ?? "sm"}
-          onValueChange={(sectionPaddingX) => {
-            if (!isSectionPaddingXValue(sectionPaddingX)) return;
-            updateLayout(value, onChange, { sectionPaddingX });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Side padding" />
-          </SelectTrigger>
-          <SelectContent>
-            {sectionPaddingXOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Vertical padding
-        </label>
-        <Select
-          value={normalized.layout?.sectionPaddingY ?? "md"}
-          onValueChange={(sectionPaddingY) => {
-            if (!isSectionPaddingYValue(sectionPaddingY)) return;
-            updateLayout(value, onChange, { sectionPaddingY });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Vertical padding" />
-          </SelectTrigger>
-          <SelectContent>
-            {sectionPaddingYOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Field gap</label>
-        <Select
-          value={normalized.layout?.fieldGap ?? "md"}
-          onValueChange={(fieldGap) => {
-            if (!isFieldGapValue(fieldGap)) return;
-            updateLayout(value, onChange, { fieldGap });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Field gap" />
-          </SelectTrigger>
-          <SelectContent>
-            {fieldGapOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <EditorSection
+      id="form-embed.visual.layout"
+      mode="visual"
+      role="layout"
+      title="Layout"
+      description="Control spacing and alignment."
+    >
+      <WidgetControlRow id="form-embed.layout-alignment" label="Alignment" path="layout.alignment">
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.alignment ?? "start"}
+            onValueChange={(alignment) => {
+              if (!isAlignmentValue(alignment)) return;
+              updateLayout(value, onChange, { alignment });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Alignment" />
+            </SelectTrigger>
+            <SelectContent>
+              {alignmentOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.layout-width" label="Width" path="layout.width">
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.width ?? "md"}
+            onValueChange={(width) => {
+              if (!isWidthValue(width)) return;
+              updateLayout(value, onChange, { width });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Width" />
+            </SelectTrigger>
+            <SelectContent>
+              {widthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.layout-spacing" label="Spacing" path="layout.spacing">
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.spacing ?? "md"}
+            onValueChange={(spacing) => {
+              if (!isSpacingValue(spacing)) return;
+              updateLayout(value, onChange, { spacing });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Spacing" />
+            </SelectTrigger>
+            <SelectContent>
+              {spacingOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.button-alignment"
+        label="Button alignment"
+        path="layout.buttonAlignment"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.buttonAlignment ?? "start"}
+            onValueChange={(buttonAlignment) => {
+              if (!isButtonAlignmentValue(buttonAlignment)) return;
+              updateLayout(value, onChange, { buttonAlignment });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Button alignment" />
+            </SelectTrigger>
+            <SelectContent>
+              {alignmentOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.section-padding-x"
+        label="Side padding"
+        path="layout.sectionPaddingX"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.sectionPaddingX ?? "sm"}
+            onValueChange={(sectionPaddingX) => {
+              if (!isSectionPaddingXValue(sectionPaddingX)) return;
+              updateLayout(value, onChange, { sectionPaddingX });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Side padding" />
+            </SelectTrigger>
+            <SelectContent>
+              {sectionPaddingXOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.section-padding-y"
+        label="Vertical padding"
+        path="layout.sectionPaddingY"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.sectionPaddingY ?? "md"}
+            onValueChange={(sectionPaddingY) => {
+              if (!isSectionPaddingYValue(sectionPaddingY)) return;
+              updateLayout(value, onChange, { sectionPaddingY });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Vertical padding" />
+            </SelectTrigger>
+            <SelectContent>
+              {sectionPaddingYOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.field-gap" label="Field gap" path="layout.fieldGap">
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.fieldGap ?? "md"}
+            onValueChange={(fieldGap) => {
+              if (!isFieldGapValue(fieldGap)) return;
+              updateLayout(value, onChange, { fieldGap });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Field gap" />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldGapOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
@@ -791,31 +890,55 @@ function FieldsSection({
 }) {
   const normalized = normalizeValue(value);
   return (
-    <EditorSection title="Field labels" description="Control label visibility and required badges.">
-      <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
-        <div>
-          <p className="text-sm font-medium text-foreground">Show labels</p>
-          <p className="text-xs text-muted-foreground">Display field names above each input.</p>
-        </div>
-        <Switch
-          checked={Boolean(normalized.fields?.showLabels)}
-          onCheckedChange={(checked) =>
-            updateFields(value, onChange, { showLabels: checked === true })
-          }
-        />
-      </div>
-      <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
-        <div>
-          <p className="text-sm font-medium text-foreground">Required indicator</p>
-          <p className="text-xs text-muted-foreground">Show a star for required fields.</p>
-        </div>
-        <Switch
-          checked={Boolean(normalized.fields?.showRequiredIndicator)}
-          onCheckedChange={(checked) =>
-            updateFields(value, onChange, { showRequiredIndicator: checked === true })
-          }
-        />
-      </div>
+    <EditorSection
+      id="form-embed.visual.field-labels"
+      mode="visual"
+      role="content"
+      title="Field labels"
+      description="Control label visibility and required badges."
+    >
+      <WidgetControlRow
+        id="form-embed.show-labels"
+        label="Show labels"
+        path="fields.showLabels"
+        className="rounded-lg border bg-muted/20 p-3"
+      >
+        {(fieldProps) => (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Display field names above each input.</p>
+            </div>
+            <Switch
+              {...fieldProps}
+              checked={Boolean(normalized.fields?.showLabels)}
+              onCheckedChange={(checked) =>
+                updateFields(value, onChange, { showLabels: checked === true })
+              }
+            />
+          </div>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.required-indicator"
+        label="Required indicator"
+        path="fields.showRequiredIndicator"
+        className="rounded-lg border bg-muted/20 p-3"
+      >
+        {(fieldProps) => (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Show a star for required fields.</p>
+            </div>
+            <Switch
+              {...fieldProps}
+              checked={Boolean(normalized.fields?.showRequiredIndicator)}
+              onCheckedChange={(checked) =>
+                updateFields(value, onChange, { showRequiredIndicator: checked === true })
+              }
+            />
+          </div>
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
@@ -829,9 +952,17 @@ function StyleSection({
 }) {
   const normalized = normalizeValue(value);
   return (
-    <EditorSection title="Style" description="Adjust surfaces, borders, and inputs.">
+    <EditorSection
+      id="form-embed.visual.style"
+      mode="visual"
+      role="visual"
+      title="Style"
+      description="Adjust surfaces, borders, and inputs."
+    >
       <ColorField
+        id="form-embed.style-background"
         label="Background"
+        path="style.background"
         value={normalized.style?.background}
         onChange={(background) => updateStyle(value, onChange, { background })}
         onClear={() => clearStyleField(value, onChange, "background")}
@@ -839,7 +970,9 @@ function StyleSection({
         pickerFallback="#ffffff"
       />
       <ColorField
+        id="form-embed.style-surface"
         label="Surface"
+        path="style.surface"
         value={normalized.style?.surface}
         onChange={(surface) => updateStyle(value, onChange, { surface })}
         onClear={() => clearStyleField(value, onChange, "surface")}
@@ -847,132 +980,147 @@ function StyleSection({
         pickerFallback="#ffffff"
       />
       <ColorField
+        id="form-embed.style-border-color"
         label="Border color"
+        path="style.borderColor"
         value={normalized.style?.borderColor}
         onChange={(borderColor) => updateStyle(value, onChange, { borderColor })}
         onClear={() => clearStyleField(value, onChange, "borderColor")}
         placeholder="var(--color-border)"
         pickerFallback="#e2e8f0"
       />
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Border width
-        </label>
-        <Select
-          value={normalized.style?.borderWidth ?? "1"}
-          onValueChange={(borderWidth) => {
-            if (!isBorderWidthValue(borderWidth)) return;
-            updateStyle(value, onChange, { borderWidth });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Border width" />
-          </SelectTrigger>
-          <SelectContent>
-            {borderWidthOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Radius</label>
-        <Select
-          value={normalized.style?.radius ?? "md"}
-          onValueChange={(radius) => {
-            if (!isRadiusValue(radius)) return;
-            updateStyle(value, onChange, { radius });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Radius" />
-          </SelectTrigger>
-          <SelectContent>
-            {radiusOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Input size</label>
-        <Select
-          value={normalized.style?.inputSize ?? "md"}
-          onValueChange={(inputSize) => {
-            if (!isInputSizeValue(inputSize)) return;
-            updateStyle(value, onChange, { inputSize });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Input size" />
-          </SelectTrigger>
-          <SelectContent>
-            {inputSizeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow
+        id="form-embed.style-border-width"
+        label="Border width"
+        path="style.borderWidth"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.borderWidth ?? "1"}
+            onValueChange={(borderWidth) => {
+              if (!isBorderWidthValue(borderWidth)) return;
+              updateStyle(value, onChange, { borderWidth });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Border width" />
+            </SelectTrigger>
+            <SelectContent>
+              {borderWidthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.style-radius" label="Radius" path="style.radius">
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.radius ?? "md"}
+            onValueChange={(radius) => {
+              if (!isRadiusValue(radius)) return;
+              updateStyle(value, onChange, { radius });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Radius" />
+            </SelectTrigger>
+            <SelectContent>
+              {radiusOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.style-input-size" label="Input size" path="style.inputSize">
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.inputSize ?? "md"}
+            onValueChange={(inputSize) => {
+              if (!isInputSizeValue(inputSize)) return;
+              updateStyle(value, onChange, { inputSize });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Input size" />
+            </SelectTrigger>
+            <SelectContent>
+              {inputSizeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       <ColorField
+        id="form-embed.style-title-color"
         label="Title color"
+        path="style.titleColor"
         value={normalized.style?.titleColor}
         onChange={(titleColor) => updateStyle(value, onChange, { titleColor })}
         onClear={() => clearStyleField(value, onChange, "titleColor")}
         placeholder="var(--color-text)"
         pickerFallback="#0f172a"
       />
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Title size</label>
-        <Select
-          value={normalized.style?.titleSize ?? "md"}
-          onValueChange={(titleSize) => {
-            if (!isTitleSizeValue(titleSize)) return;
-            updateStyle(value, onChange, { titleSize });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Title size" />
-          </SelectTrigger>
-          <SelectContent>
-            {titleSizeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Title weight
-        </label>
-        <Select
-          value={normalized.style?.titleWeight ?? "semibold"}
-          onValueChange={(titleWeight) => {
-            if (!isTitleWeightValue(titleWeight)) return;
-            updateStyle(value, onChange, { titleWeight });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Title weight" />
-          </SelectTrigger>
-          <SelectContent>
-            {titleWeightOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow id="form-embed.style-title-size" label="Title size" path="style.titleSize">
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.titleSize ?? "md"}
+            onValueChange={(titleSize) => {
+              if (!isTitleSizeValue(titleSize)) return;
+              updateStyle(value, onChange, { titleSize });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Title size" />
+            </SelectTrigger>
+            <SelectContent>
+              {titleSizeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.style-title-weight"
+        label="Title weight"
+        path="style.titleWeight"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.style?.titleWeight ?? "semibold"}
+            onValueChange={(titleWeight) => {
+              if (!isTitleWeightValue(titleWeight)) return;
+              updateStyle(value, onChange, { titleWeight });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Title weight" />
+            </SelectTrigger>
+            <SelectContent>
+              {titleWeightOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       <ColorField
+        id="form-embed.style-label-color"
         label="Label color"
+        path="style.labelColor"
         value={normalized.style?.labelColor}
         onChange={(labelColor) => updateStyle(value, onChange, { labelColor })}
         onClear={() => clearStyleField(value, onChange, "labelColor")}
@@ -980,7 +1128,9 @@ function StyleSection({
         pickerFallback="#0f172a"
       />
       <ColorField
+        id="form-embed.style-helper-color"
         label="Helper color"
+        path="style.helperColor"
         value={normalized.style?.helperColor}
         onChange={(helperColor) => updateStyle(value, onChange, { helperColor })}
         onClear={() => clearStyleField(value, onChange, "helperColor")}
@@ -988,7 +1138,9 @@ function StyleSection({
         pickerFallback="#64748b"
       />
       <ColorField
+        id="form-embed.style-submit-background"
         label="Submit background"
+        path="style.submitBackground"
         value={normalized.style?.submitBackground}
         onChange={(submitBackground) => updateStyle(value, onChange, { submitBackground })}
         onClear={() => clearStyleField(value, onChange, "submitBackground")}
@@ -996,36 +1148,41 @@ function StyleSection({
         pickerFallback="#2563eb"
       />
       <ColorField
+        id="form-embed.style-submit-text-color"
         label="Submit text color"
+        path="style.submitTextColor"
         value={normalized.style?.submitTextColor}
         onChange={(submitTextColor) => updateStyle(value, onChange, { submitTextColor })}
         onClear={() => clearStyleField(value, onChange, "submitTextColor")}
         placeholder="var(--color-bg)"
         pickerFallback="#ffffff"
       />
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Heading level
-        </label>
-        <Select
-          value={normalized.layout?.headingLevel ?? "2"}
-          onValueChange={(headingLevel) => {
-            if (!isHeadingLevelValue(headingLevel)) return;
-            updateLayout(value, onChange, { headingLevel });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Heading level" />
-          </SelectTrigger>
-          <SelectContent>
-            {headingLevelOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow
+        id="form-embed.heading-level"
+        label="Heading level"
+        path="layout.headingLevel"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.layout?.headingLevel ?? "2"}
+            onValueChange={(headingLevel) => {
+              if (!isHeadingLevelValue(headingLevel)) return;
+              updateLayout(value, onChange, { headingLevel });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Heading level" />
+            </SelectTrigger>
+            <SelectContent>
+              {headingLevelOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
@@ -1042,55 +1199,77 @@ function NavigationSection({
   const normalized = normalizeValue(value);
   return (
     <EditorSection
+      id="form-embed.visual.navigation"
+      mode="visual"
+      role="visual"
       title="Multi-step navigation"
       description="Controls shown only when the selected form resolves as multi-step."
     >
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Back label</label>
-        <Input
-          value={normalized.navigation?.backLabel ?? ""}
-          onChange={(event) => updateNavigation(value, onChange, { backLabel: event.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">Next label</label>
-        <Input
-          value={normalized.navigation?.nextLabel ?? ""}
-          onChange={(event) => updateNavigation(value, onChange, { nextLabel: event.target.value })}
-        />
-      </div>
-      {showProgressToggle ? (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">Show progress</p>
-            <p className="text-xs text-muted-foreground">
-              Renders current step and progress bar when multi-step is active.
-            </p>
-          </div>
-          <Switch
-            checked={Boolean(normalized.navigation?.showProgress)}
-            onCheckedChange={(checked) =>
-              updateNavigation(value, onChange, { showProgress: checked === true })
+      <WidgetControlRow id="form-embed.back-label" label="Back label" path="navigation.backLabel">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.navigation?.backLabel ?? ""}
+            onChange={(event) =>
+              updateNavigation(value, onChange, { backLabel: event.target.value })
             }
           />
-        </div>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow id="form-embed.next-label" label="Next label" path="navigation.nextLabel">
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.navigation?.nextLabel ?? ""}
+            onChange={(event) =>
+              updateNavigation(value, onChange, { nextLabel: event.target.value })
+            }
+          />
+        )}
+      </WidgetControlRow>
+      {showProgressToggle ? (
+        <WidgetControlRow
+          id="form-embed.show-progress"
+          label="Show progress"
+          path="navigation.showProgress"
+          className="rounded-lg border bg-muted/20 p-3"
+        >
+          {(fieldProps) => (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Renders current step and progress bar when multi-step is active.
+              </p>
+              <Switch
+                {...fieldProps}
+                checked={Boolean(normalized.navigation?.showProgress)}
+                onCheckedChange={(checked) =>
+                  updateNavigation(value, onChange, { showProgress: checked === true })
+                }
+              />
+            </div>
+          )}
+        </WidgetControlRow>
       ) : null}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Saved progress TTL (days)
-        </label>
-        <Input
-          type="number"
-          min={1}
-          max={30}
-          value={String(normalized.navigation?.savedProgressTtlDays ?? 7)}
-          onChange={(event) =>
-            updateNavigation(value, onChange, {
-              savedProgressTtlDays: Number.parseInt(event.target.value || "7", 10) || 7,
-            })
-          }
-        />
-      </div>
+      <WidgetControlRow
+        id="form-embed.saved-progress-ttl"
+        label="Saved progress TTL (days)"
+        path="navigation.savedProgressTtlDays"
+      >
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            type="number"
+            min={1}
+            max={30}
+            value={String(normalized.navigation?.savedProgressTtlDays ?? 7)}
+            onChange={(event) =>
+              updateNavigation(value, onChange, {
+                savedProgressTtlDays: Number.parseInt(event.target.value || "7", 10) || 7,
+              })
+            }
+          />
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
@@ -1105,52 +1284,134 @@ function SubmitBehaviorSection({
   const normalized = normalizeValue(value);
   return (
     <EditorSection
+      id="form-embed.visual.submit-behavior"
+      mode="visual"
+      role="visual"
       title="Submit behavior"
       description="Loading copy and post-submit behavior for public runtime."
     >
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Loading label
-        </label>
-        <Input
-          value={normalized.submitBehavior?.loadingLabel ?? ""}
-          onChange={(event) =>
-            updateSubmitBehavior(value, onChange, { loadingLabel: event.target.value })
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Success behavior
-        </label>
-        <Select
-          value={normalized.submitBehavior?.successBehavior ?? "show-message-hide-form"}
-          onValueChange={(successBehavior) => {
-            if (!isSuccessBehaviorValue(successBehavior)) return;
-            updateSubmitBehavior(value, onChange, { successBehavior });
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Success behavior" />
-          </SelectTrigger>
-          <SelectContent>
-            {successBehaviorOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <WidgetControlRow
+        id="form-embed.loading-label"
+        label="Loading label"
+        path="submitBehavior.loadingLabel"
+      >
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={normalized.submitBehavior?.loadingLabel ?? ""}
+            onChange={(event) =>
+              updateSubmitBehavior(value, onChange, { loadingLabel: event.target.value })
+            }
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="form-embed.success-behavior"
+        label="Success behavior"
+        path="submitBehavior.successBehavior"
+      >
+        {(fieldProps) => (
+          <Select
+            value={normalized.submitBehavior?.successBehavior ?? "show-message-hide-form"}
+            onValueChange={(successBehavior) => {
+              if (!isSuccessBehaviorValue(successBehavior)) return;
+              updateSubmitBehavior(value, onChange, { successBehavior });
+            }}
+          >
+            <SelectTrigger {...fieldProps}>
+              <SelectValue placeholder="Success behavior" />
+            </SelectTrigger>
+            <SelectContent>
+              {successBehaviorOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
     </EditorSection>
   );
 }
 
+function redactDiagnosticsPayload(value: FormEmbedData): FormEmbedData {
+  const normalized = normalizeValue(value);
+  const resolved = normalized.resolved
+    ? {
+        ...normalized.resolved,
+        submissionNonce: normalized.resolved.submissionNonce ? "[redacted]" : undefined,
+        botProtection: normalized.resolved.botProtection
+          ? {
+              ...normalized.resolved.botProtection,
+              siteKey: normalized.resolved.botProtection.siteKey
+                ? "[public site key configured]"
+                : undefined,
+            }
+          : undefined,
+      }
+    : undefined;
+
+  return {
+    ...normalized,
+    ...(resolved ? { resolved } : {}),
+  };
+}
+
 function DiagnosticsSnapshot({ value }: { value: FormEmbedData }) {
+  const redacted = redactDiagnosticsPayload(value);
   return (
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
+      {JSON.stringify(redacted, null, 2)}
     </pre>
+  );
+}
+
+function SetupDiagnosticsSection({
+  value,
+  forms,
+  detail,
+  detailStatus,
+}: {
+  value: FormEmbedData;
+  forms: FormRecord[];
+  detail: FormDetail | null;
+  detailStatus: "idle" | "loading" | "loaded" | "error";
+}) {
+  return (
+    <EditorSection
+      id="form-embed.wizard.setup-diagnostics"
+      mode="wizard"
+      role="diagnostics"
+      title="Setup diagnostics"
+      description="Read-only setup status for the selected form."
+    >
+      <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={detailStatus} />
+    </EditorSection>
+  );
+}
+
+function VisualFormStatusSection({
+  value,
+  forms,
+  detail,
+  detailStatus,
+}: {
+  value: FormEmbedData;
+  forms: FormRecord[];
+  detail: FormDetail | null;
+  detailStatus: "idle" | "loading" | "loaded" | "error";
+}) {
+  return (
+    <EditorSection
+      id="form-embed.visual.form-status"
+      mode="visual"
+      role="diagnostics"
+      title="Selected form"
+      description="Read-only runtime status for the form selected in Wizard."
+    >
+      <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={detailStatus} />
+    </EditorSection>
   );
 }
 
@@ -1162,10 +1423,7 @@ function FormEmbedWizardEditorBody({ value, onChange }: WidgetEditorProps<FormEm
   return (
     <div className="space-y-4">
       <FormSelection value={value} onChange={onChange} />
-      <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={status} />
-      <ContentSection value={value} onChange={onChange} />
-      <LayoutSection value={value} onChange={onChange} />
-      <FieldsSection value={value} onChange={onChange} />
+      <SetupDiagnosticsSection value={value} forms={forms} detail={detail} detailStatus={status} />
     </div>
   );
 }
@@ -1177,8 +1435,8 @@ function FormEmbedVisualEditorBody({ value, onChange }: WidgetEditorProps<FormEm
 
   return (
     <div className="space-y-4">
-      <FormSelection value={value} onChange={onChange} />
-      <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={status} />
+      <VisualFormStatusSection value={value} forms={forms} detail={detail} detailStatus={status} />
+      <ContentSection value={value} onChange={onChange} />
       <LayoutSection value={value} onChange={onChange} />
       <FieldsSection value={value} onChange={onChange} />
       <StyleSection value={value} onChange={onChange} />
@@ -1188,7 +1446,7 @@ function FormEmbedVisualEditorBody({ value, onChange }: WidgetEditorProps<FormEm
   );
 }
 
-function FormEmbedAdvancedEditorBody({ value, onChange }: WidgetEditorProps<FormEmbedData>) {
+function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>) {
   const { items: forms } = useForms();
   const normalized = normalizeValue(value);
   const { detail, status } = useSelectedFormDetail(normalized.formId);
@@ -1197,34 +1455,147 @@ function FormEmbedAdvancedEditorBody({ value, onChange }: WidgetEditorProps<Form
       forms.find((form) => form.id === (normalized.formId?.trim() ?? "")) ?? detail?.form ?? null,
     [detail?.form, forms, normalized.formId]
   );
+  const fieldTypes = normalizeFieldTypes(detail, normalized.resolved);
+  const fieldCount = detail?.fields.length ?? normalized.resolved?.fields?.length ?? 0;
+  const layoutMode =
+    selectedForm?.settings.layoutMode ?? normalized.resolved?.settings?.layoutMode ?? "single";
+  const saveProgress =
+    selectedForm?.settings.saveProgress ?? normalized.resolved?.settings?.saveProgress ?? false;
+  const submissionAccess =
+    selectedForm?.submissionAccess ?? normalized.resolved?.submissionAccess ?? "unknown";
 
   return (
     <div className="space-y-4">
-      <FormSelection value={value} onChange={onChange} />
       <EditorSection
-        title="Diagnostics"
-        description="Technical runtime and selection state for QA and implementation checks."
+        id="form-embed.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime diagnostics"
+        description="Read-only runtime and selection state for QA and implementation checks."
       >
         <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={status} />
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p>Selected form id: {normalized.formId?.trim() || "none"}</p>
-          <p>Detail cache status: {status}</p>
-          <p>
-            Submission access:{" "}
-            {selectedForm?.submissionAccess ?? normalized.resolved?.submissionAccess ?? "unknown"}
-          </p>
-          <p>Resolver error: {normalized.resolved?.error ?? "none"}</p>
-          <p>Nonce projected: {normalized.resolved?.submissionNonce ? "yes" : "no"}</p>
-          <p>
-            Captcha site key projected: {normalized.resolved?.botProtection?.siteKey ? "yes" : "no"}
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.form-id"
+          label="Selected form id"
+          path="formId"
+          value={normalized.formId?.trim() || "none"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.detail-cache-status"
+          label="Detail cache status"
+          value={status}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.field-count"
+          label="Field count"
+          path="resolved.fields"
+          value={fieldCount > 0 ? String(fieldCount) : "No fields yet"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.field-types"
+          label="Field types"
+          path="resolved.fields"
+          value={fieldTypes.length > 0 ? fieldTypes.join(", ") : "None"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.layout-mode"
+          label="Layout mode"
+          path="resolved.settings.layoutMode"
+          value={layoutMode}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.save-progress"
+          label="Save progress"
+          path="resolved.settings.saveProgress"
+          value={saveProgress ? "enabled" : "disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.resolver-error"
+          label="Resolver error"
+          path="resolved.error"
+          value={normalized.resolved?.error ?? "none"}
+        />
       </EditorSection>
       <EditorSection
+        id="form-embed.advanced.submission-security"
+        mode="advanced"
+        role="diagnostics"
+        title="Submission security"
+        description="Read-only public write safeguards. Secret values and nonce strings stay hidden."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.submission-endpoint"
+          label="Submission endpoint"
+          value={
+            normalized.formId?.trim()
+              ? `/forms/${normalized.formId.trim()}/submissions`
+              : "Not configured"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.submission-access"
+          label="Submission access"
+          path="resolved.submissionAccess"
+          value={submissionAccess}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.nonce-policy"
+          label="Nonce policy"
+          path="resolved.submissionNonce"
+          value={
+            normalized.resolved?.submissionNonce
+              ? "public runtime nonce projected; raw value redacted"
+              : "not projected"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.captcha-policy"
+          label="Bot protection"
+          path="resolved.botProtection"
+          value={
+            normalized.resolved?.botProtection
+              ? `${normalized.resolved.botProtection.provider} configured; public key redacted`
+              : "not configured"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.success-behavior"
+          label="Success behavior"
+          path="submitBehavior.successBehavior"
+          value={normalized.submitBehavior?.successBehavior ?? "show-message-hide-form"}
+        />
+      </EditorSection>
+      <EditorSection
+        id="form-embed.advanced.payload-snapshot"
+        mode="advanced"
+        role="technical"
         title="Normalized payload snapshot"
-        description="Read-only current normalized payload for runtime/debug verification."
+        description="Read-only normalized payload with raw nonce and public key values redacted."
       >
         <DiagnosticsSnapshot value={normalized} />
+      </EditorSection>
+      <EditorSection
+        id="form-embed.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Mode ownership for this widget."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.contract-wizard"
+          label="Wizard owns"
+          value="Form selection and first-time setup diagnostics."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.contract-visual"
+          label="Visual owns"
+          value="Public copy, layout, field-label visibility, style, navigation, and submit behavior."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="form-embed.advanced.contract-advanced"
+          label="Advanced owns"
+          value="Read-only runtime, security, payload, and contract diagnostics."
+        />
       </EditorSection>
     </div>
   );

@@ -24,14 +24,18 @@ the current product contract.
 
 ### Wizard
 
-- form selection
-- selected-form diagnostics and no-form CTA
-- title, description, submit label, and success-message copy
-- basic layout and field-label controls
+- form selection and first-time embed setup
+- read-only selected-form diagnostics and no-form guidance
+
+Wizard intentionally does not own copy, layout, field-label, style, navigation,
+or submit-behavior controls. Those are daily editing controls and live in
+Visual so the one-time Wizard lifecycle can hide setup later without trapping
+routine edits.
 
 ### Visual
 
-- selected-form diagnostics with field count/type summary
+- read-only selected-form diagnostics with field count/type summary
+- title, description, submit label, and success-message copy
 - layout controls, including spacing, padding, field gap, and button alignment
 - field label toggles
 - surface, border, title, helper, and submit-button styling
@@ -39,8 +43,14 @@ the current product contract.
 
 ### Advanced
 
-- selected-form diagnostics and runtime projection state
-- read-only normalized payload snapshot
+- read-only runtime diagnostics and compatibility notes
+- read-only submission endpoint/access, nonce policy, bot-protection presence,
+  and submit success behavior
+- read-only normalized payload snapshot with raw nonce values and public key
+  values redacted
+- read-only editor contract summary
+
+Advanced must not render the form picker or any wrapper visual/copy controls.
 
 ## Supported Field Types
 

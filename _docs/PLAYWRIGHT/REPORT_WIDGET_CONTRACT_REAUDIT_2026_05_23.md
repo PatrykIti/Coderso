@@ -155,6 +155,25 @@ Targeted smoke evidence:
 - `posts-feed`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
   `publicFailures=0` (`.tmp/widget-smoke-posts-feed.json`).
 
+## 2026-05-24 TASK-336-10 Ownership Update
+
+`form-embed` now has an explicit v2 editor contract and no longer duplicates
+form selection, layout, and field-label controls across modes:
+
+- Wizard owns only form selection and setup diagnostics.
+- Visual owns public copy, layout, field-label visibility, style, multi-step
+  navigation, and submit behavior.
+- Advanced is read-only runtime diagnostics, submission security, redacted
+  normalized payload, and contract summary diagnostics.
+
+The draft-only fixture was published as `/ctr-form-embed-2305` so public CSS
+smoke can verify the renderer instead of leaving this widget as a fixture gap.
+
+Targeted smoke evidence:
+
+- `form-embed`: `adminFailures=0`, `metadataGaps=0`, `fixtureGaps=0`,
+  `publicFailures=0` (`.tmp/widget-smoke-form-embed.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35
@@ -231,7 +250,7 @@ The page-builder scope is therefore 38 widgets:
 | `newsletter` | yes | yes | Public fixture exists. |
 | `booking-calendar` | yes | yes | Runtime smoke passed. |
 | `appointment-form` | yes | yes | Public fixture exists. |
-| `form-embed` | draft only | yes | No published public fixture found in current page list. |
+| `form-embed` | yes | yes | Public fixture exists at `/ctr-form-embed-2305`; TASK-336-10 smoke passed. |
 | `contact` | yes | yes | Public fixture exists. |
 | `navigation` | yes | yes | Public fixture exists. |
 | `footer` | yes | yes | Public fixture exists. |
@@ -296,7 +315,7 @@ The drift is inside widget-specific editor implementations.
 | `tabs` | Advanced repeats variant, structure, layout, trigger style, and colors, then adds diagnostics. | Advanced duplicates daily Visual work. |
 | `accordion` | Advanced repeats variant, structure, and behavior before diagnostics. | Users have two places to change the same product behavior. |
 | `posts-feed` | Advanced repeats the Visual flow and appends a snapshot. | Source/display ownership remains unclear. |
-| `form-embed` | Advanced still exposes writable form selection repeated from Wizard/Visual. | Technical diagnostics and form source ownership are mixed. |
+| `form-embed` | Closed by TASK-336-10: Advanced is read-only and form selection is Wizard-only. | Targeted smoke has no duplicate writable paths or metadata gaps. |
 | `hero` | Advanced says it owns technical layout controls, but repeats background color, gradient, media, and overlay fields from Visual. | High user-facing widget, high confusion risk. |
 | `stats-kpi` | Advanced repeats alignment, spacing, value color, label color, and card surface from Visual. | Token ownership is not enforceable. |
 
@@ -413,13 +432,11 @@ Validation rules:
 
 ## Prioritized Follow-Up Plan
 
-1. Create missing Playwright coverage for `template-section`, `search-box`, and
-   a published `form-embed` page.
+1. Create missing Playwright coverage for `template-section` and `search-box`.
 2. Fix P0 editor ownership:
    `TemplateSectionEditors.tsx`, `SearchBoxEditors.tsx`,
    `ListingFiltersEditors.tsx`.
-3. Fix P1 Advanced duplication in tabs, accordion, posts-feed, form-embed, hero,
-   and stats-kpi.
+3. Fix P1 Advanced duplication in hero and stats-kpi.
 4. Replace local `EditorSection` aliases with shared `WidgetEditorSection` and
    explicit IDs across editor files.
 5. Migrate old raw field rows to `WidgetControlRow`, starting with Hero CTA and

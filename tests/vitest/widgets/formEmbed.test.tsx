@@ -12,9 +12,11 @@ import {
   FormEmbedBlock,
   createFormEmbedWidget,
   formEmbedDefaults,
+  formEmbedEditorContract,
   normalizeFormEmbedData,
   type FormEmbedData,
 } from "../../../core/widgets/core/formEmbed";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -556,13 +558,17 @@ test("form embed editors render core sections", () => {
     />
   );
 
-  expect(html).toContain("Form selection");
+  expect(html).toContain("Selected form");
+  expect(html).toContain("Content");
   expect(html).toContain("Layout");
+  expect(html).toContain("Field labels");
   expect(html).toContain("Style");
+  expect(html).toContain("Multi-step navigation");
   expect(html).toContain("Submit behavior");
+  expect(html).not.toContain('data-widget-editor-section="form-embed.wizard.form-selection"');
 });
 
-test("form embed wizard editor renders content flow sections", () => {
+test("form embed wizard editor renders source setup only", () => {
   const html = renderToString(
     <FormEmbedWizardEditor
       value={formEmbedDefaults}
@@ -573,8 +579,10 @@ test("form embed wizard editor renders content flow sections", () => {
   );
 
   expect(html).toContain("Form selection");
-  expect(html).toContain("Content");
-  expect(html).toContain("Field labels");
+  expect(html).toContain("Setup diagnostics");
+  expect(html).not.toContain("Content");
+  expect(html).not.toContain("Field labels");
+  expect(html).not.toContain("Style");
 });
 
 test("form embed advanced editor renders diagnostics sections", () => {
@@ -587,7 +595,41 @@ test("form embed advanced editor renders diagnostics sections", () => {
     />
   );
 
-  expect(html).toContain("Form selection");
-  expect(html).toContain("Diagnostics");
+  expect(html).not.toContain('data-widget-editor-section="form-embed.wizard.form-selection"');
+  expect(html).toContain("Runtime diagnostics");
+  expect(html).toContain("Submission security");
   expect(html).toContain("Normalized payload snapshot");
+  expect(html).toContain("Contract summary");
+});
+
+test("form embed editor contract validates mode ownership", () => {
+  const widget = createFormEmbedWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(validation.errors).toEqual([]);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract).toBe(formEmbedEditorContract);
+  expect(formEmbedEditorContract.sections).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        mode: "wizard",
+        id: "form-embed.wizard.form-selection",
+        writablePaths: ["formId"],
+      }),
+      expect.objectContaining({
+        mode: "visual",
+        id: "form-embed.visual.content",
+        writablePaths: ["title", "description", "submitLabel", "successMessage"],
+      }),
+      expect.objectContaining({
+        mode: "advanced",
+        id: "form-embed.advanced.submission-security",
+        writablePaths: [],
+      }),
+    ])
+  );
 });

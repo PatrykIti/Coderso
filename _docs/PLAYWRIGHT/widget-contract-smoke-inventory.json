@@ -366,10 +366,10 @@
       "title": "Form Embed",
       "adminInsertLabel": "Form Embed",
       "adminFixtureSlug": "/ctr-form-embed-2305",
-      "publicPath": null,
-      "publicFixtureStatus": "draft-only",
+      "publicPath": "/ctr-form-embed-2305",
+      "publicFixtureStatus": "published",
       "requiredModes": ["wizard", "visual", "advanced"],
-      "notes": "Draft-only fixture in the current local page list."
+      "cssChecks": ["body-overflow"]
     },
     {
       "widgetType": "contact",

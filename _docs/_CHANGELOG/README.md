@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 938 | 2026-05-24 | Form Embed editor ownership | CMS Widgets/Forms/Admin UI/Security/QA/Docs |
 | 937 | 2026-05-24 | Posts Feed editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 936 | 2026-05-24 | Accordion editor ownership | CMS Widgets/Admin UI/QA/Docs |
 | 935 | 2026-05-24 | Tabs editor ownership | CMS Widgets/Admin UI/QA/Docs |
