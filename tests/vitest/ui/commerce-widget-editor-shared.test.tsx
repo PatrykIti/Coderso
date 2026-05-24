@@ -82,6 +82,7 @@ vi.mock("@/components/ui/select", () => ({
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => []),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -305,6 +306,7 @@ test("source fields update limit, filters, sorting, and status toggles", () => {
           history.push(next);
           setValue(next);
         }}
+        options={{ allowCollectionFallbackInput: true }}
       />
     );
   };
@@ -386,6 +388,7 @@ test("source fields honor widget-specific limit and copy options without changin
         }}
         options={{
           limitMax: 12,
+          allowCollectionFallbackInput: true,
           copy: {
             searchPlaceholder: "product title or slug",
             searchHelpText: "Search narrows Product Compare candidates.",

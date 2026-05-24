@@ -104,6 +104,44 @@ vi.mock("@/components/ui/select", () => ({
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => [
+    {
+      id: "product-1",
+      title: "Starter Home",
+      slug: "starter-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 120000, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 3 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+    {
+      id: "product-3",
+      title: "Family Home",
+      slug: "family-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 240000, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 5 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+  ]),
 }));
 
 vi.mock("@/services/productComparePreviewClient", () => ({
@@ -153,16 +191,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -196,8 +224,10 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
-const findTextareaByLabel = (container: ParentNode, text: string) =>
-  findLabeledField(container, text, "textarea");
+const findSelectByOption = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("select")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(text))
+  );
 
 afterEach(() => {
   productComparePreviewState.reset();
@@ -277,16 +307,11 @@ test("ProductCompare editors preserve selected product ids and expose all visual
       (findInputByLabel(view.container, "Search") as HTMLInputElement | undefined)?.placeholder
     ).toBe("product title or slug");
 
-    setTextareaValue(
-      findTextareaByLabel(view.container, "Selected product IDs"),
-      "product-3\nproduct-1, product-3"
-    );
+    await flush();
+    toggleCheckbox(findInputByLabel(view.container, "Family Home"));
+    toggleCheckbox(findInputByLabel(view.container, "Starter Home"));
     setInputValue(findInputByLabel(view.container, "Limit"), "8");
     setInputValue(findInputByLabel(view.container, "Search"), " starter suite ");
-    setInputValue(
-      findInputByLabel(view.container, "Collection IDs (fallback)"),
-      "summer, winter, summer"
-    );
     setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
     setSelectValue(findSelectByLabel(view.container, "Sort direction"), "desc");
 
@@ -304,7 +329,7 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     setSelectValue(findSelectByLabel(view.container, "Money locale"), "pl-PL");
     setSelectValue(findSelectByLabel(view.container, "Quantity display"), "compact");
     setInputValue(findInputByLabel(view.container, "Compact quantity limit"), "25");
-    setInputValue(findInputByLabel(view.container, "Featured product ID"), "product-1");
+    setSelectValue(findSelectByOption(view.container, "Starter Home"), "product-1");
     toggleCheckbox(findInputByLabel(view.container, "Sticky table header"));
     setInputValue(findInputByLabel(view.container, "Title"), "Compare our homes");
     setInputValue(findInputByLabel(view.container, "Description"), "Quick side-by-side overview.");
@@ -314,7 +339,7 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     expect(latestValue.source?.productIds).toEqual(["product-3", "product-1"]);
     expect(latestValue.source?.limit).toBe(8);
     expect(latestValue.source?.search).toBe("starter suite");
-    expect(latestValue.source?.collectionIds).toEqual(["summer", "winter"]);
+    expect(latestValue.source?.collectionIds).toEqual([]);
     expect(latestValue.rows?.find((row) => row.key === "price")?.visible).toBe(false);
     expect(latestValue.rows?.find((row) => row.key === "slug")?.visible).toBe(true);
     expect(latestValue.rows?.find((row) => row.key === "excerpt")?.visible).toBe(true);

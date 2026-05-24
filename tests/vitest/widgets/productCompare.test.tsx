@@ -296,7 +296,7 @@ test("product compare editors render expected panels", () => {
     />
   );
   expect(wizard).toContain("Comparison source");
-  expect(wizard).toContain("Selected product IDs");
+  expect(wizard).toContain("Specific product curation is available in Visual");
   expect(wizard).toContain("Limit guidance");
 
   const visual = renderToString(

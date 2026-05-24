@@ -71,6 +71,7 @@ vi.mock("@/services/commerceClient", () => ({
     { id: "summer", name: "Summer", slug: "summer" },
     { id: "winter", name: "Winter", slug: "winter" },
   ]),
+  listCommerceProductsCached: vi.fn(async () => []),
 }));
 
 const previewQueue = vi.hoisted(() => {

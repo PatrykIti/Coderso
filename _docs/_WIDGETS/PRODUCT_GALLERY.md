@@ -19,19 +19,20 @@ styling.
 
 ### Wizard
 - source/query basics
-- bounded price filters in commerce minor units
-- gallery density
+- bounded shopper-facing price filters
 
 ### Visual
 - section header
 - card metadata and link controls
+- optional selected-product picker and card order
+- more-products page picker and link label
+- card density and presentation
 - empty state
 - surfaces
 
 ### Advanced
-- manual curation and view-all behavior
 - preview status and refresh
-- query diagnostics
+- read-only source, curation, route, pagination, and query diagnostics
 
 ## Runtime Behavior Notes
 
@@ -115,7 +116,8 @@ styling.
 
 - Exports `productGalleryEditorContract` with `version: 2`.
 - Contract target: Wizard owns commerce source setup; Visual owns section
-  header, card fields, links, pagination, empty state, columns, and style;
-  Advanced is read-only query/runtime diagnostics.
-- Minor-unit price wording, style fields in Wizard, and manual product IDs are
-  routed to `TASK-336-19`.
+  header, card fields, selected-product curation, links, pagination, empty
+  state, columns, and style; Advanced is read-only query/runtime diagnostics.
+- `TASK-336-19` removes beginner-mode raw product IDs, collection fallback IDs,
+  route-prefix editing, and minor-unit price wording. Legacy saved product
+  routes and curation stay backward-compatible and are summarized in Advanced.

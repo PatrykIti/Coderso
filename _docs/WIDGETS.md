@@ -165,6 +165,12 @@ Zasady:
   are chosen from a Form picker, field mapping is selected from Form fields or
   shown as safe defaults, and external provider action URL/method/webhook
   metadata is summarized rather than edited as raw technical text.
+- Commerce widget authoring follows the same picker-first rule. Product Gallery
+  and Product Compare use collection/product/page pickers for normal
+  Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
+  strings, and minor-unit price wording are not beginner-mode inputs. Existing
+  saved technical values remain backward-compatible and are summarized in
+  Advanced diagnostics.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

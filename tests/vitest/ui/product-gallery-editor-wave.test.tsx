@@ -83,6 +83,57 @@ vi.mock("@/components/ui/select", () => ({
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => [
+    {
+      id: "product-1",
+      title: "Preview Home",
+      slug: "preview-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 4 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+    {
+      id: "product-2",
+      title: "Premium Home",
+      slug: "premium-home",
+      status: "published",
+      excerpt: null,
+      description: null,
+      pricing: { amount: 49900, currency: "USD", compareAtAmount: null },
+      stock: { state: "in_stock", quantity: 6 },
+      collectionIds: [],
+      mediaIds: [],
+      variants: [],
+      metadata: {},
+      data: {},
+      createdAt: "2026-05-19T12:00:00.000Z",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      publishedAt: "2026-05-19T12:00:00.000Z",
+    },
+  ]),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "catalog-page",
+      title: "Catalog",
+      slug: "catalog",
+      status: "published",
+      updatedAt: "2026-05-19T12:00:00.000Z",
+      author: null,
+    },
+  ]),
 }));
 
 const previewProductGalleryMock = vi.hoisted(() =>
@@ -203,8 +254,10 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
-const findTextareaByLabel = (container: ParentNode, text: string) =>
-  findLabeledField(container, text, "textarea");
+const findSelectByOption = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("select")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(text))
+  );
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -290,18 +343,20 @@ test("ProductGallery editors update source, links, curation, and preview status"
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview ready"));
 
     setInputValue(findInputByLabel(view.container, "Limit"), "4");
-    setInputValue(findInputByLabel(view.container, "Minimum price (minor units)"), "19900");
-    setInputValue(findInputByLabel(view.container, "Maximum price (minor units)"), "49900");
+    setInputValue(findInputByLabel(view.container, "Minimum price"), "199");
+    setInputValue(findInputByLabel(view.container, "Maximum price"), "499");
     setSelectValue(findSelectByLabel(view.container, "Columns"), "4");
-    setInputValue(findInputByLabel(view.container, "Route prefix"), "/catalog");
     setInputValue(findInputByLabel(view.container, "CTA label"), "View details");
     setSelectValue(findSelectByLabel(view.container, "CTA style"), "button");
     toggleCheckbox(findInputByLabel(view.container, "Show status badge"));
-    setSelectValue(findSelectByLabel(view.container, "Curation mode"), "manual");
-    setInputValue(findTextareaByLabel(view.container, "Product IDs"), "product-2\nproduct-1");
-    setSelectValue(findSelectByLabel(view.container, "Pagination"), "view-all");
-    setInputValue(findInputByLabel(view.container, "View all href"), "/catalog");
-    setInputValue(findInputByLabel(view.container, "View all label"), "Browse catalog");
+    setSelectValue(findSelectByLabel(view.container, "Product selection"), "manual");
+    await flushPromises();
+    toggleCheckbox(findInputByLabel(view.container, "Premium Home"));
+    toggleCheckbox(findInputByLabel(view.container, "Preview Home"));
+    setSelectValue(findSelectByLabel(view.container, "More products action"), "view-all");
+    await flushPromises();
+    setSelectValue(findSelectByOption(view.container, "Catalog"), "catalog-page");
+    setInputValue(findInputByLabel(view.container, "Link label"), "Browse catalog");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Preview needs refresh")
     );
@@ -322,7 +377,6 @@ test("ProductGallery editors update source, links, curation, and preview status"
     );
     expect(latestValue.link).toEqual(
       expect.objectContaining({
-        basePath: "/catalog",
         ctaLabel: "View details",
         ctaStyle: "button",
       })
@@ -346,6 +400,33 @@ test("ProductGallery editors update source, links, curation, and preview status"
     expect(previewProductGalleryMock.mock.calls.length).toBe(2);
   } finally {
     view.cleanup();
+  }
+});
+
+test("ProductGallery keeps daily presentation controls out of Wizard", async () => {
+  const { ProductGalleryVisualEditor, ProductGalleryWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+
+  const wizardView = mount(
+    <ProductGalleryWizardEditor value={{}} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(findSelectByLabel(wizardView.container, "Columns")).toBeUndefined();
+    expect(findSelectByLabel(wizardView.container, "Card style")).toBeUndefined();
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <ProductGalleryVisualEditor value={{}} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(findSelectByLabel(visualView.container, "Columns")).toBeInstanceOf(HTMLSelectElement);
+    expect(findSelectByLabel(visualView.container, "Card style")).toBeInstanceOf(HTMLSelectElement);
+  } finally {
+    visualView.cleanup();
   }
 });
 

@@ -712,6 +712,36 @@ Visual drift found after Advanced was made read-only.
 - Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
   technical authoring drift in the current diff.
 
+## TASK-336-19 Commerce Source Authoring Evidence (2026-05-24)
+
+The seventh TASK-336-19 implementation family targets Product Gallery and
+Product Compare raw commerce authoring drift.
+
+- `product-compare` Wizard now stays query-based. Exact compared products and
+  featured-product selection live in Visual product pickers, and the temporary
+  Wizard/Visual duplicate allowance for `source.productIds` was removed.
+- `product-gallery` Wizard no longer asks for fallback collection IDs or
+  commerce minor-unit prices. Visual owns selected-product curation and the
+  more-products destination through product/page pickers. Card density moved
+  from Wizard into Visual to keep the presentation contract single-owned.
+  Product route prefix and saved technical behavior are summarized read-only in
+  Advanced.
+- Targeted Vitest evidence covers the shared commerce picker, both editor
+  waves, preview behavior, widget renderer compatibility, and strict editor
+  contracts:
+  `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/commerce-widget-editor-shared.test.tsx tests/vitest/ui/product-gallery-admin-preview.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-gallery-2026-05-24.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.*`.
+  Product Gallery reports `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. Product Compare reports
+  `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with the known
+  admin fixture gap `block_select_missing` before mode inspection.
+- Claude post-implementation review flagged Product Gallery `style.columns` and
+  `style.cardStyle` as a Wizard/Visual ownership blocker. The final patch moves
+  those controls into Visual rather than expanding the Wizard contract.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

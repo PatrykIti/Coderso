@@ -391,7 +391,7 @@ test("product gallery editors render expected panels", () => {
   );
   expect(wizard).toContain("Product source");
   expect(wizard).toContain("Price filters");
-  expect(wizard).toContain("Columns preview");
+  expect(wizard).not.toContain("Columns preview");
 
   const visual = renderToString(
     <ProductGalleryVisualEditor
@@ -403,6 +403,8 @@ test("product gallery editors render expected panels", () => {
   );
   expect(visual).toContain("Section header");
   expect(visual).toContain("Product links");
+  expect(visual).toContain("Presentation");
+  expect(visual).toContain("Columns preview");
   expect(visual).toContain("Surfaces");
 
   const advanced = renderToString(

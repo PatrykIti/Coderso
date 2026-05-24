@@ -194,6 +194,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   records the known `block_select_missing` fixture gap before mode inspection.
   Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
   technical authoring drift in the current diff.
+- In Progress (2026-05-24): seventh implementation family targets commerce
+  source/curation authoring in `product-gallery` and `product-compare`.
+  Product Compare now keeps Wizard query-based and moves curated product order
+  plus featured-product selection to Visual product pickers, removing the
+  temporary `source.productIds` duplicate allowance. Product Gallery hides
+  collection fallback IDs, uses shopper-facing price fields, moves selected
+  products, card density, and more-products destination into Visual pickers,
+  and keeps route prefix/behavior summaries read-only in Advanced.
+- In Progress (2026-05-24): targeted commerce validation passed
+  `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/commerce-widget-editor-shared.test.tsx tests/vitest/ui/product-gallery-admin-preview.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/editorContract.test.ts`,
+  `bun --cwd core lint`, and `bun --cwd core lint:types`. Playwright evidence
+  is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-gallery-2026-05-24.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.*`.
+  Product Gallery reports `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. Product Compare reports
+  `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with the known
+  admin fixture gap `block_select_missing` before mode inspection. Claude
+  post-implementation review later flagged Product Gallery card density as a
+  Wizard/Visual ownership blocker; the controls were moved into Visual instead
+  of broadening the Wizard contract.
 
 ## Files to Change
 

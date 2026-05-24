@@ -13,12 +13,14 @@ import {
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
+  CommerceProductSelectionField,
   CommerceSourceFields,
   CommerceTextField,
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
 import { ClearableInputField } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 
 const update = (
   value: ProductGalleryData,
@@ -123,7 +125,7 @@ const updateCuration = (
   });
 };
 
-function OptionalIntegerField({
+function OptionalPriceField({
   label,
   value,
   placeholder,
@@ -134,12 +136,13 @@ function OptionalIntegerField({
   placeholder?: string;
   onChange: (next: number | undefined) => void;
 }) {
+  const displayValue = typeof value === "number" ? (value / 100).toFixed(2) : "";
   return (
     <label className="space-y-1 text-sm">
       <span className="font-medium text-foreground">{label}</span>
       <Input
-        inputMode="numeric"
-        value={typeof value === "number" ? String(value) : ""}
+        inputMode="decimal"
+        value={displayValue}
         placeholder={placeholder}
         onChange={(event) => {
           const raw = event.target.value.trim();
@@ -147,9 +150,9 @@ function OptionalIntegerField({
             onChange(undefined);
             return;
           }
-          const numeric = Number(raw);
+          const numeric = Number(raw.replace(",", "."));
           if (!Number.isFinite(numeric)) return;
-          onChange(Math.max(0, Math.floor(numeric)));
+          onChange(Math.max(0, Math.round(numeric * 100)));
         }}
       />
     </label>
@@ -195,6 +198,63 @@ function SurfaceFields({
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
         placeholder="var(--color-border)"
       />
+    </CommerceEditorSection>
+  );
+}
+
+function ProductGalleryLayoutFields({
+  value,
+  onChange,
+}: {
+  value: ProductGalleryData;
+  onChange: (next: ProductGalleryData) => void;
+}) {
+  const normalized = normalizeProductGalleryData(value);
+
+  return (
+    <CommerceEditorSection
+      title="Presentation"
+      description="Adjust the daily card density and card treatment."
+    >
+      <label className="space-y-1 text-sm">
+        <span className="font-medium text-foreground">Columns</span>
+        <select
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          value={normalized.style?.columns ?? "3"}
+          onChange={(event) =>
+            updateStyle(value, onChange, {
+              columns:
+                event.target.value === "2" ||
+                event.target.value === "3" ||
+                event.target.value === "4"
+                  ? event.target.value
+                  : "3",
+            })
+          }
+        >
+          <option value="2">2 columns</option>
+          <option value="3">3 columns</option>
+          <option value="4">4 columns</option>
+        </select>
+      </label>
+
+      <label className="space-y-1 text-sm">
+        <span className="font-medium text-foreground">Card style</span>
+        <select
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          value={normalized.style?.cardStyle ?? "outlined"}
+          onChange={(event) =>
+            updateStyle(value, onChange, {
+              cardStyle: event.target.value === "minimal" ? "minimal" : "outlined",
+            })
+          }
+        >
+          <option value="outlined">Outlined</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </label>
+
+      <ProductGalleryColumnsPreview columns={normalized.style?.columns ?? "3"} />
     </CommerceEditorSection>
   );
 }
@@ -400,81 +460,30 @@ export function ProductGalleryWizardEditor({
               sortDir: nextSource.sortDir,
             })
           }
+          options={{ allowCollectionFallbackInput: false }}
         />
         <div className="rounded-lg border border-dashed border-border/70 bg-muted/10 p-3 text-xs text-muted-foreground">
-          Product Gallery keeps the shared commerce collection picker intact. If the checkbox list
-          is empty or stale, keep using the fallback IDs field and the manual collection count you
-          already selected.
+          Product Gallery uses collection checkboxes when collections are available. Saved legacy
+          collection selections stay active even when a collection is not listed here.
         </div>
       </CommerceEditorSection>
 
       <CommerceEditorSection
         title="Price filters"
-        description="Use commerce minor units here. Example: `19900` means `$199.00`."
+        description="Use shopper-facing prices. The widget stores normalized commerce values."
       >
-        <OptionalIntegerField
-          label="Minimum price (minor units)"
+        <OptionalPriceField
+          label="Minimum price"
           value={normalized.source?.minPriceMinor}
-          placeholder="19900"
+          placeholder="199.00"
           onChange={(next) => updateSource(normalized, onChange, { minPriceMinor: next })}
         />
-        <OptionalIntegerField
-          label="Maximum price (minor units)"
+        <OptionalPriceField
+          label="Maximum price"
           value={normalized.source?.maxPriceMinor}
-          placeholder="49900"
+          placeholder="499.00"
           onChange={(next) => updateSource(normalized, onChange, { maxPriceMinor: next })}
         />
-      </CommerceEditorSection>
-
-      <CommerceEditorSection
-        title="Layout"
-        description="Configure card density for this gallery section."
-      >
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Columns</span>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={normalized.style?.columns ?? "3"}
-            onChange={(event) =>
-              update(normalized, onChange, {
-                style: {
-                  ...normalized.style,
-                  columns:
-                    event.target.value === "2" ||
-                    event.target.value === "3" ||
-                    event.target.value === "4"
-                      ? event.target.value
-                      : "3",
-                },
-              })
-            }
-          >
-            <option value="2">2 columns</option>
-            <option value="3">3 columns</option>
-            <option value="4">4 columns</option>
-          </select>
-        </label>
-
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Card style</span>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={normalized.style?.cardStyle ?? "outlined"}
-            onChange={(event) =>
-              update(normalized, onChange, {
-                style: {
-                  ...normalized.style,
-                  cardStyle: event.target.value === "minimal" ? "minimal" : "outlined",
-                },
-              })
-            }
-          >
-            <option value="outlined">Outlined</option>
-            <option value="minimal">Minimal</option>
-          </select>
-        </label>
-
-        <ProductGalleryColumnsPreview columns={normalized.style?.columns ?? "3"} />
       </CommerceEditorSection>
     </div>
   );
@@ -556,18 +565,29 @@ export function ProductGalleryVisualEditor({
             })
           }
         />
+        <CommerceToggleField
+          label="Show media hint"
+          description="Editor-only helper showing resolved primary media status in preview."
+          checked={normalized.fields?.showMediaHint === true}
+          onChange={(next) =>
+            update(normalized, onChange, {
+              fields: {
+                ...normalized.fields,
+                showMediaHint: next,
+              },
+            })
+          }
+        />
       </CommerceEditorSection>
 
       <CommerceEditorSection
         title="Product links"
-        description="Link cards only when you have an explicit safe route prefix."
+        description="Control product card calls to action without typing product-route paths."
       >
-        <CommerceTextField
-          label="Route prefix"
-          value={normalized.link?.basePath}
-          placeholder="/catalog"
-          onChange={(next) => updateLink(normalized, onChange, { basePath: next })}
-        />
+        <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Product detail routing is managed outside the daily widget editor. Existing saved product
+          routes stay active and are reported in Advanced diagnostics.
+        </div>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-foreground">Link target</span>
           <select
@@ -610,6 +630,80 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        title="Curated products"
+        description="Optionally choose exact products by name."
+      >
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">Product selection</span>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={normalized.curation?.mode ?? "query"}
+            onChange={(event) =>
+              updateCuration(normalized, onChange, {
+                mode: event.target.value === "manual" ? "manual" : "query",
+              })
+            }
+          >
+            <option value="query">Use source query</option>
+            <option value="manual">Choose products</option>
+          </select>
+        </label>
+
+        {normalized.curation?.mode === "manual" ? (
+          <CommerceProductSelectionField
+            label="Selected products"
+            selectedIds={normalized.curation?.productIds ?? []}
+            maxSelected={48}
+            description="Product Gallery preserves the order shown here. Use Up and Down to reorder cards."
+            onChange={(productIds) => updateCuration(normalized, onChange, { productIds })}
+          />
+        ) : (
+          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            The gallery uses the Wizard source query until you switch to selected products.
+          </p>
+        )}
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        title="More products link"
+        description="Send visitors to an existing page when there are more matching products."
+      >
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">More products action</span>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={normalized.pagination?.mode ?? "none"}
+            onChange={(event) =>
+              updatePagination(normalized, onChange, {
+                mode: event.target.value === "view-all" ? "view-all" : "none",
+              })
+            }
+          >
+            <option value="none">No extra navigation</option>
+            <option value="view-all">Show link to page</option>
+          </select>
+        </label>
+
+        {normalized.pagination?.mode === "view-all" ? (
+          <>
+            <LinkDestinationField
+              fieldId="product-gallery-view-all"
+              label="Destination page"
+              value={normalized.pagination?.viewAllHref}
+              onChange={(next) => updatePagination(normalized, onChange, { viewAllHref: next })}
+              emptyLabel="No page selected"
+              helpText="Choose the page visitors should open for more products."
+            />
+            <CommerceTextField
+              label="Link label"
+              value={normalized.pagination?.viewAllLabel}
+              onChange={(next) => updatePagination(normalized, onChange, { viewAllLabel: next })}
+            />
+          </>
+        ) : null}
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
         title="Empty state"
         description="Shown when query returns no products."
       >
@@ -640,13 +734,13 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <SurfaceFields value={normalized} onChange={onChange} />
+      <ProductGalleryLayoutFields value={normalized} onChange={onChange} />
     </div>
   );
 }
 
 export function ProductGalleryAdvancedEditor({
   value,
-  onChange,
   context,
 }: WidgetEditorProps<ProductGalleryData>) {
   const normalized = normalizeProductGalleryData(value);
@@ -680,96 +774,51 @@ export function ProductGalleryAdvancedEditor({
     <div className="space-y-4">
       <CommerceEditorSection
         title="Product behavior"
-        description="Pagination and curated ordering stay diagnostic and bounded here."
+        description="Read-only source, curation, route, and pagination diagnostics."
       >
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Curation mode</span>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={normalized.curation?.mode ?? "query"}
-            onChange={(event) =>
-              updateCuration(normalized, onChange, {
-                mode: event.target.value === "manual" ? "manual" : "query",
-              })
-            }
-          >
-            <option value="query">Query results</option>
-            <option value="manual">Manual ID order</option>
-          </select>
-        </label>
-
-        {normalized.curation?.mode === "manual" ? (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-foreground">Product IDs</span>
-            <textarea
-              className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={(normalized.curation?.productIds ?? []).join("\n")}
-              onChange={(event) =>
-                updateCuration(normalized, onChange, {
-                  productIds: event.target.value
-                    .split("\n")
-                    .map((entry) => entry.trim())
-                    .filter((entry) => entry.length > 0),
-                })
-              }
-            />
-            <span className="block text-xs text-muted-foreground">
-              One product ID per line. Order is preserved. Keep this bounded to explicit curated IDs
-              only.
+        <div className="space-y-2 rounded-md border border-border/70 bg-background p-3 text-sm text-muted-foreground">
+          <p>
+            Source mode:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.curation?.mode === "manual" ? "Selected products" : "Query results"}
             </span>
-          </label>
-        ) : null}
-
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Pagination</span>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={normalized.pagination?.mode ?? "none"}
-            onChange={(event) =>
-              updatePagination(normalized, onChange, {
-                mode: event.target.value === "view-all" ? "view-all" : "none",
-              })
-            }
-          >
-            <option value="none">No extra navigation</option>
-            <option value="view-all">View all link</option>
-          </select>
-        </label>
-
-        {normalized.pagination?.mode === "view-all" ? (
-          <>
-            <CommerceTextField
-              label="View all href"
-              value={normalized.pagination?.viewAllHref}
-              placeholder="/catalog"
-              onChange={(next) => updatePagination(normalized, onChange, { viewAllHref: next })}
-            />
-            <CommerceTextField
-              label="View all label"
-              value={normalized.pagination?.viewAllLabel}
-              onChange={(next) => updatePagination(normalized, onChange, { viewAllLabel: next })}
-            />
-          </>
-        ) : null}
+            .
+          </p>
+          <p>
+            Selected products:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.curation?.productIds?.length ?? 0}
+            </span>
+            .
+          </p>
+          <p>
+            Card route:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.link?.basePath ? "Configured" : "Not configured"}
+            </span>
+            .
+          </p>
+          <p>
+            More products link:{" "}
+            <span className="font-medium text-foreground">
+              {normalized.pagination?.mode === "view-all" ? "Shown" : "Hidden"}
+            </span>
+            .
+          </p>
+        </div>
       </CommerceEditorSection>
 
       <CommerceEditorSection
         title="Diagnostics"
         description="Media IDs and preview payloads stay editor-only diagnostics."
       >
-        <CommerceToggleField
-          label="Show media hint"
-          description="Editor-only diagnostic helper showing resolved primary media IDs in preview."
-          checked={normalized.fields?.showMediaHint === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showMediaHint: next,
-              },
-            })
-          }
-        />
+        <div className="rounded-md border border-border/70 bg-background p-3 text-sm text-muted-foreground">
+          Media hint preview is{" "}
+          <span className="font-medium text-foreground">
+            {normalized.fields?.showMediaHint === true ? "enabled" : "disabled"}
+          </span>
+          . Visual owns whether product media hints are shown.
+        </div>
       </CommerceEditorSection>
 
       <CommerceEditorSection

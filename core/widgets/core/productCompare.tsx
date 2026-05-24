@@ -200,15 +200,6 @@ export const productCompareDefaults: ProductCompareData = {
   },
 };
 
-const productCompareWizardVisualDuplicateAllowances = [
-  {
-    path: "source.productIds",
-    reason:
-      "Wizard seeds compared products until product-picker ownership is moved fully to Visual.",
-    expiresWithTask: "TASK-336-19",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const productCompareEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -221,12 +212,10 @@ export const productCompareEditorContract: WidgetEditorContract = {
         "source.limit",
         "source.search",
         "source.collectionIds",
-        "source.productIds",
         "source.status",
         "source.sortField",
         "source.sortDir",
       ],
-      allowedDuplicateWritablePaths: productCompareWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -263,7 +252,6 @@ export const productCompareEditorContract: WidgetEditorContract = {
         "emptyState.title",
         "emptyState.description",
       ],
-      allowedDuplicateWritablePaths: productCompareWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

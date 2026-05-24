@@ -20,17 +20,17 @@ read-only runtime diagnostics.
 
 ### Wizard
 - source/query basics
-- selected product IDs
 - backend preview status and refresh
 - dense compare guidance
 
 ### Visual
+- selected-product picker and comparison order
 - section title/description/caption
 - attribute row visibility
 - labels and stock-state copy
 - product header image/link/CTA controls
 - money/quantity formatting
-- featured product and sticky header
+- featured-product picker and sticky header
 - empty state
 - surfaces
 
@@ -132,8 +132,9 @@ read-only runtime diagnostics.
 ## TASK-336-18 Editor Contract
 
 - Exports `productCompareEditorContract` with `version: 2`.
-- Contract target: Wizard seeds source selection; Visual owns rows, labels,
-  visible fields, header, empty state, format, layout, and style; Advanced is
-  read-only query/runtime diagnostics.
-- Raw selected product IDs and technical Visual formatting fields are routed to
-  `TASK-336-19`.
+- Contract target: Wizard seeds query-based source setup; Visual owns selected
+  products, rows, labels, visible fields, header, empty state, format, layout,
+  and style; Advanced is read-only query/runtime diagnostics.
+- `TASK-336-19` removes the temporary Wizard/Visual duplicate allowance for
+  `source.productIds`. Product curation now uses Visual product pickers instead
+  of raw ID text fields, while runtime still preserves exact manual order.

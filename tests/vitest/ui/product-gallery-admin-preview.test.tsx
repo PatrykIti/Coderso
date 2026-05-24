@@ -75,6 +75,7 @@ vi.mock("@/components/ui/select", () => ({
 
 vi.mock("@/services/commerceClient", () => ({
   listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceProductsCached: vi.fn(async () => []),
 }));
 
 const previewQueue = vi.hoisted(() => {

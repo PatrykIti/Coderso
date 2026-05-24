@@ -23,8 +23,9 @@ import {
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
+  CommerceProductSelectField,
+  CommerceProductSelectionField,
   CommerceSourceFields,
-  CommerceTextareaField,
   CommerceTextField,
   CommerceToggleField,
   normalizeSourceForEditor,
@@ -34,29 +35,14 @@ import { ClearableInputField } from "./ClearableFields";
 
 const productCompareSourceFieldOptions: CommerceSourceFieldOptions = {
   limitMax: 12,
+  allowCollectionFallbackInput: false,
   copy: {
     searchPlaceholder: "product title or slug",
     searchHelpText: "Use search to narrow Product Compare candidates before final curation.",
-    collectionFallbackLabel: "Collection IDs (fallback)",
-    collectionHelpText:
-      "Enter commerce collection IDs here when the picker is empty or unavailable.",
     statusHelpText:
       "Empty keeps the current runtime defaults. Use Published for public-ready comparisons.",
   },
 };
-
-const toProductCompareProductIdsText = (productIds: string[] | undefined) =>
-  (productIds ?? []).join("\n");
-
-const fromProductCompareProductIdsText = (value: string) =>
-  Array.from(
-    new Set(
-      value
-        .split(/[\n,]/)
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0)
-    )
-  );
 
 const normalizeText = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
@@ -295,7 +281,7 @@ function PreviewStatusCard({
             Resolved rows: {resolved.rows?.length ?? 0} of {resolved.total ?? 0}
           </p>
           <p>
-            Selected product IDs: {selectedCount || "None"} · Limit: {normalized.source?.limit ?? 0}
+            Selected products: {selectedCount || "None"} · Limit: {normalized.source?.limit ?? 0}
           </p>
           <p>
             {context?.previewState?.status === "loading"
@@ -331,7 +317,7 @@ function QuerySummarySection({ value }: { value: ProductCompareData }) {
     selectedCount > 0
       ? [
           `Curated compare set: ${selectedCount} selected products in manual order.`,
-          "Search, collection, and status filters are ignored while selected IDs are present.",
+          "Search, collection, and status filters are ignored while selected products are present.",
           `Runtime pagination limit: ${query.pagination.limit}`,
         ]
       : [
@@ -408,24 +394,9 @@ export function ProductCompareWizardEditor({
           }
           options={productCompareSourceFieldOptions}
         />
-        <CommerceTextareaField
-          label="Selected product IDs"
-          rows={3}
-          value={toProductCompareProductIdsText(normalized.source?.productIds)}
-          onChange={(next) => {
-            const productIds = fromProductCompareProductIdsText(next);
-            selectedProductIdsRef.current = productIds;
-            update(value, onChange, {
-              source: {
-                ...normalizeProductCompareData(value).source,
-                productIds,
-              },
-            });
-          }}
-        />
         <p className="text-xs text-muted-foreground">
-          One ID per line or comma-separated. When provided, Product Compare preserves this order
-          and ignores search, collection, and status filters.
+          Specific product curation is available in Visual as a product picker. Wizard keeps source
+          setup query-based.
         </p>
       </CommerceEditorSection>
 
@@ -475,6 +446,26 @@ export function ProductCompareVisualEditor({
         context={context}
         onRefresh={typeof context?.setPreviewState === "function" ? refresh : undefined}
       />
+
+      <CommerceEditorSection
+        title="Compared products"
+        description="Choose products by name and control their column order."
+      >
+        <CommerceProductSelectionField
+          label="Selected products"
+          selectedIds={normalized.source?.productIds ?? []}
+          maxSelected={12}
+          description="Product Compare preserves the order shown here. Use Up and Down to reorder columns."
+          onChange={(productIds) =>
+            update(value, onChange, {
+              source: {
+                ...normalized.source,
+                productIds,
+              },
+            })
+          }
+        />
+      </CommerceEditorSection>
 
       <CommerceEditorSection
         title="Section copy"
@@ -749,8 +740,8 @@ export function ProductCompareVisualEditor({
         title="Layout"
         description="Highlight a product and keep table headers visible in dense tables."
       >
-        <CommerceTextField
-          label="Featured product ID"
+        <CommerceProductSelectField
+          label="Featured product"
           value={normalized.layout?.featuredProductId}
           onChange={(next) =>
             update(value, onChange, {
