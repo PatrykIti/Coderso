@@ -686,6 +686,32 @@ shell instead of per widget.
   and verifies hidden Wizard peer tab, visible setup summary, daily Visual,
   Advanced diagnostics, explicit setup rerun, and return to Visual.
 
+## TASK-336-19 Newsletter Visual Authoring Evidence (2026-05-24)
+
+The sixth TASK-336-19 implementation family targets the remaining `newsletter`
+Visual drift found after Advanced was made read-only.
+
+- `newsletter` Visual no longer asks authors to type stored field-name keys,
+  analytics event names, action URLs, native methods, or webhook IDs.
+- Static mode shows safe default field mapping as read-only state. Forms-runtime
+  mode maps Email, First name, and Consent through fields from the selected
+  Coderso Form while preserving the existing persisted schema paths.
+- The daily editor now shows a beginner-safe connection summary. External
+  provider metadata remains read-only diagnostics in Advanced.
+- Compatibility warnings now describe missing Email/First name/Consent fields
+  instead of raw runtime field keys.
+- Targeted Vitest evidence covers the UI contract and renderer/runtime
+  compatibility:
+  `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and `bun test tests/vitest/widgets/newsletter.test.tsx`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-visual-admin-2026-05-24.*`.
+  Public CSS smoke passed with `publicFailures=0`; the admin probe still records
+  the known `block_select_missing` fixture gap before it can inspect the
+  Newsletter editor modes.
+- Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
+  technical authoring drift in the current diff.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

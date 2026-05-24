@@ -177,6 +177,23 @@ read-only diagnostics. It added these concrete cleanup requirements:
   reports `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with an
   unchanged admin fixture gap (`block_select_missing`) that prevents opening
   widget modes in the harness.
+- In Progress (2026-05-24): sixth implementation family removes remaining
+  Newsletter Visual raw technical authoring. Field-name text inputs are
+  replaced by default/read-only mapping in static mode and selected Form field
+  pickers in Forms-runtime mode. Visual no longer edits analytics event names,
+  action URLs, native methods, or webhook IDs; it shows a beginner-safe
+  connection summary while Advanced remains the read-only transport diagnostics
+  surface. Compatibility warnings now describe missing Email/First name/Consent
+  fields rather than raw runtime field keys.
+- In Progress (2026-05-24): targeted Newsletter validation passed
+  `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and `bun test tests/vitest/widgets/newsletter.test.tsx`. Targeted
+  Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-visual-admin-2026-05-24.*`;
+  the public fixture passes with no overflow, while the admin probe still
+  records the known `block_select_missing` fixture gap before mode inspection.
+  Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
+  technical authoring drift in the current diff.
 
 ## Files to Change
 

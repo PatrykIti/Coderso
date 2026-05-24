@@ -33,7 +33,7 @@ Sections:
 2. Content and copy
 3. Form semantics and consent
 4. Submission runtime
-5. Integration target
+5. Connection status
 6. Colors and emphasis
 7. Spacing and alignment
 
@@ -42,6 +42,10 @@ Notes:
 - Newsletter owns variant selection in Visual
   (`visualOwnsVariantSelection = true`).
 - Mobile behavior is documented directly on the variant cards.
+- Visual does not ask authors to type persisted field-name keys, action URLs,
+  methods, webhook IDs, or analytics event names. Static mode uses safe default
+  field mapping; Forms-runtime mode maps fields through the selected Form's
+  field picker; external provider metadata is summarized read-only.
 - Success preview is local UI state only and does not persist a fake submitted
   state into widget JSON.
 
@@ -52,7 +56,9 @@ Notes:
 - Confirm-gated normalization support action
 
 Advanced reports whether raw transport fields are configured without exposing
-or editing the stored action URL or webhook ID. Visual owns integration setup.
+or editing the stored action URL or webhook ID. Visual owns safe Forms-runtime
+binding and read-only connection status; external provider metadata remains a
+technical Advanced diagnostic/support concern.
 
 ## Runtime Contract
 
@@ -88,7 +94,10 @@ or editing the stored action URL or webhook ID. Visual owns integration setup.
 
 - Base email field is always present and required.
 - Optional `firstName` can be enabled with bounded label, placeholder, field
-  name, and `required` state.
+  mapping, and `required` state.
+- Visual field mapping is picker/read-only based: authors choose from the bound
+  Coderso Form fields when Forms runtime is active; static mode uses default
+  mapping unless legacy custom data already exists.
 - Bound Forms-runtime compatibility requires matching field names/types for:
   - email
   - first name, when enabled
@@ -217,5 +226,9 @@ The renderer emits bounded data markers including:
   style; Advanced is read-only transport diagnostics.
 - TASK-336-19 converts Advanced raw action URL/webhook ID editing into
   read-only configured/not-configured diagnostics plus a confirm-gated
-  normalization support action. Remaining Visual raw integration authoring is
-  tracked as follow-up drift.
+  normalization support action.
+- TASK-336-19 follow-up removes the remaining Visual raw integration and field
+  key authoring: field names are mapped through selected Form fields or shown
+  as safe read-only defaults, analytics event names are no longer edited in
+  Visual, and external provider action URL/method/webhook metadata is summarized
+  without exposing editable raw values.

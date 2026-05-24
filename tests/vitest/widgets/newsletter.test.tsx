@@ -587,7 +587,7 @@ test("newsletter visual editor renders the expanded IA", () => {
   expect(html).toContain("Variant and form structure");
   expect(html).toContain("Form semantics and consent");
   expect(html).toContain("Submission runtime");
-  expect(html).toContain("Integration target");
+  expect(html).toContain("Connection status");
   expect(html).toContain("Colors and emphasis");
   expect(html).toContain("Spacing and alignment");
 });
@@ -615,6 +615,6 @@ test("newsletter wizard and advanced editors reflect the new owner seams", () =>
     "Description stays saved, but the Minimal variant does not render it."
   );
   expect(advancedHtml).toContain("Transport diagnostics");
-  expect(advancedHtml).toContain("Raw integration metadata");
-  expect(advancedHtml).toContain("Normalize newsletter payload");
+  expect(advancedHtml).toContain("Integration metadata summary");
+  expect(advancedHtml).toContain("Normalize payload");
 });

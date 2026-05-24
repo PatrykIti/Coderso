@@ -26,8 +26,6 @@ import {
   resolveNewsletterVariant,
   type NewsletterData,
   type NewsletterFirstNameField,
-  type NewsletterIntegrationMode,
-  type NewsletterMethod,
   type NewsletterOptInMode,
   type NewsletterSpacing,
   type NewsletterSubmissionMode,
@@ -86,19 +84,9 @@ const widthOptions: Array<{ id: NewsletterWidth; label: string }> = [
   { id: "full", label: "Full width" },
 ];
 
-const integrationModeOptions: Array<{ id: NewsletterIntegrationMode; label: string }> = [
-  { id: "action-url", label: "Action URL" },
-  { id: "webhook", label: "Webhook" },
-];
-
-const methodOptions: Array<{ id: NewsletterMethod; label: string }> = [
-  { id: "post", label: "POST" },
-  { id: "get", label: "GET" },
-];
-
 const submissionModeOptions: Array<{ id: NewsletterSubmissionMode; label: string }> = [
-  { id: "static", label: "Static/native" },
-  { id: "forms-runtime", label: "Forms runtime" },
+  { id: "static", label: "Not connected yet" },
+  { id: "forms-runtime", label: "Use a Coderso Form" },
 ];
 
 const optInModeOptions: Array<{ id: NewsletterOptInMode; label: string }> = [
@@ -111,7 +99,6 @@ const NO_FORM_VALUE = "__newsletter-no-form__";
 type NormalizedNewsletterData = ReturnType<typeof normalizeNewsletterData>;
 type FormSettings = NonNullable<NewsletterData["form"]>;
 type StateCopy = NonNullable<NewsletterData["stateCopy"]>;
-type IntegrationData = NonNullable<NewsletterData["integration"]>;
 type SubmissionData = NonNullable<NewsletterData["submission"]>;
 type OptInData = NonNullable<NewsletterData["optIn"]>;
 type StyleData = NonNullable<NewsletterData["style"]>;
@@ -356,20 +343,6 @@ function updateStateCopy(
   }));
 }
 
-function updateIntegration(
-  value: NewsletterData,
-  onChange: (next: NewsletterData) => void,
-  patch: Partial<IntegrationData>
-) {
-  updateValue(value, onChange, (current) => ({
-    ...current,
-    integration: {
-      ...current.integration,
-      ...patch,
-    },
-  }));
-}
-
 function updateSubmission(
   value: NewsletterData,
   onChange: (next: NewsletterData) => void,
@@ -474,13 +447,118 @@ function RuntimeBindingSummary({ value }: { value: NormalizedNewsletterData }) {
     form: value.form,
     consent: value.consent,
   });
-  const requiredFieldText = requiredFields.map((field) => field.name).join(", ");
+  const requiredFieldText = requiredFields
+    .map((field) => describeNewsletterField(value, field.name))
+    .join(", ");
 
   return (
     <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-      <p>Required Newsletter field names for a bound Form: {requiredFieldText || "none"}.</p>
-      <p>Bound public Forms can reuse nonce, captcha, and `/forms/:id/submissions`.</p>
+      <p>Newsletter needs these fields from the selected Form: {requiredFieldText || "none"}.</p>
+      <p>Published public Forms reuse the shared secure submit flow automatically.</p>
     </div>
+  );
+}
+
+function describeNewsletterField(value: NormalizedNewsletterData, fieldName: string) {
+  if (fieldName === value.form.emailFieldName) return "Email";
+  if (fieldName === value.form.firstName.fieldName) return "First name";
+  if (fieldName === value.form.consentFieldName) return "Consent";
+  return "Custom mapped field";
+}
+
+function describeRuntimeField(detail: FormDetail | null, fieldName: string) {
+  const field = detail?.fields.find((candidate) => candidate.name === fieldName);
+  if (field?.label.trim()) return field.label.trim();
+  if (field?.type === "email") return "Email";
+  if (field?.type === "checkbox") return "Consent";
+  return "Required Form field";
+}
+
+function isDefaultNewsletterMapping(value: NormalizedNewsletterData) {
+  return (
+    value.form.emailFieldName === "email" &&
+    value.form.firstName.fieldName === "first_name" &&
+    value.form.consentFieldName === "consent"
+  );
+}
+
+function fieldMappingSummary(
+  value: NormalizedNewsletterData,
+  fieldName: string,
+  defaultLabel: string
+) {
+  return fieldName === defaultLabel ? "Default mapping" : "Custom mapping configured";
+}
+
+function getFormFieldOptions(
+  detail: FormDetail | null,
+  type: "email" | "text" | "checkbox",
+  currentValue: string,
+  fallbackLabel: string
+) {
+  const fields = (detail?.fields ?? []).filter((field) => field.type === type);
+  const options = fields.map((field) => ({
+    value: field.name,
+    label: field.label.trim() || fallbackLabel,
+    disabled: false,
+  }));
+  if (currentValue && !options.some((option) => option.value === currentValue)) {
+    options.unshift({
+      value: currentValue,
+      label: "Custom mapping configured",
+      disabled: true,
+    });
+  }
+  return options;
+}
+
+function FormFieldMappingSelect({
+  label,
+  path,
+  value,
+  options,
+  onChange,
+  emptyCopy,
+}: {
+  label: string;
+  path: string;
+  value: string;
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
+  onChange: (next: string) => void;
+  emptyCopy: string;
+}) {
+  if (options.length === 0) {
+    return (
+      <ReadonlyWidgetSummaryRow
+        id={`newsletter-mapping-${path.replaceAll(".", "-")}`}
+        label={label}
+        path={path}
+        value={emptyCopy}
+      />
+    );
+  }
+
+  return (
+    <WidgetControlRow
+      id={`newsletter-mapping-${path.replaceAll(".", "-")}`}
+      label={label}
+      path={path}
+    >
+      {(fieldProps) => (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger {...fieldProps}>
+            <SelectValue placeholder="Choose a Form field" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -677,8 +755,6 @@ export function NewsletterVisualEditor({
     selectedForm && !forms.some((form) => form.id === selectedForm.id)
       ? [selectedForm, ...forms]
       : forms;
-  const actionTargetsSharedFormsRoute =
-    transport.actionStatus === "valid" && transport.actionUrl.startsWith("/forms/");
   const textContrast = resolveColorContrastAdvisory({
     foreground: normalized.style.textColor,
     background: normalized.style.background,
@@ -734,11 +810,11 @@ export function NewsletterVisualEditor({
 
       <EditorSection
         title="Form semantics and consent"
-        description="Keep field names, labels, and consent semantics explicit and accessible."
+        description="Keep visible labels, consent, and Form field mapping explicit without asking authors to type runtime keys."
       >
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Email, first name, and consent field names must stay unique. Duplicate values normalize
-          back to safe bounded names before runtime rendering.
+          Newsletter uses safe default field mapping for simple forms. When a Coderso Form is
+          selected, choose fields from that Form instead of typing technical field names.
         </div>
 
         <div className="space-y-2">
@@ -763,16 +839,28 @@ export function NewsletterVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Email field name</p>
-          <Input
+        {normalized.submission.mode === "forms-runtime" ? (
+          <FormFieldMappingSelect
+            label="Email Form field"
+            path="form.emailFieldName"
             value={normalized.form.emailFieldName}
-            onChange={(event) =>
-              updateForm(value, onChange, { emailFieldName: event.target.value })
-            }
-            placeholder="email"
+            options={getFormFieldOptions(detail, "email", normalized.form.emailFieldName, "Email")}
+            onChange={(next) => updateForm(value, onChange, { emailFieldName: next })}
+            emptyCopy={detailLoading ? "Loading Form fields..." : "Select a Form to map fields"}
           />
-        </div>
+        ) : (
+          <ReadonlyWidgetSummaryRow
+            id="newsletter-static-email-mapping"
+            label="Email Form field"
+            path="form.emailFieldName"
+            value={fieldMappingSummary(normalized, normalized.form.emailFieldName, "email")}
+            help={
+              isDefaultNewsletterMapping(normalized)
+                ? "Static forms use safe default field mapping."
+                : "A legacy custom mapping is configured. Switch to a Coderso Form to choose fields."
+            }
+          />
+        )}
 
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
@@ -812,16 +900,32 @@ export function NewsletterVisualEditor({
                 placeholder="Your first name"
               />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">First name field name</p>
-              <Input
+            {normalized.submission.mode === "forms-runtime" ? (
+              <FormFieldMappingSelect
+                label="First name Form field"
+                path="form.firstName.fieldName"
                 value={normalized.form.firstName.fieldName}
-                onChange={(event) =>
-                  updateFirstNameField(value, onChange, { fieldName: event.target.value })
-                }
-                placeholder="first_name"
+                options={getFormFieldOptions(
+                  detail,
+                  "text",
+                  normalized.form.firstName.fieldName,
+                  "First name"
+                )}
+                onChange={(next) => updateFirstNameField(value, onChange, { fieldName: next })}
+                emptyCopy={detailLoading ? "Loading Form fields..." : "Select a Form to map fields"}
               />
-            </div>
+            ) : (
+              <ReadonlyWidgetSummaryRow
+                id="newsletter-static-first-name-mapping"
+                label="First name Form field"
+                path="form.firstName.fieldName"
+                value={fieldMappingSummary(
+                  normalized,
+                  normalized.form.firstName.fieldName,
+                  "first_name"
+                )}
+              />
+            )}
             <div className="flex items-center justify-between rounded-md border p-2">
               <div>
                 <p className="text-sm font-medium">First name required</p>
@@ -863,16 +967,28 @@ export function NewsletterVisualEditor({
               />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Consent field name</p>
-              <Input
+            {normalized.submission.mode === "forms-runtime" ? (
+              <FormFieldMappingSelect
+                label="Consent Form field"
+                path="form.consentFieldName"
                 value={normalized.form.consentFieldName}
-                onChange={(event) =>
-                  updateForm(value, onChange, { consentFieldName: event.target.value })
-                }
-                placeholder="consent"
+                options={getFormFieldOptions(
+                  detail,
+                  "checkbox",
+                  normalized.form.consentFieldName,
+                  "Consent"
+                )}
+                onChange={(next) => updateForm(value, onChange, { consentFieldName: next })}
+                emptyCopy={detailLoading ? "Loading Form fields..." : "Select a Form to map fields"}
               />
-            </div>
+            ) : (
+              <ReadonlyWidgetSummaryRow
+                id="newsletter-static-consent-mapping"
+                label="Consent Form field"
+                path="form.consentFieldName"
+                value={fieldMappingSummary(normalized, normalized.form.consentFieldName, "consent")}
+              />
+            )}
 
             <div className="flex items-center justify-between rounded-md border p-2">
               <div>
@@ -933,7 +1049,7 @@ export function NewsletterVisualEditor({
 
       <EditorSection
         title="Submission runtime"
-        description="Choose native external submit or bind to the existing shared Forms runtime."
+        description="Choose whether newsletter signups are connected to a Coderso Form."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Submission mode</p>
@@ -1002,9 +1118,8 @@ export function NewsletterVisualEditor({
 
             {selectedForm?.submissionAccess === "internal" ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                Internal submissions require an authenticated admin session or an API key with the
-                <span className="font-semibold"> forms.submit </span>scope. Newsletter should stay
-                static on public pages for this binding.
+                This Form is admin-only and cannot accept public newsletter signups. Choose a
+                published public Form or leave this block not connected.
               </div>
             ) : null}
 
@@ -1017,20 +1132,29 @@ export function NewsletterVisualEditor({
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                 {bindingStatus.missingExpectedFields.length > 0 ? (
                   <p>
-                    Missing matching Form fields:{" "}
-                    {bindingStatus.missingExpectedFields.map((field) => field.name).join(", ")}.
+                    The selected Form is missing the{" "}
+                    {bindingStatus.missingExpectedFields
+                      .map((field) => describeNewsletterField(normalized, field.name))
+                      .join(", ")}{" "}
+                    field this block needs.
                   </p>
                 ) : null}
                 {bindingStatus.requiredMismatchFields.length > 0 ? (
                   <p>
-                    These bound Form fields are required, so Newsletter must require them too:{" "}
-                    {bindingStatus.requiredMismatchFields.map((field) => field.name).join(", ")}.
+                    The selected Form requires{" "}
+                    {bindingStatus.requiredMismatchFields
+                      .map((field) => describeNewsletterField(normalized, field.name))
+                      .join(", ")}
+                    , so mark that field required here or choose another Form field.
                   </p>
                 ) : null}
                 {bindingStatus.unmappedRequiredFields.length > 0 ? (
                   <p>
-                    Required Form fields are not rendered by Newsletter:{" "}
-                    {bindingStatus.unmappedRequiredFields.map((field) => field.name).join(", ")}.
+                    The selected Form has required fields this block does not render:{" "}
+                    {bindingStatus.unmappedRequiredFields
+                      .map((field) => describeRuntimeField(detail, field.name))
+                      .join(", ")}
+                    .
                   </p>
                 ) : null}
               </div>
@@ -1050,9 +1174,8 @@ export function NewsletterVisualEditor({
           </>
         ) : (
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Native submit uses the configured action URL or provider-owned webhook target. Loading,
-            success, error, captcha, and redirect automation are only active when the shared Forms
-            runtime owns the submit flow.
+            This block is not connected to a public signup flow yet. Choose a Coderso Form to let
+            Coderso handle loading, success, error, captcha, and redirect behavior.
           </div>
         )}
 
@@ -1111,17 +1234,6 @@ export function NewsletterVisualEditor({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">Analytics event</p>
-          <Input
-            value={normalized.submission.analyticsEvent}
-            onChange={(event) =>
-              updateSubmission(value, onChange, { analyticsEvent: event.target.value })
-            }
-            placeholder="newsletter_submit"
-          />
-        </div>
-
-        <div className="space-y-2">
           <div className="flex gap-2">
             <Button
               type="button"
@@ -1143,102 +1255,42 @@ export function NewsletterVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="Integration target"
-        description="Keep action URLs safe and make the active transport explicit."
+        title="Connection status"
+        description="Show where signups go without exposing provider connection details in the daily editor."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Integration mode</p>
-          <Select
-            value={transport.mode}
-            onValueChange={(next) =>
-              updateIntegration(value, onChange, { mode: next as NewsletterIntegrationMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select integration mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {integrationModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {transport.mode === "action-url" ? (
-          <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Form action URL</p>
-              <Input
-                value={normalized.integration.actionUrl}
-                onChange={(event) =>
-                  updateIntegration(value, onChange, { actionUrl: event.target.value })
-                }
-                placeholder="https://example.com/subscribe"
-              />
-            </div>
-
-            {normalized.submission.mode === "static" ? (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Native method</p>
-                <Select
-                  value={normalized.integration.method}
-                  onValueChange={(next) =>
-                    updateIntegration(value, onChange, { method: next as NewsletterMethod })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {methodOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-              {(() => {
-                const action = normalizeNewsletterActionUrl(normalized.integration.actionUrl);
-                if (action.status === "valid" && actionTargetsSharedFormsRoute) {
-                  return normalized.submission.mode === "forms-runtime"
-                    ? "This Coderso Forms route is valid because Submission mode is handled by the shared Forms runtime."
-                    : "Coderso Forms routes require Submission mode = Forms runtime so nonce, captcha, and JSON submit stay aligned.";
-                }
-                if (action.status === "valid") {
-                  return "Safe action URL detected.";
-                }
-                if (action.status === "empty") {
-                  return "No action URL is configured yet. Native submit stays disabled until you add a safe target.";
-                }
-                return "Action URL must be https:// or an approved `/forms/:id/submissions` path. Bare domains, localhost, and admin/internal paths are rejected.";
-              })()}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Webhook ID</p>
-              <Input
-                value={normalized.integration.webhookId}
-                onChange={(event) =>
-                  updateIntegration(value, onChange, { webhookId: event.target.value })
-                }
-                placeholder="webhook_newsletter_signup"
-              />
-            </div>
-            <div className="rounded-md border bg-muted/20 p-3 text-xs text-muted-foreground">
-              Webhook mode keeps only a safe identifier in widget data. It becomes actionable only
-              when a shared backend owner or runtime binding handles it.
-            </div>
-          </>
-        )}
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-visual-connection-owner"
+          label="Signup destination"
+          value={
+            normalized.submission.mode === "forms-runtime"
+              ? selectedForm?.name
+                ? `Coderso Form: ${selectedForm.name}`
+                : "Choose a Coderso Form"
+              : transport.actionStatus === "valid" || transport.webhookId
+                ? "External provider configured"
+                : "Not connected yet"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-visual-external-provider"
+          label="External provider"
+          value={
+            transport.actionStatus === "valid" || transport.webhookId
+              ? "Configured in technical settings"
+              : "Not configured"
+          }
+          help="External provider connection details stay out of the daily editor. Advanced reports the saved metadata read-only."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-visual-tracking"
+          label="Signup tracking"
+          path="submission.analyticsEvent"
+          value={
+            normalized.submission.analyticsEvent
+              ? "Custom tracking configured"
+              : "No custom tracking"
+          }
+        />
       </EditorSection>
 
       <EditorSection

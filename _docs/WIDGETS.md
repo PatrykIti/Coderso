@@ -161,6 +161,10 @@ Zasady:
   FAQ Accordion and Newsletter keep only confirm-gated normalization support
   actions in Advanced; Navigation layout/sticky/collapse controls live in
   Visual and Advanced reports summaries only.
+- Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
+  are chosen from a Form picker, field mapping is selected from Form fields or
+  shown as safe defaults, and external provider action URL/method/webhook
+  metadata is summarized rather than edited as raw technical text.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

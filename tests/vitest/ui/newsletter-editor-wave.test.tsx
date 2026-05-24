@@ -595,16 +595,17 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
     setInputValue(getInputByPlaceholder(semanticsSection, "Email address"), "Work email");
     const showLabelToggle = getCheckboxes(semanticsSection)[0];
     setCheckboxValue(showLabelToggle, true);
-    setInputValue(getInputByPlaceholder(semanticsSection, "email"), "subscriber_email");
+    expect(normalizeText(semanticsSection.textContent)).not.toContain("email field name");
+    expect(normalizeText(semanticsSection.textContent)).not.toContain("first name field name");
+    expect(normalizeText(semanticsSection.textContent)).not.toContain("consent field name");
 
     const firstNameToggle = getCheckboxes(semanticsSection)[1];
     setCheckboxValue(firstNameToggle, true);
-    setInputValue(getInputByPlaceholder(semanticsSection, "first_name"), "first_name");
+    setInputValue(getInputByPlaceholder(semanticsSection, "Your first name"), "Your given name");
     setCheckboxValue(getCheckboxes(semanticsSection)[2], true);
 
     const consentCheckboxes = getCheckboxes(semanticsSection);
     setCheckboxValue(consentCheckboxes[4], true);
-    setInputValue(getInputByPlaceholder(semanticsSection, "consent"), "consent_newsletter");
     setSelectValue(getSelectByOptions(semanticsSection, ["single", "double"]), "double");
     setTextareaValue(
       getTextareaByPlaceholder(
@@ -622,6 +623,8 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
       getSelectByOptions(runtimeSection, ["static", "forms-runtime"]),
       "forms-runtime"
     );
+    expect(normalizeText(runtimeSection.textContent)).not.toContain("action url");
+    expect(normalizeText(runtimeSection.textContent)).not.toContain("webhook");
     await React.act(async () => {
       await (
         window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
@@ -631,6 +634,11 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
     expect(normalizeText(runtimeSection.textContent)).toContain(
       "this form does not have a redirect configured"
     );
+    const mappedSemanticsSection = getSectionByTitle(container, "Form semantics and consent");
+    expect(normalizeText(mappedSemanticsSection.textContent)).toContain("email form field");
+    setSelectValue(getSelectByOptions(mappedSemanticsSection, ["email"]), "email");
+    setSelectValue(getSelectByOptions(mappedSemanticsSection, ["first_name"]), "first_name");
+    setSelectValue(getSelectByOptions(mappedSemanticsSection, ["consent"]), "consent");
 
     setInputValue(getInputByPlaceholder(runtimeSection, "Sending..."), "Saving...");
     setInputValue(
@@ -638,18 +646,16 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
       "Retry later."
     );
     setInputValue(getInputByPlaceholder(runtimeSection, "Thanks for joining!"), "Joined!");
-    setInputValue(getInputByPlaceholder(runtimeSection, "newsletter_submit"), "newsletter_signup");
+    expect(normalizeText(runtimeSection.textContent)).not.toContain("analytics event");
     clickButton(getButtonsByText(runtimeSection, "Success state")[0]);
     expect(normalizeText(runtimeSection.textContent)).toContain("joined!");
 
-    const integrationSection = getSectionByTitle(container, "Integration target");
-    setInputValue(
-      getInputByPlaceholder(integrationSection, "https://example.com/subscribe"),
-      "example.com"
-    );
-    expect(normalizeText(integrationSection.textContent)).toContain(
-      "action url must be https:// or an approved"
-    );
+    const integrationSection = getSectionByTitle(container, "Connection status");
+    expect(normalizeText(integrationSection.textContent)).toContain("coderso form: newsletter");
+    expect(normalizeText(integrationSection.textContent)).toContain("no custom tracking");
+    expect(normalizeText(integrationSection.textContent)).not.toContain("form action url");
+    expect(normalizeText(integrationSection.textContent)).not.toContain("native method");
+    expect(normalizeText(integrationSection.textContent)).not.toContain("webhook id");
 
     const colorsSection = getSectionByTitle(container, "Colors and emphasis");
     setInputValue(getInputByPlaceholder(colorsSection, "transparent"), "#f8fafc");
@@ -670,11 +676,12 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
       form: {
         emailLabel: "Work email",
         showEmailLabel: true,
-        emailFieldName: "subscriber_email",
-        consentFieldName: "consent_newsletter",
+        emailFieldName: "email",
+        consentFieldName: "consent",
         firstName: {
           enabled: true,
           fieldName: "first_name",
+          placeholder: "Your given name",
           required: true,
         },
       },
@@ -685,7 +692,6 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
       submission: {
         mode: "forms-runtime",
         formId: "form-public",
-        analyticsEvent: "newsletter_signup",
       },
       stateCopy: {
         loadingMessage: "Saving...",
@@ -777,9 +783,9 @@ test("Newsletter visual editor warns when a bound form is internal or incompatib
       ).happyDOM?.waitUntilComplete?.();
     });
     const runtimeSection = getSectionByTitle(view.container, "Submission runtime");
-    expect(normalizeText(runtimeSection.textContent)).toContain("internal submissions require");
-    expect(normalizeText(runtimeSection.textContent)).toContain("missing matching form fields");
-    expect(normalizeText(runtimeSection.textContent)).toContain("must require them too");
+    expect(normalizeText(runtimeSection.textContent)).toContain("this form is admin-only");
+    expect(normalizeText(runtimeSection.textContent)).toContain("selected form is missing");
+    expect(normalizeText(runtimeSection.textContent)).toContain("mark that field required");
   } finally {
     view.cleanup();
   }
