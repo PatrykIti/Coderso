@@ -358,7 +358,6 @@ export const pricingPlansDefaults: PricingPlansData = {
       },
       features: ["1 project", "Email support", "Basic analytics"],
       ctaLabel: "Start now",
-      ctaHref: "#",
       highlighted: false,
     },
     {
@@ -373,7 +372,6 @@ export const pricingPlansDefaults: PricingPlansData = {
       },
       features: ["10 projects", "Priority support", "Advanced analytics"],
       ctaLabel: "Choose growth",
-      ctaHref: "#",
       highlighted: true,
     },
     {
@@ -388,7 +386,6 @@ export const pricingPlansDefaults: PricingPlansData = {
       },
       features: ["Unlimited projects", "SLA", "Audit logs"],
       ctaLabel: "Contact sales",
-      ctaHref: "#",
       highlighted: false,
     },
   ],
@@ -410,11 +407,6 @@ const pricingPlansWizardVisualDuplicateAllowances = [
   },
   {
     path: "header.title",
-    reason: "Wizard seeds section copy; Visual remains the daily pricing owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.description",
     reason: "Wizard seeds section copy; Visual remains the daily pricing owner.",
     expiresWithTask: "TASK-336-16",
   },
@@ -445,7 +437,7 @@ const pricingPlansWizardVisualDuplicateAllowances = [
   },
   {
     path: "plans.ctaHref",
-    reason: "Wizard seeds primary action URL; Visual remains the daily plan owner.",
+    reason: "Wizard seeds primary action destinations; Visual remains the daily plan owner.",
     expiresWithTask: "TASK-336-16",
   },
 ] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
@@ -461,7 +453,6 @@ export const pricingPlansEditorContract: WidgetEditorContract = {
       writablePaths: [
         "variant",
         "header.title",
-        "header.description",
         "plans.count",
         "plans.name",
         "plans.price",
@@ -529,7 +520,15 @@ export const pricingPlansEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["variant", "plans", "billingToggle", "comparison", "layout", "style"],
+      readOnlyPaths: [
+        "variant",
+        "header",
+        "plans",
+        "billingToggle",
+        "comparison",
+        "layout",
+        "style",
+      ],
     },
   ],
 };

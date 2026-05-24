@@ -797,6 +797,34 @@ media/link authoring drift in Visual.
   deps (`504 Outdated Optimize Dep`); clearing `core/node_modules/.vite` and
   restarting `coderso-dev-core-host` fixed the environment.
 
+## TASK-336-19 Pricing Plans CTA Destination Evidence (2026-05-24)
+
+The tenth TASK-336-19 implementation family targets Pricing Plans CTA and color
+authoring drift.
+
+- Wizard and Visual no longer expose raw `CTA URL` text inputs for
+  `plans.ctaHref`. Both surfaces use the shared page-first
+  `LinkDestinationField`, preserving older custom/hash/external destinations as
+  replace-or-clear compatibility state.
+- Pricing Plans defaults no longer seed fake `ctaHref: "#"`, so inserted/reset
+  widgets do not start in a disabled custom-destination state.
+- Pricing Plans color controls now use swatches plus clear/legacy-token
+  summaries instead of visible raw token textboxes for plan surfaces and shared
+  pricing colors.
+- The Wizard contract no longer claims `header.description`, and Advanced
+  diagnostics now include the real `header` path.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-pricing-plans-cta-destination-2026-05-24.*`.
+  Pricing Plans reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
+- Claude read-only review was attempted for this slice, but the process exited
+  with code 143 and returned no usable review output. Helper-agent review
+  separately confirmed the CTA, default `#`, color-token, and contract drifts
+  addressed here.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

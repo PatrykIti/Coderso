@@ -160,6 +160,35 @@ vi.mock("@/components/ui/textarea", () => ({
   ),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "solo-page",
+      title: "Solo checkout",
+      slug: "solo",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "try-solo-page",
+      title: "Try Solo",
+      slug: "try-solo",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "draft-page",
+      title: "Draft offer",
+      slug: "draft-offer",
+      status: "draft",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
@@ -217,6 +246,13 @@ const clickElement = (element: Element | null | undefined) => {
   if (!element) return;
   React.act(() => {
     element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const flushAsyncUpdates = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
@@ -308,6 +344,7 @@ test("PricingPlans wizard editor covers variant changes, publishable plan fields
   const view = mount(<Harness />);
 
   try {
+    await flushAsyncUpdates();
     setSelectValue(
       findSelectByOptions(view.container, [
         "two-plans",
@@ -335,7 +372,11 @@ test("PricingPlans wizard editor covers variant changes, publishable plan fields
       findInputByPlaceholder(firstPlanCard ?? view.container, "Choose plan"),
       "Start free"
     );
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "/checkout"), "/solo");
+    expect(firstPlanCard?.textContent).not.toContain("CTA URL");
+    setSelectValue(
+      findSelectByOptions(firstPlanCard ?? view.container, ["solo-page"]),
+      "solo-page"
+    );
     clickButtonByText(firstPlanCard ?? view.container, "Add feature");
     await Promise.resolve();
     const newFeatureInput = findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 1");
@@ -466,6 +507,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
   const view = mount(<Harness />);
 
   try {
+    await flushAsyncUpdates();
     expect(view.container.textContent).toContain("No features yet.");
 
     const initialHighlightSwitches = Array.from(
@@ -481,6 +523,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     expect(initialColorPickers[0]?.value).toBe("#ffffff");
 
     clickButtonByText(view.container, "Four Plans");
+    await flushAsyncUpdates();
     clickElement(initialHighlightSwitches[0]);
     setInputValue(findInputByPlaceholder(view.container, "Monthly"), "Monthly");
     setInputValue(findInputByPlaceholder(view.container, "Annual"), "Yearly");
@@ -544,9 +587,10 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       findInputByPlaceholder(firstPlanCard ?? view.container, "Choose plan"),
       "Try now"
     );
-    setInputValue(
-      findInputByPlaceholder(firstPlanCard ?? view.container, "/checkout"),
-      "/try-solo"
+    expect(firstPlanCard?.textContent).not.toContain("CTA URL");
+    setSelectValue(
+      findSelectByOptions(firstPlanCard ?? view.container, ["try-solo-page"]),
+      "try-solo-page"
     );
     setSelectValue(
       findSelectByOptions(firstPlanCard ?? view.container, [
@@ -620,9 +664,11 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
 
     const scalePlanCard = getPlanCards(view.container)[2];
     clickButtonByText(scalePlanCard ?? view.container, "Remove");
+    await flushAsyncUpdates();
     expect(latestValue.plans).toHaveLength(2);
 
     clickButtonByText(view.container, "Add plan");
+    await flushAsyncUpdates();
     expect(latestValue.plans).toHaveLength(3);
     expect(latestValue.plans[2]).toMatchObject({
       name: "Plan 3",

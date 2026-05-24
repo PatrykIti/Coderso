@@ -22,16 +22,19 @@ Pricing table for plans, tiers, and comparison-style rows.
 - variant
 - header text
 - fixed-count layout guidance
-- name, badge, price, billing period, CTA, and feature essentials per visible plan
+- name, badge, price, billing period, CTA label, page-first CTA destination,
+  and feature essentials per visible plan
 
 ### Visual
 
 - plan cards and features
 - billing toggle labels and default cycle
 - highlighted plan
-- plan-level card hierarchy, CTA style, and product copy
+- plan-level card hierarchy, CTA style, CTA destination, and product copy
 - comparison-table hierarchy, layout, notes, and width controls
 - spacing, radius, colors, and feature marker style
+- color fields use swatches plus clear/legacy-token summaries instead of raw
+  token textboxes in the beginner UI
 
 ### Advanced
 
@@ -79,6 +82,10 @@ Pricing table for plans, tiers, and comparison-style rows.
 - `plans[].surface`: optional clearable per-plan card surface
 - `plans[].badgeTone`: `neutral | accent | highlight`
 - `plans[].ctaStyle`: `outline | filled | ghost`
+- `plans[].ctaHref`: persisted safe destination string selected through
+  `LinkDestinationField` in Wizard and Visual. Published pages are selectable;
+  saved custom/hash/external values from older edits stay visible as
+  replace-or-clear compatibility state.
 - `plans[].highlightLabel`: optional top-banner label for highlighted plans
 - `plans[].features[]`: legacy strings remain valid; typed feature items may
   also carry bounded `status` and `icon` presets
@@ -142,7 +149,7 @@ Pricing table for plans, tiers, and comparison-style rows.
         { "text": "Email support", "status": "included", "icon": "check" }
       ],
       "ctaLabel": "Start now",
-      "ctaHref": "#",
+      "ctaHref": "/checkout",
       "highlighted": false
     }
   ],
@@ -163,4 +170,9 @@ Pricing table for plans, tiers, and comparison-style rows.
 - Contract target: Wizard seeds starter offer/count/copy/prices; Visual owns
   plan details, billing, comparison rows, layout, and style; Advanced is
   read-only runtime diagnostics.
-- Destructive align/reset and raw payload UX drift is routed to `TASK-336-19`.
+- TASK-336-19 replaced normal Wizard/Visual `CTA URL` text inputs with
+  page-first destination pickers, removed fake `href: "#"` defaults, hid raw
+  color token textboxes behind swatch/clear controls, and corrected Wizard
+  ownership so it no longer claims `header.description`.
+- Destructive align/reset and raw payload UX drift remains routed to
+  `TASK-336-19`.

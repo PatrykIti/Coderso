@@ -718,6 +718,9 @@ Katalog zawiera podstawowe metadata:
   destination authoring. Saved legacy URLs remain visible only as
   replace-or-clear compatibility state; new defaults must not seed fake
   destinations such as `href: "#"`.
+- Pricing Plans Wizard and Visual use page-first destination pickers for plan
+  CTAs and swatch-first color controls for pricing surfaces/highlights.
+  Defaults must not seed fake CTA destinations such as `href: "#"`.
 
 ---
 

@@ -245,6 +245,25 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-gallery-mosaic-media-link-2026-05-24.*`
   reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
+- In Progress (2026-05-24): tenth implementation family targets Pricing Plans
+  CTA destination authoring. Wizard and Visual no longer render raw `CTA URL`
+  text inputs for `plans.ctaHref`; both use the shared page-first
+  `LinkDestinationField` while preserving saved custom/hash/external
+  destinations as replace-or-clear compatibility state. Pricing Plans defaults
+  no longer seed fake `ctaHref: "#"`, so new/reset widgets do not start with
+  disabled custom destination rows. Pricing Plans color controls now use
+  swatches plus clear/legacy-token summaries instead of visible raw token
+  textboxes. The Wizard contract no longer claims `header.description`, and
+  Advanced read-only diagnostics now include real `header` data. Focused
+  Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso` also pass.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-pricing-plans-cta-destination-2026-05-24.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only review was attempted for this slice, but
+  the process exited with code 143 and produced no review output.
 
 ## Files to Change
 

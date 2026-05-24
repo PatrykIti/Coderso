@@ -38,6 +38,7 @@ import {
   type PricingPlansVariantId,
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -261,6 +262,7 @@ function ColorField({
       onClear={onClear}
       placeholder={placeholder}
       pickerFallback={pickerFallback}
+      showValueInput={false}
     />
   );
 }
@@ -849,12 +851,13 @@ export function PricingPlansWizardEditor({
                   }
                   placeholder="Choose plan"
                 />
-                <Input
-                  value={plan.ctaHref ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { ctaHref: event.target.value })
-                  }
-                  placeholder="/checkout"
+                <LinkDestinationField
+                  fieldId={`pricing-plans-wizard-plan-${plan.id ?? index}-cta`}
+                  label="CTA destination"
+                  value={plan.ctaHref}
+                  onChange={(next) => updatePlan(value, onChange, index, { ctaHref: next })}
+                  emptyLabel="No destination"
+                  helpText="Pick a site page for this plan. Hand-typed links from older edits stay until you replace or clear them."
                 />
               </div>
 
@@ -1352,16 +1355,14 @@ export function PricingPlansVisualEditor({
                 />
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">CTA URL</p>
-                <Input
-                  value={plan.ctaHref ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, planIndex, { ctaHref: event.target.value })
-                  }
-                  placeholder="/checkout"
-                />
-              </div>
+              <LinkDestinationField
+                fieldId={`pricing-plans-plan-${plan.id ?? planIndex}-cta`}
+                label="CTA destination"
+                value={plan.ctaHref}
+                onChange={(next) => updatePlan(value, onChange, planIndex, { ctaHref: next })}
+                emptyLabel="No destination"
+                helpText="Pick a site page for this plan. Hand-typed links from older edits stay until you replace or clear them."
+              />
 
               <div className="space-y-2">
                 <p className="text-sm font-medium">CTA style</p>
