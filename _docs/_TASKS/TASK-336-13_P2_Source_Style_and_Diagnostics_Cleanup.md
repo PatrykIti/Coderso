@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Shared Cleanup
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -40,16 +40,33 @@ silently absorbed here.
 
 ## Sub-Tasks
 
-- [ ] Run the Playwright smoke harness and registry contract report for P2
+- [x] Run the Playwright smoke harness and registry contract report for P2
   widgets before editing.
-- [ ] Add or update `editorContract` metadata for each in-scope widget.
-- [ ] Move style/surface controls out of Wizard.
-- [ ] Move source/setup controls out of Visual unless they are daily content
+- [x] Add or update `editorContract` metadata for each in-scope widget.
+- [x] Move style/surface controls out of Wizard.
+- [x] Move source/setup controls out of Visual unless they are daily content
   authoring controls.
-- [ ] Convert Advanced diagnostics to read-only summaries.
-- [ ] Replace local section/control markup with shared primitives where touched.
-- [ ] Add focused Vitest UI tests for each widget with changed ownership.
-- [ ] Update the Playwright report with the final P2 status.
+- [x] Convert Advanced diagnostics to read-only summaries.
+- [x] Replace local section/control markup with shared primitives where touched.
+- [x] Add focused Vitest UI tests for each widget with changed ownership.
+- [x] Update the Playwright report with the final P2 status.
+
+## Completion Notes
+
+Done (2026-05-24):
+
+- `content-list`, `booking-calendar`, `appointment-form`, and `product-table`
+  now expose strict v2 editor contracts.
+- Wizard owns setup/source only for the in-scope widgets; Visual owns daily
+  presentation and variant controls; Advanced diagnostics are read-only except
+  explicit technical endpoint overrides.
+- Visual surface controls for these widgets use swatches/clear actions instead
+  of asking nontechnical editors to type CSS variables or design-token strings.
+- Appointment phone validation moved from raw regex input to bounded presets.
+- Product Table source selection hides raw collection-ID fallback in Wizard and
+  uses collection checkboxes when collections are available.
+- Booking and appointment runtime endpoint normalization remains same-origin
+  relative, with nonce/token diagnostics redacted to presence-only summaries.
 
 ## Files to Change
 
@@ -116,6 +133,16 @@ No API routes are added by default.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Playwright CLI smoke for touched P2 widgets.
+
+Validation completed (2026-05-24):
+
+- `bun test tests/unit/widgets/contentList.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/widgets/bookingRuntimeScript.bookingCalendar.test.ts tests/vitest/widgets/bookingRuntimeScript.appointmentForm.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/server/publicBookingApi.test.ts tests/unit/booking/bookingAccess.test.ts`
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget content-list --output-json _docs/PLAYWRIGHT/widget-contract-smoke-content-list-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-content-list-2026-05-24.md` (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=1`, `metadataGaps=0`)
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget booking-calendar --output-json _docs/PLAYWRIGHT/widget-contract-smoke-booking-calendar-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-booking-calendar-2026-05-24.md` (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=1`, `metadataGaps=0`)
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget appointment-form --output-json _docs/PLAYWRIGHT/widget-contract-smoke-appointment-form-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-appointment-form-2026-05-24.md` (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`)
+- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget product-table --output-json _docs/PLAYWRIGHT/widget-contract-smoke-product-table-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-product-table-2026-05-24.md` (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=2`, `metadataGaps=0`)
 
 Regression-test shape:
 

@@ -1,0 +1,90 @@
+{
+  "generatedAt": "2026-05-24T12:47:57.137Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-13 --widget content-list --output-json _docs/PLAYWRIGHT/widget-contract-smoke-content-list-2026-05-24.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-content-list-2026-05-24.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["content-list"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "content-list",
+        "modes": [
+          {
+            "mode": "wizard",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
+        "adminPath": "http://localhost:5173/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "content-list",
+        "publicPath": "/test-content-list-0516",
+        "statusCode": 200,
+        "status": "fixture-gap",
+        "emptyFixture": true,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-content-list.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": [],
+        "error": "public_fixture_empty"
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 1,
+    "metadataGaps": 0
+  }
+}

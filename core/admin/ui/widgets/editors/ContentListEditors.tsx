@@ -39,10 +39,13 @@ import {
   type ContentListStatusScope,
   type ContentListVariantId,
 } from "../../../../widgets/core/contentList";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: ContentListVariantId;
@@ -133,18 +136,21 @@ const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
-  id?: string;
+  id: string;
+  mode: EditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
-  const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -809,19 +815,16 @@ function clearStyle(
   });
 }
 
-export function ContentListWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<ContentListData>) {
+export function ContentListWizardEditor({ value, onChange }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
-  const resolvedVariant = resolveContentListVariant(variant);
   const sourceMode = resolved.source?.mode ?? "legacy";
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="content-list.wizard.source-binding"
+        mode="wizard"
+        role="source"
         title="Source setup"
         description="Select data source and quick listing defaults."
       >
@@ -858,6 +861,63 @@ export function ContentListWizardEditor({
             onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
           />
         )}
+      </EditorSection>
+
+      <EditorSection
+        id="content-list.wizard.source-rules"
+        mode="wizard"
+        role="setup"
+        title="Source rules"
+        description="First-time source limits and ordering rules."
+      >
+        {sourceMode === "legacy" ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Status scope</p>
+              <Select
+                value={resolved.source?.statusScope ?? "published"}
+                onValueChange={(next) =>
+                  updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Status scope" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusScopeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Sort</p>
+              <Select
+                value={resolved.source?.sort ?? "published-desc"}
+                onValueChange={(next) =>
+                  updateSource(value, onChange, { sort: next as ContentListSort })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort order" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sortOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+            Listing mode uses filters and sorting from the selected Listings query.
+          </p>
+        )}
         <div className="space-y-2">
           <p className="text-sm font-medium">Item limit</p>
           <Input
@@ -871,27 +931,6 @@ export function ContentListWizardEditor({
               })
             }
           />
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Variant"
-        description="Pick how entries should be arranged in preview and runtime."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Layout variant</p>
-          <Select value={resolvedVariant} onValueChange={(next) => onVariantChange?.(next)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </EditorSection>
     </div>
@@ -913,6 +952,9 @@ export function ContentListVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="content-list.visual.variant-layout"
+        mode="visual"
+        role="layout"
         title="Variant and layout"
         description="Choose list orientation and spacing style."
       >
@@ -978,82 +1020,90 @@ export function ContentListVisualEditor({
       </EditorSection>
 
       <EditorSection
-        title="Source and filters"
-        description="Configure data source and basic filtering behavior."
+        id="content-list.visual.filters"
+        mode="visual"
+        role="content"
+        title="Daily filters"
+        description="Review the Wizard-owned source and tune daily editorial filters."
       >
-        <div className="rounded-md border border-border/70 px-3 py-2 text-xs text-muted-foreground">
-          Source mode:{" "}
-          <span className="font-medium text-foreground">
-            {sourceMode === "listing" ? "By listing query" : "By content type"}
-          </span>
-          . Change source mode in Wizard or Advanced.
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="content-list-visual-source-mode"
+          label="Source mode"
+          path="source.mode"
+          value={sourceMode === "listing" ? "By listing query" : "By content type"}
+        />
         {sourceMode === "listing" ? (
-          <ListingSourceSelect
-            queryId={resolved.source?.listingQueryId ?? ""}
-            templateId={resolved.source?.listingTemplateId ?? ""}
-            onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
-            onTemplateChange={(next) => updateSource(value, onChange, { listingTemplateId: next })}
-          />
+          <>
+            <ReadonlyWidgetSummaryRow
+              id="content-list-visual-listing-query"
+              label="Listing query"
+              path="source.listingQueryId"
+              value={resolved.source?.listingQueryId ?? "Not configured"}
+            />
+            <ReadonlyWidgetSummaryRow
+              id="content-list-visual-listing-template"
+              label="Listing template"
+              path="source.listingTemplateId"
+              value={resolved.source?.listingTemplateId ?? "Default template"}
+            />
+            <p className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+              Listing query filtering is owned by the selected Listings query. Change the binding in
+              Wizard.
+            </p>
+          </>
         ) : (
           <>
-            <ContentTypeSelect
-              value={resolved.source?.contentTypeId ?? ""}
-              onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
+            <ReadonlyWidgetSummaryRow
+              id="content-list-visual-content-type"
+              label="Content type"
+              path="source.contentTypeId"
+              value={resolved.source?.contentTypeId ?? "Not configured"}
             />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Status scope</p>
-                <Select
-                  value={resolved.source?.statusScope ?? "published"}
-                  onValueChange={(next) =>
-                    updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status scope" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusScopeOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Sort</p>
-                <Select
-                  value={resolved.source?.sort ?? "published-desc"}
-                  onValueChange={(next) =>
-                    updateSource(value, onChange, { sort: next as ContentListSort })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sort order" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <ReadonlyWidgetSummaryRow
+              id="content-list-visual-status-sort"
+              label="Status and sort"
+              path="source.statusScope"
+              value={`${resolved.source?.statusScope ?? "published"} · ${
+                resolved.source?.sort ?? "published-desc"
+              }`}
+            />
             <TaxonomySuggestionsInput
               key={resolved.source?.contentTypeId ?? ""}
               contentTypeId={resolved.source?.contentTypeId ?? ""}
               value={resolved.filters?.taxonomy ?? ""}
               onChange={(next) => updateFilters(value, onChange, { taxonomy: next })}
             />
+            <AuthorSelect
+              value={resolved.filters?.authorId ?? ""}
+              onChange={(next) => updateFilters(value, onChange, { authorId: next })}
+            />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Search query</p>
+              <Input
+                value={resolved.filters?.searchQuery ?? ""}
+                onChange={(event) =>
+                  updateFilters(value, onChange, { searchQuery: event.target.value })
+                }
+                placeholder="Title, excerpt, tags"
+              />
+            </div>
+            <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+              <span className="text-sm">Featured only</span>
+              <Switch
+                checked={resolved.filters?.featuredOnly ?? false}
+                onCheckedChange={(checked) =>
+                  updateFilters(value, onChange, { featuredOnly: checked })
+                }
+              />
+            </label>
           </>
         )}
       </EditorSection>
 
       <EditorSection
+        id="content-list.visual.section-context"
+        mode="visual"
+        role="content"
         title="Section context"
         description="Optional heading copy plus guidance for the saved-data canvas preview."
       >
@@ -1090,6 +1140,9 @@ export function ContentListVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="content-list.visual.pagination-actions"
+        mode="visual"
+        role="content"
         title="Pagination and actions"
         description="Control page navigation and the follow-up action shown below the list."
       >
@@ -1172,6 +1225,9 @@ export function ContentListVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="content-list.visual.presentation-fields"
+        mode="visual"
+        role="visual"
         title="Presentation fields"
         description="Control visible item elements in runtime output."
       >
@@ -1279,7 +1335,54 @@ export function ContentListVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection title="Empty state" description="Text shown when query returns no entries.">
+      <EditorSection
+        id="content-list.visual.surface-colors"
+        mode="visual"
+        role="visual"
+        title="Surface colors"
+        description="Daily card and text color tokens for runtime output."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SharedColorControl
+            label="Card background"
+            value={resolved.style?.backgroundColor}
+            onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+            onClear={() => clearStyle(value, onChange, "backgroundColor")}
+            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Card border"
+            value={resolved.style?.borderColor}
+            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+            onClear={() => clearStyle(value, onChange, "borderColor")}
+            placeholder="var(--color-border)"
+            pickerFallback="#d4d4d8"
+            showValueInput={false}
+          />
+        </div>
+        <SharedColorControl
+          label="Text color"
+          value={resolved.style?.textColor}
+          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onSwatchChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyle(value, onChange, "textColor")}
+          placeholder="var(--color-text)"
+          pickerFallback="#0f172a"
+          showValueInput={false}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="content-list.visual.empty-state"
+        mode="visual"
+        role="content"
+        title="Empty state"
+        description="Text shown when query returns no entries."
+      >
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
@@ -1304,129 +1407,110 @@ export function ContentListVisualEditor({
   );
 }
 
-export function ContentListAdvancedEditor({ value, onChange }: WidgetEditorProps<ContentListData>) {
+export function ContentListAdvancedEditor({ value }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
   const sourceMode = resolved.source?.mode ?? "legacy";
+  const runtimeSnapshot = {
+    total: resolved.resolved?.total ?? 0,
+    itemCount: resolved.resolved?.items?.length ?? 0,
+    sourceTypeId: resolved.resolved?.sourceTypeId ?? null,
+    sourceTypeSlug: resolved.resolved?.sourceTypeSlug ?? null,
+    listPath: resolved.resolved?.listPath ?? null,
+    listingQueryId: resolved.resolved?.listingQueryId ?? null,
+    listingTemplateId: resolved.resolved?.listingTemplateId ?? null,
+    resolvedAt: resolved.resolved?.resolvedAt ?? null,
+    runtime: {
+      page: resolved.resolved?.runtime?.page ?? null,
+      pageSize: resolved.resolved?.runtime?.pageSize ?? null,
+      totalPages: resolved.resolved?.runtime?.totalPages ?? null,
+      rejectedTokenCount: resolved.resolved?.runtime?.rejectedTokens?.length ?? 0,
+      hasPreviousPage: Boolean(resolved.resolved?.runtime?.previousPageHref),
+      hasNextPage: Boolean(resolved.resolved?.runtime?.nextPageHref),
+    },
+    error: resolved.resolved?.error ?? null,
+  };
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Query controls"
-        description="Technical filtering and ordering options for runtime resolution."
+        id="content-list.advanced.source-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Source summary"
+        description="Read-only source and filter state owned by Wizard or Visual."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Source mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateSourceMode(value, onChange, next as ContentListSourceMode)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Item limit</p>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={String(resolved.source?.limit ?? 6)}
-            onChange={(event) =>
-              updateSource(value, onChange, {
-                limit: normalizeContentListLimit(Number(event.target.value)),
-              })
-            }
-          />
-        </div>
-        {sourceMode === "listing" ? (
-          <>
-            <ListingSourceSelect
-              queryId={resolved.source?.listingQueryId ?? ""}
-              templateId={resolved.source?.listingTemplateId ?? ""}
-              onQueryChange={(next) => updateSource(value, onChange, { listingQueryId: next })}
-              onTemplateChange={(next) =>
-                updateSource(value, onChange, { listingTemplateId: next })
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Listing mode uses filters and sorting from the selected Listings query.
-            </p>
-          </>
-        ) : (
-          <>
-            <AuthorSelect
-              value={resolved.filters?.authorId ?? ""}
-              onChange={(next) => updateFilters(value, onChange, { authorId: next })}
-            />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Search query</p>
-              <Input
-                value={resolved.filters?.searchQuery ?? ""}
-                onChange={(event) =>
-                  updateFilters(value, onChange, { searchQuery: event.target.value })
-                }
-                placeholder="Title, excerpt, tags"
-              />
-            </div>
-            <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-              <span className="text-sm">Featured only</span>
-              <Switch
-                checked={resolved.filters?.featuredOnly ?? false}
-                onCheckedChange={(checked) =>
-                  updateFilters(value, onChange, { featuredOnly: checked })
-                }
-              />
-            </label>
-          </>
-        )}
-      </EditorSection>
-
-      <EditorSection
-        title="Styling tokens"
-        description="Direct color values for cards and text output."
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ClearableInputField
-            label="Card background"
-            value={resolved.style?.backgroundColor}
-            onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-            onClear={() => clearStyle(value, onChange, "backgroundColor")}
-            placeholder="var(--color-bg)"
-          />
-          <ClearableInputField
-            label="Card border"
-            value={resolved.style?.borderColor}
-            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-            onClear={() => clearStyle(value, onChange, "borderColor")}
-            placeholder="var(--color-border)"
-          />
-        </div>
-        <SharedColorControl
-          label="Text color"
-          value={resolved.style?.textColor}
-          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          onClear={() => clearStyle(value, onChange, "textColor")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-source-mode"
+          label="Source mode"
+          path="source.mode"
+          value={sourceMode === "listing" ? "By listing query" : "By content type"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-source-binding"
+          label="Source binding"
+          path="source"
+          value={
+            sourceMode === "listing"
+              ? `Query: ${resolved.source?.listingQueryId ?? "not configured"} · Template: ${
+                  resolved.source?.listingTemplateId ?? "default"
+                }`
+              : `Content type: ${resolved.source?.contentTypeId ?? "not configured"}`
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-source-rules"
+          label="Source rules"
+          path="source.limit"
+          value={`Limit ${resolved.source?.limit ?? 6} · ${
+            resolved.source?.statusScope ?? "published"
+          } · ${resolved.source?.sort ?? "published-desc"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-filters"
+          label="Daily filters"
+          path="filters"
+          value={`Taxonomy: ${resolved.filters?.taxonomy || "none"} · Search: ${
+            resolved.filters?.searchQuery || "none"
+          } · Featured: ${resolved.filters?.featuredOnly ? "yes" : "no"} · Author: ${
+            resolved.filters?.authorId || "none"
+          }`}
         />
       </EditorSection>
 
       <EditorSection
-        title="Runtime payload snapshot"
-        description="Read-only resolved payload from runtime preview/public rendering."
+        id="content-list.advanced.style-summary"
+        mode="advanced"
+        role="summary"
+        title="Style summary"
+        description="Read-only presentation state owned by Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-layout-style"
+          label="Layout"
+          path="style"
+          value={`Columns ${resolved.style?.columns ?? "3"} · Gap ${
+            resolved.style?.gap ?? "md"
+          } · Card ${resolved.style?.cardStyle ?? "outlined"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-color-style"
+          label="Color tokens"
+          path="style.backgroundColor"
+          value={`Background: ${resolved.style?.backgroundColor ?? "default"} · Border: ${
+            resolved.style?.borderColor ?? "default"
+          } · Text: ${resolved.style?.textColor ?? "default"}`}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="content-list.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only sanitized runtime summary without item titles or draft/private content."
       >
         <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed">
-          {JSON.stringify(resolved.resolved ?? { items: [] }, null, 2)}
+          {JSON.stringify(runtimeSnapshot, null, 2)}
         </pre>
       </EditorSection>
     </div>

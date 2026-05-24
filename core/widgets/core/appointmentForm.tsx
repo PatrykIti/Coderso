@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
@@ -92,6 +92,138 @@ export type AppointmentFormData = {
   };
 };
 
+export const appointmentFormEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "appointment-form.wizard.flow-setup",
+      title: "Flow setup",
+      role: "setup",
+      writablePaths: ["flowId"],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.variant-flow",
+      title: "Variant and flow behavior",
+      role: "layout",
+      writablePaths: ["variant", "locale", "successRedirectUrl"],
+      readOnlyPaths: ["flowId"],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.copy",
+      title: "Copy",
+      role: "content",
+      writablePaths: ["title", "description", "submitLabel", "loadingMessage", "successMessage"],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.slot-summary",
+      title: "Slot summary",
+      role: "content",
+      writablePaths: [
+        "slotSummaryLabel",
+        "slotSummaryEmptyMessage",
+        "noSelectionMessage",
+        "showServiceInSummary",
+        "showResourceInSummary",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.fields",
+      title: "Fields",
+      role: "content",
+      writablePaths: [
+        "nameMode",
+        "customerNameLabel",
+        "customerFirstNameLabel",
+        "customerLastNameLabel",
+        "customerEmailLabel",
+        "customerPhoneLabel",
+        "notesLabel",
+        "customerNamePlaceholder",
+        "customerFirstNamePlaceholder",
+        "customerLastNamePlaceholder",
+        "customerEmailPlaceholder",
+        "customerPhonePlaceholder",
+        "notesPlaceholder",
+        "showEmail",
+        "showPhone",
+        "showNotes",
+        "requiredEmail",
+        "requiredPhone",
+        "phonePattern",
+        "phonePatternMessage",
+        "notesMaxLength",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.custom-fields",
+      title: "Custom fields",
+      role: "content",
+      writablePaths: [
+        "customFields.id",
+        "customFields.label",
+        "customFields.type",
+        "customFields.required",
+        "customFields.placeholder",
+        "customFields.options",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.consent",
+      title: "Consent and protection",
+      role: "content",
+      writablePaths: [
+        "consent.enabled",
+        "consent.label",
+        "consent.required",
+        "consent.privacyUrl",
+        "consent.termsUrl",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "appointment-form.visual.surface",
+      title: "Surface",
+      role: "visual",
+      writablePaths: [
+        "style.frameBackground",
+        "style.frameBorderColor",
+        "style.summaryBackground",
+        "style.summaryBorderColor",
+        "style.submitBackground",
+        "style.submitTextColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "appointment-form.advanced.runtime-endpoint",
+      title: "Runtime endpoint",
+      role: "technical",
+      writablePaths: ["submissionEndpoint"],
+    },
+    {
+      mode: "advanced",
+      id: "appointment-form.advanced.submission-security",
+      title: "Submission security",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "resolved.submissionNonce",
+        "resolved.captcha",
+        "resolved.captcha.provider",
+        "resolved.captcha.action",
+        "resolved.error",
+      ],
+    },
+  ],
+};
+
 export const appointmentFormDefaults: AppointmentFormData = {
   flowId: "booking-flow",
   title: "Appointment details",
@@ -153,6 +285,18 @@ const optionalText = (value: string | undefined) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const safeRelativeEndpoint = (value: string | undefined, fallback: string) => {
+  const normalized = optionalText(value) ?? fallback;
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) return fallback;
+  try {
+    const url = new URL(normalized, "https://coderso.local");
+    if (url.origin !== "https://coderso.local") return fallback;
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return fallback;
+  }
 };
 
 const bool = (value: boolean | undefined, fallback: boolean) =>
@@ -478,7 +622,7 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       privacyUrl: bookingLink(data.consent?.privacyUrl),
       termsUrl: bookingLink(data.consent?.termsUrl),
     },
-    submissionEndpoint: text(
+    submissionEndpoint: safeRelativeEndpoint(
       data.submissionEndpoint,
       appointmentFormDefaults.submissionEndpoint ?? "/api/booking/reservations"
     ),
@@ -981,6 +1125,10 @@ export function createAppointmentFormWidget(editors: {
       wizard: editors.wizard,
       visual: editors.visual,
       advanced: editors.advanced,
+    },
+    editorContract: appointmentFormEditorContract,
+    editorCapabilities: {
+      visualOwnsVariantSelection: true,
     },
     render: AppointmentFormBlock,
   };

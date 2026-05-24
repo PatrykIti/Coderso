@@ -1,6 +1,11 @@
 import React, { type ComponentType, type CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps, WidgetRenderContext } from "../types";
+import type {
+  WidgetDefinition,
+  WidgetEditorContract,
+  WidgetEditorProps,
+  WidgetRenderContext,
+} from "../types";
 import {
   buildCommerceWidgetQueryInput,
   commerceSortFieldLabelMap,
@@ -225,6 +230,172 @@ export type ProductTableData = {
     runtime?: ProductTableResolvedRuntime;
     error?: string;
   };
+};
+
+export const productTableEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "product-table.wizard.table-source",
+      title: "Table source",
+      role: "source",
+      writablePaths: [
+        "source.limit",
+        "source.search",
+        "source.collectionIds",
+        "source.status",
+        "source.sortField",
+        "source.sortDir",
+      ],
+    },
+    {
+      mode: "wizard",
+      id: "product-table.wizard.preview-summary",
+      title: "Preview summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved.items", "resolved.total", "resolved.resolvedAt", "resolved.error"],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.layout-style",
+      title: "Layout and style",
+      role: "layout",
+      writablePaths: [
+        "variant",
+        "style.density",
+        "style.rowTreatment",
+        "style.hoverRows",
+        "style.stickyHeader",
+        "style.maxWidth",
+        "style.align",
+        "style.typography",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.section-header",
+      title: "Section header",
+      role: "content",
+      writablePaths: ["header.eyebrow", "header.title", "header.description"],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.columns",
+      title: "Columns",
+      role: "content",
+      writablePaths: [
+        "fields.showImage",
+        "fields.showTitle",
+        "fields.showExcerpt",
+        "fields.showSlug",
+        "fields.showPrice",
+        "fields.showStatus",
+        "fields.showStock",
+        "fields.showStockQuantity",
+        "fields.showCompareAt",
+        "fields.showCollectionCount",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.column-labels",
+      title: "Column labels",
+      role: "content",
+      writablePaths: [
+        "labels.image",
+        "labels.title",
+        "labels.excerpt",
+        "labels.slug",
+        "labels.price",
+        "labels.compareAt",
+        "labels.status",
+        "labels.stock",
+        "labels.collections",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.public-controls",
+      title: "Public controls",
+      role: "content",
+      writablePaths: [
+        "controls.showSearchInput",
+        "controls.showCollectionFilter",
+        "controls.showStatusFilter",
+        "controls.sorting",
+        "controls.pagination",
+        "controls.pageSize",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.export-format",
+      title: "Export and currency",
+      role: "content",
+      writablePaths: [
+        "format.moneyLocale",
+        "format.currencyDisplay",
+        "export.enabled",
+        "export.label",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.links-actions",
+      title: "Links and actions",
+      role: "content",
+      writablePaths: [
+        "links.linkedColumn",
+        "links.showAction",
+        "links.actionLabel",
+        "links.openInNewTab",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.empty-state",
+      title: "Empty state",
+      role: "content",
+      writablePaths: ["emptyState.title", "emptyState.description"],
+    },
+    {
+      mode: "visual",
+      id: "product-table.visual.surfaces",
+      title: "Surfaces",
+      role: "visual",
+      writablePaths: [
+        "style.tableBackground",
+        "style.tableBorderColor",
+        "style.headerBackground",
+        "style.emptyBackground",
+        "style.emptyBorderColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "product-table.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "resolved.items",
+        "resolved.total",
+        "resolved.resolvedAt",
+        "resolved.runtime",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "product-table.advanced.query-preview",
+      title: "Query preview",
+      role: "technical",
+      writablePaths: [],
+      readOnlyPaths: ["source", "controls"],
+    },
+  ],
 };
 
 const productTableFieldDefaults: Required<ProductTableFields> = {
@@ -2526,8 +2697,10 @@ export function createProductTableWidget(editors: {
       advanced: editors.advanced,
     },
     editorCapabilities: {
+      visualOwnsVariantSelection: true,
       supportsPreviewState: true,
     },
+    editorContract: productTableEditorContract,
     render: ProductTableBlock,
   };
 }

@@ -264,11 +264,8 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
     setCheckboxValue(findToggleByText(view.container, "Require phone field"), true);
     setInputValue(findLabelInput(view.container, "Phone label"), "Mobile number");
     setInputValue(findLabelInput(view.container, "Phone placeholder"), "+48 600 700 800");
-    setInputValue(
-      findLabelInput(view.container, "Phone validation pattern"),
-      "^\\\\+?[0-9 ]{7,20}$"
-    );
-    setInputValue(findLabelInput(view.container, "Phone help text"), "Include country code");
+    setSelectValue(findLabelSelect(view.container, "Phone validation"), "digits-spaces");
+    setInputValue(findLabelInput(view.container, "Phone help text"), "Include a reachable number");
     setCheckboxValue(findToggleByText(view.container, "Show notes field"), true);
     setInputValue(findLabelInput(view.container, "Notes label"), "Additional details");
     setInputValue(findLabelInput(view.container, "Notes placeholder"), "Share context");
@@ -310,8 +307,8 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       requiredPhone: true,
       customerPhoneLabel: "Mobile number",
       customerPhonePlaceholder: "+48 600 700 800",
-      phonePattern: "^\\\\+?[0-9 ]{7,20}$",
-      phonePatternMessage: "Include country code",
+      phonePattern: "^[0-9\\s]{7,20}$",
+      phonePatternMessage: "Include a reachable number",
       showNotes: true,
       notesLabel: "Additional details",
       notesPlaceholder: "Share context",
@@ -325,9 +322,8 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       },
       submissionEndpoint: "/api/booking/custom",
     });
-    expect(view.container.textContent).toContain(
-      "Server-injected booking nonce. Read-only in the editor."
-    );
+    expect(view.container.textContent).toContain("Not injected in editor");
+    expect(view.container.textContent).toContain("presence only and never the raw nonce");
     expect(view.container.textContent).toContain("No runtime warning");
   } finally {
     view.cleanup();
@@ -518,7 +514,7 @@ test("AppointmentForm editors render safe empty-string fallbacks when normalized
   try {
     const textInputs = Array.from(
       view.container.querySelectorAll<HTMLInputElement>(
-        'input:not([type="checkbox"]):not([type="number"])'
+        'input:not([type="checkbox"]):not([type="number"]):not([type="color"])'
       )
     );
 

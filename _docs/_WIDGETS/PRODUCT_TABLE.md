@@ -25,7 +25,7 @@ and admin preview parity for the current source query.
 ### Wizard
 - source/query basics
 - admin preview status summary
-- surfaces
+- collection selection through available collection checkboxes
 
 ### Visual
 - admin preview status summary
@@ -35,15 +35,19 @@ and admin preview parity for the current source query.
 - column labels
 - public controls
 - export and currency
-- stock presentation
+- stock quantity presentation inside Columns
 - links and actions
 - empty state
-- surfaces
+- surface color swatches
 
 ### Advanced
 - read-only runtime/admin preview diagnostics
 - query diagnostics
 - manual preview refresh
+
+Wizard hides raw collection-ID fallback input for Product Table and keeps source
+selection beginner-friendly. Visual surfaces use swatches and clear controls
+instead of asking editors to type CSS variables or token names.
 
 ## Column Model
 

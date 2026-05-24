@@ -50,7 +50,7 @@ import {
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
-import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 
 const update = (
   value: ProductTableData,
@@ -530,6 +530,9 @@ function PublicControlsFields({
 
   return (
     <CommerceEditorSection
+      id="product-table.visual.public-controls"
+      mode="visual"
+      role="content"
       title="Public controls"
       description="Expose bounded Product Table search, filters, sortable headers, and SSR pagination on published pages."
     >
@@ -593,6 +596,9 @@ function ExportAndCurrencyFields({
 
   return (
     <CommerceEditorSection
+      id="product-table.visual.export-format"
+      mode="visual"
+      role="content"
       title="Export and currency"
       description="Product Table owns explicit money formatting and optional SSR CSV export for the currently visible rows. Runtime diagnostics remain read-only in Advanced mode."
     >
@@ -648,6 +654,9 @@ function LayoutStyleFields({
 
   return (
     <CommerceEditorSection
+      id="product-table.visual.layout-style"
+      mode="visual"
+      role="layout"
       title="Layout and style"
       description="Variant is a preset axis. Density, striping, hover, sticky header, width, alignment, and typography stay bounded Product Table controls."
     >
@@ -721,41 +730,62 @@ function SurfaceFields({
   const normalized = normalizeProductTableData(value);
 
   return (
-    <CommerceEditorSection title="Surfaces" description="Table, header, and empty state colors.">
-      <ClearableInputField
+    <CommerceEditorSection
+      id="product-table.visual.surfaces"
+      mode="visual"
+      role="visual"
+      title="Surfaces"
+      description="Table, header, and empty state colors."
+    >
+      <SharedColorControl
         label="Table background"
         value={normalized.style?.tableBackground}
         onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
         onClear={() => clearStyle(value, onChange, "tableBackground")}
         placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Table border"
         value={normalized.style?.tableBorderColor}
         onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "tableBorderColor")}
         placeholder="var(--color-border)"
+        pickerFallback="#d4d4d8"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Header background"
         value={normalized.style?.headerBackground}
         onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
         onClear={() => clearStyle(value, onChange, "headerBackground")}
         placeholder="var(--color-bg)"
+        pickerFallback="#f8fafc"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Empty background"
         value={normalized.style?.emptyBackground}
         onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onClear={() => clearStyle(value, onChange, "emptyBackground")}
         placeholder="var(--color-bg)"
+        pickerFallback="#f8fafc"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Empty border"
         value={normalized.style?.emptyBorderColor}
         onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
         placeholder="var(--color-border)"
+        pickerFallback="#d4d4d8"
+        showValueInput={false}
       />
     </CommerceEditorSection>
   );
@@ -783,12 +813,16 @@ export function ProductTableWizardEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-table.wizard.table-source"
+        mode="wizard"
+        role="source"
         title="Table source"
         description="Select products visible in this tabular listing."
       >
         <CommerceSourceFields
           source={source}
           onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
+          options={{ allowCollectionFallbackInput: false }}
         />
       </CommerceEditorSection>
       <PreviewStatusCard
@@ -797,7 +831,6 @@ export function ProductTableWizardEditor({
         onRefresh={context?.setPreviewState ? preview.refresh : undefined}
         disabled={preview.isLoading}
       />
-      <SurfaceFields value={normalized} onChange={onChange} />
     </div>
   );
 }
@@ -835,6 +868,9 @@ export function ProductTableVisualEditor({
       />
 
       <CommerceEditorSection
+        id="product-table.visual.section-header"
+        mode="visual"
+        role="content"
         title="Section header"
         description="Optional context above the table. Section title becomes the preferred accessible table label when present."
       >
@@ -857,6 +893,9 @@ export function ProductTableVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-table.visual.columns"
+        mode="visual"
+        role="content"
         title="Columns"
         description="Choose columns visible in the table. Product and Price stay visible when their paired context column is also hidden."
       >
@@ -871,9 +910,22 @@ export function ProductTableVisualEditor({
             }
           />
         ))}
+        {normalized.fields?.showStock ? (
+          <CommerceToggleField
+            label="Show stock quantity"
+            description="Append normalized quantity to the stock label when runtime data includes it."
+            checked={normalized.fields?.showStockQuantity === true}
+            onChange={(next) =>
+              updateFieldVisibility(normalized, onChange, "showStockQuantity", next)
+            }
+          />
+        ) : null}
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-table.visual.column-labels"
+        mode="visual"
+        role="content"
         title="Column labels"
         description="Customize every Product Table header label from the shared column registry."
       >
@@ -891,22 +943,10 @@ export function ProductTableVisualEditor({
 
       <ExportAndCurrencyFields value={normalized} onChange={onChange} />
 
-      {normalized.fields?.showStock ? (
-        <CommerceEditorSection
-          title="Stock presentation"
-          description="Append normalized quantity to the stock label when the runtime card includes it."
-        >
-          <CommerceToggleField
-            label="Show stock quantity"
-            checked={normalized.fields?.showStockQuantity === true}
-            onChange={(next) =>
-              updateFieldVisibility(normalized, onChange, "showStockQuantity", next)
-            }
-          />
-        </CommerceEditorSection>
-      ) : null}
-
       <CommerceEditorSection
+        id="product-table.visual.links-actions"
+        mode="visual"
+        role="content"
         title="Links and actions"
         description="Product links and actions use the enabled products detail route from Site Settings. When no route is available, runtime keeps the table text-only."
       >
@@ -941,7 +981,13 @@ export function ProductTableVisualEditor({
         ) : null}
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
+      <CommerceEditorSection
+        id="product-table.visual.empty-state"
+        mode="visual"
+        role="content"
+        title="Empty state"
+        description="Shown when no products are resolved."
+      >
         <CommerceTextField
           label="Title"
           value={normalized.emptyState?.title}
@@ -989,6 +1035,9 @@ export function ProductTableAdvancedEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-table.advanced.runtime-payload"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime payload"
         description="Read-only admin preview from the commerce runtime resolver."
       >
@@ -1001,6 +1050,9 @@ export function ProductTableAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-table.advanced.query-preview"
+        mode="advanced"
+        role="technical"
         title="Query preview"
         description="Normalized query payload sent to commerce runtime resolver."
       >

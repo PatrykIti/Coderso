@@ -17,6 +17,18 @@ const runtimeClientScript = String.raw`(() => {
   const lastRenderedSlots = new WeakMap();
   const weekAnchors = new WeakMap();
 
+  const safeRelativeEndpoint = (value, fallback) => {
+    const candidate = String(value || "").trim() || fallback;
+    if (!candidate.startsWith("/") || candidate.startsWith("//")) return fallback;
+    try {
+      const url = new URL(candidate, window.location.origin);
+      if (url.origin !== window.location.origin) return fallback;
+      return url.pathname + url.search;
+    } catch {
+      return fallback;
+    }
+  };
+
   const setSelection = (flowId, selection) => {
     if (!flowId) return;
     if (selection) {
@@ -179,7 +191,7 @@ const runtimeClientScript = String.raw`(() => {
     root.dataset.bookingCalendarBound = "1";
 
     const flowId = (root.dataset.flowId || "booking-flow").trim() || "booking-flow";
-    const endpoint = (root.dataset.slotsEndpoint || "/api/booking/slots").trim();
+    const endpoint = safeRelativeEndpoint(root.dataset.slotsEndpoint, "/api/booking/slots");
     const slotsToken = (root.dataset.slotsToken || "").trim();
     const interval = Number.parseInt(root.dataset.slotInterval || "15", 10);
     const summaryLocale = (root.dataset.summaryLocale || "").trim() || undefined;
@@ -691,11 +703,10 @@ const runtimeClientScript = String.raw`(() => {
     form.dataset.bookingFormBound = "1";
 
     const flowId = (form.dataset.flowId || "booking-flow").trim() || "booking-flow";
-    const endpoint = (
-      form.getAttribute("action") ||
-      form.dataset.submissionEndpoint ||
+    const endpoint = safeRelativeEndpoint(
+      form.getAttribute("action") || form.dataset.submissionEndpoint,
       "/api/booking/reservations"
-    ).trim();
+    );
 
     const summaryNode = form.querySelector("[data-booking-selected-slot]");
     const errorNode = form.querySelector("[data-booking-form-error]");

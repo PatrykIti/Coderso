@@ -20,24 +20,27 @@ bounded public slot lookup, and runtime slot handoff to `appointment-form`.
 
 ### Wizard
 - flow key
-- title/description/labels
-- frame and selected-slot style surface controls
 - slot interval
+- optional default service/resource selected from the resolved booking catalog
 - `defaultDate`, `minDate`, `maxDate`
 
 ### Visual
 - variant ownership
+- title/description/labels
 - status copy plus user-facing empty state
 - service context toggles (`price`, `duration`, `description`, `timezone`)
 - summary locale/date style
 - date picker mode (`native` / `week`)
 - slot interval mode (`fixed`, `service-duration`, `non-overlapping`)
+- frame and selected-slot style surface swatches
 
 ### Advanced
 - slots endpoint override
-- catalog-aware default service/resource pickers
-- resolved runtime/admin-preview diagnostics
-- layout and visibility through shared builder panels
+- read-only default service/resource diagnostics
+- read-only resolved runtime/admin-preview diagnostics
+
+Wizard never asks editors to type raw service/resource IDs. Visual surface
+colors use swatches and clear controls instead of CSS-variable/token text inputs.
 
 ## Runtime Behavior Notes
 

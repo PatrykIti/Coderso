@@ -23,28 +23,33 @@ future product scope rather than an implicit variant of this widget.
 ## Editor Modes
 
 ### Wizard
-- variant selection
 - flow key
+- same-surface Booking Calendar pairing feedback
+
+### Visual
+- variant selection
 - locale override
 - success redirect URL
 - title/description
 - submit/loading/success copy
-- surface colors
-
-### Visual
 - slot summary copy
 - no-selection error copy
 - optional service/resource summary context
 - name mode (`full` or `split`)
 - truthful field visibility and required toggles
-- phone pattern/help
+- phone validation presets and help copy
 - notes length limit
 - consent label/required/privacy/terms controls
-- surface colors, including submit text color
+- custom fields
+- surface color swatches, including submit text color
 
 ### Advanced
 - runtime endpoint override
-- read-only runtime diagnostics for submission nonce and runtime error
+- read-only runtime diagnostics for submission nonce, captcha presence, and runtime error
+
+Wizard/Visual do not ask nontechnical editors to type regex patterns or CSS
+tokens. Advanced diagnostics redact server-injected nonce values and show
+presence only.
 
 ## Runtime Behavior Notes
 

@@ -27,33 +27,34 @@ Minimal onboarding:
 - source mode (`By content type` / `By listing query`)
 - content type search/select or listing query/template select
 - item limit
-- variant selection
+- status/sort setup for legacy content-type sources
 
 ### Visual
 
 Primary editing mode:
 1. Variant and layout
-2. Source and filters
+2. Daily filters with read-only Wizard source summary
 3. Section context
 4. Pagination and actions
 5. Presentation fields
-6. Empty state
+6. Surface color swatches
+7. Empty state
 
 Notes:
 - `visualOwnsVariantSelection = true`
 - `Columns` is only effective for `cards`; `list` / `compact` show an explanatory note instead of a misleading selector.
-- Visual shows the current source mode and source-specific controls, but the source-mode switch itself stays in Wizard / Advanced.
+- Visual shows the current source mode and source-specific daily filters, but source binding and source-mode switching stay in Wizard.
+- Surface colors use swatches and clear controls in Visual; nontechnical users are not asked to type CSS variables or design-token strings.
 - The builder canvas shows saved `resolved` data; save or open Preview to refresh live resolved content.
 
 ### Advanced
 
-Technical-only surface:
-- source mode
-- item limit
-- listing query/template selection when mode = `listing`
-- author picker, search query, and featured toggle when mode = `legacy`
-- styling tokens with shared clear/picker support
-- runtime payload snapshot
+Read-only diagnostics surface:
+- source summary
+- style summary
+- sanitized runtime summary with counts and pagination markers only
+
+Advanced does not mutate source, style, filters, or resolved runtime payloads.
 
 ## Data Model (summary)
 
@@ -133,7 +134,7 @@ Technical-only surface:
 
 - Uses the selected `contentTypeId` plus widget-owned filters.
 - Visual supports taxonomy suggestions from the taxonomy overview seam.
-- Advanced supports author selection, search query, and featured-only filtering.
+- Visual supports author selection, search query, and featured-only filtering.
 - Runtime pagination uses a widget-scoped query key derived from `blockId`:
   `cl.<blockId>.page`.
 

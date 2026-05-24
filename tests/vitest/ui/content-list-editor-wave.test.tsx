@@ -492,21 +492,26 @@ const findButtonByText = (container: ParentNode, buttonText: string) =>
     normalizeText(element.textContent).includes(normalizeText(buttonText))
   );
 
+const findInputByAriaLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (input) =>
+      input instanceof HTMLInputElement &&
+      normalizeText(input.getAttribute("aria-label")) === normalizeText(text)
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
   contentListState.reset();
 });
 
-test("ContentList wizard editor normalizes invalid variant, clamps item limit, and clears legacy content type in listing mode", async () => {
+test("ContentList wizard editor owns source setup, clamps item limit, and clears legacy content type in listing mode", async () => {
   const { ContentListWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
   const onChangeSpy = vi.fn();
-  const onVariantChangeSpy = vi.fn();
 
   const Harness = () => {
     const [value, setValue] = useState<ContentListData>({} as ContentListData);
-    const [variant, setVariant] = useState("unknown-layout");
 
     return (
       <ContentListWizardEditor
@@ -515,11 +520,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
           onChangeSpy(next);
           setValue(next);
         }}
-        variant={variant}
-        onVariantChange={(next) => {
-          onVariantChangeSpy(next);
-          setVariant(next);
-        }}
+        variant="cards"
       />
     );
   };
@@ -529,8 +530,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
   try {
     await flush();
 
-    const variantSelect = findSelectsByOptions(view.container, ["cards", "list", "compact"])[0];
-    expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards");
+    expect(findSelectsByOptions(view.container, ["cards", "list", "compact"])).toHaveLength(0);
     expect(view.container.textContent).toContain("By content type");
     expect(view.container.textContent).toContain("By listing query");
     expect(view.container.textContent).toContain("News (news-main)");
@@ -562,10 +562,8 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
         findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
         "template-1"
       );
-      setSelectValue(findSelectsByOptions(view.container, ["cards", "list", "compact"])[0], "list");
     });
 
-    expect(onVariantChangeSpy).toHaveBeenCalledWith("list");
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         source: expect.objectContaining({
@@ -970,7 +968,7 @@ test("ContentList wizard editor tolerates unresolved listing and content type se
   }
 });
 
-test("ContentList advanced editor handles listing query controls, disabled filters, styling tokens, and runtime snapshot", async () => {
+test("ContentList advanced editor renders read-only sanitized source, style, and runtime diagnostics", async () => {
   const { ContentListAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
@@ -978,9 +976,31 @@ test("ContentList advanced editor handles listing query controls, disabled filte
 
   const Harness = () => {
     const [value, setValue] = useState<ContentListData>({
+      source: {
+        mode: "listing",
+        listingQueryId: "query-1",
+        listingTemplateId: "template-1",
+        limit: 24,
+      },
+      filters: {
+        taxonomy: "case-study",
+        authorId: "user-2",
+        searchQuery: "launch",
+        featuredOnly: true,
+      },
+      style: {
+        columns: "2",
+        gap: "lg",
+        cardStyle: "elevated",
+        backgroundColor: "var(--color-bg)",
+        borderColor: "#d1d5db",
+        textColor: "#f9fafb",
+      },
       resolved: {
         items: [{ id: "item-1", title: "Launch note" }],
         total: 1,
+        listingQueryId: "query-1",
+        listingTemplateId: "template-1",
         runtime: { rejectedTokens: ["draft"], page: 2 },
       },
     } as ContentListData);
@@ -1002,99 +1022,23 @@ test("ContentList advanced editor handles listing query controls, disabled filte
   try {
     await flush();
 
-    React.act(() => {
-      setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "listing");
-    });
-    await flush();
-
-    const authorSearchInListingMode = findInputByPlaceholder(view.container, "Search authors");
-    const searchInputInListingMode = findInputByPlaceholder(view.container, "Title, excerpt, tags");
-    const featuredOnlyToggleInListingMode = findCheckboxByLabelText(
-      view.container,
-      "Featured only"
-    );
-
-    expect(authorSearchInListingMode).toBeUndefined();
-    expect(searchInputInListingMode).toBeUndefined();
-    expect(featuredOnlyToggleInListingMode).toBeUndefined();
-    expect(view.container.textContent).toContain(
-      "Listing mode uses filters and sorting from the selected Listings query."
-    );
-
-    React.act(() => {
-      setInputValue(findNumberInputs(view.container)[0], "99");
-      setSelectValue(
-        findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
-        "query-1"
-      );
-      setSelectValue(
-        findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
-        "template-1"
-      );
-      setSelectValue(findSelectsByOptions(view.container, ["legacy", "listing"])[0], "legacy");
-    });
-    await flush();
-
-    const authorSearchInput = findInputByPlaceholder(view.container, "Search authors");
-    const authorSelect = findSelectsByOptions(view.container, [
-      "__no_author__",
-      "user-1",
-      "user-2",
-    ])[0];
-    const searchInput = findInputByPlaceholder(view.container, "Title, excerpt, tags");
-    const featuredOnlyToggle = findCheckboxByLabelText(view.container, "Featured only");
-
-    expect(authorSearchInput).toBeInstanceOf(HTMLInputElement);
-    expect(authorSelect).toBeInstanceOf(HTMLSelectElement);
-    expect(searchInput).toBeInstanceOf(HTMLInputElement);
-    expect(featuredOnlyToggle).toBeInstanceOf(HTMLInputElement);
-
-    React.act(() => {
-      setInputValue(authorSearchInput, "editor");
-      setSelectValue(authorSelect, "user-2");
-      setInputValue(searchInput, "launch");
-      clickElement(featuredOnlyToggle);
-      setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#101820");
-      setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "#d1d5db");
-      setInputValue(findInputByPlaceholder(view.container, "var(--color-text)"), "#f9fafb");
-    });
-
-    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
-      normalizeText(button.textContent).includes("clear")
-    );
-    expect(clearButtons).toHaveLength(3);
-
-    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
-      expect.objectContaining({
-        source: expect.objectContaining({
-          mode: "legacy",
-          listingQueryId: "",
-          listingTemplateId: "",
-          limit: 24,
-        }),
-        filters: expect.objectContaining({
-          authorId: "user-2",
-          searchQuery: "launch",
-          featuredOnly: true,
-        }),
-        style: expect.objectContaining({
-          backgroundColor: "#101820",
-          borderColor: "#d1d5db",
-          textColor: "#f9fafb",
-        }),
-      })
-    );
-    expect(view.container.textContent).toContain('"title": "Launch note"');
+    expect(findSelectsByOptions(view.container, ["legacy", "listing"])).toHaveLength(0);
+    expect(findInputByPlaceholder(view.container, "Search authors")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Title, excerpt, tags")).toBeUndefined();
+    expect(findCheckboxByLabelText(view.container, "Featured only")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(view.container.textContent).toContain("Source summary");
+    expect(view.container.textContent).toContain("By listing query");
+    expect(view.container.textContent).toContain("Query: query-1");
+    expect(view.container.textContent).toContain("Template: template-1");
+    expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).not.toContain("Launch note");
+    expect(view.container.textContent).not.toContain('"items"');
+    expect(view.container.textContent).toContain('"itemCount": 1');
+    expect(view.container.textContent).toContain('"rejectedTokenCount": 1');
     expect(view.container.textContent).toContain('"page": 2');
-
-    clickElement(clearButtons[2]);
-    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          textColor: undefined,
-        }),
-      })
-    );
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -1315,14 +1259,8 @@ test("ContentList editors fall back to default source, style, field, and runtime
           | undefined
       )?.value
     ).toBe("legacy");
-    expect(
-      (
-        findSelectsByOptions(view.container, ["cards", "list", "compact"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("cards");
+    const cardsButton = findButtonByText(view.container, "Cards");
+    expect(normalizeText(cardsButton?.textContent)).toContain("selected");
     expect(
       (findNumberInputs(view.container)[0] as HTMLInputElement | null | undefined)?.value
     ).toBe("6");
@@ -1422,30 +1360,17 @@ test("ContentList editors fall back to default source, style, field, and runtime
       )?.checked
     ).toBe(false);
     expect(
-      (
-        findInputByPlaceholder(view.container, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      (findInputByAriaLabel(view.container, "Card background swatch") as HTMLInputElement | null)
+        ?.value
+    ).toBe("#ffffff");
     expect(
-      (
-        findInputByPlaceholder(view.container, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      (findInputByAriaLabel(view.container, "Card border swatch") as HTMLInputElement | null)?.value
+    ).toBe("#d4d4d8");
     expect(
-      (
-        findInputByPlaceholder(view.container, "var(--color-text)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(view.container.textContent).toContain('"items": []');
+      (findInputByAriaLabel(view.container, "Text color swatch") as HTMLInputElement | null)?.value
+    ).toBe("#0f172a");
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(view.container.textContent).toContain('"itemCount": 0');
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/contentList");

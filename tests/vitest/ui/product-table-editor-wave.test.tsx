@@ -67,7 +67,10 @@ vi.mock("@/components/ui/select", () => ({
 }));
 
 vi.mock("@/services/commerceClient", () => ({
-  listCommerceCollectionsCached: vi.fn(async () => []),
+  listCommerceCollectionsCached: vi.fn(async () => [
+    { id: "summer", name: "Summer", slug: "summer" },
+    { id: "winter", name: "Winter", slug: "winter" },
+  ]),
 }));
 
 const previewQueue = vi.hoisted(() => {
@@ -322,6 +325,8 @@ test("ProductTable editors normalize source, layout styles, export/currency cont
   const view = mount(<Harness />);
 
   try {
+    await flushPromises();
+
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Table source"));
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 1 · Total: 0")
@@ -389,10 +394,10 @@ test("ProductTable editors normalize source, layout styles, export/currency cont
       findTextareaByLabel(view.container, "Section description"),
       " Curated context copy. "
     );
-    setInputValue(
-      findInputByLabel(view.container, "Collection IDs fallback"),
-      "summer, winter, summer"
-    );
+    expect(findInputByLabel(view.container, "Collection IDs fallback")).toBeUndefined();
+    expect(view.container.textContent).toContain("Raw collection IDs are hidden from the Wizard.");
+    toggleCheckbox(findInputByLabel(view.container, "Summer"));
+    toggleCheckbox(findInputByLabel(view.container, "Winter"));
     setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
     setSelectValue(findSelectByLabel(view.container, "Sort direction"), "asc");
     toggleCheckbox(findInputByLabel(view.container, "published"));

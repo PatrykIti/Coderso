@@ -30,6 +30,10 @@ Per-widget TASK-336 fixes record targeted reruns separately until the final
 |---|---|---|---|
 | 2026-05-24 | `hero` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-hero-2026-05-24.md` |
 | 2026-05-24 | `stats-kpi` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md` |
+| 2026-05-24 | `content-list` | adminFailures=0, publicFailures=0, fixtureGaps=1, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-content-list-2026-05-24.md` |
+| 2026-05-24 | `booking-calendar` | adminFailures=0, publicFailures=0, fixtureGaps=1, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-booking-calendar-2026-05-24.md` |
+| 2026-05-24 | `appointment-form` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-appointment-form-2026-05-24.md` |
+| 2026-05-24 | `product-table` | adminFailures=0, publicFailures=0, fixtureGaps=2, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-product-table-2026-05-24.md` |
 
 ## Admin Mode Contract
 

@@ -7,9 +7,13 @@ import {
   normalizeBookingCalendarData,
   type BookingCalendarData,
 } from "../../../../widgets/core/bookingCalendar";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const update = (
   value: BookingCalendarData,
@@ -20,23 +24,6 @@ const update = (
     normalizeBookingCalendarData({
       ...normalizeBookingCalendarData(value),
       ...patch,
-    })
-  );
-};
-
-const updateResolved = (
-  value: BookingCalendarData,
-  onChange: (next: BookingCalendarData) => void,
-  patch: Partial<NonNullable<BookingCalendarData["resolved"]>>
-) => {
-  const current = normalizeBookingCalendarData(value);
-  onChange(
-    normalizeBookingCalendarData({
-      ...current,
-      resolved: {
-        ...current.resolved,
-        ...patch,
-      },
     })
   );
 };
@@ -85,24 +72,24 @@ const readPreviewResolved = (context: WidgetEditorProps<BookingCalendarData>["co
 };
 
 function Section({
+  id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
+  id: string;
+  mode: EditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -197,7 +184,13 @@ function CopyFields({
   onChange: (next: BookingCalendarData) => void;
 }) {
   return (
-    <Section title="Copy" description="Headings and helper messages shown to end users.">
+    <Section
+      id="booking-calendar.visual.copy"
+      mode="visual"
+      role="content"
+      title="Copy"
+      description="Headings and helper messages shown to end users."
+    >
       <TextField
         label="Title"
         value={value.title}
@@ -245,7 +238,13 @@ function SurfaceFields({
   onChange: (next: BookingCalendarData) => void;
 }) {
   return (
-    <Section title="Surface" description="Clear removes decorative frame styles.">
+    <Section
+      id="booking-calendar.visual.surface"
+      mode="visual"
+      role="visual"
+      title="Surface"
+      description="Clear removes decorative frame styles."
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <SharedColorControl
           label="Frame background"
@@ -255,6 +254,7 @@ function SurfaceFields({
           onClear={() => clearStyle(value, onChange, "frameBackground")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Frame border"
@@ -264,28 +264,38 @@ function SurfaceFields({
           onClear={() => clearStyle(value, onChange, "frameBorderColor")}
           placeholder="var(--color-border)"
           pickerFallback="#d4d4d8"
+          showValueInput={false}
         />
       </div>
-      <ClearableInputField
+      <SharedColorControl
         label="Selected slot background"
         value={value.style?.selectedSlotBackground}
         onChange={(next) => updateStyle(value, onChange, { selectedSlotBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { selectedSlotBackground: next })}
         onClear={() => clearStyle(value, onChange, "selectedSlotBackground")}
         placeholder="var(--color-primary)"
+        pickerFallback="#2563eb"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Selected slot border"
         value={value.style?.selectedSlotBorderColor}
         onChange={(next) => updateStyle(value, onChange, { selectedSlotBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { selectedSlotBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "selectedSlotBorderColor")}
         placeholder="var(--color-primary)"
+        pickerFallback="#2563eb"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Slot hover border"
         value={value.style?.slotHoverBorderColor}
         onChange={(next) => updateStyle(value, onChange, { slotHoverBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { slotHoverBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "slotHoverBorderColor")}
         placeholder="var(--color-primary)"
+        pickerFallback="#2563eb"
+        showValueInput={false}
       />
     </Section>
   );
@@ -294,12 +304,39 @@ function SurfaceFields({
 export function BookingCalendarWizardEditor({
   value,
   onChange,
+  context,
 }: WidgetEditorProps<BookingCalendarData>) {
   const normalized = normalizeBookingCalendarData(value);
+  const previewResolved = readPreviewResolved(context);
+  const services = previewResolved?.services ?? normalized.resolved?.services ?? [];
+  const resources = previewResolved?.resources ?? normalized.resolved?.resources ?? [];
+  const selectedService =
+    services.find((service) => service.id === normalized.defaultServiceId) ?? services[0] ?? null;
+  const staleServiceId =
+    normalized.defaultServiceId &&
+    !services.some((service) => service.id === normalized.defaultServiceId)
+      ? normalized.defaultServiceId
+      : null;
+  const resourceOptions = selectedService
+    ? resources.filter(
+        (resource) =>
+          selectedService.resourceIds.length === 0 ||
+          selectedService.resourceIds.includes(resource.id)
+      )
+    : resources;
+  const staleResourceId =
+    normalized.defaultResourceId &&
+    !resourceOptions.some((resource) => resource.id === normalized.defaultResourceId)
+      ? normalized.defaultResourceId
+      : null;
+  const selectedResourceId = staleResourceId ?? normalized.defaultResourceId ?? "";
 
   return (
     <div className="space-y-4">
       <Section
+        id="booking-calendar.wizard.flow-setup"
+        mode="wizard"
+        role="setup"
         title="Flow"
         description="Use the same flow key in calendar and appointment form to connect them."
       >
@@ -311,10 +348,13 @@ export function BookingCalendarWizardEditor({
         />
       </Section>
 
-      <CopyFields value={normalized} onChange={onChange} />
-      <SurfaceFields value={normalized} onChange={onChange} />
-
-      <Section title="Availability behavior" description="Slot loading behavior for runtime.">
+      <Section
+        id="booking-calendar.wizard.availability-setup"
+        mode="wizard"
+        role="setup"
+        title="Availability setup"
+        description="Slot loading behavior and optional first service/resource defaults."
+      >
         <TextField
           label="Slot interval (minutes)"
           type="number"
@@ -326,9 +366,72 @@ export function BookingCalendarWizardEditor({
             });
           }}
         />
+        {services.length > 0 ? (
+          <SelectField
+            label="Default service ID"
+            value={staleServiceId ?? normalized.defaultServiceId ?? "__auto__"}
+            options={[
+              { value: "__auto__", label: "Auto-select first available service" },
+              ...(staleServiceId
+                ? [{ value: staleServiceId, label: "Saved unavailable service" }]
+                : []),
+              ...services.map((service) => ({ value: service.id, label: service.name })),
+            ]}
+            onChange={(next) =>
+              update(normalized, onChange, {
+                defaultServiceId: next === "__auto__" ? undefined : next,
+              })
+            }
+          />
+        ) : (
+          <ReadonlyWidgetSummaryRow
+            id="booking-calendar-wizard-default-service"
+            label="Default service"
+            path="defaultServiceId"
+            value={
+              normalized.defaultServiceId
+                ? "Saved default will apply when services load"
+                : "Auto-select first available service"
+            }
+            help="Service defaults are selected from the booking catalog; the editor does not ask for raw IDs."
+          />
+        )}
+        {resourceOptions.length > 0 ? (
+          <SelectField
+            label="Default resource ID"
+            value={selectedResourceId || "__auto__"}
+            options={[
+              { value: "__auto__", label: "Auto-select first available resource" },
+              ...(staleResourceId
+                ? [{ value: staleResourceId, label: "Saved unavailable resource" }]
+                : []),
+              ...resourceOptions.map((resource) => ({ value: resource.id, label: resource.name })),
+            ]}
+            onChange={(next) =>
+              update(normalized, onChange, {
+                defaultResourceId: next === "__auto__" ? undefined : next,
+              })
+            }
+          />
+        ) : (
+          <ReadonlyWidgetSummaryRow
+            id="booking-calendar-wizard-default-resource"
+            label="Default resource"
+            path="defaultResourceId"
+            value={
+              normalized.defaultResourceId
+                ? "Saved default will apply when resources load"
+                : "Auto-select first available resource"
+            }
+            help="Resource defaults are selected from the booking catalog; the editor does not ask for raw IDs."
+          />
+        )}
       </Section>
 
       <Section
+        id="booking-calendar.wizard.date-policy"
+        mode="wizard"
+        role="setup"
         title="Date policy"
         description="Choose the initial date and optional allowed range for this calendar."
       >
@@ -368,7 +471,13 @@ export function BookingCalendarVisualEditor({
   return (
     <div className="space-y-4">
       {onVariantChange ? (
-        <Section title="Variant" description="Choose a layout that fits the available space.">
+        <Section
+          id="booking-calendar.visual.variant-layout"
+          mode="visual"
+          role="layout"
+          title="Variant"
+          description="Choose a layout that fits the available space."
+        >
           <SelectField
             label="Layout variant"
             value={variant || "default"}
@@ -386,6 +495,9 @@ export function BookingCalendarVisualEditor({
       <SurfaceFields value={normalized} onChange={onChange} />
 
       <Section
+        id="booking-calendar.visual.status-messages"
+        mode="visual"
+        role="content"
         title="Status messages"
         description="Messages shown while loading and when no slots are available."
       >
@@ -422,6 +534,9 @@ export function BookingCalendarVisualEditor({
       </Section>
 
       <Section
+        id="booking-calendar.visual.service-context"
+        mode="visual"
+        role="content"
         title="Service context"
         description="Control how much pricing and timezone context is visible before selection."
       >
@@ -467,7 +582,13 @@ export function BookingCalendarVisualEditor({
         />
       </Section>
 
-      <Section title="Date picker" description="Choose how dates and slot density are presented.">
+      <Section
+        id="booking-calendar.visual.date-picker"
+        mode="visual"
+        role="content"
+        title="Date picker"
+        description="Choose how dates and slot density are presented."
+      >
         <SelectField
           label="Date picker mode"
           value={normalized.datePickerMode ?? "native"}
@@ -510,30 +631,16 @@ export function BookingCalendarAdvancedEditor({
   const services = previewResolved?.services ?? normalized.resolved?.services ?? [];
   const resources = previewResolved?.resources ?? normalized.resolved?.resources ?? [];
   const previewError = previewResolved?.error;
-  const selectedService =
-    services.find((service) => service.id === normalized.defaultServiceId) ?? services[0] ?? null;
-  const staleServiceId =
-    normalized.defaultServiceId &&
-    !services.some((service) => service.id === normalized.defaultServiceId)
-      ? normalized.defaultServiceId
-      : null;
-  const resourceOptions = selectedService
-    ? resources.filter(
-        (resource) =>
-          selectedService.resourceIds.length === 0 ||
-          selectedService.resourceIds.includes(resource.id)
-      )
-    : resources;
-  const staleResourceId =
-    normalized.defaultResourceId &&
-    !resourceOptions.some((resource) => resource.id === normalized.defaultResourceId)
-      ? normalized.defaultResourceId
-      : null;
-  const selectedResourceId = staleResourceId ?? normalized.defaultResourceId ?? "";
 
   return (
     <div className="space-y-4">
-      <Section title="Runtime endpoints" description="Override only for advanced proxy setups.">
+      <Section
+        id="booking-calendar.advanced.runtime-endpoint"
+        mode="advanced"
+        role="technical"
+        title="Runtime endpoint"
+        description="Override only for advanced proxy setups."
+      >
         <TextField
           label="Slots endpoint"
           value={normalized.slotsEndpoint}
@@ -543,81 +650,47 @@ export function BookingCalendarAdvancedEditor({
       </Section>
 
       <Section
-        title="Defaults"
-        description="Optional fallback IDs if you need deterministic selection."
-      >
-        {services.length > 0 ? (
-          <SelectField
-            label="Default service ID"
-            value={staleServiceId ?? normalized.defaultServiceId ?? "__auto__"}
-            options={[
-              { value: "__auto__", label: "Auto-select first available service" },
-              ...(staleServiceId
-                ? [{ value: staleServiceId, label: `Saved but unavailable: ${staleServiceId}` }]
-                : []),
-              ...services.map((service) => ({ value: service.id, label: service.name })),
-            ]}
-            onChange={(next) =>
-              update(normalized, onChange, {
-                defaultServiceId: next === "__auto__" ? undefined : next,
-              })
-            }
-          />
-        ) : (
-          <TextField
-            label="Default service ID"
-            value={normalized.defaultServiceId}
-            onChange={(next) => update(normalized, onChange, { defaultServiceId: next })}
-          />
-        )}
-        {resourceOptions.length > 0 ? (
-          <SelectField
-            label="Default resource ID"
-            value={selectedResourceId || "__auto__"}
-            options={[
-              { value: "__auto__", label: "Auto-select first available resource" },
-              ...(staleResourceId
-                ? [{ value: staleResourceId, label: `Saved but unavailable: ${staleResourceId}` }]
-                : []),
-              ...resourceOptions.map((resource) => ({ value: resource.id, label: resource.name })),
-            ]}
-            onChange={(next) =>
-              update(normalized, onChange, {
-                defaultResourceId: next === "__auto__" ? undefined : next,
-              })
-            }
-          />
-        ) : (
-          <TextField
-            label="Default resource ID"
-            value={normalized.defaultResourceId}
-            onChange={(next) => update(normalized, onChange, { defaultResourceId: next })}
-          />
-        )}
-      </Section>
-
-      <Section
+        id="booking-calendar.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Resolved runtime payload"
         description="Injected on runtime/preview by server resolver."
       >
-        <div className="rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          Services: {services.length} · Resources: {resources.length}
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="booking-calendar-advanced-catalog-counts"
+          label="Resolved catalog"
+          path="resolved.services"
+          value={`Services: ${services.length} · Resources: ${resources.length}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="booking-calendar-advanced-default-service"
+          label="Default service ID"
+          path="defaultServiceId"
+          value={normalized.defaultServiceId ?? "Auto-select first available service"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="booking-calendar-advanced-default-resource"
+          label="Default resource ID"
+          path="defaultResourceId"
+          value={normalized.defaultResourceId ?? "Auto-select first available resource"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="booking-calendar-advanced-slots-token"
+          label="Slots token"
+          path="resolved.slotsToken"
+          value={normalized.resolved?.slotsToken ? "Injected by server" : "Not injected in editor"}
+        />
         {previewError ? (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
             Preview catalog error: {previewError}
           </div>
         ) : null}
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-foreground">Runtime error flag</span>
-          <Input
-            value={normalized.resolved?.error ?? ""}
-            placeholder="e.g. booking_nonce_unavailable"
-            onChange={(event) =>
-              updateResolved(normalized, onChange, { error: event.target.value })
-            }
-          />
-        </label>
+        <ReadonlyWidgetSummaryRow
+          id="booking-calendar-advanced-runtime-error"
+          label="Runtime error"
+          path="resolved.error"
+          value={normalized.resolved?.error ?? "No runtime warning"}
+        />
       </Section>
     </div>
   );

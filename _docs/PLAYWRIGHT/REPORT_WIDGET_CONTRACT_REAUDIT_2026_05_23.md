@@ -352,8 +352,11 @@ Examples:
   file; CTA fields have labels but not the shared `data-widget-control` contract.
 - `SpacerWizardEditor` uses a raw top-level `div` and unsectioned controls,
   while Visual and Advanced are more structured.
-- Booking/form/table widgets still expose surface/style fields in Wizard.
-- Some booking diagnostics are writable, including runtime-like error text.
+- Closed by TASK-336-13 for `content-list`, `booking-calendar`,
+  `appointment-form`, and `product-table`: targeted smoke now has
+  `adminFailures=0` and `metadataGaps=0` for all four. Remaining public fixture
+  gaps are fixture coverage issues (`content-list`, `booking-calendar`,
+  `product-table`), not editor-contract ownership failures.
 - `WizardPanel` renders its own header, and `BlockSettings` renders another
   selected-widget header after setup, causing double header IA when returning to
   the Wizard tab.

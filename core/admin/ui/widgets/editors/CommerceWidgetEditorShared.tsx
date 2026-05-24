@@ -23,6 +23,7 @@ import {
   type CommerceWidgetSource,
   type NormalizedCommerceWidgetSource,
 } from "../../../../widgets/core/commerceWidgetShared";
+import type { EditorMode, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 export type CommerceSourceFieldCopy = {
@@ -35,23 +36,34 @@ export type CommerceSourceFieldCopy = {
 
 export type CommerceSourceFieldOptions = {
   limitMax?: number;
+  allowCollectionFallbackInput?: boolean;
   copy?: CommerceSourceFieldCopy;
 };
 
 export function CommerceEditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -244,6 +256,7 @@ export function CommerceSourceFields({
   const [collectionsError, setCollectionsError] = useState<string | null>(null);
   const limitMax = resolveSourceLimitMax(options.limitMax);
   const copy = options.copy ?? {};
+  const allowCollectionFallbackInput = options.allowCollectionFallbackInput !== false;
 
   useEffect(() => {
     let active = true;
@@ -330,17 +343,24 @@ export function CommerceSourceFields({
             })}
           </div>
         ) : null}
-        <CommerceTextField
-          label={copy.collectionFallbackLabel ?? "Collection IDs fallback"}
-          value={toCollectionCsv(source.collectionIds)}
-          onChange={(next) =>
-            onChange({
-              ...source,
-              collectionIds: fromCollectionCsv(next),
-            })
-          }
-        />
-        {copy.collectionHelpText ? (
+        {allowCollectionFallbackInput ? (
+          <CommerceTextField
+            label={copy.collectionFallbackLabel ?? "Collection IDs fallback"}
+            value={toCollectionCsv(source.collectionIds)}
+            onChange={(next) =>
+              onChange({
+                ...source,
+                collectionIds: fromCollectionCsv(next),
+              })
+            }
+          />
+        ) : (
+          <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            Use collection checkboxes when collections are available. Raw collection IDs are hidden
+            from the Wizard.
+          </p>
+        )}
+        {copy.collectionHelpText && allowCollectionFallbackInput ? (
           <p className="text-xs text-muted-foreground">{copy.collectionHelpText}</p>
         ) : null}
       </div>

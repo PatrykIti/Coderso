@@ -10,16 +10,62 @@ import {
 } from "../../../core/admin/ui/widgets/editors/BookingCalendarEditors";
 import {
   BookingCalendarBlock,
+  bookingCalendarEditorContract,
   bookingCalendarDefaults,
   createBookingCalendarWidget,
   normalizeBookingCalendarData,
   type BookingCalendarData,
 } from "../../../core/widgets/core/bookingCalendar";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<BookingCalendarData>> = () => null;
+
+test("booking calendar exposes a strict v2 editor contract", () => {
+  const widget = createBookingCalendarWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(widget.editorContract).toBe(bookingCalendarEditorContract);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "booking-calendar.wizard.flow-setup",
+    "booking-calendar.wizard.availability-setup",
+    "booking-calendar.wizard.date-policy",
+    "booking-calendar.visual.variant-layout",
+    "booking-calendar.visual.copy",
+    "booking-calendar.visual.status-messages",
+    "booking-calendar.visual.service-context",
+    "booking-calendar.visual.date-picker",
+    "booking-calendar.visual.surface",
+    "booking-calendar.advanced.runtime-endpoint",
+    "booking-calendar.advanced.runtime-diagnostics",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "wizard")
+      .flatMap((section) => section.writablePaths)
+      .some((path) => path.startsWith("style."))
+  ).toBe(false);
+});
+
+test("booking calendar normalizes slots endpoint to a same-origin relative path", () => {
+  expect(
+    normalizeBookingCalendarData({
+      slotsEndpoint: "https://example.test/api/booking/slots",
+    }).slotsEndpoint
+  ).toBe(bookingCalendarDefaults.slotsEndpoint);
+  expect(
+    normalizeBookingCalendarData({
+      slotsEndpoint: "/api/proxy/booking/slots?tenant=demo",
+    }).slotsEndpoint
+  ).toBe("/api/proxy/booking/slots?tenant=demo");
+});
 
 test("booking calendar renders empty-state when resolver payload is missing", () => {
   const html = renderToString(
@@ -353,5 +399,5 @@ test("booking calendar editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(advanced).toContain("Runtime endpoints");
+  expect(advanced).toContain("Runtime endpoint");
 });

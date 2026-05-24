@@ -15,17 +15,50 @@ import {
 } from "../../../core/services/content/contentListResolver";
 import {
   ContentListBlock,
+  contentListEditorContract,
   contentListDefaults,
   createContentListWidget,
   normalizeContentListData,
   normalizeContentListLimit,
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ContentListData>> = () => null;
+
+test("content list exposes a strict v2 editor contract", () => {
+  const widget = createContentListWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(widget.editorContract).toBe(contentListEditorContract);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "content-list.wizard.source-binding",
+    "content-list.wizard.source-rules",
+    "content-list.visual.variant-layout",
+    "content-list.visual.filters",
+    "content-list.visual.section-context",
+    "content-list.visual.pagination-actions",
+    "content-list.visual.presentation-fields",
+    "content-list.visual.surface-colors",
+    "content-list.visual.empty-state",
+    "content-list.advanced.source-summary",
+    "content-list.advanced.runtime-summary",
+    "content-list.advanced.style-summary",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .flatMap((section) => section.writablePaths)
+  ).toEqual([]);
+});
 
 const createEntry = (patch: Partial<ContentListResolverEntry>): ContentListResolverEntry => ({
   id: "entry-1",
@@ -555,7 +588,7 @@ test("content list editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Source setup");
-  expect(wizardHtml).toContain("Variant");
+  expect(wizardHtml).not.toContain("Variant");
 
   const visualHtml = renderToString(
     <ContentListVisualEditor
@@ -566,7 +599,7 @@ test("content list editors render expected sections", () => {
     />
   );
   expect(visualHtml).toContain("Variant and layout");
-  expect(visualHtml).toContain("Source and filters");
+  expect(visualHtml).toContain("Daily filters");
   expect(visualHtml).toContain("Presentation fields");
 
   const advancedHtml = renderToString(
@@ -577,9 +610,9 @@ test("content list editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Query controls");
-  expect(advancedHtml).toContain("Styling tokens");
-  expect(advancedHtml).toContain("Runtime payload snapshot");
+  expect(advancedHtml).toContain("Source summary");
+  expect(advancedHtml).toContain("Style summary");
+  expect(advancedHtml).toContain("Runtime summary");
 });
 
 test("content list runtime filters and sorting respect preview and status scope", () => {

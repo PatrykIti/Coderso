@@ -10,6 +10,7 @@ type SharedColorControlProps = {
   onClear?: () => void;
   placeholder?: string;
   pickerFallback?: string;
+  showValueInput?: boolean;
 };
 
 export function SharedColorControl({
@@ -20,6 +21,7 @@ export function SharedColorControl({
   onClear,
   placeholder,
   pickerFallback,
+  showValueInput = true,
 }: SharedColorControlProps) {
   const handleSwatchChange = onSwatchChange ?? onChange;
 
@@ -39,12 +41,20 @@ export function SharedColorControl({
           onChange={(event) => handleSwatchChange(event.target.value)}
           className="h-9 w-10 p-1"
         />
-        <Input
-          aria-label={`${label} value`}
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
+        {showValueInput ? (
+          <Input
+            aria-label={`${label} value`}
+            value={value ?? ""}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+          />
+        ) : (
+          <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
+            {value
+              ? "Theme or custom color active. Use the swatch to replace it, or Clear to inherit."
+              : "Inherited theme color. Use the swatch to override."}
+          </p>
+        )}
       </div>
     </div>
   );

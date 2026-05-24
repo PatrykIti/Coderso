@@ -16,15 +16,51 @@ import {
   normalizeProductTableData,
   normalizeProductTableFields,
   normalizeProductTableLabels,
+  productTableEditorContract,
   productTableDefaults,
   resolveVisibleProductTableColumns,
   type ProductTableData,
 } from "../../../core/widgets/core/productTable";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 
 const StubEditor: ComponentType<WidgetEditorProps<ProductTableData>> = () => null;
+
+test("product table exposes a strict v2 editor contract", () => {
+  const widget = createProductTableWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(widget.editorContract).toBe(productTableEditorContract);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "product-table.wizard.table-source",
+    "product-table.wizard.preview-summary",
+    "product-table.visual.layout-style",
+    "product-table.visual.section-header",
+    "product-table.visual.columns",
+    "product-table.visual.column-labels",
+    "product-table.visual.public-controls",
+    "product-table.visual.export-format",
+    "product-table.visual.links-actions",
+    "product-table.visual.empty-state",
+    "product-table.visual.surfaces",
+    "product-table.advanced.runtime-payload",
+    "product-table.advanced.query-preview",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "wizard")
+      .flatMap((section) => section.writablePaths)
+      .some((path) => path.startsWith("style."))
+  ).toBe(false);
+});
 
 test("product table renders empty state", () => {
   const html = renderToString(
@@ -1439,7 +1475,7 @@ test("product table editors render expected panels and registry-backed controls"
   expect(visual).toContain("Show price");
   expect(visual).toContain("Show compare-at price");
   expect(visual).toContain("Show stock quantity");
-  expect(visual).toContain("Stock presentation");
+  expect(visual).not.toContain("Stock presentation");
   expect(visual).toContain("Links and actions");
   expect(visual).toContain("Linked column");
   expect(visual).toContain("Show action column");

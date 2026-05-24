@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
@@ -102,6 +102,152 @@ export type ContentListData = {
     };
     error?: string;
   };
+};
+
+export const contentListEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "content-list.wizard.source-binding",
+      title: "Source binding",
+      role: "source",
+      writablePaths: [
+        "source.mode",
+        "source.listingQueryId",
+        "source.listingTemplateId",
+        "source.contentTypeId",
+      ],
+    },
+    {
+      mode: "wizard",
+      id: "content-list.wizard.source-rules",
+      title: "Source rules",
+      role: "setup",
+      writablePaths: ["source.statusScope", "source.limit", "source.sort"],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.variant-layout",
+      title: "Variant and layout",
+      role: "layout",
+      writablePaths: ["variant", "style.columns", "style.gap", "style.cardStyle"],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.filters",
+      title: "Daily filters",
+      role: "content",
+      writablePaths: [
+        "filters.taxonomy",
+        "filters.authorId",
+        "filters.searchQuery",
+        "filters.featuredOnly",
+      ],
+      readOnlyPaths: [
+        "source.mode",
+        "source.listingQueryId",
+        "source.listingTemplateId",
+        "source.contentTypeId",
+        "source.statusScope",
+        "source.sort",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.section-context",
+      title: "Section context",
+      role: "content",
+      writablePaths: ["title", "description"],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.pagination-actions",
+      title: "Pagination and actions",
+      role: "content",
+      writablePaths: [
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.viewAllHref",
+        "pagination.viewAllLabel",
+        "pagination.loadMoreLabel",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.presentation-fields",
+      title: "Presentation fields",
+      role: "visual",
+      writablePaths: [
+        "fields.showImage",
+        "fields.showExcerpt",
+        "fields.showMeta",
+        "fields.showCta",
+        "style.imageAspect",
+        "style.tagMode",
+        "style.tagLimit",
+        "style.ctaLabel",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.surface-colors",
+      title: "Surface colors",
+      role: "visual",
+      writablePaths: ["style.backgroundColor", "style.borderColor", "style.textColor"],
+    },
+    {
+      mode: "visual",
+      id: "content-list.visual.empty-state",
+      title: "Empty state",
+      role: "content",
+      writablePaths: ["emptyState.title", "emptyState.description"],
+    },
+    {
+      mode: "advanced",
+      id: "content-list.advanced.source-summary",
+      title: "Source summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "source",
+        "filters",
+        "source.mode",
+        "source.listingQueryId",
+        "source.listingTemplateId",
+        "source.contentTypeId",
+        "source.statusScope",
+        "source.limit",
+        "source.sort",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "content-list.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "resolved.total",
+        "resolved.sourceTypeId",
+        "resolved.sourceTypeSlug",
+        "resolved.listPath",
+        "resolved.listingQueryId",
+        "resolved.listingTemplateId",
+        "resolved.resolvedAt",
+        "resolved.runtime",
+        "resolved.error",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "content-list.advanced.style-summary",
+      title: "Style summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["style"],
+    },
+  ],
 };
 
 const contentListLimitMin = 1;
@@ -1056,6 +1202,7 @@ export function createContentListWidget(editors: {
     schema: contentListSchema,
     defaults: contentListDefaults,
     editor: editors,
+    editorContract: contentListEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

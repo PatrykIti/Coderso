@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
@@ -73,6 +73,124 @@ export type BookingCalendarData = {
   };
 };
 
+export const bookingCalendarEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "booking-calendar.wizard.flow-setup",
+      title: "Flow setup",
+      role: "setup",
+      writablePaths: ["flowId"],
+    },
+    {
+      mode: "wizard",
+      id: "booking-calendar.wizard.availability-setup",
+      title: "Availability setup",
+      role: "setup",
+      writablePaths: ["intervalMinutes", "defaultServiceId", "defaultResourceId"],
+    },
+    {
+      mode: "wizard",
+      id: "booking-calendar.wizard.date-policy",
+      title: "Date policy",
+      role: "setup",
+      writablePaths: ["defaultDate", "minDate", "maxDate"],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.variant-layout",
+      title: "Variant and layout",
+      role: "layout",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.copy",
+      title: "Copy",
+      role: "content",
+      writablePaths: [
+        "title",
+        "description",
+        "serviceLabel",
+        "resourceLabel",
+        "dateLabel",
+        "refreshLabel",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.status-messages",
+      title: "Status messages",
+      role: "content",
+      writablePaths: [
+        "loadingMessage",
+        "emptySlotsMessage",
+        "missingSelectionMessage",
+        "errorMessage",
+        "selectedSlotEmptyMessage",
+        "emptyStateMessage",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.service-context",
+      title: "Service context",
+      role: "content",
+      writablePaths: [
+        "showServicePrice",
+        "showServiceDuration",
+        "showServiceDescription",
+        "showTimezone",
+        "summaryLocale",
+        "summaryDateStyle",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.date-picker",
+      title: "Date picker",
+      role: "content",
+      writablePaths: ["datePickerMode", "slotIntervalMode"],
+    },
+    {
+      mode: "visual",
+      id: "booking-calendar.visual.surface",
+      title: "Surface",
+      role: "visual",
+      writablePaths: [
+        "style.frameBackground",
+        "style.frameBorderColor",
+        "style.selectedSlotBackground",
+        "style.selectedSlotBorderColor",
+        "style.slotHoverBorderColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "booking-calendar.advanced.runtime-endpoint",
+      title: "Runtime endpoint",
+      role: "technical",
+      writablePaths: ["slotsEndpoint"],
+    },
+    {
+      mode: "advanced",
+      id: "booking-calendar.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "defaultServiceId",
+        "defaultResourceId",
+        "resolved.services",
+        "resolved.resources",
+        "resolved.slotsToken",
+        "resolved.error",
+      ],
+    },
+  ],
+};
+
 type BookingCalendarResolved = NonNullable<BookingCalendarData["resolved"]>;
 
 export const bookingCalendarDefaults: BookingCalendarData = {
@@ -114,6 +232,18 @@ const optionalText = (value: string | undefined) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const safeRelativeEndpoint = (value: string | undefined, fallback: string) => {
+  const normalized = optionalText(value) ?? fallback;
+  if (!normalized.startsWith("/") || normalized.startsWith("//")) return fallback;
+  try {
+    const url = new URL(normalized, "https://coderso.local");
+    if (url.origin !== "https://coderso.local") return fallback;
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return fallback;
+  }
 };
 
 const normalizeInterval = (value: unknown, fallback: number) => {
@@ -438,7 +568,7 @@ export function normalizeBookingCalendarData(data: BookingCalendarData): Booking
     slotIntervalMode: normalizeSlotIntervalMode(data.slotIntervalMode),
     defaultServiceId: optionalText(data.defaultServiceId),
     defaultResourceId: optionalText(data.defaultResourceId),
-    slotsEndpoint: text(
+    slotsEndpoint: safeRelativeEndpoint(
       data.slotsEndpoint,
       bookingCalendarDefaults.slotsEndpoint ?? "/api/booking/slots"
     ),
@@ -845,6 +975,7 @@ export function createBookingCalendarWidget(editors: {
       visual: editors.visual,
       advanced: editors.advanced,
     },
+    editorContract: bookingCalendarEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

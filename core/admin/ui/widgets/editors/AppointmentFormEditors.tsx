@@ -6,12 +6,19 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
+  appointmentFormDefaults,
   normalizeAppointmentFormData,
   type AppointmentCustomField,
   type AppointmentFormData,
 } from "../../../../widgets/core/appointmentForm";
-import type { WidgetEditorBookingFlowSummary, WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableInputField } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorBookingFlowSummary,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const update = (
   value: AppointmentFormData,
@@ -127,25 +134,51 @@ const parseOptionsDraft = (value: string) =>
     .map((option) => option.trim())
     .filter(Boolean);
 
+const phoneValidationPresets = [
+  {
+    value: "default",
+    label: "Default international",
+    pattern: appointmentFormDefaults.phonePattern ?? "^\\+?[0-9()\\-.\\s]{7,20}$",
+    message:
+      appointmentFormDefaults.phonePatternMessage ??
+      "Use digits, spaces, parentheses, or an optional leading +.",
+  },
+  {
+    value: "digits-spaces",
+    label: "Digits and spaces",
+    pattern: "^[0-9\\s]{7,20}$",
+    message: "Use 7-20 digits and spaces.",
+  },
+  {
+    value: "not-required",
+    label: "No extra validation",
+    pattern: "",
+    message: "",
+  },
+] as const;
+
+const resolvePhoneValidationPreset = (pattern: string | undefined) =>
+  phoneValidationPresets.find((preset) => preset.pattern === (pattern ?? ""))?.value ?? "custom";
+
 function Section({
+  id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
+  id: string;
+  mode: EditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </p>
-        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
+      {children}
+    </WidgetEditorSection>
   );
 }
 
@@ -253,48 +286,72 @@ function SurfaceFields({
   onChange: (next: AppointmentFormData) => void;
 }) {
   return (
-    <Section title="Surface" description="Decorative form shell and summary colors.">
-      <ClearableInputField
+    <Section
+      id="appointment-form.visual.surface"
+      mode="visual"
+      role="visual"
+      title="Surface"
+      description="Decorative form shell and summary colors."
+    >
+      <SharedColorControl
         label="Frame background"
         value={value.style?.frameBackground}
         onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
         onClear={() => clearStyle(value, onChange, "frameBackground")}
         placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Frame border"
         value={value.style?.frameBorderColor}
         onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "frameBorderColor")}
         placeholder="var(--color-border)"
+        pickerFallback="#d4d4d8"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Summary background"
         value={value.style?.summaryBackground}
         onChange={(next) => updateStyle(value, onChange, { summaryBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { summaryBackground: next })}
         onClear={() => clearStyle(value, onChange, "summaryBackground")}
         placeholder="var(--color-bg)"
+        pickerFallback="#f8fafc"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Summary border"
         value={value.style?.summaryBorderColor}
         onChange={(next) => updateStyle(value, onChange, { summaryBorderColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { summaryBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "summaryBorderColor")}
         placeholder="var(--color-border)"
+        pickerFallback="#d4d4d8"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Submit background"
         value={value.style?.submitBackground}
         onChange={(next) => updateStyle(value, onChange, { submitBackground: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { submitBackground: next })}
         onClear={() => clearStyle(value, onChange, "submitBackground")}
         placeholder="var(--color-primary)"
+        pickerFallback="#2563eb"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
         label="Submit text color"
         value={value.style?.submitTextColor}
         onChange={(next) => updateStyle(value, onChange, { submitTextColor: next })}
+        onSwatchChange={(next) => updateStyle(value, onChange, { submitTextColor: next })}
         onClear={() => clearStyle(value, onChange, "submitTextColor")}
         placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
     </Section>
   );
@@ -351,8 +408,6 @@ function FlowPairingNotice({
 export function AppointmentFormWizardEditor({
   value,
   onChange,
-  variant,
-  onVariantChange,
   context,
 }: WidgetEditorProps<AppointmentFormData>) {
   const normalized = normalizeAppointmentFormData(value);
@@ -361,12 +416,48 @@ export function AppointmentFormWizardEditor({
   return (
     <div className="space-y-4">
       <Section
+        id="appointment-form.wizard.flow-setup"
+        mode="wizard"
+        role="setup"
         title="Flow"
         description="Use the same flow key as Booking Calendar to receive selected slot."
       >
+        <TextField
+          label="Flow key"
+          value={normalized.flowId}
+          onChange={(next) => update(normalized, onChange, { flowId: next })}
+          placeholder="booking-flow"
+        />
+        <FlowPairingNotice flowId={normalized.flowId ?? "booking-flow"} calendars={calendars} />
+      </Section>
+    </div>
+  );
+}
+
+export function AppointmentFormVisualEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+}: WidgetEditorProps<AppointmentFormData>) {
+  const normalized = normalizeAppointmentFormData(value);
+  const showEmail = normalized.showEmail !== false;
+  const showPhone = normalized.showPhone !== false;
+  const showNotes = normalized.showNotes !== false;
+  const splitName = normalized.nameMode === "split";
+
+  return (
+    <div className="space-y-4">
+      <Section
+        id="appointment-form.visual.variant-flow"
+        mode="visual"
+        role="layout"
+        title="Variant and flow behavior"
+        description="Daily presentation and post-submit routing for this form."
+      >
         <SelectField
           label="Variant"
-          value={variant}
+          value={variant || "default"}
           onChange={(next) => onVariantChange?.(next)}
           options={[
             { value: "default", label: "Default" },
@@ -376,13 +467,12 @@ export function AppointmentFormWizardEditor({
             { value: "card-summary", label: "Card summary" },
           ]}
         />
-        <TextField
+        <ReadonlyWidgetSummaryRow
+          id="appointment-form-visual-flow-id"
           label="Flow key"
-          value={normalized.flowId}
-          onChange={(next) => update(normalized, onChange, { flowId: next })}
-          placeholder="booking-flow"
+          path="flowId"
+          value={normalized.flowId ?? "booking-flow"}
         />
-        <FlowPairingNotice flowId={normalized.flowId ?? "booking-flow"} calendars={calendars} />
         <TextField
           label="Locale override"
           value={normalized.locale}
@@ -397,7 +487,13 @@ export function AppointmentFormWizardEditor({
         />
       </Section>
 
-      <Section title="Copy" description="Main heading and confirmation copy.">
+      <Section
+        id="appointment-form.visual.copy"
+        mode="visual"
+        role="content"
+        title="Copy"
+        description="Main heading and confirmation copy."
+      >
         <TextField
           label="Title"
           value={normalized.title}
@@ -427,24 +523,11 @@ export function AppointmentFormWizardEditor({
           onChange={(next) => update(normalized, onChange, { successMessage: next })}
         />
       </Section>
-      <SurfaceFields value={normalized} onChange={onChange} />
-    </div>
-  );
-}
 
-export function AppointmentFormVisualEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<AppointmentFormData>) {
-  const normalized = normalizeAppointmentFormData(value);
-  const showEmail = normalized.showEmail !== false;
-  const showPhone = normalized.showPhone !== false;
-  const showNotes = normalized.showNotes !== false;
-  const splitName = normalized.nameMode === "split";
-
-  return (
-    <div className="space-y-4">
       <Section
+        id="appointment-form.visual.slot-summary"
+        mode="visual"
+        role="content"
         title="Slot summary"
         description="Copy shown before a user selects a slot or submits without one."
       >
@@ -475,7 +558,13 @@ export function AppointmentFormVisualEditor({
         />
       </Section>
 
-      <Section title="Fields" description="Labels/placeholders for customer details.">
+      <Section
+        id="appointment-form.visual.fields"
+        mode="visual"
+        role="content"
+        title="Fields"
+        description="Labels/placeholders for customer details."
+      >
         <SelectField
           label="Name mode"
           value={normalized.nameMode ?? "full"}
@@ -576,10 +665,26 @@ export function AppointmentFormVisualEditor({
               value={normalized.customerPhonePlaceholder}
               onChange={(next) => update(normalized, onChange, { customerPhonePlaceholder: next })}
             />
-            <TextField
-              label="Phone validation pattern"
-              value={normalized.phonePattern}
-              onChange={(next) => update(normalized, onChange, { phonePattern: next })}
+            <SelectField
+              label="Phone validation"
+              value={resolvePhoneValidationPreset(normalized.phonePattern)}
+              onChange={(next) => {
+                const preset = phoneValidationPresets.find((item) => item.value === next);
+                if (!preset) return;
+                update(normalized, onChange, {
+                  phonePattern: preset.pattern,
+                  phonePatternMessage: preset.message,
+                });
+              }}
+              options={[
+                ...(resolvePhoneValidationPreset(normalized.phonePattern) === "custom"
+                  ? [{ value: "custom", label: "Saved custom validation" }]
+                  : []),
+                ...phoneValidationPresets.map((preset) => ({
+                  value: preset.value,
+                  label: preset.label,
+                })),
+              ]}
             />
             <TextField
               label="Phone help text"
@@ -617,6 +722,9 @@ export function AppointmentFormVisualEditor({
       </Section>
 
       <Section
+        id="appointment-form.visual.custom-fields"
+        mode="visual"
+        role="content"
         title="Custom fields"
         description="Add bounded intake fields that serialize into metadata.customFields."
       >
@@ -712,6 +820,9 @@ export function AppointmentFormVisualEditor({
       </Section>
 
       <Section
+        id="appointment-form.visual.consent"
+        mode="visual"
+        role="content"
         title="Consent and protection"
         description="Control visible consent copy and runtime verification behavior."
       >
@@ -792,10 +903,20 @@ export function AppointmentFormAdvancedEditor({
   onChange,
 }: WidgetEditorProps<AppointmentFormData>) {
   const normalized = normalizeAppointmentFormData(value);
+  const nonceStatus = normalized.resolved?.submissionNonce
+    ? "Injected by server"
+    : "Not injected in editor";
+  const captcha = normalized.resolved?.captcha;
 
   return (
     <div className="space-y-4">
-      <Section title="Runtime endpoint" description="Override only for advanced proxy setups.">
+      <Section
+        id="appointment-form.advanced.runtime-endpoint"
+        mode="advanced"
+        role="technical"
+        title="Runtime endpoint"
+        description="Override only for advanced proxy setups."
+      >
         <TextField
           label="Submission endpoint"
           value={normalized.submissionEndpoint}
@@ -804,25 +925,40 @@ export function AppointmentFormAdvancedEditor({
         />
       </Section>
 
-      <Section title="Resolved runtime payload" description="Injected by server runtime resolver.">
-        <div className="space-y-1 text-sm">
-          <p className="font-medium text-foreground">Submission nonce</p>
-          <code className="block rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
-            {normalized.resolved?.submissionNonce || "Not injected in this preview"}
-          </code>
-          <p className="text-xs text-muted-foreground">
-            Server-injected booking nonce. Read-only in the editor.
-          </p>
-        </div>
-        <div className="space-y-1 text-sm">
-          <p className="font-medium text-foreground">Runtime error</p>
-          <code className="block rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-xs">
-            {normalized.resolved?.error || "No runtime warning"}
-          </code>
-          <p className="text-xs text-muted-foreground">
-            Diagnostic value from the runtime resolver when booking data cannot be hydrated safely.
-          </p>
-        </div>
+      <Section
+        id="appointment-form.advanced.submission-security"
+        mode="advanced"
+        role="diagnostics"
+        title="Submission security"
+        description="Read-only server-injected public-write diagnostics. Secrets are redacted."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="appointment-form-advanced-submission-nonce"
+          label="Submission nonce"
+          path="resolved.submissionNonce"
+          value={nonceStatus}
+          help="Server-injected booking nonce. The editor shows presence only and never the raw nonce."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="appointment-form-advanced-captcha"
+          label="Captcha"
+          path="resolved.captcha"
+          value={
+            captcha
+              ? `${captcha.provider ?? "provider"} · ${captcha.action ?? "action"} · site key ${
+                  captcha.siteKey ? "configured" : "missing"
+                }`
+              : "Not configured"
+          }
+          help="Captcha diagnostics expose provider/action and site-key presence only."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="appointment-form-advanced-runtime-error"
+          label="Runtime error"
+          path="resolved.error"
+          value={normalized.resolved?.error || "No runtime warning"}
+          help="Diagnostic value from the runtime resolver when booking data cannot be hydrated safely."
+        />
       </Section>
     </div>
   );

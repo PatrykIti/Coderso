@@ -153,6 +153,34 @@ test("routes swatch and text edits through their respective handlers", () => {
   }
 });
 
+test("can hide the technical text input while keeping swatch overrides", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Frame"
+      value="var(--color-surface)"
+      onChange={onChange}
+      pickerFallback="#ffffff"
+      showValueInput={false}
+    />
+  );
+
+  try {
+    const swatch = view.container.querySelector('input[aria-label="Frame swatch"]');
+    const text = view.container.querySelector('input[aria-label="Frame value"]');
+    expect((swatch as HTMLInputElement | null)?.value).toBe("#ffffff");
+    expect(text).toBeNull();
+    expect(view.container.textContent).toContain("Theme or custom color active");
+
+    dispatchInputValue(swatch as HTMLInputElement, "#112233");
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("#112233");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("clear stays disabled when only fallback swatch state exists", () => {
   const onChange = vi.fn();
   const onClear = vi.fn();

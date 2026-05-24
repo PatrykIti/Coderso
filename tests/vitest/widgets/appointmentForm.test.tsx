@@ -10,16 +10,56 @@ import {
 } from "../../../core/admin/ui/widgets/editors/AppointmentFormEditors";
 import {
   AppointmentFormBlock,
+  appointmentFormEditorContract,
   appointmentFormDefaults,
   createAppointmentFormWidget,
   normalizeAppointmentFormData,
   type AppointmentFormData,
 } from "../../../core/widgets/core/appointmentForm";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<AppointmentFormData>> = () => null;
+
+test("appointment form exposes a strict v2 editor contract", () => {
+  const widget = createAppointmentFormWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(widget.editorContract).toBe(appointmentFormEditorContract);
+  expect(validation.valid).toBe(true);
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "appointment-form.wizard.flow-setup",
+    "appointment-form.visual.variant-flow",
+    "appointment-form.visual.copy",
+    "appointment-form.visual.slot-summary",
+    "appointment-form.visual.fields",
+    "appointment-form.visual.custom-fields",
+    "appointment-form.visual.consent",
+    "appointment-form.visual.surface",
+    "appointment-form.advanced.runtime-endpoint",
+    "appointment-form.advanced.submission-security",
+  ]);
+});
+
+test("appointment form normalizes submission endpoint to a same-origin relative path", () => {
+  expect(
+    normalizeAppointmentFormData({
+      submissionEndpoint: "https://example.test/api/booking/reservations",
+    }).submissionEndpoint
+  ).toBe(appointmentFormDefaults.submissionEndpoint);
+  expect(
+    normalizeAppointmentFormData({
+      submissionEndpoint: "/api/booking/custom?tenant=demo",
+    }).submissionEndpoint
+  ).toBe("/api/booking/custom?tenant=demo");
+});
 
 test("appointment form renders flow contract and customer fields", () => {
   const html = renderToString(
@@ -234,10 +274,19 @@ test("appointment form editors render expected sections", () => {
 
   const advanced = renderToString(
     <AppointmentFormAdvancedEditor
-      value={appointmentFormDefaults}
+      value={{
+        ...appointmentFormDefaults,
+        resolved: {
+          submissionNonce: "nonce-token",
+          error: "booking_nonce_unavailable",
+        },
+      }}
       onChange={() => undefined}
       variant="default"
     />
   );
   expect(advanced).toContain("Runtime endpoint");
+  expect(advanced).toContain("Injected by server");
+  expect(advanced).toContain("booking_nonce_unavailable");
+  expect(advanced).not.toContain("nonce-token");
 });

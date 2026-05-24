@@ -13,6 +13,10 @@ import {
   validateWidgetEditorContract,
   type WidgetEditorContractValidation,
 } from "../../../core/widgets/editorContract";
+import { appointmentFormEditorContract } from "../../../core/widgets/core/appointmentForm";
+import { bookingCalendarEditorContract } from "../../../core/widgets/core/bookingCalendar";
+import { contentListEditorContract } from "../../../core/widgets/core/contentList";
+import { productTableEditorContract } from "../../../core/widgets/core/productTable";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
@@ -362,6 +366,21 @@ describe("widget editor contract validation", () => {
         "editor_contract_wizard_style_owner",
       ])
     );
+  });
+
+  test("accepts TASK-336-13 P2 widget contracts in strict mode", () => {
+    const contracts = [
+      { type: "content-list", editorContract: contentListEditorContract },
+      { type: "booking-calendar", editorContract: bookingCalendarEditorContract },
+      { type: "appointment-form", editorContract: appointmentFormEditorContract },
+      { type: "product-table", editorContract: productTableEditorContract },
+    ];
+
+    for (const definition of contracts) {
+      const validation = validateWidgetEditorContract(definition, { requireContract: true });
+      expect(validation.errors).toEqual([]);
+      expect(validation.valid).toBe(true);
+    }
   });
 });
 
