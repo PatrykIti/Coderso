@@ -190,8 +190,8 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and `bun test tests/vitest/widgets/newsletter.test.tsx`. Targeted
   Playwright evidence is stored in
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-visual-admin-2026-05-24.*`;
-  the public fixture passes with no overflow, while the admin probe still
-  records the known `block_select_missing` fixture gap before mode inspection.
+  the rerun reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
   Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
   technical authoring drift in the current diff.
 - In Progress (2026-05-24): seventh implementation family targets commerce
@@ -211,11 +211,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.*`.
   Product Gallery reports `adminFailures=0`, `publicFailures=0`,
   `fixtureGaps=0`, and `metadataGaps=0`. Product Compare reports
-  `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with the known
-  admin fixture gap `block_select_missing` before mode inspection. Claude
-  post-implementation review later flagged Product Gallery card density as a
-  Wizard/Visual ownership blocker; the controls were moved into Visual instead
-  of broadening the Wizard contract.
+  `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude post-implementation review later flagged Product
+  Gallery card density as a Wizard/Visual ownership blocker; the controls were
+  moved into Visual instead of broadening the Wizard contract.
+- In Progress (2026-05-24): eighth implementation family hardens the shared
+  PageEditor widget-preview state setter so repeated `setPreviewState(null)`
+  calls and identical ready states are idempotent. This reduces preview-capable
+  widget churn for `newsletter`, `product-compare`, `product-gallery`, and
+  related widgets. During Playwright validation, stale Vite optimized
+  dependency cache produced false `block_select_missing` gaps with empty admin
+  snapshots and `504 Outdated Optimize Dep` console errors; clearing
+  `core/node_modules/.vite` and rerunning with fresh Playwright sessions
+  produced clean Newsletter and Product Compare admin smoke. Claude read-only
+  review for this PageEditor hardening timed out after 180 seconds without
+  returning output.
 
 ## Files to Change
 

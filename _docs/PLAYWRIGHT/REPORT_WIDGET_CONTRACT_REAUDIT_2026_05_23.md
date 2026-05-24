@@ -706,9 +706,8 @@ Visual drift found after Advanced was made read-only.
   and `bun test tests/vitest/widgets/newsletter.test.tsx`.
 - Targeted Playwright evidence is stored in
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-visual-admin-2026-05-24.*`.
-  Public CSS smoke passed with `publicFailures=0`; the admin probe still records
-  the known `block_select_missing` fixture gap before it can inspect the
-  Newsletter editor modes.
+  Newsletter reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
 - Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
   technical authoring drift in the current diff.
 
@@ -736,11 +735,34 @@ Product Compare raw commerce authoring drift.
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.*`.
   Product Gallery reports `adminFailures=0`, `publicFailures=0`,
   `fixtureGaps=0`, and `metadataGaps=0`. Product Compare reports
-  `adminFailures=0`, `publicFailures=0`, and `metadataGaps=0`, with the known
-  admin fixture gap `block_select_missing` before mode inspection.
+  `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 - Claude post-implementation review flagged Product Gallery `style.columns` and
   `style.cardStyle` as a Wizard/Visual ownership blocker. The final patch moves
   those controls into Visual rather than expanding the Wizard contract.
+
+## TASK-336-19 Preview-State Stability Evidence (2026-05-24)
+
+The eighth TASK-336-19 implementation family hardens the shared PageEditor
+preview-state bridge used by preview-capable widgets.
+
+- PageEditor widget-preview state updates are now idempotent for empty clears
+  and repeated identical states. This prevents repeated `setPreviewState(null)`
+  or repeated ready-state writes from allocating a fresh preview-state map.
+- Focused Vitest evidence covers PageEditor preview-state idempotence and the
+  Newsletter/Product Compare/Product Gallery editor preview paths:
+  `bun run test:vitest -- tests/vitest/ui/page-editor.test.tsx tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx`.
+- Initial reruns still showed `block_select_missing`; debug snapshots proved
+  those were stale Vite optimized dependency failures, not widget DOM failures:
+  the admin body was empty and the browser console reported
+  `504 Outdated Optimize Dep` for React optimized deps. After clearing
+  `core/node_modules/.vite`, restarting `coderso-dev-core-host`, and using
+  fresh Playwright sessions, Newsletter and Product Compare both report
+  `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only review for this PageEditor hardening was attempted with
+  `claude -p --permission-mode plan --output-format text`, but it timed out
+  after 180 seconds without output.
 
 ## Claude and Helper Agent Review Summary
 

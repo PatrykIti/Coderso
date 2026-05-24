@@ -402,6 +402,52 @@ const blocksContainType = (blocks: Block[], type: string) =>
 const supportsTransientWidgetPreview = (type: string | undefined) =>
   type === "entry-teaser" || type === "newsletter" || type === "posts-feed";
 
+const previewDataPatchEquals = (
+  left: WidgetPreviewState["dataPatch"],
+  right: WidgetPreviewState["dataPatch"]
+) => {
+  if (left === right) return true;
+  if (!left || !right) return !left && !right;
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+};
+
+const widgetPreviewStatesEqual = (
+  left: WidgetPreviewState | null | undefined,
+  right: WidgetPreviewState | null | undefined
+) =>
+  left?.status === right?.status &&
+  left?.message === right?.message &&
+  left?.requestKey === right?.requestKey &&
+  previewDataPatchEquals(left?.dataPatch, right?.dataPatch);
+
+export const applyWidgetPreviewStateUpdate = (
+  current: Record<string, WidgetPreviewState | undefined>,
+  blockId: string,
+  state: WidgetPreviewState | null
+) => {
+  const hasExistingState = Object.prototype.hasOwnProperty.call(current, blockId);
+  const currentState = current[blockId] ?? null;
+
+  if (!state) {
+    if (!hasExistingState) return current;
+    const { [blockId]: _removed, ...remaining } = current;
+    return remaining;
+  }
+
+  if (widgetPreviewStatesEqual(currentState, state)) {
+    return current;
+  }
+
+  return {
+    ...current,
+    [blockId]: state,
+  };
+};
+
 const hydrateBookingCalendarPreviewBlocks = (
   blocks: Block[],
   resolved: BookingCalendarPreviewResolved | null
@@ -547,6 +593,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       (supportsTransientWidgetPreview(selectedBlock?.type) || selectedWidgetSupportsPreviewState),
     [selectedBlock, selectedWidgetSupportsPreviewState]
   );
+  const selectedPreviewBlockId = previewEnabled ? (selectedBlock?.id ?? null) : null;
+  const setSelectedWidgetPreviewState = useCallback(
+    (state: WidgetPreviewState | null) => {
+      if (!selectedPreviewBlockId) return;
+      setWidgetPreviewStates((current) =>
+        applyWidgetPreviewStateUpdate(current, selectedPreviewBlockId, state)
+      );
+    },
+    [selectedPreviewBlockId]
+  );
   const pageEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
     if (!selectedBlock) return undefined;
 
@@ -556,13 +612,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       editorMode: selectedBlock.editor?.mode ?? "wizard",
       bookingFlows,
       previewState: previewEnabled ? (widgetPreviewStates[selectedBlock.id] ?? null) : null,
-      setPreviewState: previewEnabled
-        ? (state) =>
-            setWidgetPreviewStates((current) => ({
-              ...current,
-              [selectedBlock.id]: state ?? undefined,
-            }))
-        : undefined,
+      setPreviewState: previewEnabled ? setSelectedWidgetPreviewState : undefined,
       ...(selectedBlock.type === "booking-calendar" && bookingCalendarPreviewResolved
         ? {
             widgetPreviewData: {
@@ -576,6 +626,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     bookingFlows,
     previewEnabled,
     selectedBlock,
+    setSelectedWidgetPreviewState,
     widgetPreviewStates,
   ]);
   const activeWidgetPreviewStates = useMemo(() => {

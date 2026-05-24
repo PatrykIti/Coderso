@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-05-24T21:19:27.919Z",
-  "command": "bun scripts/playwright-widget-contract-smoke.ts --widget=product-compare --output-json=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.json --output-md=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.md",
+  "generatedAt": "2026-05-24T21:58:08.620Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session=widget-contract-smoke-task-336-19-vite-clean-product-compare --widget=product-compare --output-json=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.json --output-md=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-product-compare-2026-05-24.md",
   "dryRun": false,
   "inventory": {
     "expectedWidgetCount": 38,
@@ -30,28 +30,26 @@
         "modes": [
           {
             "mode": "visual",
-            "status": "fixture-gap",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 9,
+            "visibleSectionCount": 9,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "admin_fixture_unopenable:block_select_missing"
+            "controlsWithoutPath": 0
           },
           {
             "mode": "advanced",
-            "status": "fixture-gap",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "admin_fixture_unopenable:block_select_missing"
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
         "adminPath": "http://localhost:5173/admin/pages/3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
-        "status": "fixture-gap",
+        "status": "passed",
         "duplicateWritablePaths": []
       }
     ]
@@ -76,7 +74,7 @@
   "summary": {
     "adminFailures": 0,
     "publicFailures": 0,
-    "fixtureGaps": 1,
+    "fixtureGaps": 0,
     "metadataGaps": 0
   }
 }

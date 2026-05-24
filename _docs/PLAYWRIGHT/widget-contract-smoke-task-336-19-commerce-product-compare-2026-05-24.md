@@ -1,6 +1,6 @@
 # Widget Contract Smoke Results
 
-- **Generated:** 2026-05-24T21:19:27.919Z
+- **Generated:** 2026-05-24T21:58:08.620Z
 - **Dry run:** no
 - **Inventory:** 38/38 widgets
 - **Admin:** http://localhost:5173/admin
@@ -17,14 +17,14 @@
 
 - Admin failures: 0
 - Public failures: 0
-- Fixture gaps: 1
+- Fixture gaps: 0
 - Metadata gaps: 0
 
 ## Admin Mode Contract
 
 | Widget | Status | Modes | Duplicate paths | Notes |
 |---|---|---|---|---|
-| `product-compare` | fixture-gap | visual:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `product-compare` | passed | visual:passed r1/s9/v9<br>advanced:passed r1/s2/v2 | - | - |
 
 ## Public CSS Smoke
 
