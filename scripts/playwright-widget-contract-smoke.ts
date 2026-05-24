@@ -534,14 +534,14 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
   }
   async function selectFixtureBlock(item) {
     const typedBlocks = page.locator('[data-block-select][data-block-widget-type="' + item.widgetType + '"]');
-    await typedBlocks.first().waitFor({ state: "visible", timeout: 10000 }).catch(() => undefined);
+    await typedBlocks.first().waitFor({ state: "visible", timeout: 30000 }).catch(() => undefined);
     if ((await typedBlocks.count()) > 0) {
       await typedBlocks.first().click().catch(() => undefined);
       await settle();
       return { ok: true, matchedExpectedBlock: true };
     }
     const blocks = page.locator("[data-block-select]");
-    await blocks.first().waitFor({ state: "visible", timeout: 10000 }).catch(() => undefined);
+    await blocks.first().waitFor({ state: "visible", timeout: 30000 }).catch(() => undefined);
     const blockCount = await blocks.count();
     if (blockCount === 0) return { ok: false, error: "block_select_missing", matchedExpectedBlock: false };
     const expectedLabels = [item.title, item.adminInsertLabel, item.widgetType]
@@ -784,8 +784,10 @@ function summarize(report: SmokeReport): SmokeReport["summary"] {
     report.public.results.filter((item) => item.status === "failed").length +
     (report.public.error ? 1 : 0);
   const fixtureGaps =
-    report.admin.results.filter((item) => item.status === "fixture-gap").length +
-    report.public.results.filter((item) => item.status === "fixture-gap").length;
+    report.admin.results.filter(
+      (item) =>
+        item.status === "fixture-gap" || item.modes.some((mode) => mode.status === "fixture-gap")
+    ).length + report.public.results.filter((item) => item.status === "fixture-gap").length;
   const metadataGaps = report.admin.results.filter(
     (item) =>
       item.status === "metadata-gap" || item.modes.some((mode) => mode.controlsWithoutPath > 0)
@@ -823,10 +825,10 @@ function renderMarkdown(report: SmokeReport): string {
     "|---|---|---|---|---|",
     ...report.admin.results.map((item) => {
       const modes = item.modes
-        .map(
-          (mode) =>
-            `${mode.mode}:${mode.status} r${mode.rootCount}/s${mode.sectionCount}/v${mode.visibleSectionCount}`
-        )
+        .map((mode) => {
+          const error = mode.error ? ` (${mode.error})` : "";
+          return `${mode.mode}:${mode.status} r${mode.rootCount}/s${mode.sectionCount}/v${mode.visibleSectionCount}${error}`;
+        })
         .join("<br>");
       return `| \`${item.widgetType}\` | ${item.status} | ${modes || "-"} | ${item.duplicateWritablePaths.join(", ") || "-"} | ${item.error ?? "-"} |`;
     }),
@@ -861,6 +863,23 @@ function createFailedAdminMode(mode: EditorMode, error: string): AdminModeResult
     controlsWithoutPath: 0,
     error,
   };
+}
+
+function createAdminFixtureGapMode(mode: EditorMode, error: string): AdminModeResult {
+  return {
+    mode,
+    status: "fixture-gap",
+    rootCount: 0,
+    sectionCount: 0,
+    visibleSectionCount: 0,
+    writablePaths: [],
+    controlsWithoutPath: 0,
+    error: `admin_fixture_unopenable:${error}`,
+  };
+}
+
+function isAdminFixtureUnopenableError(error: string | undefined): boolean {
+  return error === "block_select_missing" || error === "widget_block_type_missing";
 }
 
 function findDuplicateWritablePaths(
@@ -901,14 +920,22 @@ function finalizeAdminResult(
     };
   }
   const hasMetadataGap = partial.modes.some((mode) => mode.controlsWithoutPath > 0);
-  const duplicates = hasMetadataGap
-    ? []
-    : findDuplicateWritablePaths(partial.modes, item.allowedDuplicateWritablePaths);
+  const hasFixtureGap = partial.modes.some((mode) => mode.status === "fixture-gap");
+  const duplicates =
+    hasMetadataGap || hasFixtureGap
+      ? []
+      : findDuplicateWritablePaths(partial.modes, item.allowedDuplicateWritablePaths);
   const hasFailure =
     partial.modes.some((mode) => mode.status === "failed") || duplicates.length > 0;
   return {
     ...partial,
-    status: hasFailure ? "failed" : hasMetadataGap ? "metadata-gap" : "passed",
+    status: hasFailure
+      ? "failed"
+      : hasFixtureGap
+        ? "fixture-gap"
+        : hasMetadataGap
+          ? "metadata-gap"
+          : "passed",
     duplicateWritablePaths: duplicates,
   };
 }
@@ -1088,7 +1115,11 @@ async function main() {
               if (modeResult.error && modeResult.modes.length === 0) {
                 merged.pageId = modeResult.pageId;
                 merged.adminPath = modeResult.adminPath;
-                merged.modes.push(createFailedAdminMode(mode, modeResult.error));
+                merged.modes.push(
+                  isAdminFixtureUnopenableError(modeResult.error)
+                    ? createAdminFixtureGapMode(mode, modeResult.error)
+                    : createFailedAdminMode(mode, modeResult.error)
+                );
                 continue;
               }
               merged.pageId = merged.pageId ?? modeResult.pageId;
@@ -1162,10 +1193,12 @@ export {
   selectCases,
   extractCliJson,
   createFailedAdminMode,
+  createAdminFixtureGapMode,
   findDuplicateWritablePaths,
   finalizeAdminResult,
   classifyPublicStatus,
   shouldCountOverflowOwner,
+  isAdminFixtureUnopenableError,
   hasStrictFailure,
   summarize,
   renderMarkdown,

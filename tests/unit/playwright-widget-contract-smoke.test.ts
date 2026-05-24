@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 
 import {
   classifyPublicStatus,
+  createAdminFixtureGapMode,
   createFailedAdminMode,
   extractCliJson,
   finalizeAdminResult,
   findDuplicateWritablePaths,
   hasStrictFailure,
+  isAdminFixtureUnopenableError,
   parseArgs,
   renderMarkdown,
   selectCases,
@@ -211,6 +213,7 @@ describe("playwright widget contract smoke helpers", () => {
                   writablePaths: [],
                   controlsWithoutPath: 2,
                 },
+                createAdminFixtureGapMode("advanced", "block_select_missing"),
               ],
             },
           ],
@@ -233,7 +236,7 @@ describe("playwright widget contract smoke helpers", () => {
     expect(summary).toEqual({
       adminFailures: 1,
       publicFailures: 1,
-      fixtureGaps: 1,
+      fixtureGaps: 2,
       metadataGaps: 1,
     });
   });
@@ -281,6 +284,23 @@ describe("playwright widget contract smoke helpers", () => {
       visibleSectionCount: 0,
       error: "widget_block_type_missing",
     });
+  });
+
+  test("classifies unopenable admin fixtures separately from editor contract failures", () => {
+    const [item] = makeInventory().widgets;
+    const fixtureGap = createAdminFixtureGapMode("advanced", "block_select_missing");
+    const finalized = finalizeAdminResult(item, {
+      widgetType: item.widgetType,
+      modes: [makeMode({ mode: "wizard" }), makeMode({ mode: "visual" }), fixtureGap],
+    });
+
+    expect(isAdminFixtureUnopenableError("block_select_missing")).toBe(true);
+    expect(isAdminFixtureUnopenableError("mode_root_or_visible_section_missing")).toBe(false);
+    expect(fixtureGap).toMatchObject({
+      status: "fixture-gap",
+      error: "admin_fixture_unopenable:block_select_missing",
+    });
+    expect(finalized.status).toBe("fixture-gap");
   });
 
   test("classifies frontend fixture gaps and overflow failures distinctly", () => {

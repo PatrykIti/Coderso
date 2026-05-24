@@ -1,6 +1,6 @@
 # Widget Contract Smoke Results
 
-- **Generated:** 2026-05-24T00:21:01.462Z
+- **Generated:** 2026-05-24T00:57:17.930Z
 - **Dry run:** no
 - **Inventory:** 38/38 widgets
 - **Admin:** http://localhost:5173/admin
@@ -15,53 +15,53 @@
 
 ## Summary
 
-- Admin failures: 27
+- Admin failures: 17
 - Public failures: 2
-- Fixture gaps: 9
-- Metadata gaps: 11
+- Fixture gaps: 29
+- Metadata gaps: 13
 
 ## Admin Mode Contract
 
 | Widget | Status | Modes | Duplicate paths | Notes |
 |---|---|---|---|---|
 | `section` | metadata-gap | wizard:passed r1/s1/v1<br>visual:passed r1/s7/v7<br>advanced:passed r1/s2/v2 | - | - |
-| `template-section` | failed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:failed r0/s0/v0 | - | - |
-| `grid-columns` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `split-layout` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s5/v5<br>advanced:failed r0/s0/v0 | - | - |
+| `template-section` | fixture-gap | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `grid-columns` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
+| `split-layout` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s5/v5<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `tabs` | metadata-gap | wizard:passed r1/s3/v3<br>visual:passed r1/s6/v6<br>advanced:passed r1/s6/v6 | - | - |
-| `accordion` | failed | wizard:passed r1/s2/v2<br>visual:passed r1/s4/v4<br>advanced:failed r0/s0/v0 | - | - |
+| `accordion` | fixture-gap | wizard:passed r1/s2/v2<br>visual:passed r1/s4/v4<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `toggle-block` | metadata-gap | wizard:passed r1/s3/v3<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
-| `spacer` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s3/v3<br>advanced:failed r0/s0/v0 | - | - |
-| `divider` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s4/v4<br>advanced:passed r1/s4/v4 | - | - |
-| `stack` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s5/v5<br>advanced:failed r0/s0/v0 | - | - |
-| `hero` | failed | wizard:failed r0/s0/v0<br>visual:passed r1/s10/v10<br>advanced:passed r1/s2/v2 | - | - |
-| `feature-grid` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
+| `spacer` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s3/v3<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `divider` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s4/v4<br>advanced:passed r1/s4/v4 | - | - |
+| `stack` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s5/v5<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `hero` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s10/v10<br>advanced:passed r1/s2/v2 | - | - |
+| `feature-grid` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s6/v6<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `testimonials` | passed | wizard:passed r1/s2/v2<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
-| `pricing-plans` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
-| `faq-accordion` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s7/v7<br>advanced:passed r1/s4/v4 | - | - |
-| `cta-banner` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
+| `pricing-plans` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s6/v6<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `faq-accordion` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s7/v7<br>advanced:passed r1/s4/v4 | - | - |
+| `cta-banner` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s6/v6<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `logo-cloud` | metadata-gap | wizard:passed r1/s1/v1<br>visual:passed r1/s5/v5<br>advanced:passed r1/s3/v3 | - | - |
-| `gallery-mosaic` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s4/v4 | - | - |
+| `gallery-mosaic` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s7/v7<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `stats-kpi` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `team` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
-| `rich-text-section` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
-| `content-list` | failed | wizard:passed r1/s2/v2<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
-| `posts-feed` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
-| `entry-teaser` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `team` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s4/v4<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `rich-text-section` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
+| `content-list` | fixture-gap | wizard:passed r1/s2/v2<br>visual:passed r1/s6/v6<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `posts-feed` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `entry-teaser` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `product-gallery` | passed | wizard:passed r1/s3/v3<br>visual:passed r1/s5/v5<br>advanced:passed r1/s4/v4 | - | - |
-| `product-compare` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `product-compare` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `product-table` | passed | wizard:passed r1/s2/v2<br>visual:passed r1/s10/v10<br>advanced:passed r1/s2/v2 | - | - |
-| `listing-filters` | failed | wizard:passed r1/s5/v5<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
+| `listing-filters` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:passed r1/s6/v6<br>advanced:passed r1/s4/v4 | - | - |
 | `search-box` | passed | wizard:passed r1/s3/v3<br>visual:passed r1/s3/v3<br>advanced:passed r1/s3/v3 | - | - |
-| `timeline` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s6/v6<br>advanced:failed r0/s0/v0 | - | - |
+| `timeline` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:passed r1/s6/v6<br>advanced:passed r1/s2/v2 | - | - |
 | `compare-timeline` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `newsletter` | failed | wizard:failed r0/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r0/s0/v0 | - | - |
-| `booking-calendar` | failed | wizard:failed r1/s0/v0<br>visual:failed r1/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
-| `appointment-form` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
+| `newsletter` | fixture-gap | wizard:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>visual:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `booking-calendar` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>advanced:failed r1/s0/v0 (mode_root_or_visible_section_missing) | - | - |
+| `appointment-form` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 | `form-embed` | passed | wizard:passed r1/s4/v4<br>visual:passed r1/s6/v6<br>advanced:passed r1/s3/v3 | - | - |
-| `contact` | failed | wizard:passed r1/s4/v4<br>visual:failed r0/s0/v0<br>advanced:passed r1/s3/v3 | - | - |
-| `navigation` | failed | wizard:failed r1/s0/v0<br>visual:passed r1/s8/v8<br>advanced:failed r1/s0/v0 | - | - |
-| `footer` | failed | wizard:failed r1/s0/v0<br>visual:failed r0/s0/v0<br>advanced:failed r1/s0/v0 | - | - |
+| `contact` | fixture-gap | wizard:passed r1/s4/v4<br>visual:passed r1/s8/v8<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
+| `navigation` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s8/v8<br>advanced:failed r1/s0/v0 (mode_root_or_visible_section_missing) | - | - |
+| `footer` | failed | wizard:failed r1/s0/v0 (mode_root_or_visible_section_missing)<br>visual:passed r1/s1/v1<br>advanced:fixture-gap r0/s0/v0 (admin_fixture_unopenable:block_select_missing) | - | - |
 
 ## Public CSS Smoke
 

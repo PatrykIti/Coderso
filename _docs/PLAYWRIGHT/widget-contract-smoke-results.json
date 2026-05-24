@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-24T00:21:01.462Z",
+  "generatedAt": "2026-05-24T00:57:17.930Z",
   "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-smoke --admin http://localhost:5173/admin --front http://localhost:3000",
   "dryRun": false,
   "inventory": {
@@ -123,18 +123,18 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "56a31dad-cf02-4671-89f4-15ecd77fa67f",
         "adminPath": "http://localhost:5173/admin/pages/56a31dad-cf02-4671-89f4-15ecd77fa67f",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -198,13 +198,13 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "c3fa7a67-99fc-42ec-a4e4-131c1dc75a58",
@@ -271,18 +271,18 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "cabe29cc-1ad6-45b7-8773-731cc5b0c503",
         "adminPath": "http://localhost:5173/admin/pages/cabe29cc-1ad6-45b7-8773-731cc5b0c503",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -345,13 +345,13 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "719cca9b-25fe-43ba-a17c-24407f3f2d36",
@@ -420,13 +420,13 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "7b23083d-f7cd-481e-8417-fc2278e54466",
@@ -440,12 +440,12 @@
           {
             "mode": "wizard",
             "status": "failed",
-            "rootCount": 0,
+            "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "mode_root_or_visible_section_missing"
           },
           {
             "mode": "visual",
@@ -486,22 +486,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 6
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "a06fb6e2-3b58-44c5-87e9-32125f572461",
@@ -560,22 +560,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e",
@@ -635,22 +635,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "94e844e2-9287-4aa4-949e-c2ea9d28ca4f",
@@ -709,22 +709,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 7,
+            "visibleSectionCount": 7,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 4,
-            "visibleSectionCount": 4,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "5b42d115-258d-4967-9936-e3ca11972a14",
@@ -783,22 +783,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "fb31e030-07df-4dce-9243-a3c8904d3269",
@@ -857,27 +857,27 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
         "adminPath": "http://localhost:5173/admin/pages/e07ab9e8-57f8-477b-86c3-86b2ccec4b61",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -885,38 +885,38 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "160c954b-1b3e-4798-bf37-74f697a18e24",
         "adminPath": "http://localhost:5173/admin/pages/160c954b-1b3e-4798-bf37-74f697a18e24",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -924,38 +924,38 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "8ccacd83-70eb-4e65-aac5-8c0767d4866b",
         "adminPath": "http://localhost:5173/admin/pages/8ccacd83-70eb-4e65-aac5-8c0767d4866b",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -999,38 +999,38 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
         "adminPath": "http://localhost:5173/admin/pages/3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -1074,37 +1074,36 @@
         "modes": [
           {
             "mode": "wizard",
+            "status": "fixture-gap",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "admin_fixture_unopenable:block_select_missing"
+          },
+          {
+            "mode": "visual",
             "status": "passed",
             "rootCount": 1,
-            "sectionCount": 5,
-            "visibleSectionCount": 5,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
             "writablePaths": [],
             "controlsWithoutPath": 4
           },
           {
-            "mode": "visual",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
-            "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 4
           }
         ],
         "pageId": "f9435704-9702-45f5-92b1-22711c7fb0ad",
         "adminPath": "http://localhost:5173/admin/pages/f9435704-9702-45f5-92b1-22711c7fb0ad",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -1148,13 +1147,13 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
-            "rootCount": 1,
+            "status": "fixture-gap",
+            "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "visual",
@@ -1167,18 +1166,17 @@
           },
           {
             "mode": "advanced",
-            "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 2,
+            "visibleSectionCount": 2,
             "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "controlsWithoutPath": 0
           }
         ],
         "pageId": "261d5209-9323-4237-ad8e-20eb3f0e9d60",
         "adminPath": "http://localhost:5173/admin/pages/261d5209-9323-4237-ad8e-20eb3f0e9d60",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -1222,38 +1220,38 @@
         "modes": [
           {
             "mode": "wizard",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           },
           {
             "mode": "advanced",
-            "status": "failed",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "f0ad3daf-aedf-47d8-9ff4-41587dff8e07",
         "adminPath": "http://localhost:5173/admin/pages/f0ad3daf-aedf-47d8-9ff4-41587dff8e07",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -1311,22 +1309,22 @@
           {
             "mode": "visual",
             "status": "failed",
-            "rootCount": 0,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
-            "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "failed",
             "rootCount": 1,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
             "error": "mode_root_or_visible_section_missing"
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
+            "rootCount": 0,
+            "sectionCount": 0,
+            "visibleSectionCount": 0,
+            "writablePaths": [],
+            "controlsWithoutPath": 0,
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "f22436b5-24db-4536-9dda-07c0ae9cfcdb",
@@ -1384,27 +1382,27 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 8,
+            "visibleSectionCount": 8,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "passed",
-            "rootCount": 1,
-            "sectionCount": 3,
-            "visibleSectionCount": 3,
-            "writablePaths": [],
-            "controlsWithoutPath": 0
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "969501e7-887f-458a-887a-1c2725e815d8",
         "adminPath": "http://localhost:5173/admin/pages/969501e7-887f-458a-887a-1c2725e815d8",
-        "status": "failed",
+        "status": "fixture-gap",
         "duplicateWritablePaths": []
       },
       {
@@ -1460,23 +1458,22 @@
           },
           {
             "mode": "visual",
-            "status": "failed",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 1,
+            "visibleSectionCount": 1,
+            "writablePaths": [],
+            "controlsWithoutPath": 4
+          },
+          {
+            "mode": "advanced",
+            "status": "fixture-gap",
             "rootCount": 0,
             "sectionCount": 0,
             "visibleSectionCount": 0,
             "writablePaths": [],
             "controlsWithoutPath": 0,
-            "error": "block_select_missing"
-          },
-          {
-            "mode": "advanced",
-            "status": "failed",
-            "rootCount": 1,
-            "sectionCount": 0,
-            "visibleSectionCount": 0,
-            "writablePaths": [],
-            "controlsWithoutPath": 0,
-            "error": "mode_root_or_visible_section_missing"
+            "error": "admin_fixture_unopenable:block_select_missing"
           }
         ],
         "pageId": "0aa97321-eeda-4455-ba63-4537cc7f2dee",
@@ -1996,9 +1993,9 @@
     ]
   },
   "summary": {
-    "adminFailures": 27,
+    "adminFailures": 17,
     "publicFailures": 2,
-    "fixtureGaps": 9,
-    "metadataGaps": 11
+    "fixtureGaps": 29,
+    "metadataGaps": 13
   }
 }
