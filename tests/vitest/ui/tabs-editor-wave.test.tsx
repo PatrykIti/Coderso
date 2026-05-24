@@ -213,28 +213,25 @@ const findCheckboxes = (container: ParentNode) =>
       element instanceof HTMLInputElement && element.type === "checkbox"
   );
 
-const getOption = (select: HTMLSelectElement, value: string) => {
-  const option = Array.from(select.options).find((candidate) => candidate.value === value);
-  if (!(option instanceof HTMLOptionElement)) {
-    throw new Error(`Missing option "${value}"`);
-  }
-  return option;
-};
-
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
-  const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
-    )
+  const section = Array.from(container.querySelectorAll("section")).find(
+    (candidate) =>
+      normalizeText(candidate.querySelector("h3")?.textContent) === normalizeText(title)
   );
   if (!(section instanceof HTMLElement)) {
     throw new Error(`Missing section "${title}"`);
   }
   return section;
 };
+
+const writablePaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
 
 type EditorKind = "wizard" | "visual" | "advanced";
 
@@ -301,7 +298,66 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Tabs wizard editor covers layout defaults, item-count growth, default-tab selection, and panel intro normalization", async () => {
+test("Tabs editors expose non-overlapping writable ownership metadata", async () => {
+  const baseValue: TabsData = {
+    items: [
+      { id: "overview", label: "Overview", panelIntro: "Primary overview." },
+      {
+        id: "details",
+        label: "Details",
+        triggerDescription: "Deep dive",
+        icon: "⭐",
+        disabled: true,
+      },
+    ],
+    options: {
+      defaultItemId: "overview",
+      activeId: "overview",
+      orientation: "horizontal",
+    },
+  };
+  const wizard = await renderEditor({ editor: "wizard", initialValue: baseValue });
+  const visual = await renderEditor({ editor: "visual", initialValue: baseValue });
+  const advanced = await renderEditor({ editor: "advanced", initialValue: baseValue });
+
+  try {
+    const wizardPaths = writablePaths(wizard.container);
+    const visualPaths = writablePaths(visual.container);
+    const advancedPaths = writablePaths(advanced.container);
+    const duplicatePaths = [...wizardPaths, ...visualPaths, ...advancedPaths].filter(
+      (path, index, paths) => paths.indexOf(path) !== index
+    );
+
+    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count", "options.defaultItemId"]));
+    expect(visualPaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "items.0.label",
+        "items.0.panelIntro",
+        "items.0.triggerDescription",
+        "items.0.icon",
+        "items.0.disabled",
+        "options.orientation",
+        "options.alignment",
+        "options.triggerOverflow",
+        "options.containerPadding",
+        "options.triggerGap",
+        "options.panelGap",
+      ])
+    );
+    expect(wizardPaths).not.toContain("variant");
+    expect(wizardPaths).not.toContain("options.orientation");
+    expect(visualPaths).not.toContain("items.count");
+    expect(advancedPaths).toEqual([]);
+    expect(duplicatePaths).toEqual([]);
+  } finally {
+    wizard.cleanup();
+    visual.cleanup();
+    advanced.cleanup();
+  }
+});
+
+test("Tabs wizard editor covers starter item-count growth and default-tab selection", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-tabs",
@@ -317,27 +373,10 @@ test("Tabs wizard editor covers layout defaults, item-count growth, default-tab 
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant");
-    expect(normalizeText(findButtonsByText(variantSection, "Pills")[0]?.textContent)).toContain(
-      "selected"
-    );
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Layout")).toThrow();
 
-    clickButton(findButtonsByText(variantSection, "Underline")[0]);
-    expect(view.getVariant()).toBe("underline");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("underline");
-
-    const layoutSection = getSectionByTitle(view.container, "Layout");
-    const orientationSelect = findSelectByOptions(layoutSection, ["horizontal", "vertical"]);
-    const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
-
-    expect(layoutSection.querySelector('[data-tabs-layout-controls="compact"]')).not.toBeNull();
-    expect(orientationSelect.value).toBe("horizontal");
-    expect(alignmentSelect.value).toBe("start");
-
-    setSelectValue(orientationSelect, "vertical");
-    setSelectValue(alignmentSelect, "center");
-
-    const structureSection = getSectionByTitle(view.container, "Tabs Structure");
+    const structureSection = getSectionByTitle(view.container, "Starter tabs");
     const countSelect = findSelectByOptions(structureSection, [
       String(tabsItemMin),
       "3",
@@ -349,6 +388,7 @@ test("Tabs wizard editor covers layout defaults, item-count growth, default-tab 
 
     expect(structureSection.textContent).toContain("matching panel slot");
     expect(structureSection.textContent).not.toContain("Trigger subtitle");
+    expect(structureSection.textContent).toContain("Visual owns daily label edits");
     expect(defaultSelect.value).toBe("overview");
 
     setSelectValue(countSelect, "3");
@@ -364,8 +404,6 @@ test("Tabs wizard editor covers layout defaults, item-count growth, default-tab 
       expect.objectContaining({
         defaultItemId: "overview",
         activeId: "overview",
-        alignment: "center",
-        orientation: "vertical",
       })
     );
 
@@ -378,25 +416,9 @@ test("Tabs wizard editor covers layout defaults, item-count growth, default-tab 
     expect(view.getValue().options?.defaultItemId).toBe("3");
     expect(view.getValue().options?.activeId).toBe("3");
 
-    setInputValue(findInputByPlaceholder(structureSection, "Tab 1"), "   ");
-    setInputValue(findInputByPlaceholder(structureSection, "Tab 3"), "Support");
-    const panelIntroInputs = findInputsByPlaceholder(structureSection, "Optional panel intro text");
-    setInputValue(panelIntroInputs[2], "Help panel details.");
-
-    expect(view.getValue().items?.[0]).toEqual(
-      expect.objectContaining({
-        id: "overview",
-        label: "Tab 1",
-        panelIntro: "Primary overview.",
-      })
-    );
-    expect(view.getValue().items?.[2]).toEqual(
-      expect.objectContaining({
-        id: "3",
-        label: "Support",
-        panelIntro: "Help panel details.",
-      })
-    );
+    expect(structureSection.querySelectorAll("input")).toHaveLength(0);
+    expect(view.getValue().items?.[0]?.label).toBe("Overview");
+    expect(view.getValue().items?.[0]?.panelIntro).toBe("Primary overview.");
     expect(view.onChangeSpy).toHaveBeenCalled();
   } finally {
     view.cleanup();
@@ -446,24 +468,10 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     expect(view.getVariant()).toBe("minimal");
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("minimal");
 
-    const structureSection = getSectionByTitle(view.container, "Tabs Structure");
-    const initialDefaultSelect = findSelectByOptions(structureSection, ["intro", "details", "faq"]);
-    expect(initialDefaultSelect.value).toBe("details");
+    const structureSection = getSectionByTitle(view.container, "Tab content");
     expect(findInputsByPlaceholder(structureSection, "Optional panel intro text")[1]?.value).toBe(
       "Deep dive."
     );
-
-    const countSelect = findSelectByOptions(structureSection, [
-      String(tabsItemMin),
-      "3",
-      "4",
-      "5",
-      String(tabsItemMax),
-    ]);
-    setSelectValue(countSelect, "2");
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Reduce tabs to 2?"));
-    expect(view.getValue().items).toHaveLength(2);
-    expect(view.getValue().options?.activeId).toBe("details");
 
     setInputValue(
       findInputsByPlaceholder(structureSection, "Optional trigger subtitle")[0],
@@ -472,9 +480,7 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     setInputValue(findInputsByPlaceholder(structureSection, "e.g. ⭐")[0], "🚀");
     setCheckboxValue(findCheckboxes(structureSection)[1], true);
 
-    const defaultSelect = findSelectByOptions(structureSection, ["intro", "details"]);
-    expect(defaultSelect.value).toBe("details");
-    expect(getOption(defaultSelect, "details").disabled).toBe(true);
+    expect(confirmSpy).not.toHaveBeenCalled();
 
     const layoutSection = getSectionByTitle(view.container, "Layout");
     const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
@@ -605,7 +611,7 @@ test("Tabs colors section surfaces contrast advisories when trigger colors lose 
   }
 });
 
-test("Tabs advanced editor covers diagnostics normalization, disabled defaults, and technical field updates", async () => {
+test("Tabs advanced editor exposes read-only runtime diagnostics and normalized payload", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "legacy-tabs",
@@ -633,9 +639,19 @@ test("Tabs advanced editor covers diagnostics normalization, disabled defaults, 
   });
 
   try {
-    const diagnosticsSection = getSectionByTitle(view.container, "Diagnostics");
-    const snapshotBefore = diagnosticsSection.querySelector("pre");
+    const diagnosticsSection = getSectionByTitle(view.container, "Runtime diagnostics");
+    const idsSection = getSectionByTitle(view.container, "Technical ids");
+    const payloadSection = getSectionByTitle(view.container, "Runtime payload");
+    const summarySection = getSectionByTitle(view.container, "Contract summary");
+    const snapshotBefore = payloadSection.querySelector("pre");
 
+    expect(diagnosticsSection.textContent).toContain("Active tab");
+    expect(diagnosticsSection.textContent).toContain("Default tab");
+    expect(diagnosticsSection.textContent).toContain("Disabled tabs");
+    expect(diagnosticsSection.textContent).toContain("Root-scoped tabs");
+    expect(idsSection.textContent).toContain("trigger suffix=trigger-dup");
+    expect(idsSection.textContent).toContain("panel suffix=panel-2");
+    expect(summarySection.textContent).toContain("Advanced is read-only diagnostics");
     expect(snapshotBefore?.textContent).toContain('"id": "dup"');
     expect(snapshotBefore?.textContent).toContain('"id": "2"');
     expect(snapshotBefore?.textContent).toContain('"label": "Tab 1"');
@@ -650,61 +666,15 @@ test("Tabs advanced editor covers diagnostics normalization, disabled defaults, 
     expect(snapshotBefore?.textContent).not.toContain('"surfaceColor"');
     expect(snapshotBefore?.textContent).toContain('"borderColor": "token-border"');
 
-    const variantSection = getSectionByTitle(view.container, "Variant");
-    clickButton(findButtonsByText(variantSection, "Minimal")[0]);
-    expect(view.getVariant()).toBe("minimal");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("minimal");
-
-    const structureSection = getSectionByTitle(view.container, "Tabs Structure");
-    const defaultSelect = findSelectByOptions(structureSection, ["dup", "2"]);
-    expect(defaultSelect.value).toBe("dup");
-    expect(getOption(defaultSelect, "2").disabled).toBe(true);
-
-    setCheckboxValue(findCheckboxes(structureSection)[1], false);
-    expect(view.getValue().items?.[1]).toEqual(
-      expect.objectContaining({
-        id: "2",
-        disabled: false,
-      })
-    );
-    const updatedDefaultSelect = findSelectByOptions(structureSection, ["dup", "2"]);
-    setSelectValue(updatedDefaultSelect, "2");
-    setInputValue(
-      findInputsByPlaceholder(structureSection, "Optional panel intro text")[0],
-      "Primary details restored."
-    );
-
-    const colorsSection = getSectionByTitle(view.container, "Colors");
-    const borderColorInput = findInputByPlaceholder(colorsSection, "var(--color-border)");
-    setInputValue(borderColorInput, "#222222");
-
-    const snapshotAfter = getSectionByTitle(view.container, "Diagnostics").querySelector("pre");
-    expect(view.getValue()).toEqual(
-      expect.objectContaining({
-        items: expect.arrayContaining([
-          expect.objectContaining({
-            id: "dup",
-            panelIntro: "Primary details restored.",
-            disabled: false,
-          }),
-          expect.objectContaining({
-            id: "2",
-            disabled: false,
-          }),
-        ]),
-        options: expect.objectContaining({
-          defaultItemId: "2",
-          activeId: "2",
-        }),
-        style: expect.objectContaining({
-          borderColor: "#222222",
-        }),
-      })
-    );
-    expect(snapshotAfter?.textContent).toContain('"activeId": "2"');
-    expect(snapshotAfter?.textContent).toContain('"defaultItemId": "2"');
-    expect(snapshotAfter?.textContent).toContain('"borderColor": "#222222"');
-    expect(snapshotAfter?.textContent).toContain('"panelIntro": "Primary details restored."');
+    expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Tab content")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Layout")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Trigger style")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Colors")).toThrow();
+    expect(view.container.querySelectorAll("input, select, button")).toHaveLength(0);
+    expect(writablePaths(view.container)).toEqual([]);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

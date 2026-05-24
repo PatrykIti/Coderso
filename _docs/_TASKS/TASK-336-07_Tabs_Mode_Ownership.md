@@ -6,7 +6,7 @@
 **Category:** Widgets + Tabs + Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-288, TASK-330
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -46,14 +46,28 @@ before the task can move to Done.
 
 ## Sub-Tasks
 
-- [ ] Compare current Tabs editor against TASK-288 and TASK-330 closure claims.
-- [ ] Add or update `tabs` `editorContract` metadata.
-- [ ] Remove writable Visual controls from Advanced.
-- [ ] Convert necessary Advanced visibility into read-only summaries.
-- [ ] Preserve current accessibility behavior and runtime script dedupe.
-- [ ] Add tests that fail if Advanced reintroduces structure/style controls.
-- [ ] Run the existing Tabs suites before closure.
-- [ ] Capture Playwright admin smoke evidence.
+- [x] Compare current Tabs editor against TASK-288 and TASK-330 closure claims.
+- [x] Add or update `tabs` `editorContract` metadata.
+- [x] Remove writable Visual controls from Advanced.
+- [x] Convert necessary Advanced visibility into read-only summaries.
+- [x] Preserve current accessibility behavior and runtime script dedupe.
+- [x] Add tests that fail if Advanced reintroduces structure/style controls.
+- [x] Run the existing Tabs suites before closure.
+- [x] Capture Playwright admin smoke evidence.
+
+## Status Notes
+
+- 2026-05-24: Completed. Wizard now owns starter tab count and default-tab
+  setup only, Visual owns variant/content/layout/trigger-style/color authoring,
+  and Advanced is read-only runtime diagnostics, technical IDs, payload, and
+  contract summary. The widget declares a v2 `editorContract`, targeted Vitest
+  ownership/runtime coverage passes, and Playwright smoke for `tabs` passed with
+  no admin, metadata, or public failures.
+- 2026-05-24: Lifecycle caveat: this task is an ownership cleanup only. Wizard
+  remains visible as a standard editor tab until `TASK-336-16` ships the
+  one-time Wizard lifecycle and `Run setup again` affordance. TASK-336-07 also
+  supersedes the earlier Tabs Wizard layout shortcut from TASK-288; layout is
+  now Visual-owned.
 
 ## Files to Change
 

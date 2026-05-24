@@ -23,32 +23,45 @@ bounded visual surface.
 ## Editor Modes
 
 ### Wizard
-- variant selection
-- compact layout row for orientation and alignment
-- tab count and destructive count-reduction confirmation
+- starter tab count
 - default tab selection with badge state
-- labels and `panelIntro` copy
+- read-only starter label and `panelIntro` summary
 - repeatable panel-slot guidance
+
+Wizard is setup-only in the v2 editor contract. It does not own variant,
+layout, trigger style, color, or daily tab copy edits.
+
+Interim before `TASK-336-16`: Wizard still appears as a normal editor tab in
+the existing builder shell. The one-time Wizard lifecycle and `Run setup again`
+affordance are not part of `TASK-336-07`.
 
 ### Visual
 Sections:
 1. Variant
-2. Tabs Structure
+2. Tab content
 3. Layout
 4. Trigger style
 5. Colors
 
 Notes:
 - Tabs owns variant selection in Visual (`visualOwnsVariantSelection = true`).
-- Structure exposes `panelIntro`, `triggerDescription`, `icon`, `disabled`, and
-  default/disabled badges.
+- Tab content exposes `label`, `panelIntro`, `triggerDescription`, `icon`, and
+  `disabled`.
+- Layout owns orientation, alignment, trigger overflow, container padding,
+  trigger gap, and panel gap.
+- Trigger style owns trigger text size, trigger font weight, and motion.
 - Colors reuse the shared clearable-surface policy for `surfaceColor`,
   `activeBackgroundColor`, and `panelBackgroundColor`, plus a bounded contrast
   advisory for active/inactive trigger text.
 
 ### Advanced
-- same authoring surfaces as Visual
+- runtime diagnostics for resolved active/default tab state and disabled count
+- technical IDs for tab, trigger, and panel wiring
 - normalized payload snapshot for diagnostics
+- read-only contract summary
+
+Advanced is technical/read-only only. It must not render writable Visual
+controls for variant, tab content, layout, trigger style, or colors.
 
 ## Runtime Behavior Notes
 

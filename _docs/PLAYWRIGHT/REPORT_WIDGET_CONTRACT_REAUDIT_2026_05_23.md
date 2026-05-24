@@ -106,6 +106,21 @@ Targeted smoke evidence:
 - `listing-filters`: `adminFailures=0`, `metadataGaps=0`, `publicFailures=0`
   (`.tmp/widget-smoke-listing-filters.json`).
 
+## 2026-05-24 TASK-336-07 Ownership Update
+
+`tabs` now has an explicit v2 editor contract and no longer treats Advanced as
+Visual plus diagnostics:
+
+- Wizard owns starter tab count and default-tab setup only.
+- Visual owns variant, tab content, layout, trigger style, and color controls.
+- Advanced is read-only runtime diagnostics, technical IDs, normalized payload,
+  and contract summary.
+
+Targeted smoke evidence:
+
+- `tabs`: `adminFailures=0`, `metadataGaps=0`, `publicFailures=0`
+  (`.tmp/widget-smoke-tabs.json`).
+
 ## Executive Summary
 
 The public frontend is clearly better than the first Playwright wave: all 35

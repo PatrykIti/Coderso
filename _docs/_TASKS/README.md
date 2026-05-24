@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 21 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1926 tasks
+- **Done:** 1927 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-07 | Tabs Mode Ownership | High | Large | Remove residual Advanced duplicates while preserving TASK-288/TASK-330 behavior |
 | TASK-336-08 | Accordion Mode Ownership | High | Large | Make Advanced technical/read-only instead of a duplicate structure/style editor |
 | TASK-336-09 | Posts Feed Mode Ownership | High | Large | Split feed source setup, card display, and resolved-query diagnostics |
 | TASK-336-10 | Form Embed Mode Ownership | High | Large | Split form setup, wrapper presentation, and read-only security/runtime diagnostics |
@@ -75,6 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336-07 | Tabs Mode Ownership | High | Large | Done (2026-05-24): Wizard owns starter tab setup, Visual owns variant/content/layout/trigger style/colors, Advanced is read-only diagnostics, and targeted Vitest plus Playwright smoke passed. |
 | TASK-336-06 | Listing Filters Mode Ownership | High | Large | Done (2026-05-24): Wizard owns listing source and facet structure/value setup, Visual owns copy/layout/surface and facet presentation, Advanced is read-only diagnostics, and targeted Vitest plus Playwright smoke passed. |
 | TASK-336-05 | Search Box Mode Ownership | High | Large | Done (2026-05-24): Wizard owns source setup, Visual owns visitor copy/interaction/surface, Advanced is read-only diagnostics/runtime payload, and targeted admin smoke rerun passed with zero admin failures/metadata gaps. |
 | TASK-336-04 | Template Section Mode Ownership | High | Large | Done (2026-05-24): Wizard owns template setup, Visual owns presentation metadata, Advanced is read-only resolved-template diagnostics/runtime payload, and targeted admin smoke passed with zero admin failures/metadata gaps. |

@@ -16,6 +16,7 @@ import {
   type TabsData,
 } from "../../../core/widgets/core/tabs";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
 import { createWidgetRuntimeScriptRegistry } from "../../../core/widgets/runtimeScripts";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -341,18 +342,19 @@ test("tabs visual editor renders task-288 sections", () => {
     />
   );
 
-  expect(html).toContain("Tabs Structure");
+  expect(html).toContain("Tab content");
   expect(html).toContain("Layout");
   expect(html).toContain("Trigger style");
   expect(html).toContain("Colors");
   expect(html).toContain("Trigger subtitle");
-  expect(html).toContain('data-widget-editor-section="tabs.structure"');
-  expect(html).toContain('data-widget-editor-section="tabs.layout"');
-  expect(html).toContain('data-widget-editor-section="tabs.trigger-style"');
-  expect(html).toContain('data-widget-editor-section="tabs.colors"');
+  expect(html).toContain('data-widget-editor-section="tabs.visual.variant"');
+  expect(html).toContain('data-widget-editor-section="tabs.visual.item-content"');
+  expect(html).toContain('data-widget-editor-section="tabs.visual.layout"');
+  expect(html).toContain('data-widget-editor-section="tabs.visual.trigger-style"');
+  expect(html).toContain('data-widget-editor-section="tabs.visual.colors"');
 });
 
-test("tabs wizard and advanced editors render their task-288 surfaces", () => {
+test("tabs wizard and advanced editors render v2 ownership surfaces", () => {
   const wizardHtml = renderToString(
     <TabsWizardEditor
       value={tabsDefaults}
@@ -370,11 +372,48 @@ test("tabs wizard and advanced editors render their task-288 surfaces", () => {
     />
   );
 
-  expect(wizardHtml).toContain("Variant");
-  expect(wizardHtml).toContain("Layout");
+  expect(wizardHtml).toContain("Starter tabs");
   expect(wizardHtml).toContain("Panel intro text");
+  expect(wizardHtml).toContain("Visual owns daily label edits");
+  expect(wizardHtml).not.toContain("Variant");
+  expect(wizardHtml).not.toContain("Layout");
   expect(wizardHtml).not.toContain("Trigger subtitle");
-  expect(advancedHtml).toContain("Variant");
-  expect(advancedHtml).toContain("Diagnostics");
-  expect(advancedHtml).toContain("Trigger subtitle");
+  expect(advancedHtml).toContain("Runtime diagnostics");
+  expect(advancedHtml).toContain("Technical ids");
+  expect(advancedHtml).toContain("Runtime payload");
+  expect(advancedHtml).toContain("Contract summary");
+  expect(advancedHtml).not.toContain("Variant");
+  expect(advancedHtml).not.toContain("Trigger subtitle");
+  expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
+});
+
+test("tabs ships a strict v2 editor contract", () => {
+  const widget = createTabsWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const validation = validateWidgetEditorContract(widget, { requireContract: true });
+
+  expect(validation).toEqual(
+    expect.objectContaining({
+      valid: true,
+      errors: [],
+    })
+  );
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual(
+    expect.arrayContaining([
+      "tabs.wizard.structure-setup",
+      "tabs.visual.variant",
+      "tabs.visual.item-content",
+      "tabs.visual.layout",
+      "tabs.visual.trigger-style",
+      "tabs.visual.colors",
+      "tabs.advanced.runtime-diagnostics",
+      "tabs.advanced.technical-ids",
+      "tabs.advanced.runtime-payload",
+      "tabs.advanced.contract-summary",
+    ])
+  );
 });

@@ -162,6 +162,7 @@ test("VisualPanel renders slot controls inside a named structure section", () =>
 
   expect(html).toContain('data-widget-editor-section="hero.structure"');
   expect(html).toContain('data-widget-control="hero.slot.content"');
+  expect(html).toContain('data-widget-control-ownership="action"');
   expect(html).toContain("Hero Content slot");
   expect(html).toContain("Manage slots in the visual flow.");
 });

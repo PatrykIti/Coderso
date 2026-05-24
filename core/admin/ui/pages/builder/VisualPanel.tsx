@@ -150,6 +150,7 @@ export function VisualPanel({
               <div
                 key={item.id}
                 data-widget-control={item.id}
+                data-widget-control-ownership="action"
                 className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5"
               >
                 <div className="flex items-center justify-between gap-3">

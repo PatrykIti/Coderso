@@ -26,13 +26,21 @@ import {
   type TabsTriggerTextSize,
   type TabsVariantId,
 } from "../../../../widgets/core/tabs";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  WidgetEditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import {
   ClearableFieldHeader,
   SharedColorFieldInputs,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: TabsVariantId;
@@ -216,17 +224,21 @@ function clearStyleField(
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id: string;
+  mode: WidgetEditorMode;
+  role: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <WidgetEditorSection id={id} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -311,73 +323,95 @@ function TabsStructureSection({
   value,
   onChange,
   context,
-  showMetadata,
+  mode,
 }: {
   value: TabsData;
   onChange: (next: TabsData) => void;
   context?: WidgetEditorProps<TabsData>["context"];
-  showMetadata: boolean;
+  mode: "setup" | "presentation";
 }) {
   const normalized = normalizeValue(value);
   const items = normalizeTabsItems(normalized.items);
   const defaultItemId =
     normalized.options?.defaultItemId ?? normalized.options?.activeId ?? items[0]?.id ?? "1";
+  const isSetupMode = mode === "setup";
 
   return (
     <EditorSection
-      id="tabs.structure"
-      title="Tabs Structure"
-      description="Set tab count, labels, and panel intro copy."
+      id={isSetupMode ? "tabs.wizard.structure-setup" : "tabs.visual.item-content"}
+      mode={isSetupMode ? "wizard" : "visual"}
+      role={isSetupMode ? "setup" : "content"}
+      title={isSetupMode ? "Starter tabs" : "Tab content"}
+      description={
+        isSetupMode
+          ? "Set the initial tab count and default tab before daily visual editing."
+          : "Edit tab labels, panel intro copy, trigger metadata, and disabled state."
+      }
     >
-      <div className="space-y-3">
+      {isSetupMode ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Number of tabs</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {tabCountOptions.map((option) => (
-                <SelectItem key={`tab-count-${option}`} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <WidgetControlRow id="tabs.wizard.item-count" label="Number of tabs" path="items.count">
+            {(fieldProps) => (
+              <Select
+                value={String(items.length)}
+                onValueChange={(next) => setCount(value, onChange, Number(next))}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select count" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tabCountOptions.map((option) => (
+                    <SelectItem key={`tab-count-${option}`} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
           <p className="text-xs text-muted-foreground">
             Each tab owns a matching panel slot in the builder. Reducing the count confirms which
             tab/panel pairs will be removed.
           </p>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Default tab</p>
-          <Select
-            value={defaultItemId}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { defaultItemId: next, activeId: next })
-            }
+          <WidgetControlRow
+            id="tabs.wizard.default-tab"
+            label="Default tab"
+            path="options.defaultItemId"
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose default tab" />
-            </SelectTrigger>
-            <SelectContent>
-              {items.map((item) => (
-                <SelectItem
-                  key={`active-tab-${item.id}`}
-                  value={item.id}
-                  disabled={item.disabled === true}
+            {(fieldProps) => (
+              <Select
+                value={defaultItemId}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { defaultItemId: next, activeId: next })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
                 >
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                  <SelectValue placeholder="Choose default tab" />
+                </SelectTrigger>
+                <SelectContent>
+                  {items.map((item) => (
+                    <SelectItem
+                      key={`active-tab-${item.id}`}
+                      value={item.id}
+                      disabled={item.disabled === true}
+                    >
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
-      </div>
+      ) : null}
 
       <div className="space-y-3">
         {items.map((item, index) => {
@@ -395,64 +429,125 @@ function TabsStructureSection({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Tab label</p>
-                <Input
-                  value={item.label}
-                  onChange={(event) =>
-                    updateItem(value, onChange, item.id, { label: event.target.value })
-                  }
-                  placeholder={`Tab ${index + 1}`}
+              {isSetupMode ? (
+                <ReadonlyWidgetSummaryRow
+                  id={`tabs.wizard.item.${item.id}.label`}
+                  label="Tab label"
+                  path={`items.${index}.label`}
+                  value={item.label || `Tab ${index + 1}`}
+                  help="Visual owns daily label edits after setup creates the tab."
                 />
-              </div>
+              ) : (
+                <WidgetControlRow
+                  id={`tabs.visual.item.${item.id}.label`}
+                  label="Tab label"
+                  path={`items.${index}.label`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                      value={item.label}
+                      onChange={(event) =>
+                        updateItem(value, onChange, item.id, { label: event.target.value })
+                      }
+                      placeholder={`Tab ${index + 1}`}
+                    />
+                  )}
+                </WidgetControlRow>
+              )}
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Panel intro text</p>
-                <Input
-                  value={item.panelIntro ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, item.id, { panelIntro: event.target.value })
-                  }
-                  placeholder="Optional panel intro text"
+              {isSetupMode ? (
+                <ReadonlyWidgetSummaryRow
+                  id={`tabs.wizard.item.${item.id}.panel-intro`}
+                  label="Panel intro text"
+                  path={`items.${index}.panelIntro`}
+                  value={item.panelIntro || "Not set"}
                 />
-              </div>
+              ) : (
+                <WidgetControlRow
+                  id={`tabs.visual.item.${item.id}.panel-intro`}
+                  label="Panel intro text"
+                  path={`items.${index}.panelIntro`}
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                      value={item.panelIntro ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, item.id, { panelIntro: event.target.value })
+                      }
+                      placeholder="Optional panel intro text"
+                    />
+                  )}
+                </WidgetControlRow>
+              )}
 
-              {showMetadata ? (
+              {!isSetupMode ? (
                 <>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Trigger subtitle</p>
-                    <Input
-                      value={item.triggerDescription ?? ""}
-                      onChange={(event) =>
-                        updateItem(value, onChange, item.id, {
-                          triggerDescription: event.target.value,
-                        })
-                      }
-                      placeholder="Optional trigger subtitle"
-                    />
-                  </div>
+                  <WidgetControlRow
+                    id={`tabs.visual.item.${item.id}.trigger-description`}
+                    label="Trigger subtitle"
+                    path={`items.${index}.triggerDescription`}
+                  >
+                    {(fieldProps) => (
+                      <Input
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                        value={item.triggerDescription ?? ""}
+                        onChange={(event) =>
+                          updateItem(value, onChange, item.id, {
+                            triggerDescription: event.target.value,
+                          })
+                        }
+                        placeholder="Optional trigger subtitle"
+                      />
+                    )}
+                  </WidgetControlRow>
 
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Icon or emoji</p>
-                    <Input
-                      value={item.icon ?? ""}
-                      onChange={(event) =>
-                        updateItem(value, onChange, item.id, { icon: event.target.value })
-                      }
-                      placeholder="e.g. ⭐"
-                    />
-                  </div>
+                  <WidgetControlRow
+                    id={`tabs.visual.item.${item.id}.icon`}
+                    label="Icon or emoji"
+                    path={`items.${index}.icon`}
+                  >
+                    {(fieldProps) => (
+                      <Input
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                        value={item.icon ?? ""}
+                        onChange={(event) =>
+                          updateItem(value, onChange, item.id, { icon: event.target.value })
+                        }
+                        placeholder="e.g. ⭐"
+                      />
+                    )}
+                  </WidgetControlRow>
 
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={item.disabled === true}
-                      onChange={(event) =>
-                        updateItem(value, onChange, item.id, { disabled: event.target.checked })
-                      }
-                    />
-                    Disable this tab
-                  </label>
+                  <WidgetControlRow
+                    id={`tabs.visual.item.${item.id}.disabled`}
+                    label="Disabled state"
+                    path={`items.${index}.disabled`}
+                  >
+                    {() => (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={item.disabled === true}
+                          onChange={(event) =>
+                            updateItem(value, onChange, item.id, {
+                              disabled: event.target.checked,
+                            })
+                          }
+                        />
+                        Disable this tab
+                      </label>
+                    )}
+                  </WidgetControlRow>
                 </>
               ) : null}
             </div>
@@ -481,80 +576,98 @@ function TabsLayoutSection({
 
   return (
     <EditorSection
-      id="tabs.layout"
+      id="tabs.visual.layout"
+      mode="visual"
+      role="layout"
       title="Layout"
-      description={
-        wizardMode
-          ? "Choose the tab direction and alignment."
-          : "Control tab direction, overflow, and spacing."
-      }
+      description="Control tab direction, overflow, and spacing."
     >
       <div className="space-y-3">
         <div
           data-tabs-layout-controls={wizardMode ? "compact" : "stacked"}
           className={wizardMode ? "grid gap-3 md:grid-cols-2" : "space-y-3"}
         >
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Orientation</p>
-            <Select
-              value={normalized.options?.orientation ?? "horizontal"}
-              onValueChange={(next) =>
-                updateOptions(value, onChange, { orientation: next as TabsOrientation })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose orientation" />
-              </SelectTrigger>
-              <SelectContent>
-                {orientationOptions.map((option) => (
-                  <SelectItem key={`tabs-orientation-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id="tabs.visual.orientation"
+            label="Orientation"
+            path="options.orientation"
+          >
+            {(fieldProps) => (
+              <Select
+                value={normalized.options?.orientation ?? "horizontal"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, { orientation: next as TabsOrientation })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Choose orientation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orientationOptions.map((option) => (
+                    <SelectItem key={`tabs-orientation-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Tab alignment</p>
-            <Select
-              value={normalized.options?.alignment ?? "start"}
-              onValueChange={(next) =>
-                updateOptions(value, onChange, {
-                  alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose alignment" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignmentOptions.map((option) => (
-                  <SelectItem key={`tabs-align-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!wizardMode ? (
-              <p className="text-xs text-muted-foreground">
-                Vertical tabs align across the row with Start, Center, and End.
-              </p>
-            ) : null}
-          </div>
+          <WidgetControlRow
+            id="tabs.visual.alignment"
+            label="Tab alignment"
+            path="options.alignment"
+          >
+            {(fieldProps) => (
+              <Select
+                value={normalized.options?.alignment ?? "start"}
+                onValueChange={(next) =>
+                  updateOptions(value, onChange, {
+                    alignment: next as NonNullable<NonNullable<TabsData["options"]>["alignment"]>,
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Choose alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {alignmentOptions.map((option) => (
+                    <SelectItem key={`tabs-align-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
 
-        {!wizardMode ? (
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Tab overflow</p>
+        <div className="space-y-3">
+          <WidgetControlRow
+            id="tabs.visual.trigger-overflow"
+            label="Tab overflow"
+            path="options.triggerOverflow"
+          >
+            {(fieldProps) => (
               <Select
                 value={normalized.options?.triggerOverflow ?? "wrap"}
                 onValueChange={(next) =>
                   updateOptions(value, onChange, { triggerOverflow: next as TabsTriggerOverflow })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Choose overflow" />
                 </SelectTrigger>
                 <SelectContent>
@@ -565,17 +678,26 @@ function TabsLayoutSection({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </WidgetControlRow>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Container padding</p>
+          <WidgetControlRow
+            id="tabs.visual.container-padding"
+            label="Container padding"
+            path="options.containerPadding"
+          >
+            {(fieldProps) => (
               <Select
                 value={normalized.options?.containerPadding ?? "md"}
                 onValueChange={(next) =>
                   updateOptions(value, onChange, { containerPadding: next as TabsSpacing })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Choose padding" />
                 </SelectTrigger>
                 <SelectContent>
@@ -586,17 +708,22 @@ function TabsLayoutSection({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </WidgetControlRow>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Tab gap</p>
+          <WidgetControlRow id="tabs.visual.trigger-gap" label="Tab gap" path="options.triggerGap">
+            {(fieldProps) => (
               <Select
                 value={normalized.options?.triggerGap ?? "md"}
                 onValueChange={(next) =>
                   updateOptions(value, onChange, { triggerGap: next as TabsSpacing })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Choose gap" />
                 </SelectTrigger>
                 <SelectContent>
@@ -607,17 +734,22 @@ function TabsLayoutSection({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            )}
+          </WidgetControlRow>
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Panel gap</p>
+          <WidgetControlRow id="tabs.visual.panel-gap" label="Panel gap" path="options.panelGap">
+            {(fieldProps) => (
               <Select
                 value={normalized.options?.panelGap ?? "md"}
                 onValueChange={(next) =>
                   updateOptions(value, onChange, { panelGap: next as TabsSpacing })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
                   <SelectValue placeholder="Choose gap" />
                 </SelectTrigger>
                 <SelectContent>
@@ -628,9 +760,9 @@ function TabsLayoutSection({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-        ) : null}
+            )}
+          </WidgetControlRow>
+        </div>
       </div>
     </EditorSection>
   );
@@ -647,73 +779,100 @@ function TabsTriggerStyleSection({
 
   return (
     <EditorSection
-      id="tabs.trigger-style"
+      id="tabs.visual.trigger-style"
+      mode="visual"
+      role="visual"
       title="Trigger style"
       description="Adjust trigger typography and panel motion."
     >
       <div className="space-y-3">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Trigger text size</p>
-          <Select
-            value={normalized.options?.triggerTextSize ?? "sm"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { triggerTextSize: next as TabsTriggerTextSize })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose text size" />
-            </SelectTrigger>
-            <SelectContent>
-              {textSizeOptions.map((option) => (
-                <SelectItem key={`tabs-trigger-size-${option.value}`} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.trigger-text-size"
+          label="Trigger text size"
+          path="options.triggerTextSize"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.options?.triggerTextSize ?? "sm"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, { triggerTextSize: next as TabsTriggerTextSize })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose text size" />
+              </SelectTrigger>
+              <SelectContent>
+                {textSizeOptions.map((option) => (
+                  <SelectItem key={`tabs-trigger-size-${option.value}`} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Trigger weight</p>
-          <Select
-            value={normalized.options?.triggerFontWeight ?? "medium"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, {
-                triggerFontWeight: next as TabsTriggerFontWeight,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose trigger weight" />
-            </SelectTrigger>
-            <SelectContent>
-              {fontWeightOptions.map((option) => (
-                <SelectItem key={`tabs-trigger-weight-${option.value}`} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.trigger-font-weight"
+          label="Trigger weight"
+          path="options.triggerFontWeight"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.options?.triggerFontWeight ?? "medium"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, {
+                  triggerFontWeight: next as TabsTriggerFontWeight,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose trigger weight" />
+              </SelectTrigger>
+              <SelectContent>
+                {fontWeightOptions.map((option) => (
+                  <SelectItem key={`tabs-trigger-weight-${option.value}`} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Panel motion</p>
-          <Select
-            value={normalized.options?.motion ?? "none"}
-            onValueChange={(next) => updateOptions(value, onChange, { motion: next as TabsMotion })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose motion" />
-            </SelectTrigger>
-            <SelectContent>
-              {motionOptions.map((option) => (
-                <SelectItem key={`tabs-motion-${option.value}`} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="tabs.visual.motion" label="Panel motion" path="options.motion">
+          {(fieldProps) => (
+            <Select
+              value={normalized.options?.motion ?? "none"}
+              onValueChange={(next) =>
+                updateOptions(value, onChange, { motion: next as TabsMotion })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Choose motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionOptions.map((option) => (
+                  <SelectItem key={`tabs-motion-${option.value}`} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </div>
     </EditorSection>
   );
@@ -738,91 +897,148 @@ function TabsColorsSection({
 
   return (
     <EditorSection
-      id="tabs.colors"
+      id="tabs.visual.colors"
+      mode="visual"
+      role="visual"
       title="Colors"
       description="Tune the tab surface, trigger, and panel colors."
     >
       <div className="space-y-3">
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Surface color"
-            value={normalized.style?.surfaceColor}
-            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-          />
-          <SharedColorFieldInputs
-            inputId="tabs-color-surface"
-            value={normalized.style?.surfaceColor}
-            onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-            placeholder="var(--color-surface)"
-            pickerFallback="#f8fafc"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.surface-color"
+          label="Surface color"
+          path="style.surfaceColor"
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <ClearableFieldHeader
+                label="Surface color"
+                value={normalized.style?.surfaceColor}
+                onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+                onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+              />
+              <SharedColorFieldInputs
+                inputId={fieldProps.id}
+                ariaLabelledby={fieldProps["aria-labelledby"]}
+                ariaDescribedby={fieldProps["aria-describedby"]}
+                value={normalized.style?.surfaceColor}
+                onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+                placeholder="var(--color-surface)"
+                pickerFallback="#f8fafc"
+              />
+            </div>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Border color</p>
-          <SharedColorFieldInputs
-            inputId="tabs-color-border"
-            value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor}
-            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-            placeholder="var(--color-border)"
-            pickerFallback="#cbd5e1"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.border-color"
+          label="Border color"
+          path="style.borderColor"
+        >
+          {(fieldProps) => (
+            <SharedColorFieldInputs
+              inputId={fieldProps.id}
+              ariaLabelledby={fieldProps["aria-labelledby"]}
+              ariaDescribedby={fieldProps["aria-describedby"]}
+              value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor}
+              onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+              placeholder="var(--color-border)"
+              pickerFallback="#cbd5e1"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Active background"
-            value={normalized.style?.activeBackgroundColor}
-            onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
-          />
-          <SharedColorFieldInputs
-            inputId="tabs-color-active-background"
-            value={normalized.style?.activeBackgroundColor}
-            onChange={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
-            placeholder="var(--color-text)"
-            pickerFallback="#0f172a"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.active-background-color"
+          label="Active background"
+          path="style.activeBackgroundColor"
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <ClearableFieldHeader
+                label="Active background"
+                value={normalized.style?.activeBackgroundColor}
+                onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
+                onRestoreValue={(next) =>
+                  updateStyle(value, onChange, { activeBackgroundColor: next })
+                }
+              />
+              <SharedColorFieldInputs
+                inputId={fieldProps.id}
+                ariaLabelledby={fieldProps["aria-labelledby"]}
+                ariaDescribedby={fieldProps["aria-describedby"]}
+                value={normalized.style?.activeBackgroundColor}
+                onChange={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
+                placeholder="var(--color-text)"
+                pickerFallback="#0f172a"
+              />
+            </div>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Active text color</p>
-          <SharedColorFieldInputs
-            inputId="tabs-color-active-text"
-            value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor}
-            onChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
-            placeholder="var(--color-background)"
-            pickerFallback="#ffffff"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.active-text-color"
+          label="Active text color"
+          path="style.activeTextColor"
+        >
+          {(fieldProps) => (
+            <SharedColorFieldInputs
+              inputId={fieldProps.id}
+              ariaLabelledby={fieldProps["aria-labelledby"]}
+              ariaDescribedby={fieldProps["aria-describedby"]}
+              value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor}
+              onChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
+              placeholder="var(--color-background)"
+              pickerFallback="#ffffff"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Inactive text color</p>
-          <SharedColorFieldInputs
-            inputId="tabs-color-inactive-text"
-            value={normalized.style?.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor}
-            onChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
-            placeholder="var(--color-text)"
-            pickerFallback="#0f172a"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.inactive-text-color"
+          label="Inactive text color"
+          path="style.inactiveTextColor"
+        >
+          {(fieldProps) => (
+            <SharedColorFieldInputs
+              inputId={fieldProps.id}
+              ariaLabelledby={fieldProps["aria-labelledby"]}
+              ariaDescribedby={fieldProps["aria-describedby"]}
+              value={normalized.style?.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor}
+              onChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
+              placeholder="var(--color-text)"
+              pickerFallback="#0f172a"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Panel background"
-            value={normalized.style?.panelBackgroundColor}
-            onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
-          />
-          <SharedColorFieldInputs
-            inputId="tabs-color-panel-background"
-            value={normalized.style?.panelBackgroundColor}
-            onChange={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
-            placeholder="var(--color-surface)"
-            pickerFallback="#f8fafc"
-          />
-        </div>
+        <WidgetControlRow
+          id="tabs.visual.panel-background-color"
+          label="Panel background"
+          path="style.panelBackgroundColor"
+        >
+          {(fieldProps) => (
+            <div className="space-y-2">
+              <ClearableFieldHeader
+                label="Panel background"
+                value={normalized.style?.panelBackgroundColor}
+                onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
+                onRestoreValue={(next) =>
+                  updateStyle(value, onChange, { panelBackgroundColor: next })
+                }
+              />
+              <SharedColorFieldInputs
+                inputId={fieldProps.id}
+                ariaLabelledby={fieldProps["aria-labelledby"]}
+                ariaDescribedby={fieldProps["aria-describedby"]}
+                value={normalized.style?.panelBackgroundColor}
+                onChange={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
+                placeholder="var(--color-surface)"
+                pickerFallback="#f8fafc"
+              />
+            </div>
+          )}
+        </WidgetControlRow>
       </div>
 
       {activeContrast.status === "warning" && activeContrast.message ? (
@@ -843,25 +1059,10 @@ function DiagnosticsSnapshot({ value }: { value: TabsData }) {
   );
 }
 
-export function TabsWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  context,
-}: WidgetEditorProps<TabsData>) {
+export function TabsWizardEditor({ value, onChange, context }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
-      <EditorSection id="tabs.variant" title="Variant" description="Pick tabs presentation style.">
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
-      </EditorSection>
-      <TabsLayoutSection value={value} onChange={onChange} wizardMode />
-      <TabsStructureSection
-        value={value}
-        onChange={onChange}
-        context={context}
-        showMetadata={false}
-      />
+      <TabsStructureSection value={value} onChange={onChange} context={context} mode="setup" />
     </div>
   );
 }
@@ -875,10 +1076,23 @@ export function TabsVisualEditor({
 }: WidgetEditorProps<TabsData>) {
   return (
     <div className="space-y-4">
-      <EditorSection id="tabs.variant" title="Variant" description="Choose tab presentation style.">
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
+      <EditorSection
+        id="tabs.visual.variant"
+        mode="visual"
+        role="visual"
+        title="Variant"
+        description="Choose tab presentation style."
+      >
+        <WidgetControlRow id="tabs.visual.variant-picker" label="Variant" path="variant">
+          {() => <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />}
+        </WidgetControlRow>
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} context={context} showMetadata />
+      <TabsStructureSection
+        value={value}
+        onChange={onChange}
+        context={context}
+        mode="presentation"
+      />
       <TabsLayoutSection value={value} onChange={onChange} wizardMode={false} />
       <TabsTriggerStyleSection value={value} onChange={onChange} />
       <TabsColorsSection value={value} onChange={onChange} />
@@ -886,32 +1100,91 @@ export function TabsVisualEditor({
   );
 }
 
-export function TabsAdvancedEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  context,
-}: WidgetEditorProps<TabsData>) {
+export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
+  const normalized = normalizeValue(value);
+  const items = normalizeTabsItems(normalized.items);
+  const activeId = normalized.options?.activeId ?? items[0]?.id ?? "1";
+  const defaultItemId = normalized.options?.defaultItemId ?? activeId;
+  const disabledCount = items.filter((item) => item.disabled === true).length;
+
   return (
     <div className="space-y-4">
       <EditorSection
-        id="tabs.variant"
-        title="Variant"
-        description="Variant and technical controls."
+        id="tabs.advanced.runtime-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime diagnostics"
+        description="Read-only activation, accessibility, and runtime behavior."
       >
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.active-tab"
+          label="Active tab"
+          path="options.activeId"
+          value={activeId}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.default-tab"
+          label="Default tab"
+          path="options.defaultItemId"
+          value={defaultItemId}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.disabled-count"
+          label="Disabled tabs"
+          path="items.disabled"
+          value={`${disabledCount} of ${items.length}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.activation-model"
+          label="Activation model"
+          value="Root-scoped tabs, disabled tabs skipped, active panel remains focusable."
+        />
       </EditorSection>
-      <TabsStructureSection value={value} onChange={onChange} context={context} showMetadata />
-      <TabsLayoutSection value={value} onChange={onChange} wizardMode={false} />
-      <TabsTriggerStyleSection value={value} onChange={onChange} />
-      <TabsColorsSection value={value} onChange={onChange} />
       <EditorSection
-        id="tabs.diagnostics"
-        title="Diagnostics"
+        id="tabs.advanced.technical-ids"
+        mode="advanced"
+        role="technical"
+        title="Technical ids"
+        description="Read-only tab, trigger, and panel id summary."
+      >
+        {items.map((item, index) => (
+          <ReadonlyWidgetSummaryRow
+            key={item.id}
+            id={`tabs.advanced.item.${item.id}.id`}
+            label={`Tab ${index + 1}`}
+            path={`items.${index}.id`}
+            value={`item=${item.id}; trigger suffix=trigger-${item.id}; panel suffix=panel-${item.id}`}
+          />
+        ))}
+      </EditorSection>
+      <EditorSection
+        id="tabs.advanced.runtime-payload"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime payload"
         description="Normalized data payload preview."
       >
-        <DiagnosticsSnapshot value={normalizeValue(value)} />
+        <WidgetControlRow
+          id="tabs.advanced.normalized-payload"
+          label="Normalized payload"
+          path="items"
+          ownership="readonly"
+          readOnly
+        >
+          {() => <DiagnosticsSnapshot value={normalized} />}
+        </WidgetControlRow>
+      </EditorSection>
+      <EditorSection
+        id="tabs.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Tabs runtime and editor ownership summary."
+      >
+        <p className="text-xs text-muted-foreground">
+          Visual owns variant, tab presentation, layout, trigger style, and colors. Advanced is
+          read-only diagnostics.
+        </p>
       </EditorSection>
     </div>
   );

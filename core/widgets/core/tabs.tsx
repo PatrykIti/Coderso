@@ -13,6 +13,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
+  WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
@@ -164,6 +165,105 @@ export const tabsDefaults: TabsData = {
     inactiveTextColor: "var(--color-text)",
     panelBackgroundColor: "var(--color-surface)",
   },
+};
+
+export const tabsEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "tabs.wizard.structure-setup",
+      title: "Starter tabs",
+      role: "setup",
+      writablePaths: ["items.count", "options.defaultItemId"],
+    },
+    {
+      mode: "visual",
+      id: "tabs.visual.variant",
+      title: "Variant",
+      role: "visual",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "tabs.visual.item-content",
+      title: "Tab content",
+      role: "content",
+      writablePaths: [
+        "items.label",
+        "items.panelIntro",
+        "items.triggerDescription",
+        "items.icon",
+        "items.disabled",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "tabs.visual.layout",
+      title: "Layout",
+      role: "layout",
+      writablePaths: [
+        "options.orientation",
+        "options.alignment",
+        "options.triggerOverflow",
+        "options.containerPadding",
+        "options.triggerGap",
+        "options.panelGap",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "tabs.visual.trigger-style",
+      title: "Trigger style",
+      role: "visual",
+      writablePaths: ["options.triggerTextSize", "options.triggerFontWeight", "options.motion"],
+    },
+    {
+      mode: "visual",
+      id: "tabs.visual.colors",
+      title: "Colors",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.activeBackgroundColor",
+        "style.activeTextColor",
+        "style.inactiveTextColor",
+        "style.panelBackgroundColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "tabs.advanced.runtime-diagnostics",
+      title: "Runtime diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["options.activeId", "options.defaultItemId", "items.disabled"],
+    },
+    {
+      mode: "advanced",
+      id: "tabs.advanced.technical-ids",
+      title: "Technical ids",
+      role: "technical",
+      writablePaths: [],
+      readOnlyPaths: ["items.id"],
+    },
+    {
+      mode: "advanced",
+      id: "tabs.advanced.runtime-payload",
+      title: "Runtime payload",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["items"],
+    },
+    {
+      mode: "advanced",
+      id: "tabs.advanced.contract-summary",
+      title: "Contract summary",
+      role: "summary",
+      writablePaths: [],
+    },
+  ],
 };
 
 type NormalizedTabsItem = {
@@ -904,6 +1004,7 @@ export function createTabsWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
+    editorContract: tabsEditorContract,
     render: TabsBlock,
   };
 }
