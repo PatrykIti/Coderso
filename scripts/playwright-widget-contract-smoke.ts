@@ -908,6 +908,31 @@ function classifyPublicStatus(input: {
   return { status: "passed", error: undefined };
 }
 
+function shouldCountOverflowOwner(input: {
+  className?: string;
+  ariaHidden?: string | null;
+  hidden?: boolean;
+  hasIntentionalOverflowAncestor?: boolean;
+  display?: string;
+  visibility?: string;
+  width?: number;
+  height?: number;
+  clip?: string;
+  clipPath?: string;
+  scrollWidth: number;
+  clientWidth: number;
+}): boolean {
+  if (input.hasIntentionalOverflowAncestor) return false;
+  if (input.ariaHidden === "true" || input.hidden) return false;
+  if (input.className && /\bsr-only\b/.test(input.className)) return false;
+  if (input.display === "none" || input.visibility === "hidden") return false;
+  if ((input.width ?? 0) <= 1 || (input.height ?? 0) <= 1) return false;
+  if (input.clip === "rect(0px, 0px, 0px, 0px)" || input.clipPath === "inset(50%)") {
+    return false;
+  }
+  return input.scrollWidth > input.clientWidth + 1 && input.clientWidth > 0;
+}
+
 function hasStrictFailure(report: SmokeReport): boolean {
   return (
     report.summary.adminFailures > 0 ||
@@ -1113,6 +1138,7 @@ export {
   findDuplicateWritablePaths,
   finalizeAdminResult,
   classifyPublicStatus,
+  shouldCountOverflowOwner,
   hasStrictFailure,
   summarize,
   renderMarkdown,

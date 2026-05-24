@@ -10,6 +10,7 @@ import {
   parseArgs,
   renderMarkdown,
   selectCases,
+  shouldCountOverflowOwner,
   summarize,
   validateInventory,
   type AdminModeResult,
@@ -302,6 +303,37 @@ describe("playwright widget contract smoke helpers", () => {
         unmarkedOverflowOwnerCount: 1,
       })
     ).toEqual({ status: "failed", error: "card_overflow_unmarked" });
+
+    expect(
+      classifyPublicStatus({
+        cssChecks: ["body-overflow"],
+        statusCode: 200,
+        emptyFixture: false,
+        bodyOverflow: true,
+        unmarkedOverflowOwnerCount: 1,
+      })
+    ).toEqual({ status: "failed", error: "body_overflow_unmarked" });
+  });
+
+  test("ignores intentional and visually-hidden overflow owners", () => {
+    const visibleOverflow = {
+      scrollWidth: 420,
+      clientWidth: 320,
+      width: 320,
+      height: 80,
+      display: "block",
+      visibility: "visible",
+    };
+
+    expect(shouldCountOverflowOwner(visibleOverflow)).toBe(true);
+    expect(
+      shouldCountOverflowOwner({
+        ...visibleOverflow,
+        hasIntentionalOverflowAncestor: true,
+      })
+    ).toBe(false);
+    expect(shouldCountOverflowOwner({ ...visibleOverflow, className: "sr-only" })).toBe(false);
+    expect(shouldCountOverflowOwner({ ...visibleOverflow, ariaHidden: "true" })).toBe(false);
   });
 
   test("strict mode treats fixture and metadata gaps as failures", () => {
