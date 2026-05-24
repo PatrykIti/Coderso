@@ -2420,6 +2420,7 @@ export function ProductTableBlock({
     : "border-[var(--color-border)] bg-[var(--color-bg)]/70";
   const tableCaptionText = normalized.header?.title ?? productTableDefaultCaptionText;
   const tableCaptionId = React.useId();
+  const tableScrollHintId = React.useId();
   const runtime = normalized.resolved?.runtime;
 
   return (
@@ -2503,11 +2504,21 @@ export function ProductTableBlock({
             </div>
           ) : (
             <div>
+              <p
+                id={tableScrollHintId}
+                className="mb-2 text-xs text-[var(--color-text)]/60"
+                data-overflow-affordance="horizontal-scroll"
+              >
+                Scroll horizontally to view all product columns.
+              </p>
               <div
                 className={joinClasses("overflow-x-auto rounded-xl border", legacyTableClass)}
                 style={tableStyle}
                 tabIndex={0}
                 aria-label={tableCaptionText}
+                aria-describedby={tableScrollHintId}
+                data-overflow-intentional="true"
+                data-product-table-scroll-region="table"
               >
                 <table
                   className={joinClasses("w-full min-w-[44rem]", densityClasses.table)}

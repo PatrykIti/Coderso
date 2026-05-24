@@ -327,6 +327,7 @@ test("stack renders content slot blocks", () => {
   expect(html).toContain("Stack child");
   expect(html).toContain('data-stack-items="1"');
   expect(html).toContain('data-widget-surface="row-flow-item"');
+  expect(html).toContain('class="min-w-0 max-w-full" data-widget-surface="row-flow-item"');
   expect(html.match(/<section/g) ?? []).toHaveLength(1);
 });
 

@@ -199,6 +199,9 @@ test("testimonials slider-static renders dot navigation and label-empty zero-rat
   expect(html).toContain('data-testimonials-nav-dot="1"');
   expect(html).toContain('data-testimonials-nav-dot="2"');
   expect(html).toContain('data-testimonials-nav-dot="3"');
+  expect(html).toContain('data-overflow-intentional="true"');
+  expect(html).toContain('data-overflow-affordance="horizontal-scroll"');
+  expect(html).toContain("Scroll horizontally to view more testimonials.");
   expect(html).toContain("No rating");
   expect(html).not.toContain("Rating 0 out of 5");
 });

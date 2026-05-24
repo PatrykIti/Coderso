@@ -1238,187 +1238,208 @@ function PricingComparisonRowsLayout({
     : undefined;
 
   return (
-    <div className={joinClasses("overflow-x-auto", radiusClassMap[style.radius])}>
-      <table
-        className="w-full min-w-[44rem] border-collapse text-sm"
-        style={tableStyle}
-        data-pricing-comparison="true"
-        data-pricing-comparison-sticky={String(comparison.stickyHeader)}
+    <>
+      <p
+        id={scopedId(instanceId, "comparison-scroll-hint")}
+        className="mb-2 text-xs text-[var(--color-text)]/60"
+        data-overflow-affordance="horizontal-scroll"
       >
-        <caption className="sr-only">Pricing plan comparison</caption>
-        <thead>
-          <tr className="border-b" style={{ borderColor: style.cardBorder }}>
-            <th
-              scope="col"
-              className="px-4 py-3 text-left text-xs uppercase tracking-wider text-[var(--color-text)]/65"
-              style={stickyHeaderStyle}
-            >
-              Feature
-            </th>
-            {plans.map((plan, index) => {
-              const highlighted = Boolean(plan.highlighted);
-              const highlightLabel = resolvePlanHighlightLabel(plan);
-              const pricePresentation = resolveDisplayedPlanPrice(plan, billingToggle);
-              const ctaStyle = plan.ctaStyle ?? resolvePricingPlanCtaStyle(undefined, highlighted);
-
-              return (
-                <th
-                  key={plan.id ?? `header-${index + 1}`}
-                  scope="col"
-                  className="px-4 py-3 text-left align-top"
-                  style={{
-                    ...stickyHeaderStyle,
-                    backgroundColor:
-                      resolveClearableStyleValue(plan.surface) ??
-                      stickyHeaderStyle?.backgroundColor,
-                    boxShadow: highlighted ? `inset 0 0 0 1px ${style.highlightRing}` : undefined,
-                  }}
-                  data-pricing-comparison-highlighted={String(highlighted)}
-                >
-                  <div className="space-y-2">
-                    {highlightLabel ? (
-                      <span
-                        className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
-                        style={{
-                          backgroundColor: style.highlightRing,
-                          color: "var(--color-bg)",
-                        }}
-                      >
-                        {highlightLabel}
-                      </span>
-                    ) : null}
-                    {comparison.showHeaderBadges
-                      ? renderPlanBadge(plan, style.highlightRing, { hideText: highlightLabel })
-                      : null}
-                    <p
-                      id={scopedId(instanceId, `comparison-plan-${plan.id ?? index + 1}-title`)}
-                      className={joinClasses(
-                        "font-semibold text-[var(--color-text)]",
-                        typography.planName
-                      )}
-                    >
-                      {plan.name}
-                    </p>
-                    <p
-                      className={joinClasses(
-                        "font-semibold text-[var(--color-text)]",
-                        typography.comparisonPrice
-                      )}
-                    >
-                      {pricePresentation.priceLabel}
-                    </p>
-                    {pricePresentation.periodLabel ? (
-                      <p className={joinClasses("text-[var(--color-text)]/65", typography.period)}>
-                        {pricePresentation.periodLabel}
-                      </p>
-                    ) : null}
-                    {pricePresentation.savingsLabel ? (
-                      <p className="text-xs font-medium" style={{ color: style.highlightRing }}>
-                        {pricePresentation.savingsLabel}
-                      </p>
-                    ) : null}
-                    {comparison.showHeaderCta &&
-                    (plan.ctaLabel ?? "").trim().length > 0 &&
-                    (plan.ctaHref ?? "").trim().length > 0 ? (
-                      <a
-                        href={plan.ctaHref}
-                        className={ctaStyleClassMap[ctaStyle]}
-                        aria-label={plan.name ? `${plan.ctaLabel} for ${plan.name}` : plan.ctaLabel}
-                      >
-                        {plan.ctaLabel}
-                      </a>
-                    ) : null}
-                  </div>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {featureRows.map((feature, rowIndex) => (
-            <tr
-              key={`feature-row-${rowIndex}`}
-              className="border-b"
-              style={{ borderColor: style.cardBorder }}
-              data-pricing-feature-row={String(rowIndex + 1)}
-            >
-              <th scope="row" className="px-4 py-3 text-left text-[var(--color-text)]">
-                {feature}
+        Scroll horizontally to compare all plans.
+      </p>
+      <div
+        className={joinClasses("overflow-x-auto", radiusClassMap[style.radius])}
+        data-overflow-intentional="true"
+        data-pricing-comparison-scroll="true"
+        tabIndex={0}
+        aria-label="Pricing plan comparison"
+        aria-describedby={scopedId(instanceId, "comparison-scroll-hint")}
+      >
+        <table
+          className="w-full min-w-[44rem] border-collapse text-sm"
+          style={tableStyle}
+          data-pricing-comparison="true"
+          data-pricing-comparison-sticky={String(comparison.stickyHeader)}
+        >
+          <caption className="sr-only">Pricing plan comparison</caption>
+          <thead>
+            <tr className="border-b" style={{ borderColor: style.cardBorder }}>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs uppercase tracking-wider text-[var(--color-text)]/65"
+                style={stickyHeaderStyle}
+              >
+                Feature
               </th>
-              {plans.map((plan, planIndex) => {
-                const featureItem = findPlanFeature(plan, feature);
-                const hasFeature = Boolean(featureItem);
-                const featureIconKey = featureItem
-                  ? (resolvePricingFeatureIcon(featureItem.icon) ??
-                    (featureItem.status === "premium"
-                      ? "sparkle"
-                      : featureItem.status === "coming-soon"
-                        ? "clock"
-                        : "check"))
-                  : undefined;
-                const FeatureIcon = featureIconKey
-                  ? pricingFeatureIconMap[featureIconKey]
-                  : undefined;
-                const label = hasFeature
-                  ? pricingFeatureStatusLabelMap[resolvePricingFeatureStatus(featureItem?.status)]
-                  : "Not included";
+              {plans.map((plan, index) => {
+                const highlighted = Boolean(plan.highlighted);
+                const highlightLabel = resolvePlanHighlightLabel(plan);
+                const pricePresentation = resolveDisplayedPlanPrice(plan, billingToggle);
+                const ctaStyle =
+                  plan.ctaStyle ?? resolvePricingPlanCtaStyle(undefined, highlighted);
+
                 return (
-                  <td key={`feature-cell-${planIndex}-${rowIndex}`} className="px-4 py-3">
-                    <span
-                      className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold"
-                      style={{
-                        backgroundColor: hasFeature
-                          ? style.highlightRing
-                          : "color-mix(in oklab, var(--color-text) 10%, transparent)",
-                        color: hasFeature ? "var(--color-bg)" : "var(--color-text)",
-                      }}
-                      aria-label={label}
-                    >
-                      {hasFeature && FeatureIcon ? (
-                        <FeatureIcon aria-hidden="true" className="h-3.5 w-3.5" />
-                      ) : hasFeature ? (
-                        "✓"
-                      ) : (
-                        "-"
-                      )}
-                    </span>
-                  </td>
+                  <th
+                    key={plan.id ?? `header-${index + 1}`}
+                    scope="col"
+                    className="px-4 py-3 text-left align-top"
+                    style={{
+                      ...stickyHeaderStyle,
+                      backgroundColor:
+                        resolveClearableStyleValue(plan.surface) ??
+                        stickyHeaderStyle?.backgroundColor,
+                      boxShadow: highlighted ? `inset 0 0 0 1px ${style.highlightRing}` : undefined,
+                    }}
+                    data-pricing-comparison-highlighted={String(highlighted)}
+                  >
+                    <div className="space-y-2">
+                      {highlightLabel ? (
+                        <span
+                          className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
+                          style={{
+                            backgroundColor: style.highlightRing,
+                            color: "var(--color-bg)",
+                          }}
+                        >
+                          {highlightLabel}
+                        </span>
+                      ) : null}
+                      {comparison.showHeaderBadges
+                        ? renderPlanBadge(plan, style.highlightRing, { hideText: highlightLabel })
+                        : null}
+                      <p
+                        id={scopedId(instanceId, `comparison-plan-${plan.id ?? index + 1}-title`)}
+                        className={joinClasses(
+                          "font-semibold text-[var(--color-text)]",
+                          typography.planName
+                        )}
+                      >
+                        {plan.name}
+                      </p>
+                      <p
+                        className={joinClasses(
+                          "font-semibold text-[var(--color-text)]",
+                          typography.comparisonPrice
+                        )}
+                      >
+                        {pricePresentation.priceLabel}
+                      </p>
+                      {pricePresentation.periodLabel ? (
+                        <p
+                          className={joinClasses("text-[var(--color-text)]/65", typography.period)}
+                        >
+                          {pricePresentation.periodLabel}
+                        </p>
+                      ) : null}
+                      {pricePresentation.savingsLabel ? (
+                        <p className="text-xs font-medium" style={{ color: style.highlightRing }}>
+                          {pricePresentation.savingsLabel}
+                        </p>
+                      ) : null}
+                      {comparison.showHeaderCta &&
+                      (plan.ctaLabel ?? "").trim().length > 0 &&
+                      (plan.ctaHref ?? "").trim().length > 0 ? (
+                        <a
+                          href={plan.ctaHref}
+                          className={ctaStyleClassMap[ctaStyle]}
+                          aria-label={
+                            plan.name ? `${plan.ctaLabel} for ${plan.name}` : plan.ctaLabel
+                          }
+                        >
+                          {plan.ctaLabel}
+                        </a>
+                      ) : null}
+                    </div>
+                  </th>
                 );
               })}
             </tr>
-          ))}
-          <tr>
-            <th
-              scope="row"
-              className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text)]/65"
-            >
-              Action
-            </th>
-            {plans.map((plan, index) => (
-              <td key={`cta-${index}`} className="px-4 py-3">
-                {(plan.ctaLabel ?? "").trim().length > 0 &&
-                (plan.ctaHref ?? "").trim().length > 0 ? (
-                  <a
-                    href={plan.ctaHref}
-                    className={
-                      ctaStyleClassMap[
-                        plan.ctaStyle ??
-                          resolvePricingPlanCtaStyle(undefined, Boolean(plan.highlighted))
-                      ]
-                    }
-                    aria-label={plan.name ? `${plan.ctaLabel} for ${plan.name}` : plan.ctaLabel}
-                  >
-                    {plan.ctaLabel}
-                  </a>
-                ) : (
-                  <span className="text-xs text-[var(--color-text)]/40">Not set</span>
-                )}
-              </td>
+          </thead>
+          <tbody>
+            {featureRows.map((feature, rowIndex) => (
+              <tr
+                key={`feature-row-${rowIndex}`}
+                className="border-b"
+                style={{ borderColor: style.cardBorder }}
+                data-pricing-feature-row={String(rowIndex + 1)}
+              >
+                <th scope="row" className="px-4 py-3 text-left text-[var(--color-text)]">
+                  {feature}
+                </th>
+                {plans.map((plan, planIndex) => {
+                  const featureItem = findPlanFeature(plan, feature);
+                  const hasFeature = Boolean(featureItem);
+                  const featureIconKey = featureItem
+                    ? (resolvePricingFeatureIcon(featureItem.icon) ??
+                      (featureItem.status === "premium"
+                        ? "sparkle"
+                        : featureItem.status === "coming-soon"
+                          ? "clock"
+                          : "check"))
+                    : undefined;
+                  const FeatureIcon = featureIconKey
+                    ? pricingFeatureIconMap[featureIconKey]
+                    : undefined;
+                  const label = hasFeature
+                    ? pricingFeatureStatusLabelMap[resolvePricingFeatureStatus(featureItem?.status)]
+                    : "Not included";
+                  return (
+                    <td key={`feature-cell-${planIndex}-${rowIndex}`} className="px-4 py-3">
+                      <span
+                        className="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-semibold"
+                        style={{
+                          backgroundColor: hasFeature
+                            ? style.highlightRing
+                            : "color-mix(in oklab, var(--color-text) 10%, transparent)",
+                          color: hasFeature ? "var(--color-bg)" : "var(--color-text)",
+                        }}
+                        aria-label={label}
+                      >
+                        {hasFeature && FeatureIcon ? (
+                          <FeatureIcon aria-hidden="true" className="h-3.5 w-3.5" />
+                        ) : hasFeature ? (
+                          "✓"
+                        ) : (
+                          "-"
+                        )}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
             ))}
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            <tr>
+              <th
+                scope="row"
+                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[var(--color-text)]/65"
+              >
+                Action
+              </th>
+              {plans.map((plan, index) => (
+                <td key={`cta-${index}`} className="px-4 py-3">
+                  {(plan.ctaLabel ?? "").trim().length > 0 &&
+                  (plan.ctaHref ?? "").trim().length > 0 ? (
+                    <a
+                      href={plan.ctaHref}
+                      className={
+                        ctaStyleClassMap[
+                          plan.ctaStyle ??
+                            resolvePricingPlanCtaStyle(undefined, Boolean(plan.highlighted))
+                        ]
+                      }
+                      aria-label={plan.name ? `${plan.ctaLabel} for ${plan.name}` : plan.ctaLabel}
+                    >
+                      {plan.ctaLabel}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-[var(--color-text)]/40">Not set</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

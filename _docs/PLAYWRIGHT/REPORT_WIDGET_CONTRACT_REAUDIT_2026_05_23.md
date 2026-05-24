@@ -486,6 +486,25 @@ Validation rules:
 - Two helper agents were spawned: one for editor-contract source review and one
   for frontend fixture/CSS review.
 
+## TASK-336-15 Superseding Frontend Evidence (2026-05-24)
+
+The TASK-336-15 rerun supersedes the frontend CSS/fixture gaps listed above:
+
+- `widget-contract-smoke-task-336-15-front-rerun-2026-05-24.md` and `.json`
+  covered all 38 inventory widgets with `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
+- `team` spotlight now keeps the supporting rail readable at high column
+  counts and long member/social copy uses bounded wrapping.
+- `testimonials`, `pricing-plans`, `product-compare`, and `product-table` now
+  expose approved intentional horizontal-scroll regions with visible scroll
+  affordances and keyboard-focusable containers.
+- The Playwright overflow detector now ignores intentional overflow only when
+  the marked region also matches the approved widget/region allowlist; a raw
+  `data-overflow-intentional` marker alone no longer bypasses the check.
+- Public fixture data was repaired for the previously empty/weak structural,
+  content, commerce, search, timeline, and template-section fixture pages used
+  by the smoke inventory.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal contract

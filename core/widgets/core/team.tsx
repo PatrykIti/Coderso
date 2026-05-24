@@ -73,9 +73,9 @@ const columnsClassMap: Record<TeamColumns, string> = {
 
 const spotlightRestColumnsClassMap: Record<TeamColumns, string> = {
   "1": "grid-cols-1",
-  "2": "grid-cols-1 sm:grid-cols-2",
-  "3": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  "4": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  "2": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1",
+  "3": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1",
+  "4": "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1",
 };
 
 const radiusClassMap: Record<TeamRadius, string> = {
@@ -543,12 +543,12 @@ function SocialLinks({ links }: { links: TeamSocialLink[] }) {
   });
   if (renderableLinks.length === 0) return null;
   return (
-    <ul className="mt-3 flex flex-wrap gap-2 text-xs">
+    <ul className="mt-3 flex min-w-0 flex-wrap gap-2 text-xs">
       {renderableLinks.map(({ index, link, linkAttrs }) => (
-        <li key={link.id ?? `social-link-${index + 1}`}>
+        <li key={link.id ?? `social-link-${index + 1}`} className="min-w-0">
           <a
             {...linkAttrs}
-            className="inline-flex rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-text)]/80 transition hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
+            className="inline-flex max-w-full break-words rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-text)]/80 transition hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
           >
             {link.label}
           </a>
@@ -583,14 +583,14 @@ function MemberCard({
   const trimmedBio = member.bio?.trim();
   const bioClassName =
     compact && compactMobileBio === "hide"
-      ? "mt-2 text-sm text-[var(--color-text)]/80 sr-only sm:not-sr-only sm:block"
-      : "mt-2 text-sm text-[var(--color-text)]/80";
+      ? "mt-2 break-words text-sm text-[var(--color-text)]/80 sr-only sm:not-sr-only sm:block"
+      : "mt-2 break-words text-sm text-[var(--color-text)]/80";
 
   return (
     <article
       aria-label={memberIdentityLabel || name}
       className={joinClasses(
-        "border p-4",
+        "min-w-0 border p-4",
         radiusClassMap[radius],
         compact ? "flex flex-col gap-4 sm:flex-row sm:items-start" : "space-y-3",
         spotlightLead ? "p-6" : undefined
@@ -604,13 +604,13 @@ function MemberCard({
       <div className={joinClasses("min-w-0", compact ? "flex-1" : undefined)}>
         <h4
           className={joinClasses(
-            "font-semibold text-[var(--color-text)]",
+            "break-words font-semibold text-[var(--color-text)]",
             spotlightLead ? "text-2xl" : "text-lg"
           )}
         >
           {name}
         </h4>
-        <p className="text-sm text-[var(--color-text)]/75">{role}</p>
+        <p className="break-words text-sm text-[var(--color-text)]/75">{role}</p>
         {trimmedBio ? <p className={bioClassName}>{trimmedBio}</p> : null}
         <SocialLinks links={socialLinks} />
       </div>

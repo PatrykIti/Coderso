@@ -169,10 +169,15 @@ test("team renderer covers spotlight lead, CTA, and style controls", () => {
         members: [
           {
             id: "member-1",
-            name: "Anna",
-            role: "Head of Product",
-            bio: "Leads roadmap.",
-            socialLinks: [{ label: "LinkedIn", url: "https://example.com/anna" }],
+            name: "Anna Kowalska Product Operations Architecture",
+            role: "Head of Product Operations Architecture",
+            bio: "Leads roadmap across a long cross-functional product operations scope.",
+            socialLinks: [
+              {
+                label: "LinkedIn Company Leadership Profile",
+                url: "https://example.com/anna",
+              },
+            ],
           },
           {
             id: "member-2",
@@ -190,7 +195,7 @@ test("team renderer covers spotlight lead, CTA, and style controls", () => {
           },
         ],
         style: {
-          columns: "3",
+          columns: "4",
           gap: "lg",
           sectionBackground: "#f8fafc",
           cardSurface: "#ffffff",
@@ -213,6 +218,8 @@ test("team renderer covers spotlight lead, CTA, and style controls", () => {
   expect(html).toContain("border-width:2px");
   expect(html).toContain("background-color:#f8fafc");
   expect(html.indexOf("Marek")).toBeLessThan(html.indexOf("Anna"));
+  expect(html).toContain("grid-cols-1 sm:grid-cols-2 lg:grid-cols-1");
+  expect(html).toContain("break-words");
   expect(html.match(/data-team-spotlight-lead="true"/g)).toHaveLength(1);
   expect(Array.from(html.matchAll(/data-team-member="(\d+)"/g), (match) => match[1])).toEqual([
     "2",

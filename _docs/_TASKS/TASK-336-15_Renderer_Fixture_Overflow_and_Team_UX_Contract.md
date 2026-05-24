@@ -6,7 +6,7 @@
 **Category:** Widgets + Frontend CSS + Fixtures + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-336-03, TASK-336-13, TASK-336-14
-**Status:** To Do
+**Status:** Done (2026-05-24)
 
 ---
 
@@ -43,15 +43,27 @@ spotlight layout behavior.
 
 ## Sub-Tasks
 
-- [ ] Run the Playwright frontend smoke and collect current failures.
-- [ ] Replace empty fixture data with realistic bounded content.
-- [ ] Add long-name/long-copy Team spotlight fixture coverage.
-- [ ] Add intentional overflow markers to widgets where horizontal scroll is a
+- [x] Run the Playwright frontend smoke and collect current failures.
+- [x] Replace empty fixture data with realistic bounded content.
+- [x] Add long-name/long-copy Team spotlight fixture coverage.
+- [x] Add intentional overflow markers to widgets where horizontal scroll is a
   deliberate interaction.
-- [ ] Fix any unintentional `body` overflow.
-- [ ] Add renderer/unit tests where CSS classes or runtime markup change.
-- [ ] Re-run Playwright frontend smoke and save evidence.
-- [ ] Update report rows with final CSS/fixture status.
+- [x] Fix any unintentional `body` overflow.
+- [x] Add renderer/unit tests where CSS classes or runtime markup change.
+- [x] Re-run Playwright frontend smoke and save evidence.
+- [x] Update report rows with final CSS/fixture status.
+
+## Status Notes
+
+- 2026-05-24: Initial frontend-only smoke recorded
+  `publicFailures=2` (`testimonials`, `team`) and `fixtureGaps=8`.
+- 2026-05-24: Fixed Team spotlight rail collapse, approved horizontal-scroll
+  affordances, row-flow child containment, and the Playwright intentional
+  overflow allowlist. Repaired public fixture data for Stack/Split/Grid,
+  Content List, commerce widgets, Search Box, Timeline, and Template Section.
+  Rerun evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-15-front-rerun-2026-05-24.md`
+  with 38/38 widgets passing and zero public failures/fixture gaps.
 
 ## Files to Change
 

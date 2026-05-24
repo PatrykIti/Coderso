@@ -78,6 +78,10 @@ test("pricing plans comparison rows render deterministic table markers", () => {
 
   expect(html).toContain('data-pricing-variant="comparison-rows"');
   expect(html).toContain('data-pricing-comparison="true"');
+  expect(html).toContain('data-overflow-intentional="true"');
+  expect(html).toContain('data-overflow-affordance="horizontal-scroll"');
+  expect(html).toContain("Scroll horizontally to compare all plans.");
+  expect(html).toContain('tabindex="0"');
   expect(html).toContain('data-pricing-feature-row="1"');
   expect(html).toContain("Advanced analytics");
   expect(html).toContain("<caption");

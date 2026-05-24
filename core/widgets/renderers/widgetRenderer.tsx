@@ -250,7 +250,11 @@ export function WidgetRenderer({
 
   if (renderSurface === "row-flow-item") {
     return (
-      <div data-widget-surface="row-flow-item" data-widget-type={normalized.type}>
+      <div
+        className="min-w-0 max-w-full"
+        data-widget-surface="row-flow-item"
+        data-widget-type={normalized.type}
+      >
         {widgetNode}
       </div>
     );

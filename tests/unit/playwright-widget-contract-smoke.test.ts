@@ -335,7 +335,7 @@ describe("playwright widget contract smoke helpers", () => {
     ).toEqual({ status: "failed", error: "body_overflow_unmarked" });
   });
 
-  test("ignores intentional and visually-hidden overflow owners", () => {
+  test("ignores approved intentional and visually-hidden overflow owners", () => {
     const visibleOverflow = {
       scrollWidth: 420,
       clientWidth: 320,
@@ -350,6 +350,12 @@ describe("playwright widget contract smoke helpers", () => {
       shouldCountOverflowOwner({
         ...visibleOverflow,
         hasIntentionalOverflowAncestor: true,
+      })
+    ).toBe(true);
+    expect(
+      shouldCountOverflowOwner({
+        ...visibleOverflow,
+        hasApprovedIntentionalOverflowAncestor: true,
       })
     ).toBe(false);
     expect(shouldCountOverflowOwner({ ...visibleOverflow, className: "sr-only" })).toBe(false);

@@ -864,66 +864,85 @@ function TestimonialsList({
           );
 
   return (
-    <div className={listClassName} data-testimonials-list={variant}>
-      {items.map((item, index) => {
-        const highlight = variant === "spotlight" && item.id === spotlightItemId;
-        const author = item.author ?? `Customer ${index + 1}`;
-        const rating = resolveRating(item.rating, 0);
-        const roleText = (item.role ?? "").trim();
-        const sourceText = (item.sourceLabel ?? "").trim();
+    <>
+      {variant === "slider-static" ? (
+        <p
+          id={scopedId(instanceId, "scroll-hint")}
+          className="mb-2 text-xs text-[var(--color-text)]/60"
+          data-overflow-affordance="horizontal-scroll"
+        >
+          Scroll horizontally to view more testimonials.
+        </p>
+      ) : null}
+      <div
+        className={listClassName}
+        data-testimonials-list={variant}
+        data-overflow-intentional={variant === "slider-static" ? "true" : undefined}
+        aria-describedby={
+          variant === "slider-static" ? scopedId(instanceId, "scroll-hint") : undefined
+        }
+        tabIndex={variant === "slider-static" ? 0 : undefined}
+      >
+        {items.map((item, index) => {
+          const highlight = variant === "spotlight" && item.id === spotlightItemId;
+          const author = item.author ?? `Customer ${index + 1}`;
+          const rating = resolveRating(item.rating, 0);
+          const roleText = (item.role ?? "").trim();
+          const sourceText = (item.sourceLabel ?? "").trim();
 
-        return (
-          <article
-            id={resolveTestimonialsAnchorId(instanceId, item, index)}
-            aria-label={`Testimonial ${index + 1}: ${author}`}
-            key={item.id ?? `testimonial-${index + 1}`}
-            className={joinClasses(
-              "flex h-full flex-col gap-4 p-5",
-              cardRadiusClassMap[resolvedCardRadius],
-              cardBorderWidthClassMap[resolvedCardBorderWidth],
-              variant === "slider-static" ? "min-w-[18rem] shrink-0 snap-start" : undefined,
-              highlight ? "lg:col-span-2" : undefined
-            )}
-            style={cardStyle}
-            data-testimonial-item={String(index + 1)}
-            data-testimonial-rating={String(rating)}
-            data-testimonial-highlighted={String(highlight)}
-          >
-            <TestimonialRating
-              rating={rating}
-              display={ratingDisplay}
-              accentColor={style.accentColor ?? "var(--color-primary)"}
-            />
-
-            <TestimonialQuote item={item} highlight={highlight} />
-
-            <div className="mt-auto flex items-center gap-3">
-              <Avatar
-                author={author}
-                src={item.avatar}
+          return (
+            <article
+              id={resolveTestimonialsAnchorId(instanceId, item, index)}
+              aria-label={`Testimonial ${index + 1}: ${author}`}
+              key={item.id ?? `testimonial-${index + 1}`}
+              className={joinClasses(
+                "flex h-full flex-col gap-4 p-5",
+                cardRadiusClassMap[resolvedCardRadius],
+                cardBorderWidthClassMap[resolvedCardBorderWidth],
+                variant === "slider-static" ? "min-w-[18rem] shrink-0 snap-start" : undefined,
+                highlight ? "lg:col-span-2" : undefined
+              )}
+              style={cardStyle}
+              data-testimonial-item={String(index + 1)}
+              data-testimonial-rating={String(rating)}
+              data-testimonial-highlighted={String(highlight)}
+            >
+              <TestimonialRating
+                rating={rating}
+                display={ratingDisplay}
                 accentColor={style.accentColor ?? "var(--color-primary)"}
-                role={roleText || undefined}
-                sourceLabel={sourceText || undefined}
               />
-              <div className="space-y-0.5">
-                <p className="text-sm font-semibold">{author}</p>
-                {roleText.length > 0 ? (
-                  <p className="text-xs text-[var(--color-text)]/70">{roleText}</p>
-                ) : null}
-                {sourceText.length > 0 ? (
-                  <p
-                    className="text-xs font-medium"
-                    style={{ color: style.accentColor ?? "var(--color-primary)" }}
-                  >
-                    {sourceText}
-                  </p>
-                ) : null}
+
+              <TestimonialQuote item={item} highlight={highlight} />
+
+              <div className="mt-auto flex items-center gap-3">
+                <Avatar
+                  author={author}
+                  src={item.avatar}
+                  accentColor={style.accentColor ?? "var(--color-primary)"}
+                  role={roleText || undefined}
+                  sourceLabel={sourceText || undefined}
+                />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold">{author}</p>
+                  {roleText.length > 0 ? (
+                    <p className="text-xs text-[var(--color-text)]/70">{roleText}</p>
+                  ) : null}
+                  {sourceText.length > 0 ? (
+                    <p
+                      className="text-xs font-medium"
+                      style={{ color: style.accentColor ?? "var(--color-primary)" }}
+                    >
+                      {sourceText}
+                    </p>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </article>
-        );
-      })}
-    </div>
+            </article>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

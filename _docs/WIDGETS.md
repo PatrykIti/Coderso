@@ -127,6 +127,13 @@ Zasady:
   `Raw payload snapshot`. Dopuszczalne legacy compatibility hooks musza byc
   `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
   UX.
+- Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
+  dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
+  tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,
+  focusowalnym kontenerem i allowlista w Playwright smoke. Obecnie zatwierdzone
+  sa: `testimonials` slider, `pricing-plans` comparison rows,
+  `product-compare` table i `product-table` table. Pozostale overflow jest
+  traktowane jako regresja layoutu.
 
 ### Layout widget Advanced token policy
 

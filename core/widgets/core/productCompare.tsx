@@ -870,6 +870,7 @@ export function ProductCompareBlock({
     normalized.section?.title ||
     productCompareDefaults.section?.caption ||
     "Product comparison";
+  const scrollHintId = blockId ? `${blockId}-product-compare-scroll-hint` : undefined;
   const tableStyle: CSSProperties | undefined = compactStyle({
     backgroundColor: resolveClearableStyleValue(normalized.style?.tableBackground),
     borderColor: resolveClearableStyleValue(normalized.style?.tableBorderColor),
@@ -937,78 +938,90 @@ export function ProductCompareBlock({
       ) : resolvedVariant === "cards" ? (
         renderCardsVariant(normalized, resolvedRows, featuredProductId)
       ) : (
-        <div
-          tabIndex={0}
-          aria-label={captionText}
-          className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
-          style={tableStyle}
-        >
-          <table className={`min-w-full ${compact ? "text-xs" : "text-sm"}`}>
-            <caption
-              className={
-                normalized.section?.hideCaption !== false
-                  ? "sr-only"
-                  : "px-3 py-2 text-left text-sm text-[var(--color-text)]/70"
-              }
-            >
-              {captionText}
-            </caption>
-            <thead>
-              <tr
-                className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
-                style={headerStyle}
+        <>
+          <p
+            id={scrollHintId}
+            className="mb-2 text-xs text-[var(--color-text)]/60"
+            data-overflow-affordance="horizontal-scroll"
+          >
+            Scroll horizontally to compare all products.
+          </p>
+          <div
+            tabIndex={0}
+            aria-label={captionText}
+            aria-describedby={scrollHintId}
+            className={`overflow-x-auto rounded-xl border ${legacyTableClass}`}
+            style={tableStyle}
+            data-overflow-intentional="true"
+            data-product-compare-scroll-region="table"
+          >
+            <table className={`min-w-full ${compact ? "text-xs" : "text-sm"}`}>
+              <caption
+                className={
+                  normalized.section?.hideCaption !== false
+                    ? "sr-only"
+                    : "px-3 py-2 text-left text-sm text-[var(--color-text)]/70"
+                }
               >
-                <th
-                  scope="col"
-                  className={`${headerPaddingClass} ${stickyHeader ? "sticky left-0 top-0 z-20" : ""} text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65`}
-                  style={stickyHeader ? headerStyle : undefined}
-                >
-                  {normalized.labels?.attributeHeader}
-                </th>
-                {resolvedRows.map((row) => {
-                  const featured = featuredProductId === row.id;
-                  return (
-                    <th
-                      key={row.id}
-                      scope="col"
-                      className={`${headerPaddingClass} ${stickyHeader ? "sticky top-0 z-10 align-top" : "align-top"} text-left text-[var(--color-text)]/75 ${
-                        featured ? "bg-emerald-50/70" : ""
-                      }`}
-                      style={stickyHeader ? headerStyle : undefined}
-                    >
-                      {renderProductHeader(row, normalized, { featured, compact })}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {visibleMetrics.map((metric) => (
+                {captionText}
+              </caption>
+              <thead>
                 <tr
-                  key={metric.key}
-                  className="border-b border-[var(--color-border)]/70 last:border-b-0"
+                  className={`border-b border-[var(--color-border)] ${legacyHeaderClass}`}
+                  style={headerStyle}
                 >
-                  <td className={`${bodyPaddingClass} font-medium text-[var(--color-text)]/80`}>
-                    {resolveAttributeLabel(normalized.labels, metric.key)}
-                  </td>
+                  <th
+                    scope="col"
+                    className={`${headerPaddingClass} ${stickyHeader ? "sticky left-0 top-0 z-20" : ""} text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/65`}
+                    style={stickyHeader ? headerStyle : undefined}
+                  >
+                    {normalized.labels?.attributeHeader}
+                  </th>
                   {resolvedRows.map((row) => {
                     const featured = featuredProductId === row.id;
                     return (
-                      <td
-                        key={`${metric.key}-${row.id}`}
-                        className={`${bodyPaddingClass} text-[var(--color-text)]/75 ${
-                          featured ? "bg-emerald-50/40" : ""
+                      <th
+                        key={row.id}
+                        scope="col"
+                        className={`${headerPaddingClass} ${stickyHeader ? "sticky top-0 z-10 align-top" : "align-top"} text-left text-[var(--color-text)]/75 ${
+                          featured ? "bg-emerald-50/70" : ""
                         }`}
+                        style={stickyHeader ? headerStyle : undefined}
                       >
-                        {renderMatrixCellValue(row, metric.key, normalized)}
-                      </td>
+                        {renderProductHeader(row, normalized, { featured, compact })}
+                      </th>
                     );
                   })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visibleMetrics.map((metric) => (
+                  <tr
+                    key={metric.key}
+                    className="border-b border-[var(--color-border)]/70 last:border-b-0"
+                  >
+                    <td className={`${bodyPaddingClass} font-medium text-[var(--color-text)]/80`}>
+                      {resolveAttributeLabel(normalized.labels, metric.key)}
+                    </td>
+                    {resolvedRows.map((row) => {
+                      const featured = featuredProductId === row.id;
+                      return (
+                        <td
+                          key={`${metric.key}-${row.id}`}
+                          className={`${bodyPaddingClass} text-[var(--color-text)]/75 ${
+                            featured ? "bg-emerald-50/40" : ""
+                          }`}
+                        >
+                          {renderMatrixCellValue(row, metric.key, normalized)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

@@ -122,6 +122,9 @@ test("product compare renders accessible matrix rows, section copy, and safe lin
   expect(html).toContain("<caption");
   expect(html).toContain('scope="col"');
   expect(html).toContain('tabindex="0"');
+  expect(html).toContain('data-overflow-intentional="true"');
+  expect(html).toContain('data-overflow-affordance="horizontal-scroll"');
+  expect(html).toContain("Scroll horizontally to compare all products.");
   expect(html).toContain('href="/products/starter-home"');
   expect(html).toContain('src="/media/starter-home.jpg"');
   expect(html).toContain("Featured");

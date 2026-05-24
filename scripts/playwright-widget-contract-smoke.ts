@@ -29,6 +29,13 @@ type SmokeInventory = {
   widgets: WidgetSmokeCase[];
 };
 
+const APPROVED_INTENTIONAL_OVERFLOW_SELECTORS: Record<string, string[]> = {
+  "pricing-plans": ['[data-pricing-comparison-scroll="true"]'],
+  "product-compare": ['[data-product-compare-scroll-region="table"]'],
+  "product-table": ['[data-product-table-scroll-region="table"]'],
+  testimonials: ['[data-testimonials-list="slider-static"]'],
+};
+
 type ParsedArgs = {
   session: string;
   adminUrl: string;
@@ -674,6 +681,7 @@ function buildPublicProbeCode(frontUrl: string, cases: WidgetSmokeCase[], screen
   const frontUrl = ${JSON.stringify(frontUrl.replace(/\/$/, ""))};
   const cases = ${JSON.stringify(cases)};
   const screenshotDir = ${JSON.stringify(screenshotDir)};
+  const approvedIntentionalOverflowSelectors = ${JSON.stringify(APPROVED_INTENTIONAL_OVERFLOW_SELECTORS)};
   const results = [];
   async function settle() {
     await page.waitForLoadState("domcontentloaded").catch(() => undefined);
@@ -696,13 +704,25 @@ function buildPublicProbeCode(frontUrl: string, cases: WidgetSmokeCase[], screen
     try {
       response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
       await settle();
-      const overflow = await page.evaluate(() => {
+      const overflow = await page.evaluate(({ widgetType, approvedIntentionalOverflowSelectors }) => {
         const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
         const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+        function hasApprovedIntentionalOverflowAncestor(element) {
+          const intentional = element.closest('[data-overflow-intentional="true"]');
+          if (!intentional) return false;
+          const selectors = approvedIntentionalOverflowSelectors[String(widgetType)] || [];
+          return selectors.some((selector) => {
+            try {
+              return intentional.matches(selector) || Boolean(intentional.querySelector(selector));
+            } catch {
+              return false;
+            }
+          });
+        }
         const unmarkedOverflowOwners = Array.from(document.body.querySelectorAll("*"))
           .filter((element) => {
             if (!(element instanceof HTMLElement)) return false;
-            if (element.closest('[data-overflow-intentional="true"]')) return false;
+            if (hasApprovedIntentionalOverflowAncestor(element)) return false;
             if (element.closest('[aria-hidden="true"], [hidden]')) return false;
             if (element.getAttribute("aria-hidden") === "true" || element.hidden) return false;
             const className = typeof element.className === "string" ? element.className : "";
@@ -728,7 +748,7 @@ function buildPublicProbeCode(frontUrl: string, cases: WidgetSmokeCase[], screen
           documentWidth,
           unmarkedOverflowOwners,
         };
-      });
+      }, { widgetType: item.widgetType, approvedIntentionalOverflowSelectors });
       const emptyFixture = await page.evaluate((checks) => {
         if (!Array.isArray(checks) || !checks.includes("empty-fixture")) return false;
         const text = (document.body.innerText || "").replace(/\\s+/g, " ").trim();
@@ -966,6 +986,7 @@ function shouldCountOverflowOwner(input: {
   ariaHidden?: string | null;
   hidden?: boolean;
   hasIntentionalOverflowAncestor?: boolean;
+  hasApprovedIntentionalOverflowAncestor?: boolean;
   display?: string;
   visibility?: string;
   width?: number;
@@ -975,7 +996,7 @@ function shouldCountOverflowOwner(input: {
   scrollWidth: number;
   clientWidth: number;
 }): boolean {
-  if (input.hasIntentionalOverflowAncestor) return false;
+  if (input.hasApprovedIntentionalOverflowAncestor) return false;
   if (input.ariaHidden === "true" || input.hidden) return false;
   if (input.className && /\bsr-only\b/.test(input.className)) return false;
   if (input.display === "none" || input.visibility === "hidden") return false;

@@ -128,6 +128,9 @@ test("product table renders accessible caption, labels, and scoped headers", () 
 
   expect(html).toMatch(/<section[^>]*aria-label="Product table"/);
   expect(html).toMatch(/<div[^>]*tabindex="0"[^>]*aria-label="Product table"/);
+  expect(html).toContain('data-overflow-intentional="true"');
+  expect(html).toContain('data-overflow-affordance="horizontal-scroll"');
+  expect(html).toContain("Scroll horizontally to view all product columns.");
   expect(html).toMatch(/<table[^>]*aria-labelledby="[^"]+"/);
   expect(html).toMatch(/<caption id="[^"]+" class="sr-only">Product table<\/caption>/);
   expect(html.match(/scope="col"/g)?.length).toBe(8);
