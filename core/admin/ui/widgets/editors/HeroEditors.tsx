@@ -53,9 +53,9 @@ import {
   ColorContrastNotice,
   ClearableFieldHeader,
   hasClearableFieldValue,
+  isPickerRepresentableColorValue,
   resolveColorContrastAdvisory,
   resolveColorPickerValue,
-  SharedColorFieldInputs,
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import {
@@ -1206,18 +1206,25 @@ function HeroColorField({
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback = "#111827",
+  allowTransparent = false,
   onClear,
 }: {
   id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback?: string;
+  allowTransparent?: boolean;
   onClear?: () => void;
 }) {
+  const normalizedValue = value?.trim();
+  const isTransparent = normalizedValue === "transparent";
+  const hasCustomValue =
+    hasClearableFieldValue(value) && !isTransparent && !isPickerRepresentableColorValue(value);
+  const pickerValue = resolveColorPickerValue(value, pickerFallback);
+  const canSetTransparent = allowTransparent;
+
   return (
     <WidgetControlRow
       id={id}
@@ -1237,15 +1244,48 @@ function HeroColorField({
       }
     >
       {(fieldProps) => (
-        <SharedColorFieldInputs
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          pickerFallback={pickerFallback}
-          inputId={fieldProps.id}
-          ariaLabelledby={fieldProps["aria-labelledby"]}
-          ariaDescribedby={fieldProps["aria-describedby"]}
-        />
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={pickerValue}
+              onChange={(event) => onChange(event.target.value)}
+              className="h-10 w-11 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-10 flex-wrap items-center gap-2">
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {hasCustomValue
+                  ? "Saved custom color"
+                  : isTransparent
+                    ? "Transparent"
+                    : hasClearableFieldValue(value)
+                      ? "Selected color"
+                      : "Theme default"}
+              </span>
+              {canSetTransparent ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onChange("transparent")}
+                >
+                  Use transparent
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {hasCustomValue ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+              A saved custom color is configured.{" "}
+              {onClear
+                ? "Pick a swatch to replace it, or clear the field."
+                : "Pick a swatch to replace it."}
+            </p>
+          ) : null}
+        </div>
       )}
     </WidgetControlRow>
   );
@@ -3021,28 +3061,31 @@ export function HeroVisualEditor({
             label="Headline color"
             value={style.textColor}
             onChange={(next) => updateStyle({ textColor: next })}
-            placeholder="var(--color-text)"
+            onClear={() => clearStyleField("textColor")}
           />
           <HeroColorField
             id="hero.style.subheadColor"
             label="Subhead color"
             value={style.subheadColor}
             onChange={(next) => updateStyle({ subheadColor: next })}
-            placeholder="rgba(17, 24, 39, 0.8)"
+            onClear={() => clearStyleField("subheadColor")}
+            pickerFallback="#1f2937"
           />
           <HeroColorField
             id="hero.style.bodyColor"
             label="Body color"
             value={style.bodyColor}
             onChange={(next) => updateStyle({ bodyColor: next })}
-            placeholder="rgba(17, 24, 39, 0.7)"
+            onClear={() => clearStyleField("bodyColor")}
+            pickerFallback="#374151"
           />
           <HeroColorField
             id="hero.style.borderColor"
             label="Card border color"
             value={style.borderColor}
             onChange={(next) => updateStyle({ borderColor: next })}
-            placeholder="var(--color-border)"
+            onClear={() => clearStyleField("borderColor")}
+            pickerFallback="#d1d5db"
           />
           <HeroColorField
             id="hero.style.primaryButtonBg"
@@ -3050,21 +3093,24 @@ export function HeroVisualEditor({
             value={style.primaryButtonBg}
             onChange={(next) => updateStyle({ primaryButtonBg: next })}
             onClear={() => clearStyleField("primaryButtonBg")}
-            placeholder="var(--color-primary)"
+            pickerFallback="#2563eb"
           />
           <HeroColorField
             id="hero.style.primaryButtonText"
             label="Primary button text"
             value={style.primaryButtonText}
             onChange={(next) => updateStyle({ primaryButtonText: next })}
-            placeholder="var(--color-bg)"
+            onClear={() => clearStyleField("primaryButtonText")}
+            pickerFallback="#ffffff"
           />
           <HeroColorField
             id="hero.style.primaryButtonBorder"
             label="Primary button border"
             value={style.primaryButtonBorder}
             onChange={(next) => updateStyle({ primaryButtonBorder: next })}
-            placeholder="transparent"
+            onClear={() => clearStyleField("primaryButtonBorder")}
+            allowTransparent
+            pickerFallback="#2563eb"
           />
           <HeroColorField
             id="hero.style.secondaryButtonBg"
@@ -3072,21 +3118,23 @@ export function HeroVisualEditor({
             value={style.secondaryButtonBg}
             onChange={(next) => updateStyle({ secondaryButtonBg: next })}
             onClear={() => clearStyleField("secondaryButtonBg")}
-            placeholder="transparent"
+            allowTransparent
+            pickerFallback="#ffffff"
           />
           <HeroColorField
             id="hero.style.secondaryButtonText"
             label="Secondary button text"
             value={style.secondaryButtonText}
             onChange={(next) => updateStyle({ secondaryButtonText: next })}
-            placeholder="var(--color-text)"
+            onClear={() => clearStyleField("secondaryButtonText")}
           />
           <HeroColorField
             id="hero.style.secondaryButtonBorder"
             label="Secondary button border"
             value={style.secondaryButtonBorder}
             onChange={(next) => updateStyle({ secondaryButtonBorder: next })}
-            placeholder="var(--color-border)"
+            onClear={() => clearStyleField("secondaryButtonBorder")}
+            pickerFallback="#d1d5db"
           />
           {selectedVariant !== "centered" ? (
             <HeroColorField
@@ -3094,7 +3142,8 @@ export function HeroVisualEditor({
               label="Media frame border color"
               value={style.mediaBorderColor}
               onChange={(next) => updateStyle({ mediaBorderColor: next })}
-              placeholder="var(--color-border)"
+              onClear={() => clearStyleField("mediaBorderColor")}
+              pickerFallback="#d1d5db"
             />
           ) : null}
         </div>
@@ -3218,7 +3267,7 @@ export function HeroVisualEditor({
           value={value.background?.color}
           onChange={(next) => updateBackground({ color: next })}
           onClear={() => clearBackgroundField("color")}
-          placeholder="transparent"
+          allowTransparent
           pickerFallback="#ffffff"
         />
         <GradientField

@@ -450,6 +450,16 @@ const findButtonsByText = (container: ParentNode, text: string) =>
     (element) => element.textContent?.trim() === text
   );
 
+const findButtonByControl = (container: ParentNode, controlId: string, text: string) =>
+  Array.from(container.querySelectorAll(`[data-widget-control="${controlId}"] button`)).find(
+    (element) => element.textContent?.trim() === text
+  );
+
+const findColorInputByControl = (container: ParentNode, controlId: string) =>
+  container.querySelector(
+    `[data-widget-control="${controlId}"] input[type="color"]`
+  ) as HTMLInputElement | null;
+
 const findButtonContainingText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).find((element) =>
     element.textContent?.includes(text)
@@ -1595,27 +1605,30 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
 
     React.act(() => {
       const colorsRoot = colorsSection ?? view.container;
-      const textColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-text)");
-      const borderColorInputs = findInputsByPlaceholder(colorsRoot, "var(--color-border)");
-      const transparentInputs = findInputsByPlaceholder(colorsRoot, "transparent");
+      expect(findInputByPlaceholder(colorsRoot, "var(--color-text)")).toBeUndefined();
+      expect(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)")).toBeUndefined();
+      expect(findInputByPlaceholder(colorsRoot, "transparent")).toBeUndefined();
 
-      setInputValue(textColorInputs[0], "#111111");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.textColor"), "#111111");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.subheadColor"), "#121212");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.bodyColor"), "#131313");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.borderColor"), "#222222");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonBg"), "#333333");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonText"), "#f8fafc");
       setInputValue(
-        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)"),
-        "rgba(17,17,17,0.8)"
+        findColorInputByControl(colorsRoot, "hero.style.primaryButtonBorder"),
+        "#444444"
+      );
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.secondaryButtonBg"), "#555555");
+      setInputValue(
+        findColorInputByControl(colorsRoot, "hero.style.secondaryButtonText"),
+        "#666666"
       );
       setInputValue(
-        findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.7)"),
-        "rgba(17,17,17,0.7)"
+        findColorInputByControl(colorsRoot, "hero.style.secondaryButtonBorder"),
+        "#777777"
       );
-      setInputValue(borderColorInputs[0], "#222222");
-      setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-primary)"), "#333333");
-      setInputValue(findInputByPlaceholder(colorsRoot, "var(--color-bg)"), "#f8fafc");
-      setInputValue(transparentInputs[0], "#444444");
-      setInputValue(transparentInputs[1], "#555555");
-      setInputValue(textColorInputs[1], "#666666");
-      setInputValue(borderColorInputs[1], "#777777");
-      setInputValue(borderColorInputs[2], "#888888");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.mediaBorderColor"), "#888888");
 
       const widthSelects = findSelectsByOptions(colorsRoot, ["0", "1", "2", "3"]);
       const radiusSelects = findSelectsByOptions(colorsRoot, ["lg", "xl", "2xl", "3xl"]);
@@ -1648,7 +1661,8 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         'input[type="range"]'
       ) as HTMLInputElement | null;
 
-      setInputValue(findInputByPlaceholder(backgroundRoot, "transparent"), "#999999");
+      expect(findInputByPlaceholder(backgroundRoot, "transparent")).toBeUndefined();
+      setInputValue(findColorInputByControl(backgroundRoot, "hero.background.color"), "#999999");
       setInputValue(backgroundColorInputs[1], "#123456");
       setInputValue(backgroundColorInputs[2], "#654321");
       setInputValue(gradientAngle ?? undefined, "45");
@@ -1688,8 +1702,8 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           subheadSize: "2xl",
           bodySize: "lg",
           textColor: "#111111",
-          subheadColor: "rgba(17,17,17,0.8)",
-          bodyColor: "rgba(17,17,17,0.7)",
+          subheadColor: "#121212",
+          bodyColor: "#131313",
           borderColor: "#222222",
           primaryButtonBg: "#333333",
           primaryButtonText: "#f8fafc",
@@ -1714,6 +1728,86 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       })
     );
     expect(latestValue.secondaryCta).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved custom colors replace-or-clear in Visual", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    style: {
+      textColor: "var(--color-text)",
+      subheadColor: "rgba(17, 24, 39, 0.8)",
+      primaryButtonBg: "var(--color-primary)",
+      primaryButtonBorder: "transparent",
+    },
+    background: {
+      color: "transparent",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and Borders");
+    const colorsRoot = colorsSection ?? view.container;
+    const backgroundSection = findSectionByTitle(view.container, "Background");
+    const backgroundRoot = backgroundSection ?? view.container;
+
+    expect(colorsRoot.textContent).toContain("Saved custom color");
+    expect(colorsRoot.textContent).toContain("Transparent");
+    expect(backgroundRoot.textContent).toContain("Transparent");
+    expect(findInputByPlaceholder(colorsRoot, "var(--color-text)")).toBeUndefined();
+    expect(findInputByPlaceholder(colorsRoot, "rgba(17, 24, 39, 0.8)")).toBeUndefined();
+    expect(findInputByPlaceholder(colorsRoot, "transparent")).toBeUndefined();
+    expect(findInputByPlaceholder(backgroundRoot, "transparent")).toBeUndefined();
+
+    clickElement(findButtonByControl(colorsRoot, "hero.style.subheadColor", "Clear"));
+    await flush();
+    expect(latestValue.style?.subheadColor).toBeUndefined();
+
+    clickElement(findButtonByControl(backgroundRoot, "hero.background.color", "Clear"));
+    await flush();
+    expect(latestValue.background?.color).toBeUndefined();
+
+    React.act(() => {
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.textColor"), "#101010");
+      setInputValue(findColorInputByControl(colorsRoot, "hero.style.primaryButtonBg"), "#202020");
+    });
+
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        textColor: "#101010",
+        primaryButtonBg: "#202020",
+      })
+    );
+
+    clickElement(findButtonsByText(colorsRoot, "Use transparent")[0]);
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        primaryButtonBorder: "transparent",
+      })
+    );
   } finally {
     view.cleanup();
   }

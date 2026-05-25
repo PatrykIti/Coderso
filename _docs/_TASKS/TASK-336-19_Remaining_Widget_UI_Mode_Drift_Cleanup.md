@@ -392,6 +392,20 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Claude read-only review timed out after 180 seconds
   without output.
+- In Progress (2026-05-25): twentieth implementation family continues Hero
+  cleanup with color authoring. Hero Visual style and background color controls
+  now use swatch/color-picker, transparent, and clear actions instead of raw
+  CSS/token text inputs. Existing `var(...)`, `rgba(...)`, and `transparent`
+  values remain runtime-compatible and appear as replace-or-clear saved custom
+  state for nontechnical authors. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Helper-agent review found no high drift and flagged missing
+  clear-path coverage plus docs/evidence synchronization; those findings were
+  addressed before validation. Claude read-only review timed out after 240
+  seconds without output.
 
 ## Files to Change
 

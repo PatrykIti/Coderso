@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import { HeroVisualEditor } from "../../../core/admin/ui/widgets/editors/HeroEditors";
-import { heroDefaults } from "../../../core/widgets/core/hero";
+import { heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 
 test("hero visual variant cards use full-width layout", () => {
   const html = renderToString(
@@ -121,6 +121,41 @@ test("hero visual editor exposes rich copy, social proof, palette, and contrast 
   expect(html).not.toContain("Allowed tags");
   expect(html).not.toContain("Avatar 1 URL");
   expect(html).not.toContain("https://cdn.example.com/avatar-1.jpg");
+});
+
+test("hero visual editor keeps custom color values behind swatch-only controls", () => {
+  const value: HeroData = {
+    ...heroDefaults,
+    style: {
+      ...heroDefaults.style,
+      textColor: "var(--color-text)",
+      subheadColor: "rgba(17, 24, 39, 0.8)",
+      primaryButtonBorder: "transparent",
+    },
+    background: {
+      ...heroDefaults.background,
+      color: "transparent",
+    },
+  };
+  const html = renderToString(
+    <HeroVisualEditor
+      value={value}
+      onChange={() => undefined}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Saved custom color");
+  expect(html).toContain("Transparent");
+  expect(html).toContain("Use transparent");
+  expect(html).toContain('data-widget-control="hero.style.textColor"');
+  expect(html).toContain('input type="color"');
+  expect(html).not.toContain('placeholder="var(--color-text)"');
+  expect(html).not.toContain('placeholder="rgba(17, 24, 39, 0.8)"');
+  expect(html).not.toContain('placeholder="transparent"');
+  expect(html).not.toContain('value="var(--color-text)"');
+  expect(html).not.toContain('value="rgba(17, 24, 39, 0.8)"');
 });
 
 test("hero visual editor switches image alt controls to video metadata", () => {

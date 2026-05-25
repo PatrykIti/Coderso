@@ -111,6 +111,10 @@ Advanced must not duplicate Visual as a second design panel.
 - Hero appearance tokens are bounded to fixed maps:
   `cardShadow`, `mediaShadow`, `buttonShadow`, `fontFamily`,
   `headlineWeight`, `bodyWeight`, and `motion`.
+- Per-field Visual color authoring uses swatch pickers, transparent actions,
+  and clear actions. Section-level palette presets can bulk-apply safe explicit
+  colors. Existing theme token or rgba values remain compatible as saved custom
+  color state that can be replaced or cleared without typing CSS.
 - Motion presets are reduced-motion safe and currently support `none`,
   `fade-in`, and `slide-up`.
 - Contrast guidance reuses the shared editor advisory helper and only gives a

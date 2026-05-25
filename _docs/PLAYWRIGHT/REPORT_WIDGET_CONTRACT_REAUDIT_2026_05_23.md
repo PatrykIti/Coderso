@@ -1031,6 +1031,28 @@ CSS color authoring drift.
   `metadataGaps=0`.
 - Claude read-only review timed out after 180 seconds without output.
 
+## TASK-336-19 Hero Color Authoring Evidence (2026-05-25)
+
+The twentieth TASK-336-19 implementation family targets Hero raw color/CSS
+token authoring drift.
+
+- Hero Visual no longer exposes normal raw CSS/token text inputs for style and
+  background color fields.
+- Color authoring now uses swatch/color-picker controls plus explicit
+  transparent and clear actions while preserving the string runtime contract
+  for existing `var(...)`, `rgba(...)`, and `transparent` values.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  renderer compatibility, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Helper-agent review found no high drift and flagged missing clear-path
+  coverage plus docs/evidence synchronization; those findings were addressed
+  before validation. Claude read-only review timed out after 240 seconds
+  without output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
