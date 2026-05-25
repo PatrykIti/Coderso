@@ -204,12 +204,14 @@ Zasady:
   builds the stored string destination itself; legacy custom sources remain
   replace/clear state, and Advanced reports map metadata read-only.
 - Advanced cleanup slices convert second-editor controls into diagnostics.
-  FAQ Accordion and Newsletter keep only confirm-gated normalization support
-  actions in Advanced; Navigation layout/sticky/collapse controls live in
-  Visual and Advanced reports summaries only. CTA Banner style-token controls
-  and Stats KPI runtime style summaries are read-only diagnostics in Advanced,
-  while Visual uses swatch-only color controls plus clear actions where values
-  are clearable.
+  FAQ Accordion Advanced is now read-only human runtime/style/saved-data
+  summaries with no raw payload snapshot or repair mutation. Newsletter keeps
+  only confirm-gated normalization support actions in Advanced until its slice
+  is revisited. Navigation layout/sticky/collapse controls live in Visual and
+  Advanced reports summaries only. CTA Banner style-token controls and Stats
+  KPI runtime style summaries are read-only diagnostics in Advanced, while
+  Visual uses swatch-only color controls plus clear actions where values are
+  clearable.
 - Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
   are chosen from a Form picker, field mapping is selected from Form fields or
   shown as safe defaults, and external provider action URL/method/webhook

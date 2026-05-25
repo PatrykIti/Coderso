@@ -764,10 +764,23 @@ test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates
   });
 
   try {
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"defaultOpenIndex": 1');
-    expect(snapshot?.textContent).toContain('"spacing": "md"');
-    expect(snapshot?.textContent).toContain('"id": "faq-2"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Saved data status");
+    expect(view.container.textContent).toContain("Default open item");
+    expect(view.container.textContent).toContain("Item 2: Keep this");
+    expect(view.container.textContent).toContain("Questions");
+    expect(view.container.textContent).toContain("2/12 questions configured");
+    expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).toContain(
+      "Saved FAQ data will be repaired automatically when the page is saved."
+    );
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.textContent).not.toContain('"defaultOpenIndex"');
+    expect(view.container.textContent).not.toContain('"id": "faq-2"');
+    expect(view.container.textContent).not.toContain("Review repair");
+    expect(view.container.textContent).not.toContain("Confirm repair");
 
     expect(view.container.querySelector("input[type='number']")).toBeNull();
     expect(findSelectByOptions(view.container, ["-1", "0", "1"])).toBeUndefined();
@@ -775,13 +788,8 @@ test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates
     expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
     expect(findButtonByText(view.container, "Reset to defaults")).toBeUndefined();
 
-    clickElement(findButtonByText(view.container, "Review normalization"));
-    expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");
-    clickElement(findButtonByText(view.container, "Confirm normalization"));
-    expect(view.getValue().items[0]?.question).toBe("How long does setup take?");
-    expect(view.getValue().items[1]?.id).toBe("faq-2");
-    expect(view.getValue().options?.defaultOpenIndex).toBe(1);
-    expect(view.getValue().style?.spacing).toBe("md");
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -904,14 +912,12 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
       )?.value
     ).toBe("xl");
     const advancedSection = Array.from(view.container.querySelectorAll("section")).find((section) =>
-      section.textContent?.includes("Style token diagnostics")
+      section.textContent?.includes("Style summary")
     );
-    if (!advancedSection) throw new Error("Missing Advanced style diagnostics");
+    if (!advancedSection) throw new Error("Missing Advanced style summary");
     expect(advancedSection.querySelector("input[type='number']")).toBeNull();
     expect(advancedSection.querySelectorAll("input[type='checkbox']")).toHaveLength(0);
-    expect(advancedSection.textContent).toContain("Default surface");
-    expect(advancedSection.textContent).toContain("Default border");
-    expect(advancedSection.textContent).toContain("Default divider");
+    expect(advancedSection.textContent).toContain("Theme default");
     expect(advancedSection.querySelectorAll("input[type='color']")).toHaveLength(0);
   } finally {
     view.cleanup();

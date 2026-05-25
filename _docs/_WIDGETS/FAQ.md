@@ -46,15 +46,17 @@ Notes:
   - native drag/drop reorder with Move Up/Down fallback,
   - bounded bulk delete that keeps the min-one-item guard.
 
-### Advanced (technical-only)
-- Read-only open-state diagnostics
-- Read-only style token diagnostics
-- Confirm-gated normalization support action
-- Raw payload snapshot
+### Advanced
+- Read-only runtime summary for open behavior, question count, answer formats,
+  and FAQ search enhancement
+- Read-only style summary that describes theme/default/custom color state
+  without exposing raw token strings
+- Read-only saved-data status for legacy compatibility cleanup
 
 Advanced does not duplicate Visual's open-state, spacing, or color controls.
-Visual owns normal editing; Advanced reports resolved runtime state and keeps
-payload repair behind explicit confirmation.
+Visual owns normal editing; Advanced reports resolved runtime state in human
+summaries only. It must not render raw JSON payload snapshots or mutating
+normalization/repair actions.
 
 ## Runtime Behavior Notes
 
@@ -154,6 +156,6 @@ payload repair behind explicit confirmation.
 - Contract target: Wizard seeds starter questions; Visual owns FAQ item
   content, behavior, SEO toggle, and presentation; Advanced is read-only
   runtime diagnostics.
-- Advanced exposes read-only open-state/style diagnostics plus confirmed
-  normalization support; raw default-index/style-token authoring is not part of
-  the daily editor contract.
+- Advanced exposes read-only runtime, style, and saved-data summaries; raw
+  default-index/style-token authoring, raw payload snapshots, and mutation
+  actions are not part of the editor contract.

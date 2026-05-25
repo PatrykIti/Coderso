@@ -425,6 +425,22 @@ read-only diagnostics. It added these concrete cleanup requirements:
   incomplete clear coverage, and stale docs; those findings were fixed before
   final review, which reported no high/medium/low drift. Claude read-only
   review timed out after 240 seconds without output.
+- In Progress (2026-05-25): FAQ Accordion residual Advanced drift is
+  superseded under this task after the user-reported Wizard concern was
+  audited with a helper agent. The shared shell's `Run setup again` re-entry is
+  intentional, but FAQ Advanced still had a mutating normalization action and
+  raw JSON payload snapshot. FAQ Advanced now renders only read-only runtime,
+  style, and saved-data summaries; the raw `<pre>` snapshot, normalization
+  mutation, and technical repair copy were removed. Targeted Vitest evidence
+  passes `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 34/34 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-accordion-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-accordion-focused-2026-05-25.*`
+  verifies completed widgets have no Wizard tab/root before explicit `Run setup
+  again`, Advanced writable paths `0`, Advanced raw controls `0`, and no raw
+  payload/repair text.
 - In Progress (2026-05-25): twenty-second implementation family targets CTA
   Banner color and Advanced drift. CTA Banner Visual style/background color
   fields now use swatch-only controls plus clear actions instead of raw

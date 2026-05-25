@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 import {
   faqAccordionItemMax,
-  resolveFaqAccordionSpacing,
   normalizeFaqAccordionData,
   normalizeFaqAccordionItems,
   resolveFaqAccordionVariant,
@@ -46,6 +45,7 @@ import {
   WidgetControlRow,
   WidgetEditorSection,
 } from "./WidgetEditorControls";
+import type { WidgetEditorSectionRole } from "../../../../widgets/types";
 
 const variantOptions: Array<{
   id: FaqAccordionVariantId;
@@ -151,18 +151,28 @@ function normalizeValue(value: FaqAccordionData): FaqAccordionData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -471,12 +481,71 @@ function getFaqItemEditorLabel(item: FaqAccordionItem, index: number): string {
   return `Item ${index + 1}: Untitled question`;
 }
 
-function DiagnosticsSnapshot({ value }: { value: FaqAccordionData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+function findOptionLabel(options: ReadonlyArray<{ id: string; label: string }>, value: string) {
+  return options.find((option) => option.id === value)?.label ?? value;
+}
+
+function describeColorValue(value: string | undefined) {
+  if (!hasClearableFieldValue(value)) return "Theme default";
+  return isPickerRepresentableColorValue(value) ? "Selected color" : "Saved custom color";
+}
+
+function describeFaqDefaultOpen(value: FaqAccordionData, items: FaqAccordionItem[]) {
+  const index = normalizeValue(value).options?.defaultOpenIndex ?? 0;
+  if (index === -1) return "All collapsed";
+  const item = items[index];
+  return item ? getFaqItemEditorLabel(item, index) : "Fallback to first item";
+}
+
+function describeFaqAnswerFormats(items: FaqAccordionItem[]) {
+  const formats = Array.from(new Set(items.map((item) => item.answerFormat ?? "plain"))).sort();
+  return formats.map((format) => findOptionLabel(answerFormatOptions, format)).join(", ");
+}
+
+function describeFaqLayout(value: FaqAccordionData) {
+  const normalized = normalizeValue(value);
+  return [
+    findOptionLabel(maxWidthOptions, normalized.style?.maxWidth ?? "xl"),
+    findOptionLabel(headerAlignOptions, normalized.style?.headerAlign ?? "center"),
+    findOptionLabel(spacingOptions, normalized.style?.spacing ?? "md"),
+  ].join(" · ");
+}
+
+function describeFaqPanelStyle(value: FaqAccordionData) {
+  const normalized = normalizeValue(value);
+  return [
+    `${findOptionLabel(panelRadiusOptions, normalized.style?.panelRadius ?? "lg")} corners`,
+    `${findOptionLabel(borderWidthOptions, normalized.style?.borderWidth ?? "1")} border`,
+    `${findOptionLabel(headerTitleSizeOptions, normalized.style?.headerTitleSize ?? "auto")} title`,
+  ].join(" · ");
+}
+
+function describeFaqSavedData(value: FaqAccordionData) {
+  const sourceItems = Array.isArray(value.items) ? value.items : [];
+  const normalized = normalizeValue(value);
+  const normalizedItems = normalizeFaqAccordionItems(normalized.items);
+  const sourceIds = sourceItems
+    .map((item) => (typeof item.id === "string" ? item.id.trim() : ""))
+    .filter(Boolean);
+  const hasDuplicateIds = sourceIds.length !== new Set(sourceIds).size;
+  const hasMissingRequiredCopy = sourceItems.some(
+    (item) => !item.question?.trim() || !item.answer?.trim()
   );
+  const normalizedDefaultOpen = normalized.options?.defaultOpenIndex ?? 0;
+  const sourceDefaultOpen = value.options?.defaultOpenIndex;
+  const hasOpenStateRepair =
+    typeof sourceDefaultOpen === "number" && sourceDefaultOpen !== normalizedDefaultOpen;
+  const hasCountRepair = sourceItems.length !== normalizedItems.length;
+  const hasStyleRepair =
+    value.style?.spacing !== undefined && value.style.spacing !== normalized.style?.spacing;
+
+  return hasDuplicateIds ||
+    hasMissingRequiredCopy ||
+    hasOpenStateRepair ||
+    hasCountRepair ||
+    hasStyleRepair
+    ? "Saved FAQ data will be repaired automatically when the page is saved."
+    : "Saved FAQ data is already clean.";
 }
 
 export function FaqAccordionWizardEditor({
@@ -1257,20 +1326,18 @@ export function FaqAccordionVisualEditor({
   );
 }
 
-export function FaqAccordionAdvancedEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<FaqAccordionData>) {
+export function FaqAccordionAdvancedEditor({ value }: WidgetEditorProps<FaqAccordionData>) {
   const normalized = normalizeValue(value);
   const items = normalizeFaqAccordionItems(normalized.items);
-  const [normalizationArmed, setNormalizationArmed] = useState(false);
-  const [normalizationMessage, setNormalizationMessage] = useState("");
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Open-state diagnostics"
-        description="Read-only summary of runtime open-state behavior."
+        id="faq-accordion.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only summary of published FAQ behavior."
       >
         <ReadonlyWidgetSummaryRow
           id="faq-advanced-allow-multiple-open"
@@ -1282,93 +1349,92 @@ export function FaqAccordionAdvancedEditor({
           id="faq-advanced-default-open-item"
           label="Default open item"
           path="options.defaultOpenIndex"
-          value={
-            normalized.options?.defaultOpenIndex === -1
-              ? "All collapsed"
-              : items[normalized.options?.defaultOpenIndex ?? 0]
-                ? getFaqItemEditorLabel(
-                    items[normalized.options?.defaultOpenIndex ?? 0],
-                    normalized.options?.defaultOpenIndex ?? 0
-                  )
-                : "Fallback to first item"
-          }
+          value={describeFaqDefaultOpen(normalized, items)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-item-count"
+          label="Questions"
+          path="items"
+          value={`${items.length}/${faqAccordionItemMax} questions configured`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-answer-formats"
+          label="Answer formats"
+          path="items"
+          value={describeFaqAnswerFormats(items)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-search-enhancement"
+          label="Search enhancement"
+          path="seo.emitFaqJsonLd"
+          value={normalized.seo?.emitFaqJsonLd ? "Enabled" : "Disabled"}
         />
       </EditorSection>
 
       <EditorSection
-        title="Style token diagnostics"
-        description="Read-only renderer token summary. Visual owns normal style changes."
+        id="faq-accordion.advanced.style-summary"
+        mode="advanced"
+        role="summary"
+        title="Style summary"
+        description="Read-only summary of the visual settings. Change styling in Visual."
       >
         <ReadonlyWidgetSummaryRow
           id="faq-advanced-surface-token"
           label="Panel surface"
           path="style.surface"
-          value={normalized.style?.surface || "Default surface"}
+          value={describeColorValue(normalized.style?.surface)}
         />
         <ReadonlyWidgetSummaryRow
           id="faq-advanced-border-token"
           label="Panel border"
           path="style.border"
-          value={normalized.style?.border || "Default border"}
+          value={describeColorValue(normalized.style?.border)}
         />
         <ReadonlyWidgetSummaryRow
           id="faq-advanced-divider-token"
           label="Divider"
           path="style.divider"
-          value={normalized.style?.divider || "Default divider"}
+          value={describeColorValue(normalized.style?.divider)}
         />
         <ReadonlyWidgetSummaryRow
-          id="faq-advanced-spacing-token"
-          label="Spacing"
-          path="style.spacing"
-          value={resolveFaqAccordionSpacing(normalized.style?.spacing)}
+          id="faq-advanced-question-color"
+          label="Question text"
+          path="style.questionTextColor"
+          value={describeColorValue(normalized.style?.questionTextColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-answer-color"
+          label="Answer text"
+          path="style.answerTextColor"
+          value={describeColorValue(normalized.style?.answerTextColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-layout-summary"
+          label="Layout"
+          path="style"
+          value={describeFaqLayout(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-panel-style"
+          label="Panel style"
+          path="style"
+          value={describeFaqPanelStyle(normalized)}
         />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Confirmed support action for deterministic payload cleanup."
+        id="faq-accordion.advanced.normalization-support"
+        mode="advanced"
+        role="diagnostics"
+        title="Saved data status"
+        description="Read-only compatibility summary for saved FAQ data."
       >
-        <WidgetControlRow
-          id="faq-advanced-normalize-action"
-          label="Normalize payload"
-          ownership="action"
-          help="This support action rewrites missing IDs and fallback content after explicit confirmation."
-        >
-          {() => (
-            <Button
-              type="button"
-              variant={normalizationArmed ? "default" : "outline"}
-              onClick={() => {
-                if (!normalizationArmed) {
-                  setNormalizationArmed(true);
-                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
-                  return;
-                }
-
-                const before = JSON.stringify(value);
-                const next = normalizeValue(value);
-                const after = JSON.stringify(next);
-                onChange(next);
-                setNormalizationArmed(false);
-                setNormalizationMessage(
-                  before === after ? "Already normalized." : "Payload normalized."
-                );
-              }}
-            >
-              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
-            </Button>
-          )}
-        </WidgetControlRow>
-        {normalizationMessage ? (
-          <p className="text-xs text-muted-foreground" role="status">
-            {normalizationMessage}
-          </p>
-        ) : null}
-      </EditorSection>
-
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-saved-data-status"
+          label="Saved data"
+          path="items"
+          value={describeFaqSavedData(value)}
+        />
       </EditorSection>
     </div>
   );

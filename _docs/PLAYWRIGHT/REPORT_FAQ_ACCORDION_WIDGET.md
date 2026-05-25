@@ -25,6 +25,22 @@ FAQ Accordion to specjalistyczny widget content do sekcji FAQ — pary pytanie/o
 
 ---
 
+## Status po TASK-336-19 (2026-05-25)
+
+- `Run setup again` pozostaje jedyną intencjonalną ścieżką powrotu do Wizard
+  po ukończeniu setupu; codzienna praca odbywa się w `Visual` i `Advanced`.
+- Visual zachowuje swatch-only color authoring i nie renderuje raw CSS/token
+  text inputów.
+- Advanced nie renderuje już raw payload snapshotu, `<pre>` z JSON-em ani
+  mutującej akcji normalizacji. Zamiast tego pokazuje read-only runtime,
+  style i saved-data summaries.
+- Świeże TASK-336-19 evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-accordion-2026-05-25.*`
+  oraz
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-accordion-focused-2026-05-25.*`.
+
+---
+
 ## 2. Analiza kodu — struktura konfiguracji
 
 ### 2.1 Model danych
@@ -193,9 +209,9 @@ FaqAccordionItem {
 | ✅ | Spinbutton `Default open index` (`min=-1`, `max=n-1`) | OK — wartość `-1` działa |
 | ⚠️ | Hint `Use -1 to collapse all items` tylko pod polem | **Bug U9** — brak wskazówki w samym polu |
 | ✅ | Raw token inputs (surface/border/divider/spacing) | OK — działają |
-| ✅ | Button `Normalize now` | OK — normalizuje dane |
-| ✅ | Button `Reset to defaults` | OK — resetuje do defaults |
-| ✅ | JSON snapshot `Raw payload snapshot` | OK — aktualny payload widoczny |
+| ✅ | Button `Normalize now` | Superseded by TASK-336-19 — Advanced is read-only and no longer mutates FAQ data |
+| ✅ | Button `Reset to defaults` | Superseded by TASK-336-19 — reset controls are not part of Advanced |
+| ✅ | JSON snapshot | Superseded by TASK-336-19 — Advanced uses human summaries instead of raw payload output |
 | ✅ | Layout section (Padding top/bottom, Margin top/bottom) | OK — globalne kontrole layoutu |
 | ✅ | Visibility (Desktop/Tablet/Mobile switches) | OK — wszystkie domyślnie `true` |
 

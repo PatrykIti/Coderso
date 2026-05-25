@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 962 | 2026-05-25 | FAQ Accordion editor drift cleanup | CMS Widgets/Admin UI/FAQ/Contracts/QA/Docs |
 | 961 | 2026-05-25 | Form Embed editor drift cleanup | CMS Widgets/Admin UI/Forms/Contracts/QA/Docs |
 | 960 | 2026-05-25 | Product Table editor drift cleanup | CMS Widgets/Admin UI/Commerce/Contracts/QA/Docs |
 | 959 | 2026-05-25 | Listing Filters editor drift cleanup | CMS Widgets/Admin UI/Listings/Contracts/QA/Docs |

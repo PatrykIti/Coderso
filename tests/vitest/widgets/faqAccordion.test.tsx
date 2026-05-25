@@ -12,6 +12,7 @@ import {
   buildFaqAccordionJsonLd,
   createFaqAccordionWidget,
   extractFaqAnswerPlainText,
+  faqAccordionEditorContract,
   faqAccordionDefaults,
   faqAccordionItemMax,
   FaqAccordionBlock,
@@ -342,10 +343,42 @@ test("faq accordion advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Open-state diagnostics");
-  expect(html).toContain("Style token diagnostics");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Runtime summary");
+  expect(html).toContain("Style summary");
+  expect(html).toContain("Saved data status");
   expect(html).toContain("Default open item");
+  expect(html).not.toContain("Review repair");
+  expect(html).not.toContain("Confirm repair");
+  expect(html).not.toContain("Raw payload snapshot");
+  expect(html).not.toContain("<pre");
+  expect(html).not.toContain("{&quot;");
   expect(html).not.toContain("Questions and answers");
+});
+
+test("faq accordion advanced contract uses human read-only summaries", () => {
+  expect(faqAccordionEditorContract.sections).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        mode: "advanced",
+        id: "faq-accordion.advanced.runtime-summary",
+        role: "diagnostics",
+        writablePaths: [],
+      }),
+      expect.objectContaining({
+        mode: "advanced",
+        id: "faq-accordion.advanced.style-summary",
+        role: "summary",
+        writablePaths: [],
+      }),
+      expect.objectContaining({
+        mode: "advanced",
+        id: "faq-accordion.advanced.normalization-support",
+        role: "diagnostics",
+        writablePaths: [],
+      }),
+    ])
+  );
+  expect(faqAccordionEditorContract.sections).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ role: "technical" })])
+  );
 });
