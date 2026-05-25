@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 949 | 2026-05-25 | Grid Columns editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 948 | 2026-05-25 | Section editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 947 | 2026-05-25 | Testimonials editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 946 | 2026-05-25 | Entry Teaser editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |

@@ -220,7 +220,6 @@ test("grid columns asymmetric helper reapplies desktop preset without rewriting 
   expect(next.columns?.map((column) => column.mobileSpan)).toEqual(["11", "9", "8"]);
 });
 
-
 test("grid columns asymmetric helper materializes the current live slot order when reapplying", () => {
   const next = applyGridColumnsAsymmetricPreset(
     {
@@ -319,7 +318,6 @@ test("grid columns span totals helper excludes columns hidden at each breakpoint
     mobile: 21,
   });
 });
-
 
 test("grid columns span totals helper normalizes conflicting all-hidden visibility back to visible", () => {
   expect(
@@ -916,9 +914,11 @@ test("grid columns editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Grid style");
-  expect(wizardHtml).toContain("Column count");
-  expect(wizardHtml).toContain('data-grid-columns-preset="two-equal"');
+  expect(wizardHtml).toContain("Grid quick start");
+  expect(wizardHtml).toContain("Starter layout");
+  expect(wizardHtml).toContain('data-widget-control="grid-columns.wizard.variant"');
+  expect(wizardHtml).not.toContain("Column count");
+  expect(wizardHtml).not.toContain('data-grid-columns-preset="two-equal"');
 
   const visualHtml = renderToString(
     <GridColumnsVisualEditor
@@ -942,7 +942,10 @@ test("grid columns editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical layout tokens");
-  expect(advancedHtml).toContain("Per-column override tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("Layout summary");
+  expect(advancedHtml).toContain("Column override summary");
+  expect(advancedHtml).toContain("Content area diagnostics");
+  expect(advancedHtml).not.toContain("var(--color");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("<pre");
 });

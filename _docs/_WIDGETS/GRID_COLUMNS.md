@@ -30,11 +30,10 @@ schema-first contract.
 
 ### Wizard
 
-- variant selection
-- live column-count guidance
-- label inputs for every configured column
-- same-count layout presets
-- horizontal and vertical gap controls with scale labels
+- one-time starter variant selection only
+- setup copy explicitly sends column count, labels, spacing, responsive spans,
+  surfaces, and behavior to Visual after setup completion
+- no label, gap, preset, responsive span, color, or raw token controls
 
 ### Visual
 
@@ -43,11 +42,14 @@ Sections:
 2. Column sizing and labels
 3. Gap and column surface
 4. Per-column surfaces and behavior
-5. Slots and runtime behavior
+5. Content areas and rendering
 
 Notes:
 
 - Visual owns variant selection (`visualOwnsVariantSelection = true`).
+- Visual owns daily column labels, column count guidance, same-count layout
+  presets, responsive spans, visibility, spacing, cardized surface controls, and
+  per-column overrides.
 - When live slot instances already exist, the local count controls plus add/remove
   actions are locked and users are redirected to the shared Structure section so
   slot payloads and column metadata stay aligned.
@@ -58,13 +60,20 @@ Notes:
 - Visual shows current desktop/tablet/mobile span totals from the effective
   visible live layout and explains whether each breakpoint fills one row,
   wraps onto additional rows, or leaves unused width.
+- Visual color fields are swatch-only for nontechnical authors. Saved custom
+  CSS variable/token values remain compatible as replace-or-clear state instead
+  of editable text inputs.
+- Visual uses user-facing `Content area N` labels; raw `column:<id>` slot ids
+  stay out of the normal authoring surface.
 
 ### Advanced
 
-- read-only technical layout token summary for alignment, gaps, span totals,
-  cardized state, and live slot drift
+- read-only layout summary for alignment, gaps, span totals, cardized state,
+  and live content-area drift
 - read-only per-column override summary for surface/overflow/height/alignment
-- raw payload snapshot for diagnostics
+- read-only content-area support diagnostics and theme surface defaults
+- no inputs, selects, buttons, hidden mutating controls, or raw JSON payload
+  snapshots in the normal Advanced UI
 - `masonry-lite` cardized state is summarized here; writable cardize/surface
   controls stay Visual-owned so Advanced does not duplicate Visual/runtime
   truthfulness
@@ -164,9 +173,9 @@ Notes:
   fragments, and unknown nested style keys are rejected by schema validation
 - `gapX` and `gapY` remain separate persisted fields; TASK-271 only expanded the
   bounded token list and clarified editor labels
-- global and per-column color text inputs preserve approved `var(--color-*)`
-  tokens verbatim, while swatch inputs fall back to preview colors without
-  rewriting saved token values
+- global and per-column saved color values preserve approved `var(--color-*)`
+  tokens verbatim at runtime, while Visual shows swatch-only replacement plus
+  clear actions instead of asking authors to type CSS/token strings
 - effective span totals follow the live slot count and each breakpoint's visibility toggles rather than the raw saved `columns[]` list alone
 - when live repeatable `column` slots exist, editor rows, layout presets, and asymmetric recovery follow the current live slot order and ignore saved phantom columns until the structure is reconciled
 - repeatable slot targets may resolve live column instance ids from either explicit `instanceId` values or parsable `column:<instanceId>` slot ids before the editor decides whether local structure controls should lock

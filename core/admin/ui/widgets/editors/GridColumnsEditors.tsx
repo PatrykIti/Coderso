@@ -46,8 +46,14 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 import { SharedColorControl } from "./SharedColorControl";
+
+type GridColumnsControlOwnership = "writable" | "readonly" | "action" | "preview";
 
 const variantOptions: Array<{
   id: GridColumnsVariantId;
@@ -79,17 +85,17 @@ const spanOptions = gridColumnsSpanTokens.map((value) => ({
 const extendedSpanOptions = [{ id: "auto", label: "Match desktop" }, ...spanOptions];
 
 const gapScaleLabels: Record<GridColumnsGap, string> = {
-  none: "None - 0px",
-  "1": "Gap 1 - 4px",
-  "2": "Gap 2 - 8px",
-  "3": "Gap 3 - 12px",
-  "4": "Gap 4 - 16px",
-  "5": "Gap 5 - 20px",
-  "6": "Gap 6 - 24px",
-  "7": "Gap 7 - 28px",
-  "8": "Gap 8 - 32px",
-  "10": "Gap 10 - 40px",
-  "12": "Gap 12 - 48px",
+  none: "No gap",
+  "1": "Tiny gap",
+  "2": "Extra small gap",
+  "3": "Small gap",
+  "4": "Default gap",
+  "5": "Medium gap",
+  "6": "Large gap",
+  "7": "Extra large gap",
+  "8": "Wide gap",
+  "10": "Very wide gap",
+  "12": "Maximum gap",
 };
 
 const gapOptions = gridColumnsGapTokens.map((value) => ({
@@ -105,17 +111,17 @@ const alignOptions: Array<{ id: GridColumnsAlign; label: string }> = [
 ];
 
 const borderWidthOptions: Array<{ id: GridColumnsBorderWidth; label: string }> = [
-  { id: "0", label: "0px" },
-  { id: "1", label: "1px" },
-  { id: "2", label: "2px" },
-  { id: "3", label: "3px" },
+  { id: "0", label: "No border" },
+  { id: "1", label: "Thin border" },
+  { id: "2", label: "Medium border" },
+  { id: "3", label: "Strong border" },
 ];
 
 const radiusOptions: Array<{ id: GridColumnsRadius; label: string }> = [
   { id: "none", label: "None" },
   { id: "lg", label: "Large" },
   { id: "xl", label: "Extra large" },
-  { id: "2xl", label: "2XL" },
+  { id: "2xl", label: "Largest" },
 ];
 
 const paddingOptions: Array<{ id: GridColumnsPadding; label: string }> = [
@@ -124,7 +130,7 @@ const paddingOptions: Array<{ id: GridColumnsPadding; label: string }> = [
   { id: "3", label: "Small" },
   { id: "4", label: "Default" },
   { id: "5", label: "Large" },
-  { id: "6", label: "XL" },
+  { id: "6", label: "Extra roomy" },
 ];
 
 const inheritedBorderWidthOptions = [{ id: "inherit", label: "Global" }, ...borderWidthOptions];
@@ -135,10 +141,10 @@ const inheritedPaddingOptions = [{ id: "inherit", label: "Global" }, ...paddingO
 
 const minHeightOptions: Array<{ id: GridColumnsMinHeight; label: string }> = [
   { id: "none", label: "None" },
-  { id: "sm", label: "Small - 4rem" },
-  { id: "md", label: "Default - 6rem" },
-  { id: "lg", label: "Large - 8rem" },
-  { id: "xl", label: "XL - 10rem" },
+  { id: "sm", label: "Small" },
+  { id: "md", label: "Default" },
+  { id: "lg", label: "Large" },
+  { id: "xl", label: "Extra tall" },
 ];
 
 const mobileMinHeightOptions = [{ id: "inherit", label: "Match base height" }, ...minHeightOptions];
@@ -286,6 +292,22 @@ function EditorSection({
       {children}
     </WidgetEditorSection>
   );
+}
+
+function controlAttributes({
+  id,
+  path,
+  ownership = "writable",
+}: {
+  id: string;
+  path?: string;
+  ownership?: GridColumnsControlOwnership;
+}) {
+  return {
+    "data-widget-control": id,
+    "data-widget-control-path": path,
+    "data-widget-control-ownership": ownership,
+  };
 }
 
 function VariantCards({
@@ -480,26 +502,6 @@ function setColumnsCount(
     return {
       ...current,
       columns: next,
-    };
-  });
-}
-
-function updateColumn(
-  value: GridColumnsData,
-  onChange: (next: GridColumnsData) => void,
-  index: number,
-  patch: Partial<ColumnData>
-) {
-  updateValue(value, onChange, (current) => {
-    const columns = Array.isArray(current.columns) ? [...current.columns] : [];
-    if (!columns[index]) return current;
-    columns[index] = {
-      ...columns[index],
-      ...patch,
-    };
-    return {
-      ...current,
-      columns,
     };
   });
 }
@@ -701,14 +703,6 @@ function applyGridColumnsPreset(
       })),
     };
   });
-}
-
-function DiagnosticsSnapshot({ value }: { value: GridColumnsData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
 }
 
 function resolveGridColumnsSlotTargets(context?: WidgetEditorProps<GridColumnsData>["context"]) {
@@ -921,7 +915,10 @@ function ColumnSizingGrid({
   );
 
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      {...controlAttributes({ id: "grid-columns.visual.column-sizing-grid", path: "columns" })}
+    >
       {rowDriftMessage ? <p className="text-xs text-amber-700">{rowDriftMessage}</p> : null}
       {rows.map((row, index) => (
         <div key={row.instanceId} className="rounded-md border p-3">
@@ -929,13 +926,15 @@ function ColumnSizingGrid({
             <div className="space-y-1">
               <p className="text-sm font-semibold">Column {index + 1}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">slot: {row.slotId}</Badge>
-                {!row.hasSavedMetadata ? <Badge variant="outline">live slot fallback</Badge> : null}
+                <Badge variant="outline">Content area {index + 1}</Badge>
+                {!row.hasSavedMetadata ? (
+                  <Badge variant="outline">Using Structure fallback</Badge>
+                ) : null}
               </div>
               {!row.hasSavedMetadata ? (
                 <p className="text-xs text-amber-700">
-                  Saved column settings are missing for this live slot. Editing any field will
-                  materialize them.
+                  This content area does not have saved column settings yet. Editing any field will
+                  create them.
                 </p>
               ) : null}
             </div>
@@ -965,7 +964,13 @@ function ColumnSizingGrid({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes({
+              id: `grid-columns.visual.column-${row.instanceId}-label`,
+              path: "columns.label",
+            })}
+          >
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Label
             </p>
@@ -989,9 +994,15 @@ function ColumnSizingGrid({
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-desktop-width`,
+                path: "columns.desktopSpan",
+              })}
+            >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Desktop
+                Desktop width
               </p>
               <Select
                 value={row.column.desktopSpan ?? "6"}
@@ -1010,7 +1021,7 @@ function ColumnSizingGrid({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Desktop span" />
+                  <SelectValue placeholder="Desktop width" />
                 </SelectTrigger>
                 <SelectContent>
                   {spanOptions.map((option) => (
@@ -1022,9 +1033,15 @@ function ColumnSizingGrid({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-tablet-width`,
+                path: "columns.tabletSpan",
+              })}
+            >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Tablet
+                Tablet width
               </p>
               <Select
                 value={row.column.tabletSpan ?? "6"}
@@ -1043,7 +1060,7 @@ function ColumnSizingGrid({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Tablet span" />
+                  <SelectValue placeholder="Tablet width" />
                 </SelectTrigger>
                 <SelectContent>
                   {spanOptions.map((option) => (
@@ -1055,9 +1072,15 @@ function ColumnSizingGrid({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-phone-width`,
+                path: "columns.mobileSpan",
+              })}
+            >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Mobile
+                Phone width
               </p>
               <Select
                 value={row.column.mobileSpan ?? "12"}
@@ -1076,7 +1099,7 @@ function ColumnSizingGrid({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Mobile span" />
+                  <SelectValue placeholder="Phone width" />
                 </SelectTrigger>
                 <SelectContent>
                   {spanOptions.map((option) => (
@@ -1090,9 +1113,15 @@ function ColumnSizingGrid({
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-wide-screen-width`,
+                path: "columns.xlSpan",
+              })}
+            >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                XL
+                Wide screens
               </p>
               <Select
                 value={row.column.xlSpan ?? "auto"}
@@ -1111,7 +1140,7 @@ function ColumnSizingGrid({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="XL span" />
+                  <SelectValue placeholder="Wide screen width" />
                 </SelectTrigger>
                 <SelectContent>
                   {extendedSpanOptions.map((option) => (
@@ -1123,9 +1152,15 @@ function ColumnSizingGrid({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-large-screen-width`,
+                path: "columns.twoXlSpan",
+              })}
+            >
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                2XL
+                Very wide screens
               </p>
               <Select
                 value={row.column.twoXlSpan ?? "auto"}
@@ -1144,7 +1179,7 @@ function ColumnSizingGrid({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="2XL span" />
+                  <SelectValue placeholder="Very wide screen width" />
                 </SelectTrigger>
                 <SelectContent>
                   {extendedSpanOptions.map((option) => (
@@ -1158,11 +1193,17 @@ function ColumnSizingGrid({
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-md border p-3">
+            <div
+              className="rounded-md border p-3"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-hide-on-phone`,
+                path: "columns.hideOnMobile",
+              })}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">Hide on mobile</p>
-                  <p className="text-xs text-muted-foreground">Below 768px</p>
+                  <p className="text-xs text-muted-foreground">Small phone screens</p>
                 </div>
                 <Switch
                   checked={Boolean(row.column.hideOnMobile)}
@@ -1183,11 +1224,17 @@ function ColumnSizingGrid({
               </div>
             </div>
 
-            <div className="rounded-md border p-3">
+            <div
+              className="rounded-md border p-3"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-hide-on-tablet`,
+                path: "columns.hideOnTablet",
+              })}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">Hide on tablet</p>
-                  <p className="text-xs text-muted-foreground">768px to 1023px</p>
+                  <p className="text-xs text-muted-foreground">Tablet-sized screens</p>
                 </div>
                 <Switch
                   checked={Boolean(row.column.hideOnTablet)}
@@ -1208,11 +1255,17 @@ function ColumnSizingGrid({
               </div>
             </div>
 
-            <div className="rounded-md border p-3">
+            <div
+              className="rounded-md border p-3"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-hide-on-desktop`,
+                path: "columns.hideOnDesktop",
+              })}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">Hide on desktop</p>
-                  <p className="text-xs text-muted-foreground">1024px and wider</p>
+                  <p className="text-xs text-muted-foreground">Laptop and desktop screens</p>
                 </div>
                 <Switch
                   checked={Boolean(row.column.hideOnDesktop)}
@@ -1238,19 +1291,17 @@ function ColumnSizingGrid({
 
       {rows.length > 0 && rows.every((row) => Boolean(row.column.hideOnMobile)) ? (
         <p className="text-xs text-amber-700">
-          All columns are hidden on mobile. At least one column should stay visible below 768px.
+          All columns are hidden on phone screens. Keep at least one content area visible.
         </p>
       ) : null}
       {rows.length > 0 && rows.every((row) => Boolean(row.column.hideOnTablet)) ? (
         <p className="text-xs text-amber-700">
-          All columns are hidden on tablet. At least one column should stay visible between 768px
-          and 1023px.
+          All columns are hidden on tablet screens. Keep at least one content area visible.
         </p>
       ) : null}
       {rows.length > 0 && rows.every((row) => Boolean(row.column.hideOnDesktop)) ? (
         <p className="text-xs text-amber-700">
-          All columns are hidden on desktop. At least one column should stay visible at 1024px and
-          wider.
+          All columns are hidden on desktop screens. Keep at least one content area visible.
         </p>
       ) : null}
     </div>
@@ -1283,8 +1334,10 @@ function ColumnBehaviorGrid({
             <div className="mb-3 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold">Column {index + 1}</p>
-                <Badge variant="outline">slot: {row.slotId}</Badge>
-                {!row.hasSavedMetadata ? <Badge variant="outline">live slot fallback</Badge> : null}
+                <Badge variant="outline">Content area {index + 1}</Badge>
+                {!row.hasSavedMetadata ? (
+                  <Badge variant="outline">Using Structure fallback</Badge>
+                ) : null}
               </div>
               <p className="text-xs text-muted-foreground">
                 Override surface, height, and alignment only when this column needs special
@@ -1292,18 +1345,24 @@ function ColumnBehaviorGrid({
               </p>
               {!row.hasSavedMetadata ? (
                 <p className="text-xs text-amber-700">
-                  Saved column settings are missing for this live slot. Editing any field will
-                  materialize them.
+                  This content area does not have saved column settings yet. Editing any field will
+                  create them.
                 </p>
               ) : null}
             </div>
 
-            <div className="rounded-md border p-3">
+            <div
+              className="rounded-md border p-3"
+              {...controlAttributes({
+                id: `grid-columns.visual.column-${row.instanceId}-surface-toggle`,
+                path: "columns.style.surface",
+              })}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium">Highlight this column</p>
                   <p className="text-xs text-muted-foreground">
-                    Apply column-only surface tokens without changing the whole grid.
+                    Apply a column-only background and border without changing the whole grid.
                   </p>
                 </div>
                 <Switch
@@ -1326,67 +1385,87 @@ function ColumnBehaviorGrid({
             {surfaceOverrideEnabled ? (
               <div className="mt-3 space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <ColorField
-                    label="Column background override"
-                    value={row.column.style?.background}
-                    onChange={(next) =>
-                      updateEditableGridColumnsRowStyle(
-                        value,
-                        onChange,
-                        variant,
-                        context,
-                        row.instanceId,
-                        row.rowIndex,
-                        { background: next }
-                      )
-                    }
-                    onClear={() =>
-                      clearEditableGridColumnsRowStyleField(
-                        value,
-                        onChange,
-                        variant,
-                        context,
-                        row.instanceId,
-                        row.rowIndex,
-                        "background"
-                      )
-                    }
-                    placeholder="var(--color-surface)"
-                    pickerFallback="#f8fafc"
-                  />
+                  <div
+                    {...controlAttributes({
+                      id: `grid-columns.visual.column-${row.instanceId}-background`,
+                      path: "columns.style.background",
+                    })}
+                  >
+                    <ColorField
+                      label="Column background override"
+                      value={row.column.style?.background}
+                      onChange={(next) =>
+                        updateEditableGridColumnsRowStyle(
+                          value,
+                          onChange,
+                          variant,
+                          context,
+                          row.instanceId,
+                          row.rowIndex,
+                          { background: next }
+                        )
+                      }
+                      onClear={() =>
+                        clearEditableGridColumnsRowStyleField(
+                          value,
+                          onChange,
+                          variant,
+                          context,
+                          row.instanceId,
+                          row.rowIndex,
+                          "background"
+                        )
+                      }
+                      placeholder="Theme surface color"
+                      pickerFallback="#f8fafc"
+                    />
+                  </div>
 
-                  <ColorField
-                    label="Column border override"
-                    value={row.column.style?.borderColor}
-                    onChange={(next) =>
-                      updateEditableGridColumnsRowStyle(
-                        value,
-                        onChange,
-                        variant,
-                        context,
-                        row.instanceId,
-                        row.rowIndex,
-                        { borderColor: next }
-                      )
-                    }
-                    onClear={() =>
-                      clearEditableGridColumnsRowStyleField(
-                        value,
-                        onChange,
-                        variant,
-                        context,
-                        row.instanceId,
-                        row.rowIndex,
-                        "borderColor"
-                      )
-                    }
-                    placeholder="var(--color-border)"
-                    pickerFallback="#e2e8f0"
-                  />
+                  <div
+                    {...controlAttributes({
+                      id: `grid-columns.visual.column-${row.instanceId}-border-color`,
+                      path: "columns.style.borderColor",
+                    })}
+                  >
+                    <ColorField
+                      label="Column border override"
+                      value={row.column.style?.borderColor}
+                      onChange={(next) =>
+                        updateEditableGridColumnsRowStyle(
+                          value,
+                          onChange,
+                          variant,
+                          context,
+                          row.instanceId,
+                          row.rowIndex,
+                          { borderColor: next }
+                        )
+                      }
+                      onClear={() =>
+                        clearEditableGridColumnsRowStyleField(
+                          value,
+                          onChange,
+                          variant,
+                          context,
+                          row.instanceId,
+                          row.rowIndex,
+                          "borderColor"
+                        )
+                      }
+                      placeholder="Theme border color"
+                      pickerFallback="#e2e8f0"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
+                  <div
+                    className="space-y-2"
+                    {...controlAttributes({
+                      id: `grid-columns.visual.column-${row.instanceId}-border-width`,
+                      path: "columns.style.borderWidth",
+                    })}
+                  >
                     <p className="text-sm font-medium">Border width</p>
                     <Select
                       value={row.column.style?.borderWidth ?? "inherit"}
@@ -1418,7 +1497,13 @@ function ColumnBehaviorGrid({
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div
+                    className="space-y-2"
+                    {...controlAttributes({
+                      id: `grid-columns.visual.column-${row.instanceId}-radius`,
+                      path: "columns.style.radius",
+                    })}
+                  >
                     <p className="text-sm font-medium">Corner radius</p>
                     <Select
                       value={row.column.style?.radius ?? "inherit"}
@@ -1449,7 +1534,13 @@ function ColumnBehaviorGrid({
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div
+                    className="space-y-2"
+                    {...controlAttributes({
+                      id: `grid-columns.visual.column-${row.instanceId}-padding`,
+                      path: "columns.style.padding",
+                    })}
+                  >
                     <p className="text-sm font-medium">Internal padding</p>
                     <Select
                       value={row.column.style?.padding ?? "inherit"}
@@ -1484,8 +1575,14 @@ function ColumnBehaviorGrid({
             ) : null}
 
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Overflow</p>
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: `grid-columns.visual.column-${row.instanceId}-overflow`,
+                  path: "columns.style.overflow",
+                })}
+              >
+                <p className="text-sm font-medium">Clip overflowing content</p>
                 <Select
                   value={row.column.style?.overflow ?? "visible"}
                   onValueChange={(next) =>
@@ -1501,7 +1598,7 @@ function ColumnBehaviorGrid({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Overflow" />
+                    <SelectValue placeholder="Overflow behavior" />
                   </SelectTrigger>
                   <SelectContent>
                     {overflowOptions.map((option) => (
@@ -1513,7 +1610,13 @@ function ColumnBehaviorGrid({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: `grid-columns.visual.column-${row.instanceId}-min-height`,
+                  path: "columns.minHeight",
+                })}
+              >
                 <p className="text-sm font-medium">Minimum height</p>
                 <Select
                   value={row.column.minHeight ?? "md"}
@@ -1544,8 +1647,14 @@ function ColumnBehaviorGrid({
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Mobile min height</p>
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: `grid-columns.visual.column-${row.instanceId}-phone-min-height`,
+                  path: "columns.mobileMinHeight",
+                })}
+              >
+                <p className="text-sm font-medium">Phone minimum height</p>
                 <Select
                   value={row.column.mobileMinHeight ?? "inherit"}
                   onValueChange={(next) =>
@@ -1564,7 +1673,7 @@ function ColumnBehaviorGrid({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Mobile min height" />
+                    <SelectValue placeholder="Phone minimum height" />
                   </SelectTrigger>
                   <SelectContent>
                     {mobileMinHeightOptions.map((option) => (
@@ -1576,7 +1685,13 @@ function ColumnBehaviorGrid({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: `grid-columns.visual.column-${row.instanceId}-vertical-alignment`,
+                  path: "columns.alignSelf",
+                })}
+              >
                 <p className="text-sm font-medium">Vertical alignment</p>
                 <Select
                   value={row.column.alignSelf ?? "inherit"}
@@ -1634,8 +1749,11 @@ function ColumnsCountControl({
   );
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Column count</p>
+    <div
+      className="space-y-2"
+      {...controlAttributes({ id: "grid-columns.visual.column-count", path: "columns" })}
+    >
+      <p className="text-sm font-medium">Content area count</p>
       <Select
         value={String(count)}
         disabled={hasLiveColumnSlots}
@@ -1654,13 +1772,13 @@ function ColumnsCountControl({
       </Select>
       <p className="text-xs text-muted-foreground">
         {hasLiveColumnSlots
-          ? `Live slot instances are controlled in the shared Structure section. Current slot instances: ${slotTargetCount}.`
-          : `Column count is editing local configuration only because no live slot structure is attached yet.`}
+          ? `Shared content areas are controlled in the Structure section. Current content areas: ${slotTargetCount}.`
+          : `This changes the starter content areas until shared Structure areas are attached.`}
       </p>
       {hasSlotDrift ? (
         <p className="text-xs text-amber-700">
-          Column count and slot instances are out of sync. Preview uses the slot count until the
-          structure is reconciled.
+          Content area count and saved column settings are out of sync. Preview follows the
+          Structure section until they are reconciled.
         </p>
       ) : null}
     </div>
@@ -1683,10 +1801,16 @@ function LayoutPresetButtons({
   if (presets.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Layout presets</p>
+    <div
+      className="space-y-2"
+      {...controlAttributes({
+        id: "grid-columns.visual.width-presets",
+        path: "columns.desktopSpan",
+      })}
+    >
+      <p className="text-sm font-medium">Width presets</p>
       <p className="text-xs text-muted-foreground">
-        Presets stay within the current live column order and never add or remove slots.
+        Presets keep the current content area order and never add or remove areas.
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {presets.map((preset) => (
@@ -1729,8 +1853,7 @@ function resolveGridColumnsCardizeControlsState(
     return {
       active: true,
       toggleLocked: true,
-      helperCopy:
-        "Masonry Lite always renders cardized column wrappers, so this toggle is locked on for truthful preview behavior.",
+      helperCopy: "Masonry Lite always adds column cards, so this switch stays on.",
     };
   }
 
@@ -1739,7 +1862,7 @@ function resolveGridColumnsCardizeControlsState(
       active: false,
       toggleLocked: false,
       helperCopy:
-        "Turn on Cardized columns to edit shared wrapper background, border, radius, and padding tokens.",
+        "Turn on Cardized columns to edit shared background, border, corners, and spacing.",
     };
   }
 
@@ -1779,12 +1902,12 @@ function resolveGridColumnsAsymmetricSlotDriftMessage(
     slotDriftState.missingLiveInstanceIds.length > 0 &&
     slotDriftState.phantomSavedInstanceIds.length > 0
   ) {
-    return `Current live slot structure has ${liveCount} columns, but saved column metadata is out of sync. Reapply materializes the asymmetric desktop preset for the current live columns and removes saved columns that no longer have live slots.`;
+    return `The Structure section has ${liveCount} content areas, but saved column settings are out of sync. Reapply updates the asymmetric desktop widths for the current areas and ignores removed areas.`;
   }
   if (slotDriftState.missingLiveInstanceIds.length > 0) {
-    return `Current live slot structure has ${liveCount} columns, but saved column metadata is missing some live columns. Reapply materializes the asymmetric desktop preset for the current live columns.`;
+    return `The Structure section has ${liveCount} content areas, but some areas do not have saved column settings yet. Reapply creates asymmetric desktop widths for the current areas.`;
   }
-  return `Saved column metadata still includes columns outside the current ${liveCount}-column live slot structure. Reapply materializes the asymmetric desktop preset for the current live columns and removes non-live saved columns.`;
+  return `Saved column settings still include removed areas outside the current ${liveCount}-area Structure section. Reapply updates the asymmetric desktop widths for the current areas.`;
 }
 
 function resolveGridColumnsLiveRowDriftMessage(
@@ -1795,35 +1918,24 @@ function resolveGridColumnsLiveRowDriftMessage(
     slotDriftState.missingLiveInstanceIds.length > 0 &&
     slotDriftState.phantomSavedInstanceIds.length > 0
   ) {
-    return "Editor rows follow the current live slot order. Missing saved column settings use live fallback values until you edit them, and saved columns without live slots are ignored here.";
+    return "Rows follow the current Structure order. Missing saved settings use safe fallback values until you edit them, and removed areas are ignored here.";
   }
   if (slotDriftState.missingLiveInstanceIds.length > 0) {
-    return "Editor rows follow the current live slot order. Missing saved column settings use live fallback values until you edit them.";
+    return "Rows follow the current Structure order. Missing saved settings use safe fallback values until you edit them.";
   }
-  return "Editor rows follow the current live slot order. Saved columns without live slots are ignored here.";
+  return "Rows follow the current Structure order. Removed saved areas are ignored here.";
 }
 
 function handleGridColumnsVariantSelection({
   nextVariant,
-  value,
-  onChange,
   onVariantChange,
-  context,
 }: {
   nextVariant: string;
-  value: GridColumnsData;
-  onChange: (next: GridColumnsData) => void;
   onVariantChange?: (next: string) => void;
-  context?: WidgetEditorProps<GridColumnsData>["context"];
 }) {
   if (!onVariantChange) return;
 
   const resolvedVariant = resolveGridColumnsVariant(nextVariant);
-  if (resolvedVariant === "asymmetric") {
-    onChange(
-      applyGridColumnsAsymmetricPreset(value, resolveGridColumnsOrderedInstanceIds(context))
-    );
-  }
   onVariantChange(resolvedVariant);
 }
 
@@ -1849,9 +1961,9 @@ function AsymmetricVariantNotice({
       return (
         <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
           <p>
-            Asymmetric desktop preset is active for the current live columns. Saved column metadata
-            is still out of sync with the live slot structure. Editing these rows will materialize
-            the current live layout.
+            Asymmetric desktop widths are active for the current content areas. Saved column
+            settings are still out of sync with the Structure section. Editing these rows will
+            create the current layout settings.
           </p>
         </div>
       );
@@ -1859,7 +1971,7 @@ function AsymmetricVariantNotice({
 
     return (
       <p className="text-xs text-muted-foreground">
-        Asymmetric desktop preset is active for the current columns.
+        Asymmetric desktop widths are active for the current content areas.
       </p>
     );
   }
@@ -1879,7 +1991,7 @@ function AsymmetricVariantNotice({
           onChange(applyGridColumnsAsymmetricPreset(value, slotDriftState.orderedInstanceIds))
         }
       >
-        Reapply asymmetric desktop preset
+        Reapply asymmetric desktop widths
       </Button>
     </div>
   );
@@ -1934,13 +2046,13 @@ function GridColumnsSpanTotalsNotice({
   const rows = [
     resolveGridColumnsSpanTotalRowState("desktop", "Desktop", totals.desktop),
     resolveGridColumnsSpanTotalRowState("tablet", "Tablet", totals.tablet),
-    resolveGridColumnsSpanTotalRowState("mobile", "Mobile", totals.mobile),
+    resolveGridColumnsSpanTotalRowState("mobile", "Phone", totals.mobile),
   ] satisfies GridColumnsSpanTotalRowState[];
   const hasNonSingleRowTotals = rows.some((row) => row.status !== "single-row");
 
   return (
     <div className="space-y-2 rounded-md border bg-muted/20 p-3 text-xs">
-      <p className="font-medium text-foreground">Current span totals</p>
+      <p className="font-medium text-foreground">Current row width totals</p>
       {rows.map((row) => (
         <p
           key={row.id}
@@ -1951,39 +2063,64 @@ function GridColumnsSpanTotalsNotice({
       ))}
       {hasNonSingleRowTotals ? (
         <p className="text-amber-700">
-          Grid Columns keeps saved spans as authored. Totals above 12 continue onto additional rows,
-          and totals below 12 leave unused width. Runtime does not auto-balance them.
+          Grid Columns keeps saved widths as authored. Totals above 12 continue onto additional
+          rows, and totals below 12 leave unused space.
         </p>
       ) : (
         <p className="text-muted-foreground">
-          All current breakpoint totals fill a single 12-column row.
+          All current screen-size totals fill a single 12-column row.
         </p>
       )}
     </div>
   );
 }
 
+function describeGridColumnsColorValue(value: string | undefined, fallback: string): string {
+  if (!value) return "Theme default";
+  if (value === "var(--color-surface)") return "Theme surface color";
+  if (value === "var(--color-border)") return "Theme border color";
+  if (value.startsWith("var(--color-")) return "Saved theme color";
+  if (value.startsWith("#")) return "Custom color";
+  return fallback;
+}
+
+function optionLabel<T extends string>(
+  options: Array<{ id: T; label: string }>,
+  value: T | undefined,
+  fallback: T
+): string {
+  const resolved = value ?? fallback;
+  return options.find((option) => option.id === resolved)?.label ?? resolved;
+}
+
+function describeGridColumnsBorderWidth(value: GridColumnsBorderWidth | undefined): string {
+  return optionLabel(borderWidthOptions, value, "1");
+}
+
+function describeGridColumnsRadius(value: GridColumnsRadius | undefined): string {
+  return optionLabel(radiusOptions, value, "xl");
+}
+
+function describeGridColumnsPadding(value: GridColumnsPadding | undefined): string {
+  return optionLabel(paddingOptions, value, "4");
+}
+
+function describeGridColumnsVariant(value: GridColumnsVariantId): string {
+  return optionLabel(variantOptions, value, "equal");
+}
+
+function describeGridColumnsAlignment(value: GridColumnsAlign | undefined): string {
+  return optionLabel(alignOptions, value, "start");
+}
+
+function describeGridColumnsGap(value: GridColumnsGap | undefined): string {
+  return optionLabel(gapOptions, value, "6");
+}
+
 export function GridColumnsWizardEditor({
-  value,
-  onChange,
   variant,
   onVariantChange,
-  context,
 }: WidgetEditorProps<GridColumnsData>) {
-  const normalized = normalizeValue(value);
-  const columns = normalized.columns ?? [];
-  const wizardColumns =
-    columns.length > 0
-      ? columns
-      : Array.from(
-          { length: gridColumnsColumnMin },
-          (_, index) =>
-            ({
-              id: String(index + 1),
-              label: "",
-            }) satisfies ColumnData
-        );
-
   return (
     <div className="space-y-4">
       <EditorSection
@@ -1991,109 +2128,19 @@ export function GridColumnsWizardEditor({
         mode="wizard"
         role="setup"
         title="Grid quick start"
-        description="Choose a safe starting grid. Visual owns ongoing layout and surface editing."
+        description="Choose the starter grid shape. Visual owns ongoing column sizing, spacing, and surface editing."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Grid style</p>
-          <Select
-            value={resolveGridColumnsVariant(variant)}
-            onValueChange={(next) =>
-              handleGridColumnsVariantSelection({
-                nextVariant: next,
-                value,
-                onChange,
-                onVariantChange,
-                context,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <AsymmetricVariantNotice
-          value={value}
-          onChange={onChange}
-          variant={variant}
-          context={context}
-        />
-
-        <ColumnsCountControl value={value} onChange={onChange} context={context} />
-
-        <LayoutPresetButtons
-          value={value}
-          onChange={onChange}
-          variant={variant}
-          context={context}
-        />
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {wizardColumns.map((column, index) => (
-            <div key={column.id ?? `wizard-column-${index + 1}`} className="space-y-2">
-              <p className="text-sm font-medium">Column {index + 1} label</p>
-              <Input
-                value={column.label ?? ""}
-                onChange={(event) =>
-                  updateColumn(value, onChange, index, { label: event.target.value })
-                }
-                placeholder={`Column ${index + 1}`}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Horizontal gap</p>
-            <Select
-              value={normalized.layout?.gapX ?? gridColumnsDefaults.layout?.gapX ?? "6"}
-              onValueChange={(next) =>
-                updateLayout(value, onChange, { gapX: next as GridColumnsGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Horizontal gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`wizard-gap-x-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Vertical gap</p>
-            <Select
-              value={normalized.layout?.gapY ?? gridColumnsDefaults.layout?.gapY ?? "6"}
-              onValueChange={(next) =>
-                updateLayout(value, onChange, { gapY: next as GridColumnsGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Vertical gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`wizard-gap-y-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <WidgetControlRow id="grid-columns.wizard.variant" label="Starter layout" path="variant">
+          {() => (
+            <VariantCards
+              value={resolveGridColumnsVariant(variant)}
+              onChange={(next) => onVariantChange?.(resolveGridColumnsVariant(next))}
+            />
+          )}
+        </WidgetControlRow>
+        <p className="text-xs text-muted-foreground">
+          Column labels, count, spacing, responsive spans, and surfaces stay in Visual after setup.
+        </p>
       </EditorSection>
     </div>
   );
@@ -2123,32 +2170,25 @@ export function GridColumnsVisualEditor({
         mode="visual"
         role="layout"
         title="Variant and layout structure"
-        description="Choose grid behavior, alignment, and column-count guidance."
+        description="Choose the grid style, alignment, and phone order."
       >
-        <VariantCards
-          value={resolvedVariant}
-          onChange={(next) =>
-            handleGridColumnsVariantSelection({
-              nextVariant: next,
-              value,
-              onChange,
-              onVariantChange,
-              context,
-            })
-          }
-        />
+        <div {...controlAttributes({ id: "grid-columns.visual.variant", path: "variant" })}>
+          <VariantCards
+            value={resolvedVariant}
+            onChange={(next) =>
+              handleGridColumnsVariantSelection({
+                nextVariant: next,
+                onVariantChange,
+              })
+            }
+          />
+        </div>
 
-        <AsymmetricVariantNotice
-          value={value}
-          onChange={onChange}
-          variant={variant}
-          context={context}
-        />
-
-        <ColumnsCountControl value={value} onChange={onChange} context={context} />
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Cross-axis alignment</p>
+        <div
+          className="space-y-2"
+          {...controlAttributes({ id: "grid-columns.visual.align", path: "layout.align" })}
+        >
+          <p className="text-sm font-medium">Vertical alignment</p>
           <Select
             value={normalized.layout?.align ?? "start"}
             onValueChange={(next) =>
@@ -2168,12 +2208,18 @@ export function GridColumnsVisualEditor({
           </Select>
         </div>
 
-        <div className="rounded-md border p-3">
+        <div
+          className="rounded-md border p-3"
+          {...controlAttributes({
+            id: "grid-columns.visual.reverse-on-phone",
+            path: "layout.reverseOnMobile",
+          })}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Reverse on mobile</p>
+              <p className="text-sm font-medium">Reverse on phone</p>
               <p className="text-xs text-muted-foreground">
-                Reverse visual column order only below the tablet breakpoint.
+                Show the last content area first on small screens.
               </p>
             </div>
             <Switch
@@ -2191,8 +2237,15 @@ export function GridColumnsVisualEditor({
         mode="visual"
         role="layout"
         title="Column sizing and labels"
-        description="Set responsive span tokens and labels for each configured column."
+        description="Set labels plus desktop, tablet, and phone widths for each content area."
       >
+        <ColumnsCountControl value={value} onChange={onChange} context={context} />
+        <AsymmetricVariantNotice
+          value={value}
+          onChange={onChange}
+          variant={variant}
+          context={context}
+        />
         <LayoutPresetButtons
           value={value}
           onChange={onChange}
@@ -2207,7 +2260,13 @@ export function GridColumnsVisualEditor({
           onBlockPatch={onBlockPatch}
         />
         <GridColumnsSpanTotalsNotice value={value} variant={variant} context={context} />
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          {...controlAttributes({
+            id: "grid-columns.visual.column-count-actions",
+            path: "columns",
+          })}
+        >
           <Button
             type="button"
             size="sm"
@@ -2245,8 +2304,8 @@ export function GridColumnsVisualEditor({
         </div>
         {hasLiveColumnSlots ? (
           <p className="text-xs text-muted-foreground">
-            When live slot instances exist, add or remove columns in the shared Structure section so
-            slot content and column metadata stay aligned.
+            When shared content areas exist, add or remove them in the Structure section so content
+            and column settings stay aligned.
           </p>
         ) : null}
       </EditorSection>
@@ -2259,7 +2318,10 @@ export function GridColumnsVisualEditor({
         description="Control spacing between columns and optional cardized wrappers."
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes({ id: "grid-columns.visual.gap-x", path: "layout.gapX" })}
+          >
             <p className="text-sm font-medium">Horizontal gap</p>
             <Select
               value={normalized.layout?.gapX ?? "6"}
@@ -2280,7 +2342,10 @@ export function GridColumnsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes({ id: "grid-columns.visual.gap-y", path: "layout.gapY" })}
+          >
             <p className="text-sm font-medium">Vertical gap</p>
             <Select
               value={normalized.layout?.gapY ?? "6"}
@@ -2302,12 +2367,18 @@ export function GridColumnsVisualEditor({
           </div>
         </div>
 
-        <div className="rounded-md border p-3">
+        <div
+          className="rounded-md border p-3"
+          {...controlAttributes({
+            id: "grid-columns.visual.cardized-columns",
+            path: "style.cardizeColumns",
+          })}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Cardized columns</p>
               <p className="text-xs text-muted-foreground">
-                Wrap each column with background, border, and radius tokens.
+                Add a shared card background, border, and rounded corners to each content area.
               </p>
             </div>
             <Switch
@@ -2325,26 +2396,46 @@ export function GridColumnsVisualEditor({
 
         {cardizeControlsState.active ? (
           <>
-            <ColorField
-              label="Column background"
-              value={style.columnBackground}
-              onChange={(next) => updateStyle(value, onChange, { columnBackground: next })}
-              onClear={() => clearStyleField(value, onChange, "columnBackground")}
-              placeholder="var(--color-surface)"
-              pickerFallback="#f8fafc"
-            />
+            <div
+              {...controlAttributes({
+                id: "grid-columns.visual.column-background",
+                path: "style.columnBackground",
+              })}
+            >
+              <ColorField
+                label="Column background"
+                value={style.columnBackground}
+                onChange={(next) => updateStyle(value, onChange, { columnBackground: next })}
+                onClear={() => clearStyleField(value, onChange, "columnBackground")}
+                placeholder="Theme surface color"
+                pickerFallback="#f8fafc"
+              />
+            </div>
 
-            <ColorField
-              label="Column border color"
-              value={style.columnBorderColor}
-              onChange={(next) => updateStyle(value, onChange, { columnBorderColor: next })}
-              onClear={() => clearStyleField(value, onChange, "columnBorderColor")}
-              placeholder="var(--color-border)"
-              pickerFallback="#e2e8f0"
-            />
+            <div
+              {...controlAttributes({
+                id: "grid-columns.visual.column-border-color",
+                path: "style.columnBorderColor",
+              })}
+            >
+              <ColorField
+                label="Column border color"
+                value={style.columnBorderColor}
+                onChange={(next) => updateStyle(value, onChange, { columnBorderColor: next })}
+                onClear={() => clearStyleField(value, onChange, "columnBorderColor")}
+                placeholder="Theme border color"
+                pickerFallback="#e2e8f0"
+              />
+            </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: "grid-columns.visual.column-border-width",
+                  path: "style.columnBorderWidth",
+                })}
+              >
                 <p className="text-sm font-medium">Border width</p>
                 <Select
                   value={style.columnBorderWidth ?? "1"}
@@ -2367,7 +2458,13 @@ export function GridColumnsVisualEditor({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: "grid-columns.visual.column-radius",
+                  path: "style.columnRadius",
+                })}
+              >
                 <p className="text-sm font-medium">Corner radius</p>
                 <Select
                   value={style.columnRadius ?? "xl"}
@@ -2388,7 +2485,13 @@ export function GridColumnsVisualEditor({
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div
+                className="space-y-2"
+                {...controlAttributes({
+                  id: "grid-columns.visual.column-padding",
+                  path: "style.columnPadding",
+                })}
+              >
                 <p className="text-sm font-medium">Internal padding</p>
                 <Select
                   value={style.columnPadding ?? "4"}
@@ -2420,19 +2523,31 @@ export function GridColumnsVisualEditor({
         title="Per-column surfaces and behavior"
         description="Highlight a single column, clamp overflow, and tune per-column height or alignment."
       >
-        <ColumnBehaviorGrid value={value} onChange={onChange} variant={variant} context={context} />
+        <div
+          {...controlAttributes({
+            id: "grid-columns.visual.column-overrides",
+            path: "columns.style",
+          })}
+        >
+          <ColumnBehaviorGrid
+            value={value}
+            onChange={onChange}
+            variant={variant}
+            context={context}
+          />
+        </div>
       </EditorSection>
 
       <EditorSection
         id="grid-columns.visual.slot-guidance"
         mode="visual"
         role="summary"
-        title="Slots and runtime behavior"
-        description="`grid-columns` uses repeatable `column` slots (`column:1`, `column:2`, ...)."
+        title="Content areas and rendering"
+        description="Grid Columns uses repeatable content areas managed by the shared Structure panel."
       >
         <p className="text-xs text-muted-foreground">
-          Add or remove column slots in the Slots panel above tabs. This section controls styling
-          and sizing tokens used when those slot instances render.
+          Add or remove content areas in the Structure panel above tabs. This section controls the
+          styling and sizing used when those content areas render.
         </p>
       </EditorSection>
     </div>
@@ -2441,7 +2556,6 @@ export function GridColumnsVisualEditor({
 
 export function GridColumnsAdvancedEditor({
   value,
-  onChange,
   variant,
   context,
 }: WidgetEditorProps<GridColumnsData>) {
@@ -2462,26 +2576,26 @@ export function GridColumnsAdvancedEditor({
         id="grid-columns.advanced.resolved-diagnostics"
         mode="advanced"
         role="diagnostics"
-        title="Technical layout tokens"
-        description="Visual owns grid editing. Advanced summarizes spans, slot drift, and cardized state."
+        title="Layout summary"
+        description="Visual owns grid editing. Advanced summarizes widths, content areas, and cardized state."
       >
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.variant"
           label="Variant"
           path="variant"
-          value={resolvedVariant}
+          value={describeGridColumnsVariant(resolvedVariant)}
         />
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.layout"
           label="Layout"
           path="layout"
-          value={`Align ${normalized.layout?.align ?? "start"}, gap X ${normalized.layout?.gapX ?? "6"}, gap Y ${normalized.layout?.gapY ?? "6"}, mobile order ${normalized.layout?.reverseOnMobile ? "reversed" : "normal"}.`}
+          value={`Vertical alignment ${describeGridColumnsAlignment(normalized.layout?.align)}, horizontal spacing ${describeGridColumnsGap(normalized.layout?.gapX)}, vertical spacing ${describeGridColumnsGap(normalized.layout?.gapY)}, phone order ${normalized.layout?.reverseOnMobile ? "reversed" : "normal"}.`}
         />
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.spans"
-          label="Span totals"
+          label="Width totals"
           path="columns"
-          value={`Desktop ${totals.desktop}/12, tablet ${totals.tablet}/12, mobile ${totals.mobile}/12 across ${effectiveColumns.length} columns.`}
+          value={`Desktop ${totals.desktop}/12, tablet ${totals.tablet}/12, phone ${totals.mobile}/12 across ${effectiveColumns.length} content areas.`}
         />
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.cardize"
@@ -2491,174 +2605,52 @@ export function GridColumnsAdvancedEditor({
         />
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.slot-drift"
-          label="Slot drift"
+          label="Content area mismatch"
           value={
             slotDriftState.hasLiveSlotDrift
-              ? `${slotDriftState.missingLiveInstanceIds.length} live slots missing metadata, ${slotDriftState.phantomSavedInstanceIds.length} saved metadata rows without live slots.`
-              : "Saved column metadata matches the live slot order."
+              ? `${slotDriftState.missingLiveInstanceIds.length} Structure areas need saved settings, ${slotDriftState.phantomSavedInstanceIds.length} saved settings no longer have Structure areas.`
+              : "Saved column settings match the Structure order."
           }
-        />
-        <div hidden className="hidden" aria-hidden="true">
-          <div>
-            <p>Align</p>
-            <Select
-              value={normalized.layout?.align ?? "start"}
-              onValueChange={(next) =>
-                updateLayout(value, onChange, { align: next as GridColumnsAlign })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Align" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignOptions.map((option) => (
-                  <SelectItem key={`advanced-align-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p>Gap X</p>
-            <Select
-              value={normalized.layout?.gapX ?? "6"}
-              onValueChange={(next) =>
-                updateLayout(value, onChange, { gapX: next as GridColumnsGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap X" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`advanced-gap-x-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p>Gap Y</p>
-            <Select
-              value={normalized.layout?.gapY ?? "6"}
-              onValueChange={(next) =>
-                updateLayout(value, onChange, { gapY: next as GridColumnsGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap Y" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`advanced-gap-y-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p>Cardized columns</p>
-            <Switch
-              checked={cardizeState.active}
-              disabled={cardizeState.toggleLocked}
-              onCheckedChange={(checked) =>
-                updateStyle(value, onChange, { cardizeColumns: checked })
-              }
-            />
-          </div>
-          <div>
-            <p>Border width</p>
-            <Select
-              value={style.columnBorderWidth ?? "1"}
-              disabled={!cardizeState.active}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  columnBorderWidth: next as GridColumnsBorderWidth,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={`advanced-border-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <p>Column padding</p>
-            <Select
-              value={style.columnPadding ?? "4"}
-              disabled={!cardizeState.active}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { columnPadding: next as GridColumnsPadding })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Column padding" />
-              </SelectTrigger>
-              <SelectContent>
-                {paddingOptions.map((option) => (
-                  <SelectItem key={`advanced-padding-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <ColumnBehaviorGrid
-            value={value}
-            onChange={onChange}
-            variant={variant}
-            context={context}
-          />
-        </div>
-        <ReadonlyWidgetSummaryRow
-          id="grid-columns.advanced.normalized-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
         />
       </EditorSection>
       <EditorSection
         id="grid-columns.advanced.column-overrides"
         mode="advanced"
         role="diagnostics"
-        title="Per-column override tokens"
+        title="Column override summary"
         description="Visual owns column override editing. Advanced keeps the resolved override state inspectable."
       >
         <ReadonlyWidgetSummaryRow
           id="grid-columns.advanced.column-overrides-summary"
           label="Column overrides"
-          path="columns[].style"
-          value={`${effectiveColumns.filter((column) => isColumnSurfaceOverrideEnabled(column)).length} of ${effectiveColumns.length} columns use per-column surface overrides.`}
+          path="columns.style"
+          value={`${effectiveColumns.filter((column) => isColumnSurfaceOverrideEnabled(column)).length} of ${effectiveColumns.length} content areas use per-column surface overrides.`}
         />
-        <div hidden className="hidden" aria-hidden="true">
-          <ColumnBehaviorGrid
-            value={value}
-            onChange={onChange}
-            variant={variant}
-            context={context}
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.height-overrides"
+          label="Height and alignment overrides"
+          path="columns"
+          value={`${effectiveColumns.filter((column) => Boolean(column.minHeight || column.mobileMinHeight || column.alignSelf)).length} of ${effectiveColumns.length} content areas override height or alignment.`}
+        />
       </EditorSection>
       <EditorSection
-        id="grid-columns.advanced.payload"
+        id="grid-columns.advanced.slot-support"
         mode="advanced"
         role="diagnostics"
-        title="Raw payload snapshot"
-        description="Normalized read-only payload for debugging migrations and saved data."
+        title="Content area diagnostics"
+        description="Support-only summary for repeatable content areas. Visual keeps author-facing labels."
       >
         <ReadonlyWidgetSummaryRow
-          id="grid-columns.advanced.raw-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          id="grid-columns.advanced.slot-count"
+          label="Content areas"
+          path="columns"
+          value={`${effectiveColumns.length} resolved content areas. ${slotDriftState.orderedInstanceIds?.length ? "Live Structure order is active." : "Saved column order is active."}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="grid-columns.advanced.token-defaults"
+          label="Shared surface"
+          path="style"
+          value={`Background ${describeGridColumnsColorValue(style.columnBackground, "Saved custom color")}, border ${describeGridColumnsColorValue(style.columnBorderColor, "Saved custom color")}, border width ${describeGridColumnsBorderWidth(style.columnBorderWidth)}, corner radius ${describeGridColumnsRadius(style.columnRadius)}, padding ${describeGridColumnsPadding(style.columnPadding)}.`}
         />
       </EditorSection>
     </div>

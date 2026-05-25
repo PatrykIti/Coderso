@@ -4,12 +4,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  gridColumnsColumnMax,
-  gridColumnsColumnMin,
-  gridColumnsDefaults,
-  type GridColumnsData,
-} from "../../../core/widgets/core/gridColumns";
+import { gridColumnsDefaults, type GridColumnsData } from "../../../core/widgets/core/gridColumns";
 import type { WidgetBlock } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -222,16 +217,17 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string, inde
   return input;
 };
 
-const findSelectByOptions = (container: ParentNode, values: string[]) => {
-  const select = Array.from(container.querySelectorAll("select")).find((element) => {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
-  });
-  if (!(select instanceof HTMLSelectElement)) {
-    throw new Error(`Missing select with options ${values.join(", ")}`);
+const findColorInputByLabel = (container: ParentNode, label: string, index = 0) => {
+  const input = Array.from(container.querySelectorAll('input[type="color"]'))
+    .filter(
+      (element): element is HTMLInputElement =>
+        element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+    )
+    .at(index);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input "${label}" (${index})`);
   }
-  return select;
+  return input;
 };
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
@@ -256,6 +252,12 @@ const findButtonsByText = (container: ParentNode, text: string) => {
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const getWritableControlPaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("[data-widget-control-path]"))
+    .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
   const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
@@ -407,98 +409,40 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("GridColumns wizard editor covers variant fallback, count clamp, label edits, and gap updates", async () => {
+test("GridColumns wizard editor only seeds the starter variant", async () => {
+  const initialValue: GridColumnsData = {
+    columns: [
+      { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", label: "Stats", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+    ],
+    layout: {
+      gapX: "8",
+      gapY: "3",
+    },
+  };
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-grid",
-    initialValue: {
-      columns: [
-        { id: "1", label: "   " },
-        { id: "2", label: "Aside" },
-        { id: "3", label: "Stats" },
-        { id: "4", label: "Promo" },
-        { id: "5", label: "FAQ" },
-        { id: "6", label: "CTA" },
-        { id: "7", label: "Overflow" },
-      ],
-      layout: {
-        gapX: "bad" as never,
-      },
-    },
+    initialValue,
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, [
-      "equal",
-      "asymmetric",
-      "masonry-lite",
-    ]);
-    const countSelect = findSelectByLabel(view.container, "Column count");
-    const gapXSelect = findSelectByLabel(view.container, "Horizontal gap");
-    const gapYSelect = findSelectByLabel(view.container, "Vertical gap");
+    const quickStart = getSectionByTitle(view.container, "Grid quick start");
 
-    expect(variantSelect.value).toBe("equal");
-    expect(countSelect.value).toBe(String(gridColumnsColumnMax));
-    expect(findInputByPlaceholder(view.container, "Column 1").value).toBe("Column 1");
-    expect(findInputByPlaceholder(view.container, "Column 2").value).toBe("Aside");
-    expect(findInputByPlaceholder(view.container, "Column 3").value).toBe("Stats");
-    expect(findInputByPlaceholder(view.container, "Column 6").value).toBe("CTA");
-    expect(gapXSelect.value).toBe(gridColumnsDefaults.layout?.gapX);
-    expect(gapYSelect.value).toBe(gridColumnsDefaults.layout?.gapY);
+    expect(normalizeText(quickStart.textContent)).toContain("starter layout");
+    expect(normalizeText(quickStart.textContent)).toContain(
+      "column labels, count, spacing, responsive spans, and surfaces stay in visual"
+    );
+    expect(quickStart.querySelectorAll("input, select, textarea")).toHaveLength(0);
+    expect(normalizeText(quickStart.textContent)).not.toContain("column count");
+    expect(normalizeText(quickStart.textContent)).not.toContain("horizontal gap");
 
-    setSelectValue(variantSelect, "masonry-lite");
+    clickButton(findButtonsByText(quickStart, "Masonry Lite")[0]);
     expect(view.getVariant()).toBe("masonry-lite");
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("masonry-lite");
-
-    setSelectValue(countSelect, "4");
-    expect(view.getValue().columns).toHaveLength(4);
-    expect(view.getValue().columns?.[2]).toEqual(
-      expect.objectContaining({
-        id: "3",
-        label: "Stats",
-      })
-    );
-    expect(view.getValue().columns?.[3]).toEqual(
-      expect.objectContaining({
-        id: "4",
-        label: "Promo",
-        desktopSpan: "6",
-        tabletSpan: "6",
-        mobileSpan: "12",
-      })
-    );
-
-    clickButton(findButtonsByText(view.container, "Balanced 4")[0]);
-    expect(view.getValue().columns?.slice(0, 4)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ desktopSpan: "3" }),
-        expect.objectContaining({ desktopSpan: "3" }),
-        expect.objectContaining({ desktopSpan: "3" }),
-        expect.objectContaining({ desktopSpan: "3" }),
-      ])
-    );
-
-    setInputValue(findInputByPlaceholder(view.container, "Column 1"), "Overview");
-    setInputValue(findInputByPlaceholder(view.container, "Column 2"), "Sidebar");
-    setSelectValue(gapXSelect, "8");
-    setSelectValue(gapYSelect, "3");
-
-    expect(view.getValue()).toEqual(
-      expect.objectContaining({
-        columns: expect.arrayContaining([
-          expect.objectContaining({ label: "Overview" }),
-          expect.objectContaining({ label: "Sidebar" }),
-        ]),
-        layout: expect.objectContaining({
-          gapX: "8",
-          gapY: "3",
-        }),
-      })
-    );
-
-    setSelectValue(countSelect, "2");
-    expect(view.getValue().columns).toHaveLength(2);
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.getValue()).toEqual(initialValue);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -519,17 +463,12 @@ test("GridColumns variant controls ignore changes when variant handlers are abse
   });
 
   try {
-    const wizardVariantSelect = findSelectByOptions(wizardView.container, [
-      "equal",
-      "asymmetric",
-      "masonry-lite",
-    ]);
     const visualVariantSection = getSectionByTitle(
       visualView.container,
       "Variant and layout structure"
     );
 
-    setSelectValue(wizardVariantSelect, "masonry-lite");
+    clickButton(findButtonsByText(wizardView.container, "Masonry Lite")[0]);
     clickButton(findButtonsByText(visualVariantSection, "Masonry Lite")[0]);
 
     expect(wizardView.getVariant()).toBe("equal");
@@ -548,64 +487,44 @@ test("GridColumns variant controls ignore changes when variant handlers are abse
   }
 });
 
-test("GridColumns wizard selection applies the asymmetric desktop preset atomically", async () => {
+test("GridColumns wizard variant selection does not rewrite daily column sizing", async () => {
+  const initialValue: GridColumnsData = {
+    columns: [
+      { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+      { id: "4", label: "Stats", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+    ],
+  };
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "equal",
-    initialValue: {
-      columns: [
-        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
-        { id: "4", label: "Stats", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
-      ],
-    },
+    initialValue,
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, [
-      "equal",
-      "asymmetric",
-      "masonry-lite",
-    ]);
-
-    setSelectValue(variantSelect, "asymmetric");
+    clickButton(findButtonsByText(view.container, "Asymmetric")[0]);
 
     expect(view.getVariant()).toBe("asymmetric");
-    expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual([
-      "4",
-      "3",
-      "3",
-      "2",
-    ]);
-    expect(view.getValue().columns?.map((column) => column.tabletSpan)).toEqual([
-      "6",
-      "6",
-      "6",
-      "6",
-    ]);
-    expect(view.getValue().columns?.map((column) => column.mobileSpan)).toEqual([
-      "12",
-      "12",
-      "12",
-      "12",
-    ]);
+    expect(view.getValue()).toEqual(initialValue);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
 });
 
-test("GridColumns visual variant cards apply the asymmetric preset in the current live slot order", async () => {
+test("GridColumns visual variant cards change only the grid style owner", async () => {
+  const initialValue: GridColumnsData = {
+    columns: [
+      { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
+    ],
+  };
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "equal",
-    initialValue: {
-      columns: [
-        { id: "1", label: "Lead", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "2", label: "Side", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "3", label: "Meta", desktopSpan: "4", tabletSpan: "6", mobileSpan: "12" },
-      ],
-    },
+    initialValue,
     context: {
       surface: "page-builder",
       slotTargets: [
@@ -640,18 +559,9 @@ test("GridColumns visual variant cards apply the asymmetric preset in the curren
     clickButton(findButtonsByText(variantSection, "Asymmetric")[0]);
 
     expect(view.getVariant()).toBe("asymmetric");
-    expect(
-      view.getValue().columns?.map((column) => ({
-        id: column.id,
-        desktopSpan: column.desktopSpan,
-        tabletSpan: column.tabletSpan,
-        mobileSpan: column.mobileSpan,
-      }))
-    ).toEqual([
-      { id: "2", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-      { id: "1", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
-      { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
-    ]);
+    expect(view.getValue()).toEqual(initialValue);
+    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("asymmetric");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -670,15 +580,15 @@ test("GridColumns visual editor explains saved asymmetric drift and allows prese
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
-    expect(normalizeText(variantSection.textContent)).toContain("matching desktop spans");
+    expect(normalizeText(columnSection.textContent)).toContain("matching desktop spans");
 
-    clickButton(findButtonsByText(variantSection, "Reapply asymmetric desktop preset")[0]);
+    clickButton(findButtonsByText(columnSection, "Reapply asymmetric desktop widths")[0]);
 
     expect(view.getValue().columns?.map((column) => column.desktopSpan)).toEqual(["8", "4"]);
-    expect(normalizeText(variantSection.textContent)).toContain(
-      "asymmetric desktop preset is active"
+    expect(normalizeText(columnSection.textContent)).toContain(
+      "asymmetric desktop widths are active"
     );
   } finally {
     view.cleanup();
@@ -703,8 +613,8 @@ test("GridColumns visual editor shows current span totals and no-auto-balance gu
 
     expect(text).toContain("desktop total: 14 / 12 - continues onto additional rows.");
     expect(text).toContain("tablet total: 12 / 12 - fills one 12-column row.");
-    expect(text).toContain("mobile total: 24 / 12 - continues onto additional rows.");
-    expect(text).toContain("runtime does not auto-balance them");
+    expect(text).toContain("phone total: 24 / 12 - continues onto additional rows.");
+    expect(text).toContain("totals below 12 leave unused space");
   } finally {
     view.cleanup();
   }
@@ -757,20 +667,17 @@ test("GridColumns visual editor follows the current live slot order in drifted a
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
     const text = normalizeText(columnSection.textContent);
 
-    expect(normalizeText(variantSection.textContent)).toContain(
-      "saved column metadata is out of sync"
-    );
-    expect(text).toContain("editor rows follow the current live slot order");
-    expect(text).toContain("slot: column:3");
-    expect(text).not.toContain("slot: column:4");
+    expect(text).toContain("saved column settings are out of sync");
+    expect(text).toContain("rows follow the current structure order");
+    expect(text).toContain("content area 3");
+    expect(text).not.toContain("content area 4");
     expect(text).toContain("25 / 50 / 25");
     expect(text).toContain("desktop total: 15 / 12 - continues onto additional rows.");
     expect(text).toContain("tablet total: 12 / 12 - fills one 12-column row.");
-    expect(text).toContain("mobile total: 36 / 12 - continues onto additional rows.");
+    expect(text).toContain("phone total: 36 / 12 - continues onto additional rows.");
   } finally {
     view.cleanup();
   }
@@ -815,11 +722,11 @@ test("GridColumns visual editor asymmetric drift copy stays precise when only li
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
-    const text = normalizeText(variantSection.textContent);
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+    const text = normalizeText(columnSection.textContent);
 
-    expect(text).toContain("saved column metadata is missing some live columns");
-    expect(text).not.toContain("removes saved columns that no longer have live slots");
+    expect(text).toContain("some areas do not have saved column settings yet");
+    expect(text).not.toContain("ignores removed areas");
   } finally {
     view.cleanup();
   }
@@ -872,9 +779,9 @@ test("GridColumns visual editor reapply materializes the current live asymmetric
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
-    clickButton(findButtonsByText(variantSection, "Reapply asymmetric desktop preset")[0]);
+    clickButton(findButtonsByText(columnSection, "Reapply asymmetric desktop widths")[0]);
 
     expect(
       view.getValue().columns?.map((column) => ({
@@ -888,8 +795,8 @@ test("GridColumns visual editor reapply materializes the current live asymmetric
       { id: "2", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
       { id: "3", desktopSpan: "3", tabletSpan: "6", mobileSpan: "12" },
     ]);
-    expect(normalizeText(variantSection.textContent)).toContain(
-      "asymmetric desktop preset is active for the current columns"
+    expect(normalizeText(columnSection.textContent)).toContain(
+      "asymmetric desktop widths are active for the current content areas"
     );
   } finally {
     view.cleanup();
@@ -1070,8 +977,8 @@ test("GridColumns visual editor visibility warnings respect fallback live rows",
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
     const text = normalizeText(columnSection.textContent);
 
-    expect(text).toContain("slot: column:3");
-    expect(text).not.toContain("all columns are hidden on mobile");
+    expect(text).toContain("content area 3");
+    expect(text).not.toContain("all columns are hidden on phone");
   } finally {
     view.cleanup();
   }
@@ -1096,17 +1003,17 @@ test("GridColumns visual editor keeps CSS variable colors visible with fallback 
 
   try {
     const surfaceSection = getSectionByTitle(view.container, "Gap and column surface");
-    const backgroundTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-surface)");
-    const borderTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
-    const colorInputs = Array.from(surfaceSection.querySelectorAll('input[type="color"]')).filter(
-      (element): element is HTMLInputElement => element instanceof HTMLInputElement
-    );
+    const backgroundSwatch = findColorInputByLabel(surfaceSection, "Column background swatch");
+    const borderSwatch = findColorInputByLabel(surfaceSection, "Column border color swatch");
 
-    expect(backgroundTokenInput.value).toBe("var(--color-surface)");
-    expect(borderTokenInput.value).toBe("var(--color-border)");
-    expect(colorInputs[0]?.value).toBe("#f8fafc");
-    expect(colorInputs[1]?.value).toBe("#e2e8f0");
-    expect(normalizeText(surfaceSection.textContent)).toContain("custom token active");
+    expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeUndefined();
+    expect(queryInputByPlaceholder(surfaceSection, "var(--color-border)")).toBeUndefined();
+    expect(backgroundSwatch.value).toBe("#f8fafc");
+    expect(borderSwatch.value).toBe("#e2e8f0");
+    expect(normalizeText(surfaceSection.textContent)).toContain("saved custom color");
+    expect(normalizeText(surfaceSection.textContent)).toContain(
+      "pick a swatch to replace it, or clear the field"
+    );
   } finally {
     view.cleanup();
   }
@@ -1137,23 +1044,26 @@ test("GridColumns visual editor keeps CSS variable per-column overrides visible 
 
   try {
     const behaviorSection = getSectionByTitle(view.container, "Per-column surfaces and behavior");
-    const backgroundTokenInput = findInputByPlaceholder(behaviorSection, "var(--color-surface)", 0);
-    const borderTokenInput = findInputByPlaceholder(behaviorSection, "var(--color-border)", 0);
-    const colorInputs = Array.from(behaviorSection.querySelectorAll('input[type="color"]')).filter(
-      (element): element is HTMLInputElement => element instanceof HTMLInputElement
+    const backgroundSwatch = findColorInputByLabel(
+      behaviorSection,
+      "Column background override swatch"
     );
+    const borderSwatch = findColorInputByLabel(behaviorSection, "Column border override swatch");
 
-    expect(backgroundTokenInput.value).toBe("var(--color-surface)");
-    expect(borderTokenInput.value).toBe("var(--color-border)");
-    expect(colorInputs[0]?.value).toBe("#f8fafc");
-    expect(colorInputs[1]?.value).toBe("#e2e8f0");
-    expect(normalizeText(behaviorSection.textContent)).toContain("custom token active");
+    expect(queryInputByPlaceholder(behaviorSection, "var(--color-surface)")).toBeUndefined();
+    expect(queryInputByPlaceholder(behaviorSection, "var(--color-border)")).toBeUndefined();
+    expect(backgroundSwatch.value).toBe("#f8fafc");
+    expect(borderSwatch.value).toBe("#e2e8f0");
+    expect(normalizeText(behaviorSection.textContent)).toContain("saved custom color");
+    expect(normalizeText(behaviorSection.textContent)).toContain(
+      "pick a swatch to replace it, or clear the field"
+    );
   } finally {
     view.cleanup();
   }
 });
 
-test("GridColumns advanced editor disables cardize-only controls until cardized columns are enabled", async () => {
+test("GridColumns advanced editor reports cardize diagnostics without editing controls", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "equal",
@@ -1169,20 +1079,13 @@ test("GridColumns advanced editor disables cardize-only controls until cardized 
   });
 
   try {
-    const technicalSection = getSectionByTitle(view.container, "Technical layout tokens");
-    const cardizeToggle = findCheckboxByLabel(technicalSection, "Cardized columns");
-    const borderWidthSelect = findSelectByLabel(technicalSection, "Border width");
-    const paddingSelect = findSelectByLabel(technicalSection, "Column padding");
+    const technicalSection = getSectionByTitle(view.container, "Layout summary");
+    const text = normalizeText(technicalSection.textContent);
 
-    expect(borderWidthSelect.disabled).toBe(true);
-    expect(paddingSelect.disabled).toBe(true);
-    expect(normalizeText(technicalSection.textContent)).toContain("turn on cardized columns");
-
-    setCheckboxValue(cardizeToggle, true);
-
-    expect(view.getValue().style?.cardizeColumns).toBe(true);
-    expect(findSelectByLabel(technicalSection, "Border width").disabled).toBe(false);
-    expect(findSelectByLabel(technicalSection, "Column padding").disabled).toBe(false);
+    expect(text).toContain("cardized columns");
+    expect(text).toContain("off");
+    expect(view.container.querySelectorAll("input, select, textarea, button")).toHaveLength(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -1216,6 +1119,21 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
     const surfaceSection = getSectionByTitle(view.container, "Gap and column surface");
+    const columnPaths = getWritableControlPaths(columnSection);
+    expect(columnPaths).toEqual(
+      expect.arrayContaining([
+        "columns",
+        "columns.label",
+        "columns.desktopSpan",
+        "columns.tabletSpan",
+        "columns.mobileSpan",
+        "columns.xlSpan",
+        "columns.twoXlSpan",
+        "columns.hideOnMobile",
+        "columns.hideOnTablet",
+        "columns.hideOnDesktop",
+      ])
+    );
 
     expect(
       variantSection.querySelector('[data-grid-columns-variant-preview="equal"]')
@@ -1228,7 +1146,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     expect(view.getVariant()).toBe("asymmetric");
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("asymmetric");
 
-    const alignmentSelect = findSelectByLabel(variantSection, "Cross-axis alignment");
+    const alignmentSelect = findSelectByLabel(variantSection, "Vertical alignment");
     expect(alignmentSelect.value).toBe("start");
     setSelectValue(alignmentSelect, "stretch");
 
@@ -1274,6 +1192,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     expect(gapXSelect.value).toBe(gridColumnsDefaults.layout?.gapX);
     expect(gapYSelect.value).toBe(gridColumnsDefaults.layout?.gapY);
     expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeUndefined();
+    expect(normalizeText(surfaceSection.textContent)).not.toMatch(/\b(px|rem)\b/);
 
     setSelectValue(gapXSelect, "8");
     setSelectValue(gapYSelect, "2");
@@ -1283,19 +1202,16 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
 
     const cardizeToggle = surfaceSection.querySelector('input[type="checkbox"]');
     expect((cardizeToggle as HTMLInputElement | null | undefined)?.disabled).toBe(true);
-    expect(normalizeText(surfaceSection.textContent)).toContain("masonry lite always renders");
+    expect(normalizeText(surfaceSection.textContent)).toContain("masonry lite always adds");
     expect(view.getValue().style?.cardizeColumns).toBe(false);
 
-    const backgroundTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-surface)");
-    const borderTokenInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
-    const colorInputs = Array.from(surfaceSection.querySelectorAll('input[type="color"]'));
-    expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#f8fafc");
-    expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#cbd5e1");
+    const backgroundSwatch = findColorInputByLabel(surfaceSection, "Column background swatch");
+    const borderSwatch = findColorInputByLabel(surfaceSection, "Column border color swatch");
+    expect(backgroundSwatch.value).toBe("#f8fafc");
+    expect(borderSwatch.value).toBe("#cbd5e1");
 
-    setInputValue(colorInputs[0], "#0f172a");
-    setInputValue(colorInputs[1], "#475569");
-    setInputValue(backgroundTokenInput, "#111827");
-    setInputValue(borderTokenInput, "#334155");
+    setInputValue(backgroundSwatch, "#0f172a");
+    setInputValue(borderSwatch, "#475569");
 
     const borderWidthSelect = findSelectByLabel(surfaceSection, "Border width");
     const radiusSelect = findSelectByLabel(surfaceSection, "Corner radius");
@@ -1323,8 +1239,8 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
         ]),
         style: expect.objectContaining({
           cardizeColumns: false,
-          columnBackground: "#111827",
-          columnBorderColor: "#334155",
+          columnBackground: "#0f172a",
+          columnBorderColor: "#475569",
           columnBorderWidth: "2",
           columnRadius: "2xl",
           columnPadding: "6",
@@ -1334,9 +1250,7 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
 
     setCheckboxValue(surfaceSection.querySelector('input[type="checkbox"]') ?? undefined, false);
     expect(view.getValue().style?.cardizeColumns).toBe(false);
-    expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeInstanceOf(
-      HTMLInputElement
-    );
+    expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -1363,12 +1277,12 @@ test("GridColumns visual editor derives live column slots from repeatable slot i
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
-    const columnCountSelect = findSelectByLabel(variantSection, "Column count");
-    const text = normalizeText(variantSection.textContent);
+    const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
+    const columnCountSelect = findSelectByLabel(columnSection, "Content area count");
+    const text = normalizeText(columnSection.textContent);
 
     expect(columnCountSelect.disabled).toBe(true);
-    expect(text).toContain("current slot instances: 2");
+    expect(text).toContain("current content areas: 2");
     expect(text).toContain("out of sync");
   } finally {
     view.cleanup();
@@ -1402,13 +1316,12 @@ test("GridColumns visual editor locks local column-count controls when live slot
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
-    expect(findSelectByLabel(variantSection, "Column count").disabled).toBe(true);
+    expect(findSelectByLabel(columnSection, "Content area count").disabled).toBe(true);
     expect(findButtonsByText(columnSection, "Add one column")[0].disabled).toBe(true);
     expect(findButtonsByText(columnSection, "Remove one column")[0].disabled).toBe(true);
-    expect(normalizeText(columnSection.textContent)).toContain("shared structure section");
+    expect(normalizeText(columnSection.textContent)).toContain("shared content areas");
   } finally {
     view.cleanup();
   }
@@ -1446,10 +1359,9 @@ test("GridColumns visual editor also locks local count buttons without block pat
   });
 
   try {
-    const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
 
-    expect(findSelectByLabel(variantSection, "Column count").disabled).toBe(true);
+    expect(findSelectByLabel(columnSection, "Content area count").disabled).toBe(true);
     expect(findButtonsByText(columnSection, "Add one column")[0].disabled).toBe(true);
     expect(findButtonsByText(columnSection, "Remove one column")[0].disabled).toBe(true);
   } finally {
@@ -1513,9 +1425,9 @@ test("GridColumns visual editor updates responsive ordering, wide spans, and vis
   try {
     const variantSection = getSectionByTitle(view.container, "Variant and layout structure");
     const columnSection = getSectionByTitle(view.container, "Column sizing and labels");
-    const reverseToggle = findCheckboxByLabel(variantSection, "Reverse on mobile");
-    const xlSelect = findSelectByLabel(columnSection, "XL", 0);
-    const twoXlSelect = findSelectByLabel(columnSection, "2XL", 0);
+    const reverseToggle = findCheckboxByLabel(variantSection, "Reverse on phone");
+    const xlSelect = findSelectByLabel(columnSection, "Wide screens", 0);
+    const twoXlSelect = findSelectByLabel(columnSection, "Very wide screens", 0);
 
     setCheckboxValue(reverseToggle, true);
     setSelectValue(xlSelect, "9");
@@ -1540,7 +1452,7 @@ test("GridColumns visual editor updates responsive ordering, wide spans, and vis
         ]),
       })
     );
-    expect(normalizeText(columnSection.textContent)).toContain("all columns are hidden on mobile");
+    expect(normalizeText(columnSection.textContent)).toContain("all columns are hidden on phone");
   } finally {
     view.cleanup();
   }
@@ -1555,16 +1467,38 @@ test("GridColumns visual editor updates per-column surface, height, overflow, an
 
   try {
     const behaviorSection = getSectionByTitle(view.container, "Per-column surfaces and behavior");
+    expect(normalizeText(behaviorSection.textContent)).not.toMatch(/\b(px|rem)\b/);
 
     setCheckboxValue(findCheckboxByLabel(behaviorSection, "Highlight this column", 0), true);
-    setInputValue(findInputByPlaceholder(behaviorSection, "var(--color-surface)", 0), "#112233");
-    setInputValue(findInputByPlaceholder(behaviorSection, "var(--color-border)", 0), "#445566");
+    expect(getWritableControlPaths(behaviorSection)).toEqual(
+      expect.arrayContaining([
+        "columns.style",
+        "columns.style.surface",
+        "columns.style.background",
+        "columns.style.borderColor",
+        "columns.style.borderWidth",
+        "columns.style.radius",
+        "columns.style.padding",
+        "columns.style.overflow",
+        "columns.minHeight",
+        "columns.mobileMinHeight",
+        "columns.alignSelf",
+      ])
+    );
+    setInputValue(
+      findColorInputByLabel(behaviorSection, "Column background override swatch"),
+      "#112233"
+    );
+    setInputValue(
+      findColorInputByLabel(behaviorSection, "Column border override swatch"),
+      "#445566"
+    );
     setSelectValue(findSelectByLabel(behaviorSection, "Border width", 0), "2");
     setSelectValue(findSelectByLabel(behaviorSection, "Corner radius", 0), "2xl");
     setSelectValue(findSelectByLabel(behaviorSection, "Internal padding", 0), "6");
-    setSelectValue(findSelectByLabel(behaviorSection, "Overflow", 0), "hidden");
+    setSelectValue(findSelectByLabel(behaviorSection, "Clip overflowing content", 0), "hidden");
     setSelectValue(findSelectByLabel(behaviorSection, "Minimum height", 0), "lg");
-    setSelectValue(findSelectByLabel(behaviorSection, "Mobile min height", 0), "none");
+    setSelectValue(findSelectByLabel(behaviorSection, "Phone minimum height", 0), "none");
     setSelectValue(findSelectByLabel(behaviorSection, "Vertical alignment", 0), "end");
 
     expect(view.getValue().columns?.[0]).toEqual(
@@ -1599,7 +1533,7 @@ test("GridColumns visual editor keeps overflow independent from local surface hi
     const behaviorSection = getSectionByTitle(view.container, "Per-column surfaces and behavior");
     const highlightToggle = findCheckboxByLabel(behaviorSection, "Highlight this column", 0);
 
-    setSelectValue(findSelectByLabel(behaviorSection, "Overflow", 0), "hidden");
+    setSelectValue(findSelectByLabel(behaviorSection, "Clip overflowing content", 0), "hidden");
     expect(highlightToggle.checked).toBe(false);
     expect(view.getValue().columns?.[0]?.style).toEqual(
       expect.objectContaining({
@@ -1680,33 +1614,14 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
   });
 
   try {
-    const wizardVariantSelect = findSelectByOptions(wizardView.container, [
-      "equal",
-      "asymmetric",
-      "masonry-lite",
-    ]);
-    const wizardCountSelect = findSelectByLabel(wizardView.container, "Column count");
-    const wizardGapXSelect = findSelectByLabel(wizardView.container, "Horizontal gap");
-    const wizardGapYSelect = findSelectByLabel(wizardView.container, "Vertical gap");
+    const wizardSection = getSectionByTitle(wizardView.container, "Grid quick start");
 
-    expect(wizardVariantSelect.value).toBe("equal");
-    expect(wizardCountSelect.value).toBe(String(gridColumnsColumnMin));
-    expect(findInputByPlaceholder(wizardView.container, "Column 1").value).toBe("");
-    expect(findInputByPlaceholder(wizardView.container, "Column 2").value).toBe("");
-    expect(wizardGapXSelect.value).toBe("6");
-    expect(wizardGapYSelect.value).toBe("6");
+    expect(normalizeText(wizardSection.textContent)).toContain("starter layout");
+    expect(wizardSection.querySelectorAll("input, select, textarea")).toHaveLength(0);
 
-    setInputValue(findInputByPlaceholder(wizardView.container, "Column 1"), "Ignored");
+    clickButton(findButtonsByText(wizardSection, "Asymmetric")[0]);
+    expect(wizardView.getVariant()).toBe("asymmetric");
     expect(wizardView.getValue()).toEqual({});
-
-    setSelectValue(wizardCountSelect, "3");
-    expect(wizardView.getValue()).toEqual({
-      columns: [
-        { id: "1", label: "Column 1", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "2", label: "Column 2", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-        { id: "3", label: "Column 3", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
-      ],
-    });
 
     const visualVariantSection = getSectionByTitle(
       visualEmptyView.container,
@@ -1720,7 +1635,7 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
       visualPartialView.container,
       "Gap and column surface"
     );
-    const alignmentSelect = findSelectByLabel(visualVariantSection, "Cross-axis alignment");
+    const alignmentSelect = findSelectByLabel(visualVariantSection, "Vertical alignment");
     const addButton = findButtonsByText(visualEmptyView.container, "Add one column")[0];
     const removeButton = findButtonsByText(visualEmptyView.container, "Remove one column")[0];
     const visualGapXSelect = findSelectByLabel(visualSurfaceSection, "Horizontal gap");
@@ -1728,9 +1643,11 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
     const visualSpanSelects = findSelectsByOptions(visualColumnSection, allSpanOptions).filter(
       (select) => select.options.length === allSpanOptions.length
     );
-    const visualColorInputs = Array.from(
-      visualSurfaceSection.querySelectorAll('input[type="color"]')
-    ).filter((element): element is HTMLInputElement => element instanceof HTMLInputElement);
+    const backgroundSwatch = findColorInputByLabel(
+      visualSurfaceSection,
+      "Column background swatch"
+    );
+    const borderSwatch = findColorInputByLabel(visualSurfaceSection, "Column border color swatch");
 
     expect(alignmentSelect.value).toBe("start");
     expect(addButton.disabled).toBe(false);
@@ -1739,7 +1656,7 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
     clickButton(addButton);
     expect(visualEmptyView.getValue().columns).toHaveLength(3);
 
-    expect(visualColumnSection.textContent).toContain("slot: column:1");
+    expect(visualColumnSection.textContent).toContain("Content area 1");
     expect(findInputByPlaceholder(visualColumnSection, "Column 1").value).toBe("");
     expect(visualSpanSelects).toHaveLength(3);
     expect(visualSpanSelects[0]?.value).toBe("6");
@@ -1748,22 +1665,24 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
 
     expect(visualGapXSelect.value).toBe("6");
     expect(visualGapYSelect.value).toBe("6");
-    expect(visualColorInputs[0]?.value).toBe("#f8fafc");
-    expect(visualColorInputs[1]?.value).toBe("#e2e8f0");
-    expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-surface)").value).toBe("");
-    expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-border)").value).toBe("");
+    expect(backgroundSwatch.value).toBe("#f8fafc");
+    expect(borderSwatch.value).toBe("#e2e8f0");
+    expect(queryInputByPlaceholder(visualSurfaceSection, "var(--color-surface)")).toBeUndefined();
+    expect(queryInputByPlaceholder(visualSurfaceSection, "var(--color-border)")).toBeUndefined();
     expect(findSelectByLabel(visualSurfaceSection, "Border width").value).toBe("1");
     expect(findSelectByLabel(visualSurfaceSection, "Corner radius").value).toBe("xl");
     expect(findSelectByLabel(visualSurfaceSection, "Internal padding").value).toBe("4");
 
-    const advancedSection = getSectionByTitle(advancedView.container, "Technical layout tokens");
+    const advancedSection = getSectionByTitle(advancedView.container, "Layout summary");
+    const advancedText = normalizeText(advancedSection.textContent);
 
-    expect(findSelectByLabel(advancedSection, "Align").value).toBe("start");
-    expect(findSelectByLabel(advancedSection, "Gap X").value).toBe("6");
-    expect(findSelectByLabel(advancedSection, "Gap Y").value).toBe("6");
-    expect(findSelectByLabel(advancedSection, "Border width").value).toBe("1");
-    expect(findSelectByLabel(advancedSection, "Column padding").value).toBe("4");
-    expect(findCheckboxByLabel(advancedSection, "Cardized columns").checked).toBe(true);
+    expect(advancedText).toContain("vertical alignment start");
+    expect(advancedText).toContain("horizontal spacing large gap");
+    expect(advancedText).toContain("vertical spacing large gap");
+    expect(advancedText).toContain("cardized columns");
+    expect(advancedView.container.querySelectorAll("input, select, textarea, button")).toHaveLength(
+      0
+    );
   } finally {
     wizardView.cleanup();
     visualEmptyView.cleanup();
@@ -1774,7 +1693,7 @@ test("GridColumns editors fall back to safe defaults when normalization returns 
   }
 });
 
-test("GridColumns advanced editor covers normalized diagnostics and technical token updates", async () => {
+test("GridColumns advanced editor covers normalized diagnostics as read-only summaries", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialValue: {
@@ -1804,60 +1723,32 @@ test("GridColumns advanced editor covers normalized diagnostics and technical to
   });
 
   try {
-    const technicalSection = getSectionByTitle(view.container, "Technical layout tokens");
-    const snapshotSection = getSectionByTitle(view.container, "Raw payload snapshot");
-    const snapshotBefore = snapshotSection.querySelector("pre");
+    const technicalSection = getSectionByTitle(view.container, "Layout summary");
+    const overrideSection = getSectionByTitle(view.container, "Column override summary");
+    const slotSection = getSectionByTitle(view.container, "Content area diagnostics");
+    const technicalText = normalizeText(technicalSection.textContent);
 
-    expect(snapshotBefore?.textContent).toContain('"id": "dup"');
-    expect(snapshotBefore?.textContent).toContain('"id": "2"');
-    expect(snapshotBefore?.textContent).toContain('"label": "Column 1"');
-    expect(snapshotBefore?.textContent).toContain('"gapX": "6"');
-    expect(snapshotBefore?.textContent).toContain('"gapY": "3"');
-    expect(snapshotBefore?.textContent).toContain('"align": "start"');
-    expect(snapshotBefore?.textContent).toContain('"columnBorderWidth": "1"');
-    expect(snapshotBefore?.textContent).toContain('"columnRadius": "xl"');
-    expect(snapshotBefore?.textContent).toContain('"columnPadding": "4"');
-
-    setSelectValue(findSelectByLabel(technicalSection, "Align"), "center");
-    setSelectValue(findSelectByLabel(technicalSection, "Gap X"), "8");
-    setSelectValue(findSelectByLabel(technicalSection, "Gap Y"), "2");
-
-    setCheckboxValue(findCheckboxByLabel(technicalSection, "Cardized columns"), true);
-
-    setSelectValue(findSelectByLabel(technicalSection, "Border width"), "3");
-    setSelectValue(findSelectByLabel(technicalSection, "Column padding"), "6");
-
-    expect(view.getValue()).toEqual(
-      expect.objectContaining({
-        layout: expect.objectContaining({
-          align: "center",
-          gapX: "8",
-          gapY: "2",
-        }),
-        style: expect.objectContaining({
-          cardizeColumns: true,
-          columnBorderWidth: "3",
-          columnPadding: "6",
-        }),
-      })
+    expect(technicalText).toContain("vertical alignment start");
+    expect(technicalText).toContain("horizontal spacing large gap");
+    expect(technicalText).toContain("vertical spacing small gap");
+    expect(technicalText).toContain("desktop 12/12");
+    expect(technicalText).toContain("cardized columns");
+    expect(technicalText).toContain("off");
+    expect(normalizeText(overrideSection.textContent)).toContain(
+      "0 of 2 content areas use per-column surface overrides"
     );
-
-    const snapshotAfter = getSectionByTitle(view.container, "Raw payload snapshot").querySelector(
-      "pre"
-    );
-    expect(snapshotAfter?.textContent).toContain('"align": "center"');
-    expect(snapshotAfter?.textContent).toContain('"gapX": "8"');
-    expect(snapshotAfter?.textContent).toContain('"gapY": "2"');
-    expect(snapshotAfter?.textContent).toContain('"cardizeColumns": true');
-    expect(snapshotAfter?.textContent).toContain('"columnBorderWidth": "3"');
-    expect(snapshotAfter?.textContent).toContain('"columnPadding": "6"');
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(normalizeText(slotSection.textContent)).toContain("2 resolved content areas");
+    expect(normalizeText(slotSection.textContent)).toContain("background theme default");
+    expect(normalizeText(slotSection.textContent)).not.toContain("var(");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.querySelectorAll("input, select, textarea, button")).toHaveLength(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
 });
 
-test("GridColumns advanced editor locks masonry-lite cardize and follows live slot order", async () => {
+test("GridColumns advanced editor reports masonry-lite and live slot state read-only", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "masonry-lite",
@@ -1889,21 +1780,16 @@ test("GridColumns advanced editor locks masonry-lite cardize and follows live sl
   });
 
   try {
-    const technicalSection = getSectionByTitle(view.container, "Technical layout tokens");
-    const behaviorSection = getSectionByTitle(view.container, "Per-column override tokens");
-    const cardizeToggle = findCheckboxByLabel(technicalSection, "Cardized columns");
+    const technicalSection = getSectionByTitle(view.container, "Layout summary");
+    const slotSection = getSectionByTitle(view.container, "Content area diagnostics");
+    const technicalText = normalizeText(technicalSection.textContent);
 
-    expect(cardizeToggle.checked).toBe(true);
-    expect(cardizeToggle.disabled).toBe(true);
-    expect(normalizeText(technicalSection.textContent)).toContain("locked on");
-
-    setSelectValue(findSelectByLabel(behaviorSection, "Overflow", 0), "hidden");
-    expect(view.getValue().columns?.[1]?.style).toEqual(
-      expect.objectContaining({
-        overflow: "hidden",
-      })
-    );
-    expect(view.getValue().columns?.[0]?.style).toBeUndefined();
+    expect(technicalText).toContain("on - masonry lite always adds column cards");
+    expect(normalizeText(slotSection.textContent)).toContain("2 resolved content areas");
+    expect(normalizeText(slotSection.textContent)).toContain("live structure order is active");
+    expect(view.container.querySelectorAll("input, select, textarea, button")).toHaveLength(0);
+    expect(view.getValue().columns?.map((column) => column.id)).toEqual(["1", "2"]);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

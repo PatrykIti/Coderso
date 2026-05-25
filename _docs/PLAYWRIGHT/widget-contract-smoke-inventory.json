@@ -37,7 +37,8 @@
       "publicPath": "/test-grid-columns-0516",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "card-overflow"]
+      "cssChecks": ["body-overflow", "card-overflow"],
+      "notes": "Completed daily fixture validates Visual and Advanced; one-time Wizard is covered by TASK-336-16 lifecycle smoke and grid-columns focused Vitest."
     },
     {
       "widgetType": "split-layout",

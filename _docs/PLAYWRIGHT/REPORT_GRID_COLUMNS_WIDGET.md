@@ -1,6 +1,6 @@
 # RAPORT: Grid Columns Widget — Closure Matrix
 
-> **Status:** Zamknięty po TASK-271 i TASK-325
+> **Status:** Zamknięty po TASK-271/TASK-325; TASK-336-19 supersedes the editor-mode ownership notes
 > **Pierwotna sesja Playwright:** 2026-05-16
 > **Raport closure:** 2026-05-21
 > **Sesja:** Playwright #3 (Grid Columns Widget)
@@ -12,13 +12,37 @@
 
 Ten plik zachowuje snapshot z sesji Playwright z 2026-05-16, ale po
 TASK-256/TASK-293/TASK-271/TASK-325 nie może już być traktowany jako lista "wciąż
-otwartych" problemów widgetu. Został więc przepisany do closure matrix:
+otwartych" problemów widgetu. Po TASK-336-19 nie może też być używany jako
+źródło prawdy dla bieżącego podziału `Wizard` / `Visual` / `Advanced`.
+Został więc przepisany do closure matrix:
 
 - wskazuje, które findingi były shared-contract drift i zostały zamknięte poza
   TASK-271,
 - które findingi zostały dostarczone lokalnie w TASK-271,
 - które świadomie pozostają poza TASK-271 (brak safe-class policy albo
   current-state note).
+- zapisuje, że finalny bieżący kontrakt to: Wizard jako jednorazowy starter,
+  Visual jako właściciel codziennej konfiguracji, Advanced jako read-only
+  diagnostics bez raw JSON/CSS-token pól.
+
+## 1.1. TASK-336-19 ownership supersession
+
+TASK-336-19 finalizuje bieżący kontrakt Grid Columns po starszych closure
+passach:
+
+- Wizard ma tylko jednorazowy wybór starter layoutu (`variant`) i nie renderuje
+  label, gap, preset, responsive span, color ani raw token controls.
+- Visual przejmuje codzienną konfigurację: variant, labels, content-area count
+  guidance, width presets, responsive spans, visibility, spacing, cardized
+  surfaces, swatch-only colors, and per-column behavior.
+- Advanced nie dostaje `onChange` i pokazuje wyłącznie read-only layout,
+  column override, and content-area diagnostics. It does not render inputs,
+  selects, buttons, raw payload previews, hidden mutating controls, or visible
+  `var(...)` token strings for nontechnical authors.
+- Final TASK-336-19 smoke:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-grid-columns-advanced-readonly-2026-05-25.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## 2. Snapshot źródłowy z 2026-05-16
 
@@ -38,8 +62,8 @@ Playwright wykrył trzy klasy problemów:
 | ID | Snapshot z 2026-05-16 | Finalny status | Owner | Evidence |
 |---|---|---|---|---|
 | C1 | slot/config desync i manualny sync | `current-state/shared`: live editor nie tworzy już lokalnie nowego driftu, bo count controls i local add/remove actions blokują się przy istniejących slotach i odsyłają do Structure; pełne auto-remap pozostaje poza TASK-271 | TASK-256/TASK-293 seam, plus TASK-271 local guard | `GridColumnsEditors.tsx`, `gridColumns.tsx`, `blockSettings-wave.test.tsx`, `grid-columns-editor-wave.test.tsx`, `gridColumns.test.tsx` |
-| C2 | color picker nie pokazuje CSS variables truthfully | `fixed outside TASK-271` | TASK-325-03 | Grid Columns keeps token text visible, swatches fall back truthfully, and the shared clearable-field contract already proves the generic seam |
-| C3 | Wizard edytuje tylko kolumny 1 i 2 | `fixed` | TASK-271-01 | Wizard renderuje label inputs dla wszystkich aktywnych kolumn; `grid-columns-editor-wave.test.tsx` |
+| C2 | color picker nie pokazuje CSS variables truthfully | `superseded/fixed` | TASK-325-03 + TASK-336-19 | Grid Columns preserves approved token values at runtime, while normal Visual authoring is now swatch-only with saved custom color values shown as replace-or-clear state instead of editable token text |
+| C3 | Wizard edytuje tylko kolumny 1 i 2 | `superseded/fixed` | TASK-271-01 + TASK-336-19 | Older TASK-271 label-input coverage is superseded by TASK-336-19: Wizard is one-time starter only, while Visual owns labels and content-area configuration; `grid-columns-editor-wave.test.tsx` |
 | C4 | brak wizualnego preview spanów | `fixed outside TASK-271` | TASK-325-01 / TASK-325-02 | `asymmetric` now exposes preset-vs-saved desktop state, and the editor shows current per-breakpoint totals with explicit row-fit guidance |
 | C5 | brak walidacji sumy spanów | `closed with explicit guidance` | TASK-325-02 / TASK-325-05 | editor totals now follow the effective visible layout, explain row-fit consequences, and record the explicit `no-runtime-guard` rejection instead of claiming runtime enforcement |
 | W1 | brak per-column surface overrides | `fixed` | TASK-271-04 | per-column `style.surface/background/borderColor/borderWidth/radius/padding`; `gridColumns.tsx`, `gridColumns.test.tsx` |
@@ -52,7 +76,7 @@ Playwright wykrył trzy klasy problemów:
 | W8 | brak custom CSS class per kolumna | `rejected` | TASK-271-07 | no safe class registry/policy; raw class strings intentionally not added |
 | W9 | brak per-column overflow control | `fixed` | TASK-271-04 | per-column `style.overflow` now stays independent from local surface highlight, with runtime `overflow-hidden` proof |
 | W10 | ograniczone gap tokens | `fixed` | TASK-271-06 | gap set expanded to `none/1/2/3/4/5/6/7/8/10/12` |
-| U1 | gap labels bez px context | `fixed` | TASK-271-06 | labels now include scale copy (`Gap 6 - 24px`) |
+| U1 | gap labels bez px context | `superseded/fixed` | TASK-271-06 + TASK-336-19 | TASK-271 added scale context; TASK-336-19 later removed visible px-unit labels from normal authoring and keeps friendly bounded spacing names |
 | U2 | variant cards bez miniaturek | `fixed` | TASK-271-01 | visual selector includes compact previews for all variants |
 | U3 | Advanced nie ukrywa inactive cardize controls | `fixed outside TASK-271` | TASK-325-04 | cardize-only controls now hide/disable truthfully when inactive, and `masonry-lite` keeps the lock reason explicit |
 | U4 | brak wskaźnika bieżącej sumy spanów | `fixed outside TASK-271` | TASK-325-02 | current desktop/tablet/mobile totals are visible with explicit row-fit guidance |
@@ -69,7 +93,9 @@ Playwright wykrył trzy klasy problemów:
 
 ### TASK-271-01
 
-- Wizard label inputs now cover every configured column.
+- Historical note: before TASK-336-19, Wizard label inputs covered every
+  configured column. Current TASK-336-19 ownership moves label and daily
+  content-area configuration to Visual, leaving Wizard as one-time starter only.
 - Variant cards gained compact layout miniatures.
 - Count copy is now user-facing (`Column count`).
 - Same-count presets apply bounded span sets without adding/removing slots.
@@ -132,6 +158,14 @@ Focused TASK-325 closure coverage completed during this closure pass:
 
 Full TASK-325 closure validation is recorded in `TASK-325-06` together with `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run gates:coderso`, `git diff --check`, `bun run precommit`, and the local `scan:security:strict` tool availability limitation.
 
+TASK-336-19 Grid Columns ownership validation:
+
+- `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  - `3` files passed, `70` tests passed on 2026-05-25.
+- `bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-grid-columns-final --widget grid-columns --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-grid-columns-advanced-readonly-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-grid-columns-advanced-readonly-2026-05-25.md --strict`
+  - reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+    `metadataGaps=0`.
+
 ## 7. Notes
 
 - Original Playwright snapshot date remains important because several findings
@@ -140,4 +174,4 @@ Full TASK-325 closure validation is recorded in `TASK-325-06` together with `bun
 - This closure matrix intentionally does not claim TASK-271 alone fixed the
   TASK-256- and later TASK-325-owned shared-contract drift.
 
-*Raport closure zaktualizowany po finalnym TASK-325 shared truthfulness closure pass.*
+*Raport closure zaktualizowany po finalnym TASK-325 shared truthfulness closure pass oraz TASK-336-19 Grid Columns ownership supersession.*

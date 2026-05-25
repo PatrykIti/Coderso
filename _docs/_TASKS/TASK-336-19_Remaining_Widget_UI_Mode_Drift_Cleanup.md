@@ -653,6 +653,31 @@ read-only diagnostics. It added these concrete cleanup requirements:
   high findings; the remaining medium findings around Wizard preset truthfulness,
   Wizard preset metadata, stale report evidence, validation notes, and Wizard
   setup copy were fixed.
+- In Progress (2026-05-25): next family targets `grid-columns` editor-mode
+  drift. Wizard is now one-time setup only for the starter layout variant and
+  no longer owns labels, count, presets, spans, spacing, surface, color, or
+  per-column behavior. Visual is the daily owner for variant, alignment,
+  responsive widths, visibility, content-area labels/count guidance,
+  same-count presets, spacing, cardized surfaces, swatch-only color
+  replacement, and per-column overrides. Advanced no longer receives
+  `onChange`; it renders read-only layout, column override, and content-area
+  diagnostics only, without inputs/selects/buttons, hidden mutating controls,
+  raw JSON, or visible `var(...)` token strings for nontechnical authors. A
+  fresh helper-agent audit found hidden fake metadata, undeclared Visual
+  variant side effects, raw Advanced token copy, and stale docs; those findings
+  were fixed before validation. A final fresh audit then found coarse Visual
+  metadata, `XL`/`2XL` option jargon, raw Advanced surface token summaries, and
+  stale report wording; those findings were also fixed. A fresh follow-up audit
+  then found raw Advanced variant/alignment/gap token labels, which were mapped
+  to user-facing variant, vertical-alignment, and spacing summaries before the
+  final reruns.
+  Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/grid-columns-editor-wave.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-grid-columns-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0` after clearing the stale Vite optimized dependency cache and
+  restarting `coderso-dev-core-host`.
 
 ## Files to Change
 
