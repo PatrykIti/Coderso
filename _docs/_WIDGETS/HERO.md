@@ -85,6 +85,9 @@ Advanced must not duplicate Visual as a second design panel.
   controls.
 - Video media supports `posterSrc`, `title`, and `description` for both inline
   and background video output.
+- Visual media and poster authoring now uses Media Library pickers only.
+  Existing external media/poster URLs remain runtime-compatible and appear in
+  Visual as replace-or-clear saved external state instead of editable URL text.
 - Current image loading policy is deterministic and Hero-specific:
   `centered`, `split`, and `media-center` use eager/high-priority image hints;
   `media-left` stays lazy/auto. True `srcset`/`picture` variants remain deferred

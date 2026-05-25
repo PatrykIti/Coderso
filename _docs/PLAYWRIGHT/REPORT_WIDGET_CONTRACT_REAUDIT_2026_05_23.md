@@ -944,6 +944,31 @@ link-destination-only sub-slice.
 - Claude read-only review was attempted for this link-only slice, but the
   process timed out before returning output.
 
+## TASK-336-19 Hero Media Authoring Evidence (2026-05-25)
+
+The sixteenth TASK-336-19 implementation family targets Hero media/poster raw
+URL authoring drift.
+
+- Hero Visual media and background media no longer expose normal raw URL/source
+  controls for `media.src`, `media.posterSrc`, `background.media.src`, or
+  `background.media.posterSrc`.
+- Media and poster replacement now uses Media Library pickers while preserving
+  saved external media/poster values as replace-or-clear read-only state in
+  Visual.
+- Runtime schema and rendering stay backward-compatible for existing external
+  media values.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  renderer compatibility, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-media-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only media review returned `NO BLOCKERS` before the final
+  legacy-state refinements. A final `claude -p --permission-mode plan
+  --output-format text` confirmation attempt timed out after 240 seconds
+  without new output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

@@ -150,4 +150,7 @@ test("hero visual editor switches image alt controls to video metadata", () => {
   expect(videoHtml).toContain("Video title");
   expect(videoHtml).toContain("Video description");
   expect(videoHtml).toContain("Video poster image");
+  expect(videoHtml).not.toContain("Media URL");
+  expect(videoHtml).not.toContain("Poster image URL");
+  expect(videoHtml).not.toContain("External URL");
 });

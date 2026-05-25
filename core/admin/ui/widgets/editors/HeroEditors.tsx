@@ -133,7 +133,6 @@ type HeroMaxWidth = NonNullable<HeroData["layout"]>["maxWidth"];
 type HeroContentWidth = NonNullable<HeroData["layout"]>["contentWidth"];
 type HeroSpacing = NonNullable<HeroData["spacing"]>["paddingTop"];
 type HeroMediaType = NonNullable<HeroData["media"]>["type"];
-type HeroMediaSource = NonNullable<HeroData["media"]>["source"];
 type CtaMode = (typeof ctaOptions)[number]["id"];
 type HeroStyle = NonNullable<HeroData["style"]>;
 type HeroHeadlineSize = NonNullable<HeroStyle["headlineSize"]>;
@@ -165,11 +164,6 @@ const badgePlacementOptions: Array<{ id: HeroBadgePlacement; label: string }> = 
 
 const isValidMediaUrl = (value: string | undefined) =>
   !value || value.startsWith("http") || value.startsWith("/");
-
-const mediaSourceOptions = [
-  { id: "library", label: "Media library" },
-  { id: "external", label: "External URL" },
-] as const;
 
 const headlineSizeOptions = ["none", "2xl", "3xl", "4xl", "5xl"] as const;
 const subheadSizeOptions = ["none", "base", "lg", "xl", "2xl"] as const;
@@ -394,26 +388,18 @@ function HeroMediaSourceFields({
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const source: HeroMediaSource = media.source ?? "external";
+  const savedExternalMedia =
+    (media.source ?? "external") === "external" && Boolean(media.src?.trim());
+  const selectedAssetId = media.source === "library" ? (media.assetId ?? null) : null;
   const accept =
     mediaType === "image" ? ["image/*"] : mediaType === "video" ? ["video/*"] : undefined;
-
-  const handleSourceChange = (next: HeroMediaSource) => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    if (next === "library") {
-      onChange({ source: next, assetId: undefined, src: undefined });
-    } else {
-      onChange({ source: next, assetId: undefined });
-    }
-  };
 
   const handleAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
     if (!assetId) {
-      onChange({ assetId: undefined, src: undefined });
+      onChange({ source: "library", assetId: undefined, src: undefined });
       return;
     }
     onChange({ assetId, source: "library" });
@@ -449,81 +435,51 @@ function HeroMediaSourceFields({
       if (isApiClientError(err)) {
         setLookupError(err.message);
       } else {
-        setLookupError("Failed to resolve media URL.");
+        setLookupError("Failed to resolve selected media.");
       }
     }
   };
 
   return (
     <div className="space-y-3">
-      <WidgetControlRow
+      <ReadonlyWidgetSummaryRow
         id={`${controlIdPrefix}.source`}
         label="Media source"
         path={`${pathPrefix}.source`}
-      >
-        {(fieldProps) => (
-          <Select
-            value={source}
-            onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
+        value={savedExternalMedia ? "Saved external media" : "Media library"}
+        help="Normal authoring uses the Media Library. Saved external media can be replaced or cleared without hand-editing the saved source."
+      />
+      {savedExternalMedia ? (
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm text-muted-foreground">
+          <p>Saved external media is configured. Pick a Media Library asset to replace it.</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => onChange({ source: "library", assetId: undefined, src: undefined })}
           >
-            <SelectTrigger
-              id={fieldProps.id}
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            >
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaSourceOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            Clear saved external media
+          </Button>
+        </div>
+      ) : null}
+      <WidgetControlRow
+        id={`${controlIdPrefix}.assetId`}
+        label={mediaType === "video" ? "Video asset" : "Image asset"}
+        path={`${pathPrefix}.assetId`}
+      >
+        {() => (
+          <div className="space-y-2">
+            <MediaPicker
+              value={selectedAssetId}
+              onChange={(value) => void handleAssetChange(value)}
+              multiple={false}
+              accept={accept}
+            />
+            {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+          </div>
         )}
       </WidgetControlRow>
-      {source === "library" ? (
-        <WidgetControlRow
-          id={`${controlIdPrefix}.assetId`}
-          label="Media asset"
-          path={`${pathPrefix}.assetId`}
-        >
-          {() => (
-            <div className="space-y-2">
-              <MediaPicker
-                value={media.assetId ?? null}
-                onChange={(value) => void handleAssetChange(value)}
-                multiple={false}
-                accept={accept}
-              />
-              {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-            </div>
-          )}
-        </WidgetControlRow>
-      ) : (
-        <WidgetControlRow
-          id={`${controlIdPrefix}.src`}
-          label="Media URL"
-          path={`${pathPrefix}.src`}
-        >
-          {(fieldProps) => (
-            <div className="space-y-2">
-              <Input
-                id={fieldProps.id}
-                value={media.src ?? ""}
-                onChange={(event) => onChange({ src: event.target.value })}
-                placeholder="https://"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-              {!isValidMediaUrl(media.src) ? (
-                <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-              ) : null}
-            </div>
-          )}
-        </WidgetControlRow>
-      )}
     </div>
   );
 }
@@ -543,24 +499,16 @@ function HeroPosterFields({
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const posterSource: HeroMediaSource = media.posterSource ?? "library";
-
-  const handleSourceChange = (next: HeroMediaSource) => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    onChange({
-      posterSource: next,
-      posterAssetId: undefined,
-      posterSrc: undefined,
-    });
-  };
+  const posterSource = media.posterSource;
+  const savedExternalPoster = Boolean(media.posterSrc?.trim()) && posterSource !== "library";
+  const selectedPosterAssetId = posterSource === "library" ? (media.posterAssetId ?? null) : null;
 
   const handlePosterAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
     if (!assetId) {
-      onChange({ posterAssetId: undefined, posterSrc: undefined });
+      onChange({ posterSource: "library", posterAssetId: undefined, posterSrc: undefined });
       return;
     }
 
@@ -584,7 +532,7 @@ function HeroPosterFields({
       if (isApiClientError(err)) {
         setLookupError(err.message);
       } else {
-        setLookupError("Failed to resolve poster image URL.");
+        setLookupError("Failed to resolve poster image.");
       }
     }
   };
@@ -603,74 +551,37 @@ function HeroPosterFields({
           })
         }
       />
-      <WidgetControlRow
+      <ReadonlyWidgetSummaryRow
         id={`${controlIdPrefix}.posterSource`}
         label="Poster source"
         path={`${pathPrefix}.posterSource`}
+        value={savedExternalPoster ? "Saved external poster" : "Media library"}
+        help="Normal authoring uses the Media Library. Saved external poster images can be replaced or cleared without hand-editing the saved source."
+      />
+      {savedExternalPoster ? (
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm text-muted-foreground">
+          <p>
+            Saved external poster image is configured. Pick a Media Library image to replace it.
+          </p>
+        </div>
+      ) : null}
+      <WidgetControlRow
+        id={`${controlIdPrefix}.posterAssetId`}
+        label="Poster asset"
+        path={`${pathPrefix}.posterAssetId`}
       >
-        {(fieldProps) => (
-          <Select
-            value={posterSource}
-            onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
-          >
-            <SelectTrigger
-              id={fieldProps.id}
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            >
-              <SelectValue placeholder="Select source" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaSourceOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {() => (
+          <div className="space-y-2">
+            <MediaPicker
+              value={selectedPosterAssetId}
+              onChange={(value) => void handlePosterAssetChange(value)}
+              multiple={false}
+              accept={["image/*"]}
+            />
+            {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+          </div>
         )}
       </WidgetControlRow>
-      {posterSource === "library" ? (
-        <WidgetControlRow
-          id={`${controlIdPrefix}.posterAssetId`}
-          label="Poster asset"
-          path={`${pathPrefix}.posterAssetId`}
-        >
-          {() => (
-            <div className="space-y-2">
-              <MediaPicker
-                value={media.posterAssetId ?? null}
-                onChange={(value) => void handlePosterAssetChange(value)}
-                multiple={false}
-                accept={["image/*"]}
-              />
-              {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-            </div>
-          )}
-        </WidgetControlRow>
-      ) : (
-        <WidgetControlRow
-          id={`${controlIdPrefix}.posterSrc`}
-          label="Poster image URL"
-          path={`${pathPrefix}.posterSrc`}
-        >
-          {(fieldProps) => (
-            <div className="space-y-2">
-              <Input
-                id={fieldProps.id}
-                value={media.posterSrc ?? ""}
-                onChange={(event) => onChange({ posterSrc: event.target.value })}
-                placeholder="https://"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-              {!isValidMediaUrl(media.posterSrc) ? (
-                <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-              ) : null}
-            </div>
-          )}
-        </WidgetControlRow>
-      )}
     </div>
   );
 }
@@ -3021,7 +2932,7 @@ export function HeroVisualEditor({
       <EditorSection
         id="hero.background"
         title="Background"
-        description="Background can use image/video from library or external URL."
+        description="Background media uses the Media Library. Saved external media remains replace-or-clear compatible."
       >
         <HeroColorField
           id="hero.background.color"
@@ -3147,7 +3058,8 @@ export function HeroVisualEditor({
         ) : null}
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            Background media supports both Media Library and external URL.
+            Background media uses the Media Library. Saved external media remains replace-or-clear
+            compatible.
           </p>
         </div>
       </EditorSection>

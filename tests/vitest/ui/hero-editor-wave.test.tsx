@@ -424,6 +424,9 @@ const findButtonContainingText = (container: ParentNode, text: string) =>
 const findMediaPickers = (container: ParentNode) =>
   Array.from(container.querySelectorAll("[data-media-picker='true']"));
 
+const getMediaPickerValue = (picker: Element | undefined) =>
+  picker?.querySelector("span")?.textContent?.trim();
+
 const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
   container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
 
@@ -1305,7 +1308,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       "No presets yet. Save your current setup as a starting point."
     );
     expect(view.container.textContent).toContain(
-      "Background media supports both Media Library and external URL."
+      "Background media uses the Media Library. Saved external media remains replace-or-clear compatible."
     );
     expect(ctaSection).toBeTruthy();
     expect(layoutSection).toBeTruthy();
@@ -1362,14 +1365,9 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[0], "video");
     });
-    React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "https://"), "ftp://media.invalid");
-    });
-    expect(view.container.textContent).toContain("Use a relative path or full URL.");
-
-    React.act(() => {
-      setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[0], "library");
-    });
+    expect(findInputByPlaceholder(view.container, "https://")).toBeUndefined();
+    expect(findSelectsByOptions(view.container, ["library", "external"])).toHaveLength(0);
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
@@ -1461,11 +1459,8 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[1], "image");
     });
-    React.act(() => {
-      setSelectValue(findSelectsByOptions(view.container, ["library", "external"])[1], "library");
-    });
     clickElement(
-      findButtonsByText(findMediaPickers(view.container)[1], "pick-asset-background")[0]
+      findButtonsByText(findMediaPickers(view.container)[2], "pick-asset-background")[0]
     );
     await flush();
 
@@ -1544,6 +1539,153 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       })
     );
     expect(latestValue.secondaryCta).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved external hero media replace-or-clear only", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Legacy media",
+    media: {
+      type: "video",
+      source: "external",
+      assetId: "asset-video",
+      src: "https://legacy.example.com/hero.mp4",
+      posterAssetId: "asset-hero",
+      posterSrc: "https://legacy.example.com/poster.jpg",
+      title: "Legacy video",
+      description: "Legacy description",
+    },
+    background: {
+      media: {
+        type: "video",
+        source: "external",
+        assetId: "asset-background",
+        src: "https://legacy.example.com/background.mp4",
+        posterSource: "external",
+        posterAssetId: "asset-hero",
+        posterSrc: "https://legacy.example.com/background-poster.jpg",
+      },
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<HeroData>(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Saved external media is configured.");
+    expect(view.container.textContent).toContain("Saved external poster image is configured.");
+    expect(view.container.textContent).not.toContain("Clear saved external poster");
+    expect(view.container.textContent).not.toContain("Media URL");
+    expect(view.container.textContent).not.toContain("Poster image URL");
+    expect(view.container.textContent).not.toContain("External URL");
+    expect(findInputByPlaceholder(view.container, "https://")).toBeUndefined();
+    expect(findSelectsByOptions(view.container, ["library", "external"])).toHaveLength(0);
+
+    const initialPickers = findMediaPickers(view.container);
+    expect(initialPickers).toHaveLength(4);
+    expect(initialPickers.map(getMediaPickerValue)).toEqual(["none", "none", "none", "none"]);
+
+    clickElement(findButtonsByText(view.container, "Clear saved external media")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-video",
+        src: "https://cdn.example.com/demo.mp4",
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[1], "clear-media")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: undefined,
+        posterSrc: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[1], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: "asset-hero",
+        posterSrc: "/media/hero.jpg",
+      })
+    );
+
+    clickElement(findButtonsByText(view.container, "Clear saved external media")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: undefined,
+        src: undefined,
+      })
+    );
+
+    clickElement(
+      findButtonsByText(findMediaPickers(view.container)[2], "pick-asset-background")[0]
+    );
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-background",
+        src: "/media/background.jpg",
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[3], "clear-media")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: undefined,
+        posterSrc: undefined,
+      })
+    );
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[3], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.background?.media).toEqual(
+      expect.objectContaining({
+        posterSource: "library",
+        posterAssetId: "asset-hero",
+        posterSrc: "/media/hero.jpg",
+      })
+    );
   } finally {
     view.cleanup();
   }

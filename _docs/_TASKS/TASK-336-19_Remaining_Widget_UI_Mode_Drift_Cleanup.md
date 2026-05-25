@@ -339,6 +339,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   separate follow-up sub-slices for media URL, avatar URL, rich HTML, and
   color/overlay authoring. Claude review for this link-only slice timed out
   before returning output.
+- In Progress (2026-05-25): sixteenth implementation family continues Hero
+  cleanup with media/poster authoring. Hero Visual media and background media
+  now use Media Library pickers for `media.src`, `media.posterSrc`,
+  `background.media.src`, and `background.media.posterSrc` instead of visible
+  raw URL/source controls. Saved external media/poster values remain
+  runtime-compatible and appear as replace-or-clear read-only state in Visual.
+  Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-media-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only media review returned `NO BLOCKERS`
+  before the final legacy-state refinements; a final `claude -p
+  --permission-mode plan --output-format text` confirmation attempt timed out
+  after 240 seconds without new output.
 
 ## Files to Change
 
