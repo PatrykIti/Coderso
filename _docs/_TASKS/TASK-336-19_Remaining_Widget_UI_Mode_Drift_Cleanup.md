@@ -818,6 +818,31 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-advanced-readonly-2026-05-25.json`,
   `bun --cwd core lint`, `bun --cwd core lint:types`, and
   `bun run gates:coderso` pass for this slice.
+- In Progress (2026-05-25): Content List residual drift is superseded under
+  this task. Fresh helper-agent and Claude read-only UX reviews found that
+  Advanced still rendered a raw JSON runtime snapshot, Visual still asked for
+  a raw `View all` path, helper search inputs claimed persisted paths, and
+  Wizard/Visual controls lacked complete truthful metadata. Content List now
+  keeps Wizard as source setup, Visual as daily filters/presentation/pagination
+  authoring, and Advanced as read-only human runtime/support summaries without
+  raw JSON, internal IDs, raw CSS/token inputs, or raw path guidance. Visual
+  `View all` uses the shared page-first `LinkDestinationField`, color controls
+  remain swatch-only, helper search rows are preview-only, and picker button
+  groups are programmatically associated with their control rows. Targeted
+  Vitest/Bun evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts`
+  and `bun test tests/unit/widgets/contentList.test.tsx`. Targeted Playwright
+  strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0` after restarting `coderso-dev-core-host` twice to refresh
+  the admin bundle. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-focused-2026-05-25.*`
+  opens Wizard via `Run setup again` and conditionally reveals Visual
+  `View all page`, reporting `wizardPassed=true`, `viewAllPassed=true`,
+  missing metadata `0`, and raw path inputs `0`. Claude final read-only audit
+  returned `PASS`; helper-agent final audit found no blocking code drift and
+  the focused probe closes its artifact-coverage note.
 
 ## Files to Change
 

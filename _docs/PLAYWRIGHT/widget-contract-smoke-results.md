@@ -38,6 +38,7 @@ Per-widget TASK-336 fixes record targeted reruns separately until the final
 | 2026-05-24 | `grid-columns` | adminFailures=0, publicFailures=0, fixtureGaps=1, metadataGaps=0; advanced-only rerun=0/0/0/0 | `_docs/PLAYWRIGHT/widget-contract-smoke-grid-columns-2026-05-24.md`, `_docs/PLAYWRIGHT/widget-contract-smoke-grid-columns-advanced-2026-05-24.md` |
 | 2026-05-24 | `split-layout` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-split-layout-2026-05-24.md` |
 | 2026-05-25 | `stack` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 after TASK-336-19 Advanced/Wizard ownership cleanup | `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-advanced-readonly-2026-05-25.md` |
+| 2026-05-25 | `content-list` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 after TASK-336-19 page-first destination and Advanced-summary cleanup; focused Wizard/View-All probe passed | `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-advanced-readonly-2026-05-25.md`, `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-focused-2026-05-25.md` |
 | 2026-05-24 | `spacer` | adminFailures=0, publicFailures=0, fixtureGaps=0, metadataGaps=0 | `_docs/PLAYWRIGHT/widget-contract-smoke-spacer-2026-05-24.md` |
 | 2026-05-24 | `divider` | adminFailures=0, publicFailures=0, fixtureGaps=1, metadataGaps=0; advanced-only rerun=0/0/0/0 | `_docs/PLAYWRIGHT/widget-contract-smoke-divider-2026-05-24.md`, `_docs/PLAYWRIGHT/widget-contract-smoke-divider-advanced-2026-05-24.md` |
 

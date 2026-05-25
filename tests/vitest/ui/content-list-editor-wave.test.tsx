@@ -10,6 +10,7 @@ import type {
   ListingQueryRecord,
   ListingTemplateRecord,
 } from "../../../core/admin/services/listingsClient";
+import type { PageSummary } from "../../../core/admin/services/pagesClient";
 import type { TaxonomyOverview } from "../../../core/admin/services/taxonomyClient";
 import type { ContentListData } from "../../../core/widgets/core/contentList";
 
@@ -172,6 +173,16 @@ const contentListState = vi.hoisted(() => ({
       updatedAt: "2026-03-08T10:00:00.000Z",
     },
   ] satisfies ListingTemplateRecord[],
+  pages: [
+    {
+      id: "page-projects",
+      title: "Projects",
+      slug: "projects",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+      author: null,
+    },
+  ] satisfies PageSummary[],
   contentTypesError: null as unknown,
   listingsError: null as unknown,
   authorsError: null as unknown,
@@ -384,6 +395,10 @@ vi.mock("@/services/listingsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => contentListState.pages),
+}));
+
 vi.mock("@/services/adminUsersClient", () => ({
   listAdminUsers: vi.fn(async () => {
     if (contentListState.authorsError) throw contentListState.authorsError;
@@ -499,6 +514,12 @@ const findInputByAriaLabel = (container: ParentNode, text: string) =>
       normalizeText(input.getAttribute("aria-label")) === normalizeText(text)
   );
 
+const findControlByPath = (container: ParentNode, path: string) =>
+  container.querySelector(`[data-widget-control-path="${path}"]`);
+
+const closestControlPath = (element: Element | null | undefined) =>
+  element?.closest("[data-widget-control]")?.getAttribute("data-widget-control-path") ?? null;
+
 afterEach(() => {
   vi.restoreAllMocks();
   contentListState.reset();
@@ -536,6 +557,12 @@ test("ContentList wizard editor owns source setup, clamps item limit, and clears
     expect(view.container.textContent).toContain("News (news-main)");
     expect(view.container.textContent).toContain("News (news-secondary)");
     expect(view.container.textContent).not.toContain("Legacy content type source");
+    expect(findControlByPath(view.container, "source.mode")).not.toBeNull();
+    expect(findControlByPath(view.container, "source.contentTypeId")).not.toBeNull();
+    expect(findControlByPath(view.container, "source.limit")).not.toBeNull();
+    expect(closestControlPath(findInputByPlaceholder(view.container, "Search content types"))).toBe(
+      null
+    );
 
     React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Search content types"), "secondary");
@@ -626,6 +653,13 @@ test("ContentList visual editor switches between listing and legacy sources, per
   try {
     await flush();
 
+    expect(findControlByPath(view.container, "variant")).not.toBeNull();
+    expect(findControlByPath(view.container, "style.columns")).not.toBeNull();
+    expect(findControlByPath(view.container, "filters.taxonomy")).not.toBeNull();
+    expect(findControlByPath(view.container, "fields.showImage")).not.toBeNull();
+    expect(findControlByPath(view.container, "style.backgroundColor")).not.toBeNull();
+    expect(closestControlPath(findInputByPlaceholder(view.container, "Search authors"))).toBe(null);
+
     React.act(() => {
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])[0], "lg");
@@ -697,10 +731,7 @@ test("ContentList visual editor switches between listing and legacy sources, per
         ])[0],
         "title-desc"
       );
-      setInputValue(
-        findInputByPlaceholder(view.container, "e.g. featured or case-study"),
-        "case-study"
-      );
+      setInputValue(findInputByPlaceholder(view.container, "Search or choose a tag"), "case-study");
       setInputValue(
         findInputByPlaceholder(view.container, "Optional section title"),
         "Latest updates"
@@ -817,9 +848,15 @@ test("ContentList visual editor updates pagination controls", async () => {
 
     React.act(() => {
       setInputValue(findNumberInputs(view.container)[0], "8");
-      setInputValue(findInputByPlaceholder(view.container, "/articles"), "/projects");
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__coderso_link_empty__", "page-projects"])[0],
+        "page-projects"
+      );
       setInputValue(findInputByPlaceholder(view.container, "View all"), "Browse everything");
     });
+
+    expect(findInputByPlaceholder(view.container, "/articles")).toBeUndefined();
+    expect(findControlByPath(view.container, "pagination.viewAllHref")).not.toBeNull();
 
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
@@ -1029,15 +1066,22 @@ test("ContentList advanced editor renders read-only sanitized source, style, and
     expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
     expect(view.container.textContent).toContain("Source summary");
     expect(view.container.textContent).toContain("By listing query");
-    expect(view.container.textContent).toContain("Query: query-1");
-    expect(view.container.textContent).toContain("Template: template-1");
+    expect(view.container.textContent).toContain("Listing query: Featured listing");
+    expect(view.container.textContent).toContain("Template: Cards");
+    expect(view.container.textContent).toContain("Author: editor@example.com");
     expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Card and text colors");
     expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("1 item rendered");
+    expect(view.container.textContent).toContain("1 filtered token suppressed");
+    expect(view.container.textContent).toContain("Page 2");
     expect(view.container.textContent).not.toContain("Launch note");
     expect(view.container.textContent).not.toContain('"items"');
-    expect(view.container.textContent).toContain('"itemCount": 1');
-    expect(view.container.textContent).toContain('"rejectedTokenCount": 1');
-    expect(view.container.textContent).toContain('"page": 2');
+    expect(view.container.textContent).not.toContain('"itemCount"');
+    expect(view.container.textContent).not.toContain('"rejectedTokenCount"');
+    expect(view.container.textContent).not.toContain("query-1");
+    expect(view.container.textContent).not.toContain("template-1");
+    expect(view.container.textContent).not.toContain("user-2");
     expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
@@ -1370,7 +1414,8 @@ test("ContentList editors fall back to default source, style, field, and runtime
       (findInputByAriaLabel(view.container, "Text color swatch") as HTMLInputElement | null)?.value
     ).toBe("#0f172a");
     expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
-    expect(view.container.textContent).toContain('"itemCount": 0');
+    expect(view.container.textContent).toContain("0 items rendered");
+    expect(view.container.textContent).not.toContain('"itemCount"');
   } finally {
     view.cleanup();
     vi.doUnmock("../../../core/widgets/core/contentList");

@@ -154,6 +154,10 @@ Zasady:
   Wizard-owned `defaultOpenIds` przy zmianie trybu otwierania, kolory sa
   swatch-only bez raw token inputow, a Advanced pokazuje behavior/item/display
   summaries zamiast JSON payloadow i technicznych DOM id suffixow.
+- `content-list` po TASK-336-19 ma page-first `View all` destination picker,
+  truthful helper-search metadata, swatch-only color controls, Visual-owned
+  daily filters/presentation/pagination, oraz Advanced-only human summaries
+  bez raw JSON, runtime payloadow, internal IDs lub raw path guidance.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

@@ -45,7 +45,13 @@ import type {
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import { LinkDestinationField } from "./LinkDestinationField";
+import {
+  ReadonlyWidgetSummaryRow,
+  type WidgetControlFieldProps,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: ContentListVariantId;
@@ -98,17 +104,17 @@ const columnsOptions = [
 ] as const;
 
 const gapOptions: Array<{ id: ContentListGap; label: string }> = [
-  { id: "none", label: "None" },
-  { id: "sm", label: "Compact" },
-  { id: "md", label: "Default" },
-  { id: "lg", label: "Spacious" },
+  { id: "none", label: "No spacing" },
+  { id: "sm", label: "Compact spacing" },
+  { id: "md", label: "Balanced spacing" },
+  { id: "lg", label: "Spacious spacing" },
 ];
 
 const paginationModeOptions: Array<{ id: ContentListPaginationMode; label: string }> = [
   { id: "none", label: "No navigation" },
   { id: "paged", label: "Previous / next" },
   { id: "load-more", label: "Load more" },
-  { id: "view-all", label: "View all link" },
+  { id: "view-all", label: "View all page" },
 ];
 
 const cardStyleOptions: Array<{ id: ContentListCardStyle; label: string }> = [
@@ -159,12 +165,19 @@ function EditorSection({
 function VariantCards({
   value,
   onChange,
+  fieldProps,
 }: {
   value: ContentListVariantId;
   onChange?: (next: string) => void;
+  fieldProps?: WidgetControlFieldProps;
 }) {
   return (
-    <div className="space-y-2">
+    <div
+      id={fieldProps?.id}
+      aria-labelledby={fieldProps?.["aria-labelledby"]}
+      className="space-y-2"
+      role="group"
+    >
       {variantOptions.map((option) => (
         <button
           key={option.id}
@@ -209,12 +222,19 @@ function VariantCards({
 function CardStyleCards({
   value,
   onChange,
+  fieldProps,
 }: {
   value: ContentListCardStyle;
   onChange?: (next: ContentListCardStyle) => void;
+  fieldProps?: WidgetControlFieldProps;
 }) {
   return (
-    <div className="space-y-2">
+    <div
+      id={fieldProps?.id}
+      aria-labelledby={fieldProps?.["aria-labelledby"]}
+      className="space-y-2"
+      role="group"
+    >
       {cardStyleOptions.map((option) => (
         <button
           key={option.id}
@@ -316,17 +336,52 @@ function buildAuthorOptions(users: AdminUser[]) {
     })) satisfies AuthorOption[];
 }
 
-function ContentTypeSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-}) {
+function findOptionLabel(
+  options: ReadonlyArray<{ id: string; label: string }>,
+  value: string | undefined,
+  fallback: string
+) {
+  const trimmedValue = value?.trim() ?? "";
+  if (!trimmedValue) return fallback;
+  return options.find((option) => option.id === trimmedValue)?.label ?? fallback;
+}
+
+function findRecordName<TRecord extends { id: string; name: string | null | undefined }>(
+  records: TRecord[],
+  value: string | undefined,
+  emptyLabel: string,
+  missingLabel: string
+) {
+  const trimmedValue = value?.trim() ?? "";
+  if (!trimmedValue) return emptyLabel;
+  return records.find((record) => record.id === trimmedValue)?.name?.trim() || missingLabel;
+}
+
+function summarizeColorSelection(value: string | undefined) {
+  const trimmedValue = value?.trim() ?? "";
+  if (!trimmedValue) return "Theme default";
+  if (trimmedValue.startsWith("var(")) return "Theme token selected";
+  return "Selected color";
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function formatRuntimeTimestamp(value: string | undefined) {
+  if (!value?.trim()) return "Not refreshed yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Refresh time unavailable";
+  return date.toLocaleString("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function useContentTypeOptions() {
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -352,7 +407,59 @@ function ContentTypeSelect({
     };
   }, []);
 
-  const options = buildContentTypeOptions(types);
+  return {
+    options: buildContentTypeOptions(types),
+    loading,
+    error,
+  };
+}
+
+function useAuthorOptions() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    listAdminUsers()
+      .then((items) => {
+        if (!active) return;
+        setUsers(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load authors.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return {
+    options: buildAuthorOptions(users),
+    loading,
+    error,
+  };
+}
+
+function ContentTypeSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const { options, loading, error } = useContentTypeOptions();
+  const [search, setSearch] = useState("");
+
   const searchText = search.trim().toLowerCase();
   const filteredOptions =
     searchText.length > 0
@@ -366,28 +473,44 @@ function ContentTypeSelect({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Content type</p>
-      <Input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search content types"
-      />
-      <Select
-        value={selectValue}
-        onValueChange={(next) => onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)}
+      <WidgetControlRow
+        id="content-list.wizard.source.content-type-search"
+        label="Search content types"
+        ownership="preview"
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select content type">{selectedLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
-          {filteredOptions.map((entry) => (
-            <SelectItem key={entry.id} value={entry.id}>
-              {entry.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search content types"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="content-list.wizard.source.content-type"
+        label="Content type"
+        path="source.contentTypeId"
+      >
+        {(fieldProps) => (
+          <Select
+            value={selectValue}
+            onValueChange={(next) => onChange(next === NO_CONTENT_TYPE_VALUE ? "" : next)}
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select content type">{selectedLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_CONTENT_TYPE_VALUE}>No content type selected</SelectItem>
+              {filteredOptions.map((entry) => (
+                <SelectItem key={entry.id} value={entry.id}>
+                  {entry.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {loading ? <p className="text-xs text-muted-foreground">Loading content types...</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
@@ -451,13 +574,21 @@ function TaxonomySuggestionsInput({
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Taxonomy/tag filter</p>
-      <Input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="e.g. featured or case-study"
-        list={resolvedSuggestions.length > 0 ? TAXONOMY_DATALIST_ID : undefined}
-      />
+      <WidgetControlRow
+        id="content-list.visual.filters.taxonomy"
+        label="Taxonomy or tag filter"
+        path="filters.taxonomy"
+      >
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="Search or choose a tag"
+            list={resolvedSuggestions.length > 0 ? TAXONOMY_DATALIST_ID : undefined}
+          />
+        )}
+      </WidgetControlRow>
       {resolvedSuggestions.length > 0 ? (
         <datalist id={TAXONOMY_DATALIST_ID}>
           {resolvedSuggestions.map((term) => (
@@ -482,36 +613,9 @@ function TaxonomySuggestionsInput({
 }
 
 function AuthorSelect({ value, onChange }: { value: string; onChange: (next: string) => void }) {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { options, loading, error } = useAuthorOptions();
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    let active = true;
-    listAdminUsers()
-      .then((items) => {
-        if (!active) return;
-        setUsers(items);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load authors.");
-        }
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const options = buildAuthorOptions(users);
   const searchText = search.trim().toLowerCase();
   const filteredOptions =
     searchText.length > 0
@@ -525,28 +629,44 @@ function AuthorSelect({ value, onChange }: { value: string; onChange: (next: str
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium">Author filter</p>
-      <Input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search authors"
-      />
-      <Select
-        value={selectValue}
-        onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+      <WidgetControlRow
+        id="content-list.visual.filters.author-search"
+        label="Search authors"
+        ownership="preview"
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select author">{selectedLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
-          {filteredOptions.map((entry) => (
-            <SelectItem key={entry.id} value={entry.id}>
-              {entry.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        {(fieldProps) => (
+          <Input
+            {...fieldProps}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search authors"
+          />
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="content-list.visual.filters.author"
+        label="Author filter"
+        path="filters.authorId"
+      >
+        {(fieldProps) => (
+          <Select
+            value={selectValue}
+            onValueChange={(next) => onChange(next === NO_AUTHOR_VALUE ? "" : next)}
+          >
+            <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+              <SelectValue placeholder="Select author">{selectedLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_AUTHOR_VALUE}>No author filter</SelectItem>
+              {filteredOptions.map((entry) => (
+                <SelectItem key={entry.id} value={entry.id}>
+                  {entry.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {loading ? <p className="text-xs text-muted-foreground">Loading authors...</p> : null}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
@@ -622,46 +742,60 @@ function ListingSourceSelect({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Listing query</p>
-        <Select
-          value={querySelectValue}
-          onValueChange={(next) => onQueryChange(next === NO_LISTING_QUERY_VALUE ? "" : next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select listing query">{selectedQueryName}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
-            {queries.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
+      <WidgetControlRow
+        id="content-list.wizard.source.listing-query"
+        label="Listing query"
+        path="source.listingQueryId"
+      >
+        {() => (
+          <Select
+            value={querySelectValue}
+            onValueChange={(next) => onQueryChange(next === NO_LISTING_QUERY_VALUE ? "" : next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select listing query">{selectedQueryName}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_LISTING_QUERY_VALUE}>No listing query selected</SelectItem>
+              {queries.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
+      <WidgetControlRow
+        id="content-list.wizard.source.listing-template"
+        label="Listing template"
+        path="source.listingTemplateId"
+      >
+        {() => (
+          <Select
+            value={templateSelectValue}
+            onValueChange={(next) =>
+              onTemplateChange(next === NO_LISTING_TEMPLATE_VALUE ? "" : next)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select listing template">
+                {selectedTemplateName}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_LISTING_TEMPLATE_VALUE}>
+                No template selected (optional)
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Listing template</p>
-        <Select
-          value={templateSelectValue}
-          onValueChange={(next) => onTemplateChange(next === NO_LISTING_TEMPLATE_VALUE ? "" : next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select listing template">{selectedTemplateName}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_LISTING_TEMPLATE_VALUE}>
-              No template selected (optional)
-            </SelectItem>
-            {templates.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {item.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+              {templates.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
       {loading ? (
         <p className="text-xs text-muted-foreground">Loading listings options...</p>
       ) : null}
@@ -828,26 +962,31 @@ export function ContentListWizardEditor({ value, onChange }: WidgetEditorProps<C
         title="Source setup"
         description="Select data source and quick listing defaults."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Source mode</p>
-          <Select
-            value={sourceMode}
-            onValueChange={(next) =>
-              updateSourceMode(value, onChange, next as ContentListSourceMode)
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select source mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourceModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="content-list.wizard.source.mode"
+          label="Source mode"
+          path="source.mode"
+        >
+          {(fieldProps) => (
+            <Select
+              value={sourceMode}
+              onValueChange={(next) =>
+                updateSourceMode(value, onChange, next as ContentListSourceMode)
+              }
+            >
+              <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                <SelectValue placeholder="Select source mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
         {sourceMode === "listing" ? (
           <ListingSourceSelect
             queryId={resolved.source?.listingQueryId ?? ""}
@@ -872,66 +1011,78 @@ export function ContentListWizardEditor({ value, onChange }: WidgetEditorProps<C
       >
         {sourceMode === "legacy" ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Status scope</p>
-              <Select
-                value={resolved.source?.statusScope ?? "published"}
-                onValueChange={(next) =>
-                  updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Status scope" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusScopeOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Sort</p>
-              <Select
-                value={resolved.source?.sort ?? "published-desc"}
-                onValueChange={(next) =>
-                  updateSource(value, onChange, { sort: next as ContentListSort })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sort order" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <WidgetControlRow
+              id="content-list.wizard.source.status-scope"
+              label="Status scope"
+              path="source.statusScope"
+            >
+              {(fieldProps) => (
+                <Select
+                  value={resolved.source?.statusScope ?? "published"}
+                  onValueChange={(next) =>
+                    updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
+                  }
+                >
+                  <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                    <SelectValue placeholder="Status scope" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusScopeOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow id="content-list.wizard.source.sort" label="Sort" path="source.sort">
+              {(fieldProps) => (
+                <Select
+                  value={resolved.source?.sort ?? "published-desc"}
+                  onValueChange={(next) =>
+                    updateSource(value, onChange, { sort: next as ContentListSort })
+                  }
+                >
+                  <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                    <SelectValue placeholder="Sort order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
           </div>
         ) : (
           <p className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
             Listing mode uses filters and sorting from the selected Listings query.
           </p>
         )}
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Item limit</p>
-          <Input
-            type="number"
-            min={1}
-            max={24}
-            value={String(resolved.source?.limit ?? contentListDefaults.source?.limit ?? 6)}
-            onChange={(event) =>
-              updateSource(value, onChange, {
-                limit: normalizeContentListLimit(Number(event.target.value)),
-              })
-            }
-          />
-        </div>
+        <WidgetControlRow
+          id="content-list.wizard.source.limit"
+          label="Item limit"
+          path="source.limit"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              type="number"
+              min={1}
+              max={24}
+              value={String(resolved.source?.limit ?? contentListDefaults.source?.limit ?? 6)}
+              onChange={(event) =>
+                updateSource(value, onChange, {
+                  limit: normalizeContentListLimit(Number(event.target.value)),
+                })
+              }
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
@@ -948,6 +1099,35 @@ export function ContentListVisualEditor({
   const sourceMode = resolved.source?.mode ?? "legacy";
   const supportsColumns = resolvedVariant === "cards";
   const showImage = resolved.fields?.showImage ?? true;
+  const { options: contentTypeOptions } = useContentTypeOptions();
+  const { queries, templates } = useListingOptions();
+  const contentTypeLabel = findOptionLabel(
+    contentTypeOptions,
+    resolved.source?.contentTypeId,
+    resolved.source?.contentTypeId ? "Configured content type unavailable" : "Not configured"
+  );
+  const listingQueryLabel = findRecordName(
+    queries,
+    resolved.source?.listingQueryId,
+    "Not configured",
+    "Configured listing query unavailable"
+  );
+  const listingTemplateLabel = findRecordName(
+    templates,
+    resolved.source?.listingTemplateId,
+    "Inherits default",
+    "Configured listing template unavailable"
+  );
+  const statusScopeLabel = findOptionLabel(
+    statusScopeOptions,
+    resolved.source?.statusScope ?? "published",
+    "Published only"
+  );
+  const sortLabel = findOptionLabel(
+    sortOptions,
+    resolved.source?.sort ?? "published-desc",
+    "Newest published first"
+  );
 
   return (
     <div className="space-y-4">
@@ -958,65 +1138,92 @@ export function ContentListVisualEditor({
         title="Variant and layout"
         description="Choose list orientation and spacing style."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <WidgetControlRow id="content-list.visual.variant" label="List variant" path="variant">
+          {(fieldProps) => (
+            <VariantCards
+              value={resolvedVariant}
+              onChange={onVariantChange}
+              fieldProps={fieldProps}
+            />
+          )}
+        </WidgetControlRow>
         <div className="grid gap-3 sm:grid-cols-2">
           {supportsColumns ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Columns</p>
+            <WidgetControlRow
+              id="content-list.visual.layout.columns"
+              label="Columns"
+              path="style.columns"
+            >
+              {(fieldProps) => (
+                <Select
+                  value={resolved.style?.columns ?? "3"}
+                  onValueChange={(next) =>
+                    updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
+                  }
+                >
+                  <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                    <SelectValue placeholder="Columns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {columnsOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
+          ) : (
+            <WidgetControlRow
+              id="content-list.visual.layout.columns"
+              label="Columns"
+              path="style.columns"
+              ownership="readonly"
+              readOnly
+            >
+              {() => (
+                <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                  Columns only affect the cards variant.
+                </div>
+              )}
+            </WidgetControlRow>
+          )}
+          <WidgetControlRow id="content-list.visual.layout.gap" label="Gap" path="style.gap">
+            {(fieldProps) => (
               <Select
-                value={resolved.style?.columns ?? "3"}
+                value={resolved.style?.gap ?? "md"}
                 onValueChange={(next) =>
-                  updateStyle(value, onChange, { columns: next as "1" | "2" | "3" })
+                  updateStyle(value, onChange, { gap: next as ContentListGap })
                 }
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Columns" />
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Gap" />
                 </SelectTrigger>
                 <SelectContent>
-                  {columnsOptions.map((option) => (
+                  {gapOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Columns</p>
-              <div className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
-                Columns only affect the cards variant.
-              </div>
-            </div>
+            )}
+          </WidgetControlRow>
+        </div>
+        <WidgetControlRow
+          id="content-list.visual.layout.card-style"
+          label="Card style"
+          path="style.cardStyle"
+        >
+          {(fieldProps) => (
+            <CardStyleCards
+              value={resolved.style?.cardStyle ?? "outlined"}
+              onChange={(next) => updateStyle(value, onChange, { cardStyle: next })}
+              fieldProps={fieldProps}
+            />
           )}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap</p>
-            <Select
-              value={resolved.style?.gap ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { gap: next as ContentListGap })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Card style</p>
-          <CardStyleCards
-            value={resolved.style?.cardStyle ?? "outlined"}
-            onChange={(next) => updateStyle(value, onChange, { cardStyle: next })}
-          />
-        </div>
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
@@ -1038,13 +1245,13 @@ export function ContentListVisualEditor({
               id="content-list-visual-listing-query"
               label="Listing query"
               path="source.listingQueryId"
-              value={resolved.source?.listingQueryId ?? "Not configured"}
+              value={listingQueryLabel}
             />
             <ReadonlyWidgetSummaryRow
               id="content-list-visual-listing-template"
               label="Listing template"
               path="source.listingTemplateId"
-              value={resolved.source?.listingTemplateId ?? "Default template"}
+              value={listingTemplateLabel}
             />
             <p className="rounded-md border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
               Listing query filtering is owned by the selected Listings query. Change the binding in
@@ -1057,15 +1264,19 @@ export function ContentListVisualEditor({
               id="content-list-visual-content-type"
               label="Content type"
               path="source.contentTypeId"
-              value={resolved.source?.contentTypeId ?? "Not configured"}
+              value={contentTypeLabel}
             />
             <ReadonlyWidgetSummaryRow
-              id="content-list-visual-status-sort"
-              label="Status and sort"
+              id="content-list-visual-status"
+              label="Status scope"
               path="source.statusScope"
-              value={`${resolved.source?.statusScope ?? "published"} · ${
-                resolved.source?.sort ?? "published-desc"
-              }`}
+              value={statusScopeLabel}
+            />
+            <ReadonlyWidgetSummaryRow
+              id="content-list-visual-sort"
+              label="Sort"
+              path="source.sort"
+              value={sortLabel}
             />
             <TaxonomySuggestionsInput
               key={resolved.source?.contentTypeId ?? ""}
@@ -1077,25 +1288,42 @@ export function ContentListVisualEditor({
               value={resolved.filters?.authorId ?? ""}
               onChange={(next) => updateFilters(value, onChange, { authorId: next })}
             />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Search query</p>
-              <Input
-                value={resolved.filters?.searchQuery ?? ""}
-                onChange={(event) =>
-                  updateFilters(value, onChange, { searchQuery: event.target.value })
-                }
-                placeholder="Title, excerpt, tags"
-              />
-            </div>
-            <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-              <span className="text-sm">Featured only</span>
-              <Switch
-                checked={resolved.filters?.featuredOnly ?? false}
-                onCheckedChange={(checked) =>
-                  updateFilters(value, onChange, { featuredOnly: checked })
-                }
-              />
-            </label>
+            <WidgetControlRow
+              id="content-list.visual.filters.search-query"
+              label="Search query"
+              path="filters.searchQuery"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={resolved.filters?.searchQuery ?? ""}
+                  onChange={(event) =>
+                    updateFilters(value, onChange, { searchQuery: event.target.value })
+                  }
+                  placeholder="Title, excerpt, tags"
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="content-list.visual.filters.featured-only"
+              label="Featured only"
+              path="filters.featuredOnly"
+              hideLabel
+            >
+              {(fieldProps) => (
+                <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+                  <span className="text-sm">Featured only</span>
+                  <Switch
+                    id={fieldProps.id}
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    checked={resolved.filters?.featuredOnly ?? false}
+                    onCheckedChange={(checked) =>
+                      updateFilters(value, onChange, { featuredOnly: checked })
+                    }
+                  />
+                </label>
+              )}
+            </WidgetControlRow>
           </>
         )}
       </EditorSection>
@@ -1107,33 +1335,41 @@ export function ContentListVisualEditor({
         title="Section context"
         description="Optional heading copy plus guidance for the saved-data canvas preview."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={resolved.title ?? ""}
-            onChange={(event) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                title: event.target.value,
-              }))
-            }
-            placeholder="Optional section title"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section description</p>
-          <Textarea
-            value={resolved.description ?? ""}
-            onChange={(event) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-            rows={3}
-            placeholder="Optional section description"
-          />
-        </div>
+        <WidgetControlRow id="content-list.visual.section.title" label="Section title" path="title">
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={resolved.title ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
+              placeholder="Optional section title"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="content-list.visual.section.description"
+          label="Section description"
+          path="description"
+        >
+          {(fieldProps) => (
+            <Textarea
+              {...fieldProps}
+              value={resolved.description ?? ""}
+              onChange={(event) =>
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+              rows={3}
+              placeholder="Optional section description"
+            />
+          )}
+        </WidgetControlRow>
         <p className="text-xs text-muted-foreground">
           Builder canvas shows saved resolved data. Save or open Preview to refresh live results.
         </p>
@@ -1146,80 +1382,116 @@ export function ContentListVisualEditor({
         title="Pagination and actions"
         description="Control page navigation and the follow-up action shown below the list."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Navigation mode</p>
-          <Select
-            value={resolved.pagination?.mode ?? "none"}
-            onValueChange={(next) =>
-              updatePagination(value, onChange, { mode: next as ContentListPaginationMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Navigation mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {paginationModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {(resolved.pagination?.mode ?? "none") !== "none" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Page size</p>
-            <Input
-              type="number"
-              min={1}
-              max={24}
-              value={String(resolved.pagination?.pageSize ?? resolved.source?.limit ?? 6)}
-              onChange={(event) =>
-                updatePagination(value, onChange, {
-                  pageSize: normalizeContentListLimit(Number(event.target.value)),
-                })
+        <WidgetControlRow
+          id="content-list.visual.pagination.mode"
+          label="Navigation mode"
+          path="pagination.mode"
+        >
+          {(fieldProps) => (
+            <Select
+              value={resolved.pagination?.mode ?? "none"}
+              onValueChange={(next) =>
+                updatePagination(value, onChange, { mode: next as ContentListPaginationMode })
               }
-            />
-          </div>
+            >
+              <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                <SelectValue placeholder="Navigation mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {paginationModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        {(resolved.pagination?.mode ?? "none") !== "none" ? (
+          <WidgetControlRow
+            id="content-list.visual.pagination.page-size"
+            label="Page size"
+            path="pagination.pageSize"
+            help="Overrides the Wizard item limit whenever navigation is enabled."
+          >
+            {(fieldProps) => (
+              <Input
+                {...fieldProps}
+                type="number"
+                min={1}
+                max={24}
+                value={String(resolved.pagination?.pageSize ?? resolved.source?.limit ?? 6)}
+                onChange={(event) =>
+                  updatePagination(value, onChange, {
+                    pageSize: normalizeContentListLimit(Number(event.target.value)),
+                  })
+                }
+              />
+            )}
+          </WidgetControlRow>
         ) : (
           <p className="text-xs text-muted-foreground">
             No navigation keeps the current item-limit behavior from the source setup.
           </p>
         )}
         {(resolved.pagination?.mode ?? "none") === "load-more" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Load more label</p>
-            <Input
-              value={resolved.pagination?.loadMoreLabel ?? "Load more"}
-              onChange={(event) =>
-                updatePagination(value, onChange, { loadMoreLabel: event.target.value })
-              }
-              placeholder="Load more"
-            />
-          </div>
+          <WidgetControlRow
+            id="content-list.visual.pagination.load-more-label"
+            label="Load more label"
+            path="pagination.loadMoreLabel"
+          >
+            {(fieldProps) => (
+              <Input
+                {...fieldProps}
+                value={resolved.pagination?.loadMoreLabel ?? "Load more"}
+                onChange={(event) =>
+                  updatePagination(value, onChange, { loadMoreLabel: event.target.value })
+                }
+                placeholder="Load more"
+              />
+            )}
+          </WidgetControlRow>
         ) : null}
         {(resolved.pagination?.mode ?? "none") === "view-all" ? (
           <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">View all link</p>
-              <Input
-                value={resolved.pagination?.viewAllHref ?? ""}
-                onChange={(event) =>
-                  updatePagination(value, onChange, { viewAllHref: event.target.value })
-                }
-                placeholder="/articles"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">View all label</p>
-              <Input
-                value={resolved.pagination?.viewAllLabel ?? "View all"}
-                onChange={(event) =>
-                  updatePagination(value, onChange, { viewAllLabel: event.target.value })
-                }
-                placeholder="View all"
-              />
-            </div>
+            <WidgetControlRow
+              id="content-list.visual.pagination.view-all-destination"
+              label="View all destination"
+              path="pagination.viewAllHref"
+              hideLabel
+            >
+              {(fieldProps) => (
+                <LinkDestinationField
+                  fieldId={fieldProps.id}
+                  label="View all destination"
+                  value={resolved.pagination?.viewAllHref ?? ""}
+                  onChange={(next) => updatePagination(value, onChange, { viewAllHref: next })}
+                  emptyLabel="Use resolved list page"
+                  helpText="Pick a published site page. Leave empty to use the resolved list page when available."
+                  feedback={
+                    resolved.resolved?.listPath
+                      ? "A resolved list page is available from the saved source."
+                      : null
+                  }
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="content-list.visual.pagination.view-all-label"
+              label="View all label"
+              path="pagination.viewAllLabel"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={resolved.pagination?.viewAllLabel ?? "View all"}
+                  onChange={(event) =>
+                    updatePagination(value, onChange, { viewAllLabel: event.target.value })
+                  }
+                  placeholder="View all"
+                />
+              )}
+            </WidgetControlRow>
           </>
         ) : null}
       </EditorSection>
@@ -1232,107 +1504,182 @@ export function ContentListVisualEditor({
         description="Control visible item elements in runtime output."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-            <span className="text-sm">Show image</span>
-            <Switch
-              checked={resolved.fields?.showImage ?? true}
-              onCheckedChange={(checked) => updateFields(value, onChange, { showImage: checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-            <span className="text-sm">Show excerpt</span>
-            <Switch
-              checked={resolved.fields?.showExcerpt ?? true}
-              onCheckedChange={(checked) => updateFields(value, onChange, { showExcerpt: checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-            <span className="text-sm">Show meta</span>
-            <Switch
-              checked={resolved.fields?.showMeta ?? true}
-              onCheckedChange={(checked) => updateFields(value, onChange, { showMeta: checked })}
-            />
-          </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
-            <span className="text-sm">Show CTA link</span>
-            <Switch
-              checked={resolved.fields?.showCta ?? true}
-              onCheckedChange={(checked) => updateFields(value, onChange, { showCta: checked })}
-            />
-          </label>
+          <WidgetControlRow
+            id="content-list.visual.fields.show-image"
+            label="Show image"
+            path="fields.showImage"
+            hideLabel
+          >
+            {(fieldProps) => (
+              <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+                <span className="text-sm">Show image</span>
+                <Switch
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  checked={resolved.fields?.showImage ?? true}
+                  onCheckedChange={(checked) =>
+                    updateFields(value, onChange, { showImage: checked })
+                  }
+                />
+              </label>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow
+            id="content-list.visual.fields.show-excerpt"
+            label="Show excerpt"
+            path="fields.showExcerpt"
+            hideLabel
+          >
+            {(fieldProps) => (
+              <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+                <span className="text-sm">Show excerpt</span>
+                <Switch
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  checked={resolved.fields?.showExcerpt ?? true}
+                  onCheckedChange={(checked) =>
+                    updateFields(value, onChange, { showExcerpt: checked })
+                  }
+                />
+              </label>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow
+            id="content-list.visual.fields.show-meta"
+            label="Show meta"
+            path="fields.showMeta"
+            hideLabel
+          >
+            {(fieldProps) => (
+              <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+                <span className="text-sm">Show meta</span>
+                <Switch
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  checked={resolved.fields?.showMeta ?? true}
+                  onCheckedChange={(checked) =>
+                    updateFields(value, onChange, { showMeta: checked })
+                  }
+                />
+              </label>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow
+            id="content-list.visual.fields.show-cta"
+            label="Show CTA link"
+            path="fields.showCta"
+            hideLabel
+          >
+            {(fieldProps) => (
+              <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+                <span className="text-sm">Show CTA link</span>
+                <Switch
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  checked={resolved.fields?.showCta ?? true}
+                  onCheckedChange={(checked) => updateFields(value, onChange, { showCta: checked })}
+                />
+              </label>
+            )}
+          </WidgetControlRow>
         </div>
         {showImage ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Image ratio</p>
-            <Select
-              value={resolved.style?.imageAspect ?? "standard"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { imageAspect: next as ContentListImageAspect })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Image ratio" />
-              </SelectTrigger>
-              <SelectContent>
-                {imageAspectOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id="content-list.visual.style.image-aspect"
+            label="Image ratio"
+            path="style.imageAspect"
+          >
+            {(fieldProps) => (
+              <Select
+                value={resolved.style?.imageAspect ?? "standard"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { imageAspect: next as ContentListImageAspect })
+                }
+              >
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Image ratio" />
+                </SelectTrigger>
+                <SelectContent>
+                  {imageAspectOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         ) : (
           <p className="text-xs text-muted-foreground">
             Enable &quot;Show image&quot; to configure image ratio.
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Tag display</p>
-            <Select
-              value={resolved.style?.tagMode ?? "meta-line"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { tagMode: next as ContentListTagMode })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tag display" />
-              </SelectTrigger>
-              <SelectContent>
-                {tagModeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {(resolved.style?.tagMode ?? "meta-line") !== "hidden" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Tag limit</p>
-              <Input
-                type="number"
-                min={1}
-                max={4}
-                value={String(resolved.style?.tagLimit ?? 2)}
-                onChange={(event) =>
-                  updateStyle(value, onChange, {
-                    tagLimit: Math.min(4, Math.max(1, Math.floor(Number(event.target.value) || 1))),
-                  })
+          <WidgetControlRow
+            id="content-list.visual.style.tag-mode"
+            label="Tag display"
+            path="style.tagMode"
+          >
+            {(fieldProps) => (
+              <Select
+                value={resolved.style?.tagMode ?? "meta-line"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { tagMode: next as ContentListTagMode })
                 }
-              />
-            </div>
+              >
+                <SelectTrigger id={fieldProps.id} aria-labelledby={fieldProps["aria-labelledby"]}>
+                  <SelectValue placeholder="Tag display" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tagModeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          {(resolved.style?.tagMode ?? "meta-line") !== "hidden" ? (
+            <WidgetControlRow
+              id="content-list.visual.style.tag-limit"
+              label="Tag limit"
+              path="style.tagLimit"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  type="number"
+                  min={1}
+                  max={4}
+                  value={String(resolved.style?.tagLimit ?? 2)}
+                  onChange={(event) =>
+                    updateStyle(value, onChange, {
+                      tagLimit: Math.min(
+                        4,
+                        Math.max(1, Math.floor(Number(event.target.value) || 1))
+                      ),
+                    })
+                  }
+                />
+              )}
+            </WidgetControlRow>
           ) : null}
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">CTA label</p>
-          <Input
-            value={resolved.style?.ctaLabel ?? "Read more"}
-            onChange={(event) => updateStyle(value, onChange, { ctaLabel: event.target.value })}
-            placeholder="Read more"
-          />
-        </div>
+        <WidgetControlRow
+          id="content-list.visual.style.cta-label"
+          label="CTA label"
+          path="style.ctaLabel"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={resolved.style?.ctaLabel ?? "Read more"}
+              onChange={(event) => updateStyle(value, onChange, { ctaLabel: event.target.value })}
+              placeholder="Read more"
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
@@ -1340,40 +1687,67 @@ export function ContentListVisualEditor({
         mode="visual"
         role="visual"
         title="Surface colors"
-        description="Daily card and text color tokens for runtime output."
+        description="Daily card and text colors for runtime output."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <SharedColorControl
+          <WidgetControlRow
+            id="content-list.visual.colors.background"
             label="Card background"
-            value={resolved.style?.backgroundColor}
-            onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-            onSwatchChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-            onClear={() => clearStyle(value, onChange, "backgroundColor")}
-            placeholder="var(--color-bg)"
-            pickerFallback="#ffffff"
-            showValueInput={false}
-          />
-          <SharedColorControl
+            path="style.backgroundColor"
+            hideLabel
+          >
+            {() => (
+              <SharedColorControl
+                label="Card background"
+                value={resolved.style?.backgroundColor}
+                onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+                onSwatchChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+                onClear={() => clearStyle(value, onChange, "backgroundColor")}
+                placeholder="var(--color-bg)"
+                pickerFallback="#ffffff"
+                showValueInput={false}
+              />
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow
+            id="content-list.visual.colors.border"
             label="Card border"
-            value={resolved.style?.borderColor}
-            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-            onSwatchChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-            onClear={() => clearStyle(value, onChange, "borderColor")}
-            placeholder="var(--color-border)"
-            pickerFallback="#d4d4d8"
-            showValueInput={false}
-          />
+            path="style.borderColor"
+            hideLabel
+          >
+            {() => (
+              <SharedColorControl
+                label="Card border"
+                value={resolved.style?.borderColor}
+                onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+                onSwatchChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+                onClear={() => clearStyle(value, onChange, "borderColor")}
+                placeholder="var(--color-border)"
+                pickerFallback="#d4d4d8"
+                showValueInput={false}
+              />
+            )}
+          </WidgetControlRow>
         </div>
-        <SharedColorControl
+        <WidgetControlRow
+          id="content-list.visual.colors.text"
           label="Text color"
-          value={resolved.style?.textColor}
-          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          onSwatchChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          onClear={() => clearStyle(value, onChange, "textColor")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
-          showValueInput={false}
-        />
+          path="style.textColor"
+          hideLabel
+        >
+          {() => (
+            <SharedColorControl
+              label="Text color"
+              value={resolved.style?.textColor}
+              onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+              onSwatchChange={(next) => updateStyle(value, onChange, { textColor: next })}
+              onClear={() => clearStyle(value, onChange, "textColor")}
+              placeholder="var(--color-text)"
+              pickerFallback="#0f172a"
+              showValueInput={false}
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
@@ -1383,25 +1757,37 @@ export function ContentListVisualEditor({
         title="Empty state"
         description="Text shown when query returns no entries."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={resolved.emptyState?.title ?? ""}
-            onChange={(event) => updateEmptyState(value, onChange, { title: event.target.value })}
-            placeholder="No items found"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={resolved.emptyState?.description ?? ""}
-            onChange={(event) =>
-              updateEmptyState(value, onChange, { description: event.target.value })
-            }
-            rows={3}
-            placeholder="Adjust filters or publish entries for this content type."
-          />
-        </div>
+        <WidgetControlRow
+          id="content-list.visual.empty-state.title"
+          label="Title"
+          path="emptyState.title"
+        >
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={resolved.emptyState?.title ?? ""}
+              onChange={(event) => updateEmptyState(value, onChange, { title: event.target.value })}
+              placeholder="No items found"
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="content-list.visual.empty-state.description"
+          label="Description"
+          path="emptyState.description"
+        >
+          {(fieldProps) => (
+            <Textarea
+              {...fieldProps}
+              value={resolved.emptyState?.description ?? ""}
+              onChange={(event) =>
+                updateEmptyState(value, onChange, { description: event.target.value })
+              }
+              rows={3}
+              placeholder="Adjust filters or publish entries for this content type."
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
@@ -1410,25 +1796,81 @@ export function ContentListVisualEditor({
 export function ContentListAdvancedEditor({ value }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
   const sourceMode = resolved.source?.mode ?? "legacy";
-  const runtimeSnapshot = {
-    total: resolved.resolved?.total ?? 0,
-    itemCount: resolved.resolved?.items?.length ?? 0,
-    sourceTypeId: resolved.resolved?.sourceTypeId ?? null,
-    sourceTypeSlug: resolved.resolved?.sourceTypeSlug ?? null,
-    listPath: resolved.resolved?.listPath ?? null,
-    listingQueryId: resolved.resolved?.listingQueryId ?? null,
-    listingTemplateId: resolved.resolved?.listingTemplateId ?? null,
-    resolvedAt: resolved.resolved?.resolvedAt ?? null,
-    runtime: {
-      page: resolved.resolved?.runtime?.page ?? null,
-      pageSize: resolved.resolved?.runtime?.pageSize ?? null,
-      totalPages: resolved.resolved?.runtime?.totalPages ?? null,
-      rejectedTokenCount: resolved.resolved?.runtime?.rejectedTokens?.length ?? 0,
-      hasPreviousPage: Boolean(resolved.resolved?.runtime?.previousPageHref),
-      hasNextPage: Boolean(resolved.resolved?.runtime?.nextPageHref),
-    },
-    error: resolved.resolved?.error ?? null,
-  };
+  const { options: contentTypeOptions } = useContentTypeOptions();
+  const { options: authorOptions } = useAuthorOptions();
+  const { queries, templates } = useListingOptions();
+  const contentTypeLabel = findOptionLabel(
+    contentTypeOptions,
+    resolved.source?.contentTypeId,
+    resolved.source?.contentTypeId ? "Configured content type unavailable" : "Not configured"
+  );
+  const listingQueryLabel = findRecordName(
+    queries,
+    resolved.source?.listingQueryId,
+    "Not configured",
+    "Configured listing query unavailable"
+  );
+  const listingTemplateLabel = findRecordName(
+    templates,
+    resolved.source?.listingTemplateId,
+    "Inherits default",
+    "Configured listing template unavailable"
+  );
+  const authorLabel = findOptionLabel(
+    authorOptions,
+    resolved.filters?.authorId,
+    resolved.filters?.authorId ? "Configured author unavailable" : "No author filter"
+  );
+  const statusScopeLabel = findOptionLabel(
+    statusScopeOptions,
+    resolved.source?.statusScope ?? "published",
+    "Published only"
+  );
+  const sortLabel = findOptionLabel(
+    sortOptions,
+    resolved.source?.sort ?? "published-desc",
+    "Newest published first"
+  );
+  const columnsLabel = findOptionLabel(columnsOptions, resolved.style?.columns ?? "3", "3 columns");
+  const gapLabel = findOptionLabel(gapOptions, resolved.style?.gap ?? "md", "Balanced spacing");
+  const cardStyleLabel = findOptionLabel(
+    cardStyleOptions,
+    resolved.style?.cardStyle ?? "outlined",
+    "Outlined"
+  );
+  const sourceBindingPath =
+    sourceMode === "listing"
+      ? "source.listingQueryId+source.listingTemplateId"
+      : "source.contentTypeId";
+  const sourceBindingValue =
+    sourceMode === "listing"
+      ? `Listing query: ${listingQueryLabel} · Template: ${listingTemplateLabel}`
+      : `Content type: ${contentTypeLabel}`;
+  const sourceRuleValue =
+    sourceMode === "legacy"
+      ? `Limit ${resolved.source?.limit ?? 6} · ${statusScopeLabel} · ${sortLabel}`
+      : `Limit ${resolved.source?.limit ?? 6} · Listing query owns status and sort`;
+  const filtersValue = `Taxonomy: ${
+    resolved.filters?.taxonomy?.trim() || "No taxonomy filter"
+  } · Search: ${
+    resolved.filters?.searchQuery?.trim() ? "Search text configured" : "No search text"
+  } · Featured: ${resolved.filters?.featuredOnly ? "Featured only" : "All entries"} · Author: ${
+    resolved.filters?.authorId ? authorLabel : "No author filter"
+  }`;
+  const runtime = resolved.resolved?.runtime;
+  const itemCount = resolved.resolved?.items?.length ?? 0;
+  const total = resolved.resolved?.total ?? itemCount;
+  const rejectedTokenCount = runtime?.rejectedTokens?.length ?? 0;
+  const runtimePageValue =
+    runtime?.page || runtime?.pageSize || runtime?.totalPages
+      ? `Page ${runtime.page ?? "not set"} · Page size ${runtime.pageSize ?? "not set"} · Total pages ${
+          runtime.totalPages ?? "not available"
+        }`
+      : "Pagination runtime not available";
+  const runtimeNavigationValue = `Previous page ${
+    runtime?.previousPageHref ? "available" : "not available"
+  } · Next page ${runtime?.nextPageHref ? "available" : "not available"}`;
+  const runtimeError = resolved.resolved?.error?.trim();
 
   return (
     <div className="space-y-4">
@@ -1448,32 +1890,20 @@ export function ContentListAdvancedEditor({ value }: WidgetEditorProps<ContentLi
         <ReadonlyWidgetSummaryRow
           id="content-list-advanced-source-binding"
           label="Source binding"
-          path="source"
-          value={
-            sourceMode === "listing"
-              ? `Query: ${resolved.source?.listingQueryId ?? "not configured"} · Template: ${
-                  resolved.source?.listingTemplateId ?? "default"
-                }`
-              : `Content type: ${resolved.source?.contentTypeId ?? "not configured"}`
-          }
+          path={sourceBindingPath}
+          value={sourceBindingValue}
         />
         <ReadonlyWidgetSummaryRow
           id="content-list-advanced-source-rules"
           label="Source rules"
-          path="source.limit"
-          value={`Limit ${resolved.source?.limit ?? 6} · ${
-            resolved.source?.statusScope ?? "published"
-          } · ${resolved.source?.sort ?? "published-desc"}`}
+          path="source.limit+source.statusScope+source.sort"
+          value={sourceRuleValue}
         />
         <ReadonlyWidgetSummaryRow
           id="content-list-advanced-filters"
           label="Daily filters"
-          path="filters"
-          value={`Taxonomy: ${resolved.filters?.taxonomy || "none"} · Search: ${
-            resolved.filters?.searchQuery || "none"
-          } · Featured: ${resolved.filters?.featuredOnly ? "yes" : "no"} · Author: ${
-            resolved.filters?.authorId || "none"
-          }`}
+          path="filters.taxonomy+filters.searchQuery+filters.featuredOnly+filters.authorId"
+          value={filtersValue}
         />
       </EditorSection>
 
@@ -1487,18 +1917,18 @@ export function ContentListAdvancedEditor({ value }: WidgetEditorProps<ContentLi
         <ReadonlyWidgetSummaryRow
           id="content-list-advanced-layout-style"
           label="Layout"
-          path="style"
-          value={`Columns ${resolved.style?.columns ?? "3"} · Gap ${
-            resolved.style?.gap ?? "md"
-          } · Card ${resolved.style?.cardStyle ?? "outlined"}`}
+          path="style.columns+style.gap+style.cardStyle"
+          value={`${columnsLabel} · ${gapLabel} · ${cardStyleLabel} cards`}
         />
         <ReadonlyWidgetSummaryRow
           id="content-list-advanced-color-style"
-          label="Color tokens"
-          path="style.backgroundColor"
-          value={`Background: ${resolved.style?.backgroundColor ?? "default"} · Border: ${
-            resolved.style?.borderColor ?? "default"
-          } · Text: ${resolved.style?.textColor ?? "default"}`}
+          label="Card and text colors"
+          path="style.backgroundColor+style.borderColor+style.textColor"
+          value={`Background: ${summarizeColorSelection(
+            resolved.style?.backgroundColor
+          )} · Border: ${summarizeColorSelection(resolved.style?.borderColor)} · Text: ${summarizeColorSelection(
+            resolved.style?.textColor
+          )}`}
         />
       </EditorSection>
 
@@ -1509,9 +1939,79 @@ export function ContentListAdvancedEditor({ value }: WidgetEditorProps<ContentLi
         title="Runtime summary"
         description="Read-only sanitized runtime summary without item titles or draft/private content."
       >
-        <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed">
-          {JSON.stringify(runtimeSnapshot, null, 2)}
-        </pre>
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-result"
+          label="Runtime result"
+          path="resolved.items+resolved.total"
+          value={`${pluralize(itemCount, "item")} rendered · ${pluralize(total, "item")} available`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-source"
+          label="Resolved source"
+          path="resolved.sourceTypeId+resolved.listingQueryId"
+          value={
+            sourceMode === "listing"
+              ? `Listing query: ${findRecordName(
+                  queries,
+                  resolved.resolved?.listingQueryId ?? resolved.source?.listingQueryId,
+                  "Not configured",
+                  "Configured listing query unavailable"
+                )}`
+              : `Content type: ${findOptionLabel(
+                  contentTypeOptions,
+                  resolved.resolved?.sourceTypeId ?? resolved.source?.contentTypeId,
+                  "Not configured"
+                )}`
+          }
+        />
+        {resolved.resolved?.listPath ? (
+          <ReadonlyWidgetSummaryRow
+            id="content-list-advanced-runtime-list-path"
+            label="Resolved list page"
+            path="resolved.listPath"
+            value="Available from saved source"
+          />
+        ) : null}
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-pagination"
+          label="Runtime pagination"
+          path="resolved.runtime.page+resolved.runtime.pageSize+resolved.runtime.totalPages"
+          value={runtimePageValue}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-navigation"
+          label="Runtime navigation"
+          path="resolved.runtime.previousPageHref+resolved.runtime.nextPageHref"
+          value={runtimeNavigationValue}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-health"
+          label="Runtime health"
+          path="resolved.runtime.rejectedTokens+resolved.error"
+          value={`${pluralize(rejectedTokenCount, "filtered token")} suppressed · ${
+            runtimeError ? "Runtime error present" : "No runtime errors"
+          }`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-refresh"
+          label="Last refresh"
+          path="resolved.resolvedAt"
+          value={formatRuntimeTimestamp(resolved.resolved?.resolvedAt)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="content-list-advanced-runtime-support-owner"
+          label="Support owner"
+          path="source.mode"
+          value="Wizard owns source setup. Visual owns filters and presentation. Advanced is read-only."
+        />
+        {runtimeError ? (
+          <ReadonlyWidgetSummaryRow
+            id="content-list-advanced-runtime-error"
+            label="Runtime error"
+            path="resolved.error"
+            value={runtimeError}
+          />
+        ) : null}
       </EditorSection>
     </div>
   );

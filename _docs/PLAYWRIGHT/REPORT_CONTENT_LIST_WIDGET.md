@@ -361,3 +361,40 @@ Validated locally on the TASK-262 worktree after the final implementation slices
 - `semgrep`: local trust-store failure (`ca-certs: empty trust anchors`)
 - `bun audit`: `ConnectionRefused`
 - `trivy` and both `gitleaks` lanes were clean in the same strict pass.
+
+---
+
+## Status po TASK-336-19 (2026-05-25)
+
+Content List został ponownie sprawdzony w ramach czyszczenia wspólnego kontraktu
+Wizard / Visual / Advanced.
+
+### Zmiany kontraktu edytora
+
+- Wizard pozostał jednorazowym setupem źródła: tryb źródła, wybór content type
+  albo Listings query/template, limit oraz początkowe reguły status/sort.
+- Visual jest codziennym trybem pracy: wariant, layout, filtry, nagłówek,
+  paginacja, pola prezentacji, kolory i empty state.
+- `View all` nie jest już surowym inputem typu `/articles`; używa wspólnego
+  page-first destination pickera z opcją pozostawienia resolved list page.
+- Helpery wyszukiwania content type i autora są oznaczone jako preview-only,
+  więc nie udają persisted ścieżek `source.contentTypeId` ani `filters.authorId`.
+- Advanced nie pokazuje już raw JSON snapshotu, internal ID, raw path guidance
+  ani ukrytych mutatorów. Zostały ludzkie read-only summaries: source, style,
+  runtime counts, pagination, health i support owner.
+
+### Walidacja TASK-336-19
+
+- `bun run test:vitest -- tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/site/publicRenderer.test.tsx tests/vitest/widgets/listingRuntimeScript.test.ts` — PASS, 4 files / 52 tests.
+- `bun test tests/unit/widgets/contentList.test.tsx` — PASS, 20 tests.
+- `bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-content-list-final --widget content-list --admin http://localhost:5173/admin --front http://localhost:3000 --strict` — PASS (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`).
+- Focused Playwright probe for post-setup `Run setup again` Wizard plus
+  conditional Visual `View all page` controls — PASS (`wizardPassed=true`,
+  `viewAllPassed=true`, missing metadata `0`, raw path input `0`).
+
+Evidence:
+
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-advanced-readonly-2026-05-25.md`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-advanced-readonly-2026-05-25.json`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-focused-2026-05-25.md`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-content-list-focused-2026-05-25.json`

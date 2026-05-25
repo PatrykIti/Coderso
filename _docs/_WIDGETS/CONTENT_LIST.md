@@ -29,6 +29,9 @@ Minimal onboarding:
 - item limit
 - status/sort setup for legacy content-type sources
 
+Wizard is a one-time setup surface. It does not own presentation, card style,
+pagination labels, colors, empty-state copy, or daily filters.
+
 ### Visual
 
 Primary editing mode:
@@ -45,6 +48,11 @@ Notes:
 - `Columns` is only effective for `cards`; `list` / `compact` show an explanatory note instead of a misleading selector.
 - Visual shows the current source mode and source-specific daily filters, but source binding and source-mode switching stay in Wizard.
 - Surface colors use swatches and clear controls in Visual; nontechnical users are not asked to type CSS variables or design-token strings.
+- View-all navigation uses the shared page-first destination picker. Editors
+  choose a published page or leave the field empty to use the resolved list
+  page when available; Visual does not ask users to type raw URL/path strings.
+- Search fields used to filter content types or authors are preview/helper
+  controls only and do not claim persisted widget paths.
 - The builder canvas shows saved `resolved` data; save or open Preview to refresh live resolved content.
 
 ### Advanced
@@ -52,9 +60,12 @@ Notes:
 Read-only diagnostics surface:
 - source summary
 - style summary
-- sanitized runtime summary with counts and pagination markers only
+- sanitized runtime summary with item counts, pagination state, runtime health,
+  and support-owner guidance only
 
 Advanced does not mutate source, style, filters, or resolved runtime payloads.
+It renders human summaries instead of raw JSON snapshots, internal IDs, raw CSS
+tokens, or editable support fields.
 
 ## Data Model (summary)
 
@@ -152,7 +163,7 @@ Advanced does not mutate source, style, filters, or resolved runtime payloads.
 - Public output (`preview=false`) stays read-only and published-only.
 - Preview output (`preview=true`) can respect broader status scope for legacy content.
 - Detail links use `site.contentRoutes` with safe fallback patterns.
-- View-all links use the configured safe href or the resolved list path when available.
+- View-all links use the configured page-picker href or the resolved list path when available.
 - Legacy `load-more` grows cumulatively from the first slice through the
   requested page instead of replacing the list with page-local results.
 - Legacy `view-all` ignores stale `cl.<blockId>.page` params and always starts

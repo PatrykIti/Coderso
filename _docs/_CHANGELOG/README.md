@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 957 | 2026-05-25 | Content List editor drift cleanup | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 956 | 2026-05-25 | Stack editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
 | 955 | 2026-05-25 | Divider editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
 | 954 | 2026-05-25 | Spacer editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
