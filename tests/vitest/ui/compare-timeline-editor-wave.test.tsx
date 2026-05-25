@@ -162,6 +162,27 @@ vi.mock("@/components/ui/textarea", () => ({
   ),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "compare-step-page",
+      title: "Compare Step",
+      slug: "compare-step",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "compare-segment-page",
+      title: "Compare Segment",
+      slug: "compare-segment",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
@@ -276,7 +297,7 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
+    Array.from(section.querySelectorAll("h3, p")).some(
       (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
     )
   );
@@ -450,6 +471,9 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     setSelectValue(findSelectByOptions(view.container, ["3", "4", "5", "6"]), "4");
     setInputValue(findInputByPlaceholder(view.container, "Step 1"), "Discover");
     setInputValue(findInputByPlaceholder(view.container, "Step 4"), "Review");
+    expect(
+      findInputByPlaceholder(view.container, "Optional safe link (/compare-step or https://...)")
+    ).toBeUndefined();
     setInputValue(findInputByPlaceholder(view.container, "Track 1 label"), "Current state");
     setInputValue(findInputByPlaceholder(view.container, "Track 2 label"), "Future state");
 
@@ -459,6 +483,12 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
 
     const markersSection = findSectionByTitle(view.container, "Markers and segment mapping");
     expect(markersSection?.textContent).toContain("No highlight segments configured.");
+    expect(
+      findInputByPlaceholder(
+        markersSection as ParentNode,
+        "Optional safe link (/compare-path or https://...)"
+      )
+    ).toBeUndefined();
 
     const targetTrackSelect = findSelectByOptions(markersSection as ParentNode, ["a", "b", "both"]);
     expect((targetTrackSelect as HTMLSelectElement | null | undefined)?.value).toBe("b");

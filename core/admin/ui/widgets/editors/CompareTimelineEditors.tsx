@@ -35,6 +35,7 @@ import {
   type ColorContrastAdvisory,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -643,10 +644,13 @@ function SegmentEditor({
             placeholder={`Optional label. Empty -> "Steps ${segment.from + 1}-${segment.to + 1}"`}
           />
 
-          <Input
-            value={segment.href ?? ""}
-            onChange={(event) => onPatch(segmentIndex, { href: event.target.value })}
-            placeholder="Optional safe link (/compare-path or https://...)"
+          <LinkDestinationField
+            fieldId={`compare-timeline-segment-${segmentIndex + 1}-destination`}
+            label="Segment destination"
+            value={segment.href}
+            onChange={(next) => onPatch(segmentIndex, { href: next })}
+            emptyLabel="No segment destination"
+            helpText="Pick a page for this highlighted segment. Saved custom destinations stay replace-or-clear compatible."
           />
 
           <p className="text-xs text-muted-foreground">
@@ -967,12 +971,13 @@ export function CompareTimelineVisualEditor({
                 placeholder="Optional step description"
                 rows={2}
               />
-              <Input
-                value={step.href ?? ""}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, { href: event.target.value })
-                }
-                placeholder="Optional safe link (/compare-step or https://...)"
+              <LinkDestinationField
+                fieldId={`compare-timeline-step-${stepIndex + 1}-destination`}
+                label="Step destination"
+                value={step.href}
+                onChange={(next) => updateAxisStep(value, onChange, stepIndex, { href: next })}
+                emptyLabel="No step destination"
+                helpText="Pick a page for this timeline step. Saved custom destinations stay replace-or-clear compatible."
               />
             </div>
           ))}

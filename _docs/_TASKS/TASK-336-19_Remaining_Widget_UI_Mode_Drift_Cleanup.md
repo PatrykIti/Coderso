@@ -290,6 +290,18 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Claude read-only review was attempted for this slice, but
   the returned output contained no actionable findings or blocker list.
+- In Progress (2026-05-24): thirteenth implementation family targets Compare
+  Timeline step/segment destination authoring. Visual no longer exposes raw
+  safe-link text inputs for `axis.steps[].href` or track segment `href`; both
+  use the shared page-first `LinkDestinationField` while preserving saved
+  custom destinations as replace-or-clear compatibility state. Focused Vitest
+  evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-compare-timeline-authoring-2026-05-24.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only review was attempted for this slice, but
+  it returned no actionable output.
 
 ## Files to Change
 

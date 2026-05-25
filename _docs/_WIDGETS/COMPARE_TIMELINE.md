@@ -45,6 +45,9 @@ Notes:
 - In highlight mode, both tracks expose segment editors.
 - Visual is the single truthful owner for spacing, axis label position, max
   width, section padding, and render order.
+- Step and segment destination authoring uses the shared page-first destination
+  picker. Legacy custom destinations stay replace-or-clear compatible instead
+  of editable raw URL fields.
 
 ### Advanced
 

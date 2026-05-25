@@ -871,6 +871,26 @@ destination authoring drift.
 - Claude read-only review was attempted for this Footer slice, but the returned
   output contained no actionable findings or blocker list.
 
+## TASK-336-19 Compare Timeline Destination Authoring Evidence (2026-05-24)
+
+The thirteenth TASK-336-19 implementation family targets Compare Timeline step
+and segment destination authoring drift.
+
+- Compare Timeline Visual no longer exposes raw safe-link text inputs for
+  `axis.steps[].href` or highlighted segment `href` fields. Both surfaces use
+  the shared page-first `LinkDestinationField`.
+- Saved custom destinations stay backward-compatible as replace-or-clear state
+  instead of editable raw URL fields.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-compare-timeline-authoring-2026-05-24.*`.
+  Compare Timeline reports `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`.
+- Claude read-only review was attempted for this Compare Timeline slice, but it
+  returned no actionable output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
