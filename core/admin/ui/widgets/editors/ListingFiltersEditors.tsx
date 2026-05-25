@@ -37,7 +37,7 @@ import {
 } from "../../../../services/search/filterContract";
 import type { ListingQueryRecord } from "../../../services/listingsClient";
 import { useListingQueries } from "../../listings/hooks/useListingQueries";
-import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -85,6 +85,8 @@ type ListingFiltersMaxWidth = "narrow" | "content" | "wide" | "full";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 const NO_SORT_DIRECTION_VALUE = "__no_sort_direction__";
+const NO_FIELD_VALUE = "__no_field__";
+const CUSTOM_FIELD_VALUE = "__custom_field__";
 
 const kindOptions: Array<{ value: ListingFacetKind; label: string }> = [
   { value: "checkbox", label: "Checkbox" },
@@ -343,19 +345,17 @@ const validateListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetDr
     const rawId = draft.id.trim();
 
     if (duplicateCount > 1) {
-      errors.push(`Duplicate facet ID after normalization: ${normalizedId}.`);
+      errors.push("Support key conflict detected. Ask support to repair this facet setup.");
     }
 
     if (rawId.length === 0) {
-      errors.push("Facet ID is required.");
+      errors.push("Support key is missing. Ask support to repair this facet setup.");
     } else if (normalizedId !== rawId.toLowerCase()) {
-      errors.push(
-        `Facet ID will be saved as ${normalizedId}. Use lowercase letters, numbers, dots, underscores, or hyphens to keep it stable.`
-      );
+      errors.push("Legacy support key will be normalized when setup is saved.");
     }
 
     if (draft.kind !== "sort" && draft.field.trim().length === 0) {
-      errors.push("Field path is required for this facet kind.");
+      errors.push("Choose a listing field for this facet.");
     }
 
     if (draft.kind !== "sort") {
@@ -371,11 +371,8 @@ const validateListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetDr
     if (draft.kind === "sort") {
       (draft.sortOptions ?? []).forEach((option, optionIndex) => {
         const rowErrors: string[] = [];
-        if (option.value.trim().length === 0) {
-          rowErrors.push("Sort value is required.");
-        }
         if (option.field.trim().length === 0) {
-          rowErrors.push("Sort field is required.");
+          rowErrors.push("Choose a listing field for this sort option.");
         }
         if (option.dir !== "asc" && option.dir !== "desc") {
           rowErrors.push("Sort direction must be asc or desc.");
@@ -388,14 +385,14 @@ const validateListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetDr
       (draft.options ?? []).forEach((option, optionIndex) => {
         const rowErrors: string[] = [];
         if (option.value.trim().length === 0) {
-          rowErrors.push("Option value is required.");
+          rowErrors.push("Support value is missing for this option.");
         }
         if (
           draft.kind === "taxonomy" &&
           option.parentValue.trim().length > 0 &&
           option.parentValue.trim() === option.value.trim()
         ) {
-          rowErrors.push("Parent value cannot point to the same taxonomy option.");
+          rowErrors.push("Parent hierarchy key cannot point to the same option.");
         }
         if (
           draft.kind === "taxonomy" &&
@@ -404,7 +401,7 @@ const validateListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetDr
             (candidate) => candidate.value.trim() === option.parentValue.trim()
           )
         ) {
-          rowErrors.push("Parent value must match another taxonomy option value.");
+          rowErrors.push("Parent hierarchy key must match another configured option.");
         }
         if (rowErrors.length > 0) {
           optionErrors.push({ index: optionIndex, errors: rowErrors });
@@ -431,7 +428,10 @@ const serializeListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetC
           ...(draft.sortOptions
             ? {
                 sortOptions: draft.sortOptions.map((option) => ({
-                  value: option.value,
+                  value:
+                    option.field && (option.dir === "asc" || option.dir === "desc")
+                      ? `${option.field}:${option.dir}`
+                      : option.value,
                   label: option.label,
                   field: option.field,
                   ...(option.dir === "asc" || option.dir === "desc" ? { dir: option.dir } : {}),
@@ -744,6 +744,78 @@ function ListingFacetPreview({ facet }: { facet: ListingFacetDraft }) {
   );
 }
 
+function FieldCandidateSelect({
+  fieldId,
+  labelledBy,
+  describedBy,
+  value,
+  candidates,
+  onChange,
+  placeholder,
+}: {
+  fieldId: string;
+  labelledBy: string;
+  describedBy?: string;
+  value: string | undefined;
+  candidates: string[];
+  onChange: (next: string) => void;
+  placeholder: string;
+}) {
+  const trimmedValue = value?.trim() ?? "";
+  const hasCustomValue = trimmedValue.length > 0 && !candidates.includes(trimmedValue);
+  const selectedValue = hasCustomValue ? CUSTOM_FIELD_VALUE : trimmedValue || NO_FIELD_VALUE;
+
+  return (
+    <div className="space-y-2">
+      <Select
+        value={selectedValue}
+        onValueChange={(next) => {
+          if (next === CUSTOM_FIELD_VALUE) return;
+          if (next === NO_FIELD_VALUE) {
+            if (hasCustomValue) return;
+            onChange("");
+            return;
+          }
+          if (!candidates.includes(next)) return;
+          onChange(next);
+        }}
+      >
+        <SelectTrigger id={fieldId} aria-labelledby={labelledBy} aria-describedby={describedBy}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {hasCustomValue ? null : <SelectItem value={NO_FIELD_VALUE}>{placeholder}</SelectItem>}
+          {candidates.map((candidate) => (
+            <SelectItem key={candidate} value={candidate}>
+              {candidate}
+            </SelectItem>
+          ))}
+          {hasCustomValue ? (
+            <SelectItem value={CUSTOM_FIELD_VALUE} disabled>
+              Custom field configured by support
+            </SelectItem>
+          ) : null}
+        </SelectContent>
+      </Select>
+      {candidates.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Choose from fields available in the selected listing query.
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Select a listing query with exposed fields before choosing a facet field.
+        </p>
+      )}
+      {hasCustomValue ? (
+        <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+          A custom field binding is already configured by support. Choose a query field above to
+          replace it; it cannot be cleared from setup.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function ListingQuerySelect({
   value,
   onChange,
@@ -958,9 +1030,6 @@ function FacetDraftEditor({
           };
           const rawId = facet.id.trim();
           const showsNormalizedId = rawId.length > 0 && rawId !== validation.normalizedId;
-          const fieldSuggestionId =
-            fieldCandidates.length > 0 ? `listing-filters-field-suggestions-${index}` : undefined;
-
           return (
             <div
               key={key}
@@ -1028,29 +1097,13 @@ function FacetDraftEditor({
 
               {isSetupMode ? (
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <WidgetControlRow
-                    id={`listing-filters.wizard.facet.${index}.id`}
-                    label="Facet ID"
+                  <ReadonlyWidgetSummaryRow
+                    id={`listing-filters.wizard.facet.${index}.support-key`}
+                    label="Support key"
                     path={`facets.${index}.id`}
-                  >
-                    {(fieldProps) => (
-                      <Input
-                        id={fieldProps.id}
-                        aria-labelledby={fieldProps["aria-labelledby"]}
-                        aria-describedby={fieldProps["aria-describedby"]}
-                        value={facet.id}
-                        onChange={(event) => {
-                          const nextValue = event.target.value;
-                          updateFacetDrafts((currentFacets) =>
-                            currentFacets.map((entry, i) =>
-                              i === index ? { ...entry, id: nextValue } : entry
-                            )
-                          );
-                        }}
-                        placeholder="facet-id"
-                      />
-                    )}
-                  </WidgetControlRow>
+                    value="Generated automatically"
+                    help="Generated automatically so authors do not type technical facet IDs."
+                  />
                   <ReadonlyWidgetSummaryRow
                     id={`listing-filters.wizard.facet.${index}.label-seed`}
                     label="Current label"
@@ -1063,10 +1116,10 @@ function FacetDraftEditor({
                 <div className="grid gap-2 sm:grid-cols-2">
                   <ReadonlyWidgetSummaryRow
                     id={`listing-filters.visual.facet.${index}.source-id`}
-                    label="Facet ID"
+                    label="Support key"
                     path={`facets.${index}.id`}
-                    value={validation.normalizedId}
-                    help="Setup owns facet identity."
+                    value="Configured"
+                    help="Technical identity is support-owned and stays stable when labels change."
                   />
                   <WidgetControlRow
                     id={`listing-filters.visual.facet.${index}.label`}
@@ -1094,9 +1147,9 @@ function FacetDraftEditor({
                 </div>
               )}
 
-              {showsNormalizedId ? (
+              {showsNormalizedId && isSetupMode ? (
                 <p className="text-xs text-muted-foreground">
-                  Saved as: <code>{validation.normalizedId}</code>
+                  A legacy support key is saved and will stay stable.
                 </p>
               ) : null}
               {validation.errors.map((error) => (
@@ -1171,51 +1224,32 @@ function FacetDraftEditor({
                   {!isSort ? (
                     <WidgetControlRow
                       id={`listing-filters.wizard.facet.${index}.field`}
-                      label="Field path"
+                      label="Listing field"
                       path={`facets.${index}.field`}
                     >
                       {(fieldProps) => (
-                        <div className="space-y-2">
-                          <Input
-                            id={fieldProps.id}
-                            aria-labelledby={fieldProps["aria-labelledby"]}
-                            aria-describedby={fieldProps["aria-describedby"]}
-                            value={facet.field ?? ""}
-                            onChange={(event) => {
-                              const nextValue = event.target.value;
-                              updateFacetDrafts((currentFacets) =>
-                                currentFacets.map((entry, i) =>
-                                  i === index ? { ...entry, field: nextValue } : entry
-                                )
-                              );
-                            }}
-                            placeholder="Field path (example: tags)"
-                            list={fieldSuggestionId}
-                          />
-                          {fieldSuggestionId ? (
-                            <datalist id={fieldSuggestionId}>
-                              {fieldCandidates.map((candidate) => (
-                                <option key={candidate} value={candidate} />
-                              ))}
-                            </datalist>
-                          ) : null}
-                          {fieldCandidates.length > 0 ? (
-                            <p className="text-xs text-muted-foreground">
-                              Suggested fields: {fieldCandidates.join(", ")}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              No field suggestions are available for the selected listing query yet.
-                            </p>
-                          )}
-                        </div>
+                        <FieldCandidateSelect
+                          fieldId={fieldProps.id}
+                          labelledBy={fieldProps["aria-labelledby"]}
+                          describedBy={fieldProps["aria-describedby"]}
+                          value={facet.field}
+                          candidates={fieldCandidates}
+                          placeholder="Choose field"
+                          onChange={(nextValue) => {
+                            updateFacetDrafts((currentFacets) =>
+                              currentFacets.map((entry, i) =>
+                                i === index ? { ...entry, field: nextValue } : entry
+                              )
+                            );
+                          }}
+                        />
                       )}
                     </WidgetControlRow>
                   ) : (
                     <ReadonlyWidgetSummaryRow
                       id={`listing-filters.wizard.facet.${index}.sort-field-note`}
-                      label="Field path"
-                      value="Sort config uses per-option field + dir."
+                      label="Listing field"
+                      value="Sort options choose their own listing fields."
                     />
                   )}
 
@@ -1274,9 +1308,15 @@ function FacetDraftEditor({
                   />
                   <ReadonlyWidgetSummaryRow
                     id={`listing-filters.visual.facet.${index}.field`}
-                    label="Field path"
+                    label="Listing field"
                     path={`facets.${index}.field`}
-                    value={isSort ? "Sort rows own fields" : facet.field || "Not configured"}
+                    value={
+                      isSort
+                        ? "Sort rows choose fields"
+                        : facet.field
+                          ? "Configured"
+                          : "Not configured"
+                    }
                   />
                   <ReadonlyWidgetSummaryRow
                     id={`listing-filters.visual.facet.${index}.operator`}
@@ -1480,37 +1520,11 @@ function FacetDraftEditor({
                 <div className="space-y-2 rounded-md border border-border/60 bg-background/40 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium">Options</p>
-                    {isSetupMode ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        data-widget-control={`listing-filters.facet.${index}.option.add`}
-                        data-widget-control-ownership="action"
-                        onClick={() =>
-                          updateFacetDrafts((currentFacets) =>
-                            currentFacets.map((entry, i) =>
-                              i === index
-                                ? {
-                                    ...entry,
-                                    options: [
-                                      ...(entry.options ?? []),
-                                      { value: "", label: "", parentValue: "" },
-                                    ],
-                                  }
-                                : entry
-                            )
-                          )
-                        }
-                      >
-                        Add option
-                      </Button>
-                    ) : null}
                   </div>
                   {(facet.options ?? []).length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       {isSetupMode
-                        ? "Add structured option rows instead of pipe-delimited textarea values."
+                        ? "Option values are support-owned until runtime metrics can suggest safe values."
                         : "Re-open setup to add option rows for this facet."}
                     </p>
                   ) : null}
@@ -1531,44 +1545,19 @@ function FacetDraftEditor({
                           }
                         >
                           {isSetupMode ? (
-                            <WidgetControlRow
+                            <ReadonlyWidgetSummaryRow
                               id={`listing-filters.wizard.facet.${index}.option.${optionIndex}.value`}
-                              label="Option value"
+                              label="Matched value"
                               path={`facets.${index}.options.${optionIndex}.value`}
-                            >
-                              {(fieldProps) => (
-                                <Input
-                                  id={fieldProps.id}
-                                  aria-labelledby={fieldProps["aria-labelledby"]}
-                                  aria-describedby={fieldProps["aria-describedby"]}
-                                  value={option.value}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    updateFacetDrafts((currentFacets) =>
-                                      currentFacets.map((entry, i) =>
-                                        i === index
-                                          ? {
-                                              ...entry,
-                                              options: (entry.options ?? []).map((row, rowIndex) =>
-                                                rowIndex === optionIndex
-                                                  ? { ...row, value: nextValue }
-                                                  : row
-                                              ),
-                                            }
-                                          : entry
-                                      )
-                                    );
-                                  }}
-                                  placeholder="Option value"
-                                />
-                              )}
-                            </WidgetControlRow>
+                              value={option.value ? "Configured" : "Support setup required"}
+                              help="Technical data values are support-owned; Visual owns visitor labels."
+                            />
                           ) : (
                             <ReadonlyWidgetSummaryRow
                               id={`listing-filters.visual.facet.${index}.option.${optionIndex}.value`}
-                              label="Option value"
+                              label="Matched value"
                               path={`facets.${index}.options.${optionIndex}.value`}
-                              value={option.value || "Not configured"}
+                              value={option.value ? "Configured" : "Support setup required"}
                             />
                           )}
                           {isPresentationMode ? (
@@ -1615,45 +1604,19 @@ function FacetDraftEditor({
                           )}
                           {isTaxonomy ? (
                             isSetupMode ? (
-                              <WidgetControlRow
+                              <ReadonlyWidgetSummaryRow
                                 id={`listing-filters.wizard.facet.${index}.option.${optionIndex}.parent`}
-                                label="Parent value"
+                                label="Parent group"
                                 path={`facets.${index}.options.${optionIndex}.parentValue`}
-                              >
-                                {(fieldProps) => (
-                                  <Input
-                                    id={fieldProps.id}
-                                    aria-labelledby={fieldProps["aria-labelledby"]}
-                                    aria-describedby={fieldProps["aria-describedby"]}
-                                    value={option.parentValue}
-                                    onChange={(event) => {
-                                      const nextValue = event.target.value;
-                                      updateFacetDrafts((currentFacets) =>
-                                        currentFacets.map((entry, i) =>
-                                          i === index
-                                            ? {
-                                                ...entry,
-                                                options: (entry.options ?? []).map(
-                                                  (row, rowIndex) =>
-                                                    rowIndex === optionIndex
-                                                      ? { ...row, parentValue: nextValue }
-                                                      : row
-                                                ),
-                                              }
-                                            : entry
-                                        )
-                                      );
-                                    }}
-                                    placeholder="Parent value (optional)"
-                                  />
-                                )}
-                              </WidgetControlRow>
+                                value={option.parentValue ? "Configured" : "Top-level option"}
+                                help="Taxonomy hierarchy keys are support-owned."
+                              />
                             ) : (
                               <ReadonlyWidgetSummaryRow
                                 id={`listing-filters.visual.facet.${index}.option.${optionIndex}.parent`}
-                                label="Parent value"
+                                label="Parent group"
                                 path={`facets.${index}.options.${optionIndex}.parentValue`}
-                                value={option.parentValue || "Top-level"}
+                                value={option.parentValue ? "Configured" : "Top-level"}
                               />
                             )
                           ) : null}
@@ -1778,7 +1741,7 @@ function FacetDraftEditor({
                   {(facet.sortOptions ?? []).length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       {isSetupMode
-                        ? "Add explicit sort rows instead of pipe-delimited config lines."
+                        ? "Add a sort choice that visitors can select, then choose the listing field and direction."
                         : "Re-open setup to add sort rows for this facet."}
                     </p>
                   ) : null}
@@ -1786,10 +1749,6 @@ function FacetDraftEditor({
                     const rowErrors =
                       validation.sortOptionErrors.find((entry) => entry.index === optionIndex)
                         ?.errors ?? [];
-                    const sortFieldSuggestionId =
-                      fieldCandidates.length > 0
-                        ? `listing-filters-sort-field-suggestions-${index}-${optionIndex}`
-                        : undefined;
                     return (
                       <div
                         key={`${optionIndex}:${option.value}:${option.field}`}
@@ -1797,45 +1756,27 @@ function FacetDraftEditor({
                       >
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_120px_auto]">
                           {isSetupMode ? (
-                            <WidgetControlRow
+                            <ReadonlyWidgetSummaryRow
                               id={`listing-filters.wizard.facet.${index}.sort-option.${optionIndex}.value`}
-                              label="Sort value"
+                              label="Generated key"
                               path={`facets.${index}.sortOptions.${optionIndex}.value`}
-                            >
-                              {(fieldProps) => (
-                                <Input
-                                  id={fieldProps.id}
-                                  aria-labelledby={fieldProps["aria-labelledby"]}
-                                  aria-describedby={fieldProps["aria-describedby"]}
-                                  value={option.value}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    updateFacetDrafts((currentFacets) =>
-                                      currentFacets.map((entry, i) =>
-                                        i === index
-                                          ? {
-                                              ...entry,
-                                              sortOptions: (entry.sortOptions ?? []).map(
-                                                (row, rowIndex) =>
-                                                  rowIndex === optionIndex
-                                                    ? { ...row, value: nextValue }
-                                                    : row
-                                              ),
-                                            }
-                                          : entry
-                                      )
-                                    );
-                                  }}
-                                  placeholder="Sort value"
-                                />
-                              )}
-                            </WidgetControlRow>
+                              value={
+                                option.field && option.dir
+                                  ? "Generated from field and direction"
+                                  : "Choose field and direction"
+                              }
+                              help="Technical sort values are generated automatically."
+                            />
                           ) : (
                             <ReadonlyWidgetSummaryRow
                               id={`listing-filters.visual.facet.${index}.sort-option.${optionIndex}.value`}
-                              label="Sort value"
+                              label="Generated key"
                               path={`facets.${index}.sortOptions.${optionIndex}.value`}
-                              value={option.value || "Not configured"}
+                              value={
+                                option.field && option.dir
+                                  ? "Generated from field and direction"
+                                  : "Not configured"
+                              }
                             />
                           )}
                           {isPresentationMode ? (
@@ -1883,53 +1824,43 @@ function FacetDraftEditor({
                           {isSetupMode ? (
                             <WidgetControlRow
                               id={`listing-filters.wizard.facet.${index}.sort-option.${optionIndex}.field`}
-                              label="Sort field"
+                              label="Sort by"
                               path={`facets.${index}.sortOptions.${optionIndex}.field`}
                             >
                               {(fieldProps) => (
-                                <div className="space-y-2">
-                                  <Input
-                                    id={fieldProps.id}
-                                    aria-labelledby={fieldProps["aria-labelledby"]}
-                                    aria-describedby={fieldProps["aria-describedby"]}
-                                    value={option.field}
-                                    onChange={(event) => {
-                                      const nextValue = event.target.value;
-                                      updateFacetDrafts((currentFacets) =>
-                                        currentFacets.map((entry, i) =>
-                                          i === index
-                                            ? {
-                                                ...entry,
-                                                sortOptions: (entry.sortOptions ?? []).map(
-                                                  (row, rowIndex) =>
-                                                    rowIndex === optionIndex
-                                                      ? { ...row, field: nextValue }
-                                                      : row
-                                                ),
-                                              }
-                                            : entry
-                                        )
-                                      );
-                                    }}
-                                    placeholder="Sort field"
-                                    list={sortFieldSuggestionId}
-                                  />
-                                  {sortFieldSuggestionId ? (
-                                    <datalist id={sortFieldSuggestionId}>
-                                      {fieldCandidates.map((candidate) => (
-                                        <option key={candidate} value={candidate} />
-                                      ))}
-                                    </datalist>
-                                  ) : null}
-                                </div>
+                                <FieldCandidateSelect
+                                  fieldId={fieldProps.id}
+                                  labelledBy={fieldProps["aria-labelledby"]}
+                                  describedBy={fieldProps["aria-describedby"]}
+                                  value={option.field}
+                                  candidates={fieldCandidates}
+                                  placeholder="Choose sort field"
+                                  onChange={(nextValue) => {
+                                    updateFacetDrafts((currentFacets) =>
+                                      currentFacets.map((entry, i) =>
+                                        i === index
+                                          ? {
+                                              ...entry,
+                                              sortOptions: (entry.sortOptions ?? []).map(
+                                                (row, rowIndex) =>
+                                                  rowIndex === optionIndex
+                                                    ? { ...row, field: nextValue }
+                                                    : row
+                                              ),
+                                            }
+                                          : entry
+                                      )
+                                    );
+                                  }}
+                                />
                               )}
                             </WidgetControlRow>
                           ) : (
                             <ReadonlyWidgetSummaryRow
                               id={`listing-filters.visual.facet.${index}.sort-option.${optionIndex}.field`}
-                              label="Sort field"
+                              label="Sort by"
                               path={`facets.${index}.sortOptions.${optionIndex}.field`}
-                              value={option.field || "Not configured"}
+                              value={option.field ? "Configured" : "Not configured"}
                             />
                           )}
                           {isSetupMode ? (
@@ -2377,12 +2308,14 @@ function SurfaceEditor({
         path="style.frameBackground"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Frame background"
             value={normalized.style?.frameBackground}
             onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
             onClear={() => clearStyle(value, onChange, "frameBackground")}
-            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
@@ -2392,12 +2325,14 @@ function SurfaceEditor({
         path="style.frameBorderColor"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Frame border"
             value={normalized.style?.frameBorderColor}
             onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
             onClear={() => clearStyle(value, onChange, "frameBorderColor")}
-            placeholder="var(--color-border)"
+            pickerFallback="#d4d4d8"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
@@ -2407,30 +2342,20 @@ function SurfaceEditor({
         path="style.actionBackground"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Action background"
             value={normalized.style?.actionBackground}
             onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
             onClear={() => clearStyle(value, onChange, "actionBackground")}
-            placeholder="var(--color-primary)"
+            pickerFallback="#2563eb"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
     </EditorSection>
   );
 }
-
-const formatDiagnosticsValue = (value: string[] | string | undefined, fallback: string) => {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : fallback;
-  }
-  if (Array.isArray(value)) {
-    const normalized = value.map((entry) => entry.trim()).filter(Boolean);
-    return normalized.length > 0 ? normalized.join(", ") : fallback;
-  }
-  return fallback;
-};
 
 function SourceAndFacetSummary({
   value,
@@ -2457,9 +2382,7 @@ function SourceAndFacetSummary({
         label="Listing query"
         path="listingQueryId"
         value={
-          normalized.listingQueryId
-            ? `${selectedQuery?.name ?? "Selected query"} (${normalized.listingQueryId})`
-            : "Not selected"
+          normalized.listingQueryId ? (selectedQuery?.name ?? "Selected query") : "Not selected"
         }
       />
       <ReadonlyWidgetSummaryRow
@@ -2480,8 +2403,7 @@ function SourceAndFacetSummary({
             >
               <p className="font-medium text-foreground">{facet.label}</p>
               <p>
-                <span className="font-medium">ID:</span>{" "}
-                {tokenizeListingFacetId(facet.id) || `facet-${index + 1}`}
+                <span className="font-medium">Support key:</span> Configured
               </p>
               <p>
                 <span className="font-medium">Kind:</span> {facet.kind}
@@ -2489,10 +2411,10 @@ function SourceAndFacetSummary({
               <p>
                 <span className="font-medium">Binding:</span>{" "}
                 {facet.kind === "sort"
-                  ? `${facet.sortOptions?.length ?? 0} sort rows`
-                  : `${facet.field || "missing field"} / ${
-                      operatorLabelMap[facet.op ?? resolveDefaultOperator(facet.kind)]
-                    }`}
+                  ? `${facet.sortOptions?.length ?? 0} sort row${facet.sortOptions?.length === 1 ? "" : "s"} configured`
+                  : facet.field
+                    ? "Listing field configured"
+                    : "Listing field missing"}
               </p>
             </div>
           ))}
@@ -2508,9 +2430,8 @@ function SourceAndFacetSummary({
 
 function RuntimeDiagnosticsSummary({ value }: { value: ListingFiltersData }) {
   const normalized = normalizeListingFiltersData(value);
-  const runtimeQuery =
-    normalized.resolved?.listingQueryId || normalized.listingQueryId || "Not selected";
-  const rejectedTokens = formatDiagnosticsValue(normalized.resolved?.rejectedTokens, "None");
+  const hasRuntimeQuery = Boolean(normalized.resolved?.listingQueryId || normalized.listingQueryId);
+  const rejectedTokenCount = normalized.resolved?.rejectedTokens?.length ?? 0;
   const runtimeError = normalized.resolved?.error?.trim() || null;
 
   return (
@@ -2526,20 +2447,24 @@ function RuntimeDiagnosticsSummary({ value }: { value: ListingFiltersData }) {
           id="listing-filters.advanced.runtime-query"
           label="Runtime query"
           path="resolved.listingQueryId"
-          value={runtimeQuery}
+          value={hasRuntimeQuery ? "Connected to selected listing query" : "Not selected"}
         />
         <ReadonlyWidgetSummaryRow
           id="listing-filters.advanced.rejected-tokens"
-          label="Rejected tokens"
+          label="Ignored URL filters"
           path="resolved.rejectedTokens"
-          value={rejectedTokens}
+          value={
+            rejectedTokenCount > 0
+              ? `${rejectedTokenCount} ignored filter${rejectedTokenCount === 1 ? "" : "s"}`
+              : "No ignored filters"
+          }
         />
         {runtimeError ? (
           <ReadonlyWidgetSummaryRow
             id="listing-filters.advanced.runtime-error"
             label="Runtime error"
             path="resolved.error"
-            value={<span className="text-destructive">{runtimeError}</span>}
+            value={<span className="text-destructive">Runtime error reported</span>}
           />
         ) : (
           <p className="text-muted-foreground">
@@ -2552,47 +2477,42 @@ function RuntimeDiagnosticsSummary({ value }: { value: ListingFiltersData }) {
   );
 }
 
-function RuntimeSnapshot({ value }: { value: ListingFiltersData }) {
+function RuntimeMetricsSummary({ value }: { value: ListingFiltersData }) {
   const normalized = normalizeListingFiltersData(value);
-  const snapshot = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          resolved: normalized.resolved,
-        },
-        null,
-        2
-      ),
-    [normalized]
-  );
+  const metrics = normalized.resolved?.metrics ?? [];
+  const activeMetricCount = metrics.filter((metric) => {
+    if (metric.range?.active) return true;
+    return (metric.options ?? []).some((option) => option.active);
+  }).length;
 
   return (
     <EditorSection
-      id="listing-filters.advanced.runtime-payload"
+      id="listing-filters.advanced.runtime-status"
       mode="advanced"
       role="diagnostics"
-      title="Runtime payload"
-      description="Read-only runtime data from server SSR."
+      title="Runtime status"
+      description="Read-only visitor-state summary without raw payloads."
     >
-      <WidgetControlRow
-        id="listing-filters.advanced.resolved-payload"
-        label="Resolved payload"
+      <ReadonlyWidgetSummaryRow
+        id="listing-filters.advanced.metric-count"
+        label="Resolved facets"
         path="resolved.metrics"
-        ownership="readonly"
-        readOnly
-      >
-        {(fieldProps) => (
-          <Textarea
-            id={fieldProps.id}
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-            value={snapshot}
-            readOnly
-            rows={10}
-            className="font-mono text-xs"
-          />
-        )}
-      </WidgetControlRow>
+        value={
+          metrics.length > 0
+            ? `${metrics.length} facet${metrics.length === 1 ? "" : "s"} resolved`
+            : "No resolved facet metrics yet"
+        }
+      />
+      <ReadonlyWidgetSummaryRow
+        id="listing-filters.advanced.active-filter-count"
+        label="Active filter groups"
+        path="resolved.metrics"
+        value={
+          activeMetricCount > 0
+            ? `${activeMetricCount} group${activeMetricCount === 1 ? "" : "s"} active`
+            : "No active filters captured"
+        }
+      />
     </EditorSection>
   );
 }
@@ -2648,16 +2568,17 @@ export function ListingFiltersAdvancedEditor({ value }: WidgetEditorProps<Listin
     <div className="space-y-3">
       <SourceAndFacetSummary value={value} listingQueries={listingQueriesState.items} />
       <RuntimeDiagnosticsSummary value={value} />
-      <RuntimeSnapshot value={value} />
+      <RuntimeMetricsSummary value={value} />
       <EditorSection
         id="listing-filters.advanced.contract-summary"
         mode="advanced"
         role="summary"
         title="Contract summary"
-        description="This widget expects listing query runtime params under lq.<queryId>.* tokens."
+        description="Wizard chooses the source and safe field bindings. Visual edits labels, layout, presentation, and swatches. Advanced stays read-only for support."
       >
         <p className="text-xs text-muted-foreground">
-          Defaults come from <code>listingFiltersDefaults</code>.
+          Runtime URL tokens and data match values are implementation details, not ordinary author
+          inputs.
         </p>
         <p className="text-xs text-muted-foreground">
           Reference: <code>_docs/_WIDGETS/LISTING_FILTERS.md</code>

@@ -865,6 +865,29 @@ read-only diagnostics. It added these concrete cleanup requirements:
   endpoint/query/CSS inputs `0`, and route-submit page picker `1`. Claude
   read-only review is pending retry because the local Claude session limit was
   reached before reset.
+- In Progress (2026-05-25): Listing Filters residual drift is superseded under
+  this task after helper-agent audit flagged raw Advanced JSON payload, Visual
+  CSS/token inputs, Wizard raw facet IDs/field paths/option values/sort values,
+  stale tests, and missing TASK-336-19 Playwright evidence. Listing Filters now
+  generates support keys instead of asking authors for facet IDs, uses listing
+  query field pickers for facet and sort field bindings, generates sort keys
+  from field/direction, keeps option data-match values and taxonomy hierarchy
+  keys support-owned, converts Visual surface colors to swatch-only controls,
+  and replaces the Advanced raw runtime payload textarea with human source,
+  runtime, and metric summaries. Targeted Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/listingRuntimeScript.test.ts`
+  with 47/47 tests. Claude read-only UX review found no high blockers and
+  flagged two medium follow-ups, both fixed before closure: legacy
+  support-owned custom field bindings can no longer be cleared through the
+  placeholder, and the sort empty state no longer mentions pipe-delimited config
+  lines. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-focused-2026-05-25.*`
+  opens Wizard via `Run setup again`, reports `wizardPassed=true`, missing
+  metadata `0`, raw technical inputs `0`, and no support-owned option/value
+  paths writable in Wizard.
 
 ## Files to Change
 

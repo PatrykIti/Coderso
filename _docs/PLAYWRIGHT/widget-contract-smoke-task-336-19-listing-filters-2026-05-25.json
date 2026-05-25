@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-05-25T21:56:30.961Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-listing-filters-final --widget listing-filters --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-2026-05-25.md --strict",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["listing-filters"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "task-336-19-listing-filters-final"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "listing-filters",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [
+              "variant",
+              "layout.maxWidth",
+              "layout.collapsibleFacets",
+              "title",
+              "description",
+              "searchLabel",
+              "searchPlaceholder",
+              "applyLabel",
+              "showSearch",
+              "autoApply",
+              "style.frameBackground",
+              "style.frameBorderColor",
+              "style.actionBackground",
+              "facets.0.order",
+              "facets.0.label",
+              "facets.0.sortOptions.0.label",
+              "facets.0.sortOptions.1.label",
+              "layout.container",
+              "layout.padding.top",
+              "layout.padding.bottom",
+              "layout.margin.top",
+              "layout.margin.bottom",
+              "visibility.devices.desktop",
+              "visibility.devices.tablet",
+              "visibility.devices.mobile"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "f9435704-9702-45f5-92b1-22711c7fb0ad",
+        "adminPath": "http://localhost:5173/admin/pages/f9435704-9702-45f5-92b1-22711c7fb0ad",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "listing-filters",
+        "publicPath": "/test-listing-filters-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "screenshotPath": ".tmp/playwright-widget-contract-smoke/screenshots/public-listing-filters.png",
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

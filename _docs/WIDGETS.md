@@ -163,6 +163,12 @@ Zasady:
   wybiera source i page-first results destination, Visual zarzadza copy,
   interaction i swatches, a Advanced pokazuje human support diagnostics bez
   raw provider/query values.
+- `listing-filters` po TASK-336-19 usuwa raw facet ID, field path, option
+  value, sort value, raw CSS/token inputs i JSON runtime payload z normalnego
+  authoringu. Wizard wybiera listing query, facet kind, query field i sort
+  direction przez pickery; option/data match values oraz hierarchy keys sa
+  support-owned. Visual edytuje labels/layout/presentation/swatches, a Advanced
+  pokazuje human runtime/source summaries.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

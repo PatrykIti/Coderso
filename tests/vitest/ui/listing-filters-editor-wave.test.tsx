@@ -384,16 +384,16 @@ test("ListingFilters editor modes expose non-overlapping writable ownership meta
     expect(wizardPaths).toEqual(
       expect.arrayContaining([
         "listingQueryId",
-        "facets.0.id",
         "facets.0.kind",
-        "facets.0.sortOptions.0.value",
         "facets.0.sortOptions.0.field",
         "facets.0.sortOptions.0.dir",
         "facets.1.field",
         "facets.1.op",
-        "facets.1.options.0.value",
       ])
     );
+    expect(wizardPaths).not.toContain("facets.0.id");
+    expect(wizardPaths).not.toContain("facets.0.sortOptions.0.value");
+    expect(wizardPaths).not.toContain("facets.1.options.0.value");
     expect(visualPaths).toEqual(
       expect.arrayContaining([
         "variant",
@@ -412,6 +412,8 @@ test("ListingFilters editor modes expose non-overlapping writable ownership meta
     expect(wizardPaths).not.toContain("style.frameBackground");
     expect(advancedPaths).toEqual([]);
     expect(duplicatePaths).toEqual([]);
+    expect(visual.container.querySelector('input[aria-label="Frame background value"]')).toBeNull();
+    expect(advanced.container.querySelector("textarea")).toBeNull();
   } finally {
     wizard.cleanup();
     visual.cleanup();
@@ -419,7 +421,7 @@ test("ListingFilters editor modes expose non-overlapping writable ownership meta
   }
 });
 
-test("ListingFilters editors cover listing query selection, runtime behavior, facets, sort config, and runtime snapshot", async () => {
+test("ListingFilters editors cover listing query selection, runtime behavior, safe facet setup, and runtime summaries", async () => {
   const { ListingFiltersAdvancedEditor, ListingFiltersVisualEditor, ListingFiltersWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
 
@@ -465,7 +467,7 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
     expect(view.container.textContent).toContain("Listing query source");
     expect(view.container.textContent).toContain("Facet setup");
     expect(view.container.textContent).toContain("Runtime diagnostics");
-    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Runtime status");
 
     React.act(() => {
       setSelectValue(
@@ -496,16 +498,13 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
 
     clickByText(facetsSection, "Add facet");
     React.act(() => {
-      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[1], "status");
-      setInputValue(
-        findInputsByPlaceholder(facetsSection, "Field path (example: tags)")[0],
-        "status"
-      );
-    });
-
-    clickByText(facetsSection, "Add option");
-    React.act(() => {
-      setInputValue(findInputsByPlaceholder(facetsSection, "Option value")[0], "published");
+      const fieldSelects = findSelectsByOptions(facetsSection, [
+        "__no_field__",
+        "id",
+        "title",
+        "updatedAt",
+      ]);
+      setSelectValue(fieldSelects[fieldSelects.length - 1], "title");
     });
 
     const lastPayload = onChangeSpy.mock.lastCall?.[0];
@@ -521,7 +520,8 @@ test("ListingFilters editors cover listing query selection, runtime behavior, fa
         autoApply: false,
       })
     );
-    expect(view.container.textContent).toContain('"resolved"');
+    expect(view.container.textContent).not.toContain('"resolved"');
+    expect(view.container.querySelector("textarea[readonly]")).toBeNull();
     expect(view.container.textContent).toContain("_docs/_WIDGETS/LISTING_FILTERS.md");
     expect(view.container.textContent).toContain("Preview");
   } finally {
@@ -619,18 +619,21 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     });
     await flush();
     expect(latestValue.listingQueryId).toBe("query-1");
-    expect(facetsSection?.textContent).toContain("Suggested fields: id, title, updatedAt");
+    expect(facetsSection?.textContent).toContain(
+      "Choose from fields available in the selected listing query."
+    );
 
     React.act(() => {
       setSelectValue(querySelect, "__no_listing_query__");
     });
     expect(latestValue.listingQueryId).toBe("");
 
-    expect(findInputsByPlaceholder(facetsSection as HTMLElement, "facet-id")).toHaveLength(2);
-
     React.act(() => {
-      setInputValue(findInputsByPlaceholder(facetsSection as HTMLElement, "facet-id")[1], "status");
+      setSelectValue(querySelect, "query-1");
     });
+    await flush();
+
+    expect(findInputsByPlaceholder(facetsSection as HTMLElement, "facet-id")).toHaveLength(0);
 
     let kindSelects = findSelectsByOptions(facetsSection!, [
       "checkbox",
@@ -646,13 +649,25 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     expect(latestValue.facets?.[1]?.kind).toBe("radio");
     expect(latestValue.facets?.[1]?.op).toBe("eq");
 
+    const addedFacet = facetsSection?.querySelector(
+      '[data-widget-control="listing-filters.facet.1"]'
+    ) as HTMLElement | null;
+    expect(addedFacet).toBeTruthy();
+
     React.act(() => {
-      setInputValue(
-        findInputsByPlaceholder(facetsSection as HTMLElement, "Field path (example: tags)")[0],
-        "status.raw"
+      const fieldSelects = findSelectsByOptions(addedFacet as HTMLElement, [
+        "id",
+        "title",
+        "updatedAt",
+        "__custom_field__",
+      ]);
+      const fieldSelect = fieldSelects[fieldSelects.length - 1] as HTMLSelectElement;
+      expect(Array.from(fieldSelect.options).map((option) => option.value)).not.toContain(
+        "__no_field__"
       );
+      setSelectValue(fieldSelect, "title");
     });
-    expect(latestValue.facets?.[1]?.field).toBe("status.raw");
+    expect(latestValue.facets?.[1]?.field).toBe("title");
 
     let operatorSelects = findSelectsByOptions(facetsSection!, ["eq", "neq"]);
     expect(
@@ -668,14 +683,8 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     });
     expect(latestValue.facets?.[1]?.op).toBe("neq");
 
-    clickByText(facetsSection as HTMLElement, "Add option");
-    React.act(() => {
-      setInputValue(
-        findInputsByPlaceholder(facetsSection as HTMLElement, "Option value")[0],
-        "published"
-      );
-    });
-    expect(latestValue.facets?.[1]?.options).toEqual([{ value: "published", label: "" }]);
+    expect(findInputsByPlaceholder(facetsSection as HTMLElement, "Option value")).toHaveLength(0);
+    expect(facetsSection?.textContent).toContain("Option values are support-owned");
     expect(facetsSection?.textContent).toContain("Preview");
 
     kindSelects = findSelectsByOptions(facetsSection!, [
@@ -705,27 +714,28 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     });
     expect(latestValue.facets?.[1]?.kind).toBe("sort");
     expect(latestValue.facets?.[1]?.field).toBeUndefined();
-    expect(facetsSection?.textContent).toContain("Sort config uses per-option field + dir.");
+    expect(facetsSection?.textContent).toContain("Sort options choose their own listing fields.");
     expect(facetsSection?.textContent).toContain("Sort does not use filter operators.");
-    const secondFacet = facetsSection?.querySelector(
-      '[data-widget-control="listing-filters.facet.1"]'
-    ) as HTMLElement | null;
-    expect(secondFacet).toBeTruthy();
-    const addSortOptionButton = secondFacet?.querySelector(
+    expect(facetsSection?.textContent).toContain(
+      "Add a sort choice that visitors can select, then choose the listing field and direction."
+    );
+    expect(facetsSection?.textContent).not.toContain("pipe-delimited");
+    const addSortOptionButton = addedFacet?.querySelector(
       '[data-widget-control="listing-filters.facet.1.sort-option.add"]'
     );
     clickElement(addSortOptionButton);
 
     React.act(() => {
-      const sortValueInputs = findInputsByPlaceholder(secondFacet as HTMLElement, "Sort value");
-      setInputValue(sortValueInputs[sortValueInputs.length - 1], "title-asc");
+      const sortFieldSelects = findSelectsByOptions(addedFacet as HTMLElement, [
+        "__no_field__",
+        "id",
+        "title",
+        "updatedAt",
+      ]);
+      setSelectValue(sortFieldSelects[sortFieldSelects.length - 1], "title");
     });
     React.act(() => {
-      const sortFieldInputs = findInputsByPlaceholder(secondFacet as HTMLElement, "Sort field");
-      setInputValue(sortFieldInputs[sortFieldInputs.length - 1], "title");
-    });
-    React.act(() => {
-      const directionCandidates = findSelectsByOptions(secondFacet as HTMLElement, [
+      const directionCandidates = findSelectsByOptions(addedFacet as HTMLElement, [
         "__no_sort_direction__",
         "asc",
         "desc",
@@ -734,19 +744,87 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     });
     expect(latestValue.facets?.[1]?.sortOptions).toEqual([
       {
-        value: "title-asc",
+        value: "title:asc",
         label: "",
         field: "title",
         dir: "asc",
       },
     ]);
 
-    const removeButton = secondFacet?.querySelector(
+    const removeButton = addedFacet?.querySelector(
       '[data-widget-control="listing-filters.facet.1.remove"]'
     );
     clickElement(removeButton);
-    expect(findInputsByPlaceholder(facetsSection as HTMLElement, "facet-id")).toHaveLength(1);
+    expect(latestValue.facets).toHaveLength(1);
     expect(onChangeSpy).toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters wizard preserves support-owned custom field bindings until replaced", async () => {
+  const { ListingFiltersWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  let latestValue: ListingFiltersData = {
+    listingQueryId: "query-1",
+    facets: [
+      {
+        id: "legacy",
+        kind: "checkbox",
+        label: "Legacy facet",
+        field: "metadata.custom.path",
+        op: "in",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingFiltersData>(latestValue);
+    return (
+      <ListingFiltersWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    const facetsSection = findSectionByTitle(view.container, "Facet setup") as HTMLElement;
+    expect(facetsSection.textContent).toContain(
+      "A custom field binding is already configured by support."
+    );
+    expect(facetsSection.textContent).not.toContain("metadata.custom.path");
+
+    const fieldSelects = findSelectsByOptions(facetsSection, [
+      "id",
+      "title",
+      "updatedAt",
+      "__custom_field__",
+    ]);
+    expect(fieldSelects).toHaveLength(1);
+
+    const fieldSelect = fieldSelects[0] as HTMLSelectElement;
+    expect(Array.from(fieldSelect.options).map((option) => option.value)).not.toContain(
+      "__no_field__"
+    );
+
+    React.act(() => {
+      setSelectValue(fieldSelect, "__no_field__");
+    });
+    expect(latestValue.facets?.[0]?.field).toBe("metadata.custom.path");
+
+    React.act(() => {
+      setSelectValue(fieldSelect, "title");
+    });
+    expect(latestValue.facets?.[0]?.field).toBe("title");
   } finally {
     view.cleanup();
   }
@@ -840,10 +918,17 @@ test("ListingFilters wizard editor keeps draft facets visible and surfaces local
       "Select a listing query to enable canvas preview and facet mapping."
     );
 
+    const querySection = findSectionByTitle(view.container, "Listing query source") as HTMLElement;
+    const querySelect = findSelectsByOptions(querySection, ["__no_listing_query__", "query-1"])[0];
+    React.act(() => {
+      setSelectValue(querySelect, "query-1");
+    });
+    await flush();
+
     const facetsSection = findSectionByTitle(view.container, "Facet setup") as HTMLElement;
     clickByText(facetsSection, "Add facet");
-    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
-    expect(facetsSection.textContent).toContain("Field path is required for this facet kind.");
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
+    expect(facetsSection.textContent).toContain("Choose a listing field for this facet.");
 
     const kindSelects = findSelectsByOptions(facetsSection, [
       "checkbox",
@@ -855,42 +940,34 @@ test("ListingFilters wizard editor keeps draft facets visible and surfaces local
     ]);
 
     React.act(() => {
-      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[1], "Status Filter");
       setSelectValue(kindSelects[1], "radio");
     });
 
     expect(latestValue.facets).toHaveLength(2);
-    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
-    expect(facetsSection.textContent).toContain("Saved as: status-filter");
-    expect(facetsSection.textContent).toContain("Facet ID will be saved as status-filter.");
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
+    expect(facetsSection.textContent).toContain("Generated automatically");
 
     React.act(() => {
-      setInputValue(
-        findInputsByPlaceholder(facetsSection, "Field path (example: tags)")[0],
-        "status"
-      );
+      const fieldSelects = findSelectsByOptions(facetsSection, [
+        "__no_field__",
+        "id",
+        "title",
+        "updatedAt",
+      ]);
+      setSelectValue(fieldSelects[fieldSelects.length - 1], "title");
     });
 
-    expect(facetsSection.textContent).not.toContain("Field path is required for this facet kind.");
+    expect(facetsSection.textContent).not.toContain("Choose a listing field for this facet.");
     expect(latestValue.facets?.[1]).toEqual(
       expect.objectContaining({
-        id: "status-filter",
-        field: "status",
+        id: "facet-2",
+        field: "title",
       })
     );
 
     clickByText(facetsSection, "Add facet");
-    const updatedFieldInputs = findInputsByPlaceholder(facetsSection, "Field path (example: tags)");
-
-    React.act(() => {
-      setInputValue(findInputsByPlaceholder(facetsSection, "facet-id")[2], "status-filter");
-      setInputValue(updatedFieldInputs[1], "status");
-    });
-
-    expect(facetsSection.textContent).toContain(
-      "Duplicate facet ID after normalization: status-filter."
-    );
-    expect(facetsSection.textContent).toContain("Facet ID will be saved as status-filter.");
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
+    expect(facetsSection.textContent).not.toContain("Duplicate facet ID");
   } finally {
     view.cleanup();
   }
@@ -941,15 +1018,15 @@ test("ListingFilters editors preserve incomplete facet drafts when visual settin
 
     const facetsSection = findSectionByTitle(view.container, "Facet setup") as HTMLElement;
     clickByText(facetsSection, "Add facet");
-    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
 
     React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Filter results"), "Filters");
     });
 
-    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(2);
+    expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
     expect(latestValue.facets).toHaveLength(2);
-    expect(view.container.textContent).toContain("Field path is required for this facet kind.");
+    expect(view.container.textContent).toContain("Choose a listing field for this facet.");
   } finally {
     view.cleanup();
   }

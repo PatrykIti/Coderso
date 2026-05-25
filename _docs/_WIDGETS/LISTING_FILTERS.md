@@ -20,8 +20,13 @@ listing runtime token contract.
 
 ### Wizard
 - one-time listing query source selection (`listingQueryId`)
-- setup-only facet structure: facet IDs, kinds, field paths, operators, option
-  values, taxonomy parent values, sort values/fields/directions
+- setup-only facet structure with beginner-safe controls:
+  - generated support keys instead of editable facet IDs
+  - facet kinds and operators
+  - listing fields chosen from the selected query's field picker
+  - sort fields/directions with generated sort keys
+- option/data match values and taxonomy hierarchy keys are support-owned until
+  runtime metrics can suggest safe values
 - setup guidance for missing queries, empty facets, invalid fields, duplicate
   IDs, and legacy operators
 - no runtime copy, layout, or surface styling ownership
@@ -32,16 +37,17 @@ listing runtime token contract.
 - runtime labels (`title`, `description`, search/apply copy), `showSearch`,
   and `autoApply`
 - facet labels, facet order, option labels, sort labels, and preview
-- field/kind/operator bindings are read-only badges with setup ownership
+- field/kind/operator bindings are read-only human badges with setup/support
+  ownership
 - searchable-option mode, range input mode/step, and date input mode
 - range/date presentation settings with dual inputs and optional slider pairing
-- surface styling
+- surface styling through swatch-only color controls
 - no listing query rebinding and no facet source/value row creation
 
 ### Advanced
 - read-only listing query and normalized facet binding summary
 - read-only URL/runtime diagnostics for `lq.<queryId>.*` state
-- resolved runtime payload from public SSR
+- read-only human runtime status from public SSR, without raw JSON payloads
 - contract linkage to `_docs/_WIDGETS/LISTING_FILTERS.md`
 - no writable facet/source/style controls
 
@@ -77,6 +83,8 @@ listing runtime token contract.
 - `style.frameBackground` is clearable.
 - `style.frameBorderColor` is clearable.
 - `style.actionBackground` is clearable.
+- Visual color controls are swatch-only; saved custom CSS/token values can be
+  replaced or cleared but are not edited as text by ordinary authors.
 
 ## Data Model (summary)
 

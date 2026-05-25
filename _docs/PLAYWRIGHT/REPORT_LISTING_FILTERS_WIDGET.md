@@ -501,3 +501,18 @@ _Raport ukończony po pełnym cyklu testów: analiza kodu + testy Admin UI + tes
 - A fresh Playwright/browser replay was not rerun during the final closure pass.
   Current closure relies on live owner inspection, targeted DOM/runtime tests,
   full repo gates, and explicit extracted-owner routing for shared seams.
+
+## Status po TASK-336-19 (2026-05-25)
+
+- Listing Filters now follows the shared editor mode contract: Wizard is one-time
+  setup for selecting the listing query, facet kind, listing fields, and sort
+  directions; Visual owns daily copy/layout/swatch-only presentation controls;
+  Advanced is read-only support/status context.
+- Nontechnical authors are no longer asked for raw facet IDs, field paths, option
+  values, taxonomy parent keys, sort values, CSS tokens, or runtime JSON payloads.
+  Legacy/custom bindings remain preserved as support-owned values until replaced
+  through a safe query-field picker.
+- Fresh TASK-336-19 evidence:
+  - `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/listingRuntimeScript.test.ts`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-2026-05-25.md`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-listing-filters-focused-2026-05-25.md`

@@ -447,7 +447,7 @@ test("listing filters editors render expected sections", () => {
     />
   );
   expect(advanced).toContain("Source and facets summary");
-  expect(advanced).toContain("Runtime payload");
+  expect(advanced).toContain("Runtime status");
   expect(advanced).toContain("Contract summary");
   expect(advanced).not.toContain("Add facet");
 });
@@ -471,7 +471,7 @@ test("listing filters widget declares a strict editor ownership contract", () =>
     "listing-filters.visual.facet-presentation",
     "listing-filters.advanced.source-summary",
     "listing-filters.advanced.runtime-diagnostics",
-    "listing-filters.advanced.runtime-payload",
+    "listing-filters.advanced.runtime-status",
     "listing-filters.advanced.contract-summary",
   ]);
 });
