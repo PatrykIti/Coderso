@@ -492,6 +492,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `metadataGaps=0`. The smoke runner now shortens long `playwright-cli`
   session names to avoid false `auth_state_load_failed` results from CLI
   session-name limits.
+- In Progress (2026-05-25): twenty-sixth implementation family targets Posts
+  Feed Visual raw color and destination authoring drift. Visual color fields
+  now use swatch-only controls for `style.backgroundColor`, `style.borderColor`,
+  and `style.textColor`, while saved custom CSS/token values remain compatible
+  as replace-or-clear state. Fresh Posts Feed defaults no longer seed CSS
+  variable color values, so new widgets inherit theme colors instead of
+  presenting false saved-custom colors. `pagination.viewAllHref` now uses the
+  shared page-first destination picker in Visual, with legacy custom/external
+  values preserved as replace-or-clear state and the empty state falling back to
+  the configured posts list route. The previous read-only `source.contentType`
+  metadata path was removed because it is not schema-owned; the visible
+  "Content type: Posts" setup summary remains pathless. Focused Vitest and Bun
+  evidence passes
+  `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and `bun test tests/unit/widgets/postsFeedWidget.test.tsx`. Targeted
+  Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-posts-feed-source-color-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude review after implementation found no high blockers
+  and only requested doc/test tightening; a fresh helper-agent audit found the
+  current metadata drift, stale `source.contentType` path, and stale Wizard
+  lifecycle docs, all fixed before final validation.
 
 ## Files to Change
 

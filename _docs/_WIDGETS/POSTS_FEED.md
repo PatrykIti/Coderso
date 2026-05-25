@@ -35,7 +35,9 @@ Render a ready-to-use feed of posts without building a custom listing query.
   - `load-more`
   - `view-all`
 - `pagination.pageSize`, `viewAllHref`, `viewAllLabel`, and `loadMoreLabel`
-  reuse the shared `ContentListData.pagination` model.
+  reuse the shared `ContentListData.pagination` model. In Visual mode,
+  `viewAllHref` is authored through the shared page-first destination picker;
+  older custom/external values stay compatible as replace-or-clear state.
 - `paged` uses the block-scoped runtime key `cl.<blockId>.page`.
 - `load-more` uses the same key but grows cumulatively across page hops.
 - `view-all` always renders the first bounded slice and ignores stale
@@ -68,15 +70,16 @@ Render a ready-to-use feed of posts without building a custom listing query.
 - source setup only: source mode, category/tag filter, manual post order,
   author/date filters, featured-first ordering, initial item count, and sort.
 - the content type is fixed to Posts and is shown as read-only setup context.
-- lifecycle caveat: Wizard is still visible as a normal editor tab until
-  `TASK-336-16` ships one-time setup completion and `Run setup again`.
+- lifecycle: after setup is completed, the shared editor shell keeps everyday
+  editing in Visual/Advanced and exposes Wizard through `Run setup again`.
 
 ### Visual
 
 - daily presentation: field visibility, section title/description, variant,
-  columns, gap, card style, image aspect, CTA label, colors, and motion.
-- pagination presentation: mode, page size, view-all href/label, and load-more
-  label.
+  columns, gap, card style, image aspect, CTA label, swatch-only color
+  controls, and motion.
+- pagination presentation: mode, page size, view-all page destination/label,
+  and load-more label.
 - empty-state copy.
 - Visual keeps the transient preview bridge active without owning source
   controls.
@@ -97,9 +100,14 @@ Render a ready-to-use feed of posts without building a custom listing query.
 ## Clear Controls
 
 - `style.backgroundColor`, `style.borderColor`, and `style.textColor` are
-  clearable.
+  clearable and authored through swatch-only Visual controls.
 - Clear removes the owning posts-feed style key before mapping into the shared
   Content List renderer.
+- Existing `var(...)`, `rgba(...)`, and other legacy custom color strings stay
+  render-compatible as saved custom color state; editors can replace them with
+  a swatch or clear them without typing CSS.
+- Fresh Posts Feed widgets leave color values unset so the shared renderer
+  inherits theme defaults instead of showing a false saved-custom state.
 - Shared undo/toast behavior for destructive Clear actions is still routed to
   TASK-321 rather than reimplemented locally here.
 
@@ -146,9 +154,6 @@ Render a ready-to-use feed of posts without building a custom listing query.
     "cardStyle": "outlined",
     "imageAspect": "standard",
     "ctaLabel": "Read more",
-    "backgroundColor": "var(--color-bg)",
-    "borderColor": "var(--color-border)",
-    "textColor": "var(--color-text)",
     "motion": "none"
   },
   "resolved": {

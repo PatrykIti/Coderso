@@ -29,7 +29,8 @@ import type {
   WidgetPreviewState,
 } from "../../../../widgets/types";
 import { resolvePostsFeedResolvedData } from "../../../../services/content/postsFeedRuntime";
-import { ClearableInputField } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -230,6 +231,39 @@ function clearStyle(
       style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
     };
   });
+}
+
+function ColorField({
+  id,
+  path,
+  label,
+  value,
+  onChange,
+  onClear,
+  pickerFallback,
+}: {
+  id: string;
+  path: string;
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  onClear: () => void;
+  pickerFallback: string;
+}) {
+  return (
+    <WidgetControlRow id={id} label={label} path={path} hideLabel>
+      {() => (
+        <SharedColorControl
+          label={label}
+          value={value}
+          onChange={onChange}
+          onClear={onClear}
+          pickerFallback={pickerFallback}
+          showValueInput={false}
+        />
+      )}
+    </WidgetControlRow>
+  );
 }
 
 function resolvePostsCatalogError(error: unknown) {
@@ -910,7 +944,6 @@ function SourceSetup({
         id="posts-feed.wizard.fixed-content-type"
         label="Content type"
         value="Posts"
-        path="source.contentType"
         help="Posts Feed always queries the posts catalog; source mode controls which posts are selected."
       />
 
@@ -1447,51 +1480,33 @@ function LayoutOptions({
       </WidgetControlRow>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <WidgetControlRow
+        <ColorField
           id="posts-feed.visual.background-color"
-          label="Card background"
           path="style.backgroundColor"
-        >
-          {() => (
-            <ClearableInputField
-              label="Card background"
-              value={normalized.style?.backgroundColor}
-              onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
-              onClear={() => clearStyle(value, onChange, "backgroundColor")}
-              placeholder="var(--color-bg)"
-            />
-          )}
-        </WidgetControlRow>
-        <WidgetControlRow
+          label="Card background"
+          value={normalized.style?.backgroundColor}
+          onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
+          onClear={() => clearStyle(value, onChange, "backgroundColor")}
+          pickerFallback="#ffffff"
+        />
+        <ColorField
           id="posts-feed.visual.border-color"
-          label="Card border"
           path="style.borderColor"
-        >
-          {() => (
-            <ClearableInputField
-              label="Card border"
-              value={normalized.style?.borderColor}
-              onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-              onClear={() => clearStyle(value, onChange, "borderColor")}
-              placeholder="var(--color-border)"
-            />
-          )}
-        </WidgetControlRow>
-        <WidgetControlRow
+          label="Card border"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          onClear={() => clearStyle(value, onChange, "borderColor")}
+          pickerFallback="#e2e8f0"
+        />
+        <ColorField
           id="posts-feed.visual.text-color"
-          label="Text color"
           path="style.textColor"
-        >
-          {() => (
-            <ClearableInputField
-              label="Text color"
-              value={normalized.style?.textColor}
-              onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-              onClear={() => clearStyle(value, onChange, "textColor")}
-              placeholder="var(--color-text)"
-            />
-          )}
-        </WidgetControlRow>
+          label="Text color"
+          value={normalized.style?.textColor}
+          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyle(value, onChange, "textColor")}
+          pickerFallback="#0f172a"
+        />
       </div>
 
       <WidgetControlRow id="posts-feed.visual.motion" label="Entry motion" path="style.motion">
@@ -1638,18 +1653,19 @@ function PaginationOptions({
                 )}
               </WidgetControlRow>
               <WidgetControlRow
-                id="posts-feed.visual.view-all-href"
-                label="View all href"
+                id="posts-feed.visual.view-all-destination"
+                label="View all destination"
                 path="pagination.viewAllHref"
+                hideLabel
               >
-                {(fieldProps) => (
-                  <Input
-                    {...fieldProps}
-                    value={normalized.pagination?.viewAllHref ?? ""}
-                    onChange={(event) =>
-                      updatePagination(value, onChange, { viewAllHref: event.target.value })
-                    }
-                    placeholder="Leave empty to use the posts list route"
+                {() => (
+                  <LinkDestinationField
+                    fieldId="posts-feed.visual.view-all-destination"
+                    label="View all destination"
+                    value={normalized.pagination?.viewAllHref}
+                    onChange={(next) => updatePagination(value, onChange, { viewAllHref: next })}
+                    emptyLabel="Use posts list route"
+                    helpText="Pick a published site page. Leave empty to use the configured posts list route."
                   />
                 )}
               </WidgetControlRow>

@@ -41,6 +41,7 @@ export type WidgetControlRowProps = {
   ownership?: WidgetControlOwnership;
   readOnly?: boolean;
   className?: string;
+  hideLabel?: boolean;
   children: (props: WidgetControlFieldProps) => ReactNode;
 };
 
@@ -126,6 +127,7 @@ export function WidgetControlRow({
   ownership,
   readOnly,
   className,
+  hideLabel,
   children,
 }: WidgetControlRowProps) {
   const normalizedId = normalizeEditorDomId(id);
@@ -145,7 +147,10 @@ export function WidgetControlRow({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
-          <span id={labelId} className="text-sm font-medium leading-5">
+          <span
+            id={labelId}
+            className={cn("text-sm font-medium leading-5", hideLabel && "sr-only")}
+          >
             {label}
           </span>
           {help ? <InfoTip content={help} label={`${label} info`} className="mt-0.5" /> : null}

@@ -265,6 +265,27 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "updates-page",
+      title: "Updates",
+      slug: "updates",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "draft-page",
+      title: "Draft landing",
+      slug: "draft-landing",
+      status: "draft",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     info: toastInfo,
@@ -342,6 +363,11 @@ const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) 
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
       element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
+  );
+
+const findInputByAriaLabel = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
   );
 
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
@@ -965,36 +991,71 @@ test("PostsFeed visual editor keeps preview ready when routes or media degrade",
   }
 });
 
-test("PostsFeed visual editor reuses the shared clear undo contract for card background", async () => {
+test("PostsFeed visual editor uses swatch-only color controls with saved custom compatibility", async () => {
   const { PostsFeedVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
-  const Harness = () => {
-    const [value, setValue] = useState<PostsFeedData>({
-      style: {
-        backgroundColor: "var(--color-surface)",
-      },
-    });
+  let latestValue: PostsFeedData = {
+    style: {
+      backgroundColor: "var(--color-surface)",
+    },
+  };
 
-    return <PostsFeedVisualEditor value={value} onChange={setValue} variant="cards" />;
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestValue);
+
+    return (
+      <PostsFeedVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
   };
 
   const view = mount(<Harness />);
 
   try {
     await flush();
-    const input = findInputByPlaceholder(view.container, "var(--color-bg)");
-    const clearButton = input?.parentElement?.parentElement?.querySelector("button");
+    const backgroundSwatch = findInputByAriaLabel(view.container, "Card background swatch");
+    const borderSwatch = findInputByAriaLabel(view.container, "Card border swatch");
+    const textSwatch = findInputByAriaLabel(view.container, "Text color swatch");
+    const clearButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Clear" && !button.hasAttribute("disabled")
+    );
 
-    expect(input).toBeInstanceOf(HTMLInputElement);
-    expect((input as HTMLInputElement | undefined)?.value).toBe("var(--color-surface)");
+    expect(backgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(borderSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(textSwatch).toBeInstanceOf(HTMLInputElement);
+    expect((backgroundSwatch as HTMLInputElement | undefined)?.value).toBe("#ffffff");
+    expect((borderSwatch as HTMLInputElement | undefined)?.value).toBe("#e2e8f0");
+    expect((textSwatch as HTMLInputElement | undefined)?.value).toBe("#0f172a");
+    expect(findInputByAriaLabel(view.container, "Card background value")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Card border value")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Text color value")).toBeUndefined();
+    expect(view.container.textContent).toContain("Saved custom color");
+
+    React.act(() => {
+      setInputValue(backgroundSwatch, "#112233");
+      setInputValue(borderSwatch, "#445566");
+      setInputValue(textSwatch, "#778899");
+    });
+    await flush();
+
+    expect(latestValue.style?.backgroundColor).toBe("#112233");
+    expect(latestValue.style?.borderColor).toBe("#445566");
+    expect(latestValue.style?.textColor).toBe("#778899");
+    expect(view.container.textContent).not.toContain("Saved custom color");
 
     React.act(() => {
       clearButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await flush();
 
-    expect((input as HTMLInputElement | undefined)?.value).toBe("");
+    expect(latestValue.style?.backgroundColor).toBeUndefined();
     expect(toastInfo).toHaveBeenCalledWith("Card background cleared.", {
       action: {
         label: "Undo",
@@ -1008,7 +1069,68 @@ test("PostsFeed visual editor reuses the shared clear undo contract for card bac
     });
     await flush();
 
-    expect((input as HTMLInputElement | undefined)?.value).toBe("var(--color-surface)");
+    expect(latestValue.style?.backgroundColor).toBe("#112233");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed visual editor keeps fresh colors theme-owned and page-picks view-all destination", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  let latestValue: PostsFeedData = {
+    pagination: {
+      mode: "view-all",
+      pageSize: 6,
+      viewAllHref: "https://legacy.example.com/posts",
+      viewAllLabel: "View all posts",
+      loadMoreLabel: "Load more",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestValue);
+
+    return (
+      <PostsFeedVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Theme default");
+    expect(findInputByAriaLabel(view.container, "Card background value")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Card border value")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Text color value")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Leave empty to use the posts list route")).toBe(
+      undefined
+    );
+    expect(view.container.textContent).toContain("Saved custom destination");
+
+    React.act(() => {
+      setSelectValue(
+        findSelectByOptions(view.container, [
+          "__coderso_link_empty__",
+          "updates-page",
+          "__coderso_link_custom__",
+        ]),
+        "updates-page"
+      );
+    });
+    await flush();
+
+    expect(latestValue.pagination?.viewAllHref).toBe("/updates");
   } finally {
     view.cleanup();
   }

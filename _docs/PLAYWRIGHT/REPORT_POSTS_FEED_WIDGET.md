@@ -404,7 +404,7 @@ Aktualny status każdego findings po implementacji i closure passie:
 | BUG-09 | `fixed-task-322` | `TASK-322-01` and `TASK-322-03`; shared admin client now classifies session expiry and Posts Feed picker/preview consumers render shared expired-session guidance instead of raw auth messaging. |
 | UX-01 | `fixed-task-277` | `TASK-277-04`; admin preview now hydrates transient resolved posts through the existing preview-state/dataPatch channel. |
 | UX-02 | `fixed-task-277` | `TASK-277-06`; variant choice uses visual cards instead of a bare dropdown. |
-| UX-03 | `fixed-task-277` | `TASK-277-06`; Wizard is now progressive (`Source -> Display -> Layout`). |
+| UX-03 | `fixed-task-336-16/336-19` | Wizard is now source setup only and is exposed through the shared one-time setup / `Run setup again` lifecycle; daily display and layout controls stay in Visual. |
 | UX-04 | `fixed-task-277` | `TASK-277-03`; manual picker has local search over the fetched post catalog. |
 | UX-05 | `fixed-task-277` | `TASK-277-03`; selected posts can be reordered with keyboard-accessible Up/Down controls. |
 | UX-06 | `fixed-task-277` | `TASK-277-04`; editor shows a readable runtime/preview status card and sync timestamp. |
@@ -443,3 +443,20 @@ Aktualny status każdego findings po implementacji i closure passie:
   `tests/unit/content/contentListResolver.test.ts`,
   and `tests/vitest/ui/posts-feed-editor-wave.test.tsx` cover the final
   widget-local resolver/editor contract.
+
+## Status po TASK-336-19 (2026-05-25)
+
+- Posts Feed Visual color controls no longer expose raw CSS/token text fields.
+  `style.backgroundColor`, `style.borderColor`, and `style.textColor` use the
+  shared swatch-only color control with replace-or-clear compatibility for
+  saved custom values.
+- Fresh Posts Feed defaults no longer seed `var(...)` color strings, so new
+  widgets inherit the theme instead of presenting theme tokens as saved custom
+  colors.
+- `pagination.viewAllHref` is no longer a raw Visual href input. Visual uses
+  the shared page-first destination picker, keeps the posts-list-route fallback
+  as the empty state, and preserves legacy custom destinations as replace/clear
+  state.
+- Focused validation for this slice:
+  `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and `bun test tests/unit/widgets/postsFeedWidget.test.tsx`.

@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-05-25T08:24:16.321Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-19-posts-feed-source-color --widget posts-feed --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-posts-feed-source-color-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-posts-feed-source-color-2026-05-25.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["posts-feed"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "widget-contract-task-336-19-posts-feed-source-color"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "posts-feed",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 5,
+            "visibleSectionCount": 5,
+            "writablePaths": [
+              "fields.showImage",
+              "fields.showExcerpt",
+              "fields.showAuthor",
+              "fields.showDate",
+              "fields.showCta",
+              "title",
+              "description",
+              "variant",
+              "style.columns",
+              "style.gap",
+              "style.cardStyle",
+              "style.imageAspect",
+              "style.ctaLabel",
+              "style.backgroundColor",
+              "style.borderColor",
+              "style.textColor",
+              "style.motion",
+              "pagination.mode",
+              "emptyState.title",
+              "emptyState.description"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 4,
+            "visibleSectionCount": 4,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "a5555d60-0a32-4012-815f-12fea47cea94",
+        "adminPath": "http://localhost:5173/admin/pages/a5555d60-0a32-4012-815f-12fea47cea94",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "posts-feed",
+        "publicPath": "/posts-feed-test-page",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

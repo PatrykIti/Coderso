@@ -354,9 +354,6 @@ export const postsFeedDefaults: PostsFeedData = {
     cardStyle: "outlined",
     imageAspect: "standard",
     ctaLabel: "Read more",
-    backgroundColor: "var(--color-bg)",
-    borderColor: "var(--color-border)",
-    textColor: "var(--color-text)",
     motion: "none",
   },
   resolved: {
@@ -409,15 +406,12 @@ export function normalizePostsFeedData(data: PostsFeedData): PostsFeedData {
     description: "Publish posts or adjust source settings to populate this feed.",
   };
 
-  const styleDefaults = postsFeedDefaults.style ?? {
+  const styleDefaults: NonNullable<PostsFeedData["style"]> = postsFeedDefaults.style ?? {
     columns: "3" as const,
     gap: "md" as const,
     cardStyle: "outlined" as const,
     imageAspect: "standard" as const,
     ctaLabel: "Read more",
-    backgroundColor: "var(--color-bg)",
-    borderColor: "var(--color-border)",
-    textColor: "var(--color-text)",
     motion: "none" as const,
   };
   const hasStyleObject = data.style !== undefined;
@@ -694,7 +688,6 @@ export const postsFeedEditorContract: WidgetEditorContract = {
         "source.limit",
         "source.sort",
       ],
-      readOnlyPaths: ["source.contentType"],
     },
     {
       mode: "visual",

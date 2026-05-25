@@ -1190,6 +1190,40 @@ Advanced raw metadata and writable behavior drift.
   opening browser sessions; this avoids false `auth_state_load_failed` results
   when descriptive task names exceed the CLI session-name limit.
 
+## TASK-336-19 Posts Feed Source/Color Evidence (2026-05-25)
+
+The twenty-sixth TASK-336-19 implementation family targets Posts Feed raw color
+and raw destination authoring drift in Visual.
+
+- Posts Feed Visual no longer exposes raw CSS/token text inputs for
+  `style.backgroundColor`, `style.borderColor`, or `style.textColor`.
+- Color authoring now uses swatch-only controls with clear actions. Existing
+  `var(...)`, `rgba(...)`, and custom color strings remain runtime-compatible
+  as saved custom color state that can be replaced with a swatch or cleared.
+- Fresh Posts Feed defaults leave colors un-authored so new widgets inherit
+  shared renderer theme defaults instead of presenting CSS variables as saved
+  custom colors.
+- `pagination.viewAllHref` no longer uses a raw Visual href input. It is
+  authored through the shared page-first destination picker, keeps the posts
+  list route as the empty fallback, and preserves legacy custom/external
+  destinations as replace-or-clear state.
+- The stale read-only `source.contentType` path was removed from the editor
+  contract because it is not part of `PostsFeedData` or the schema; the visible
+  fixed "Posts" setup summary remains pathless.
+- Focused Vitest and Bun evidence covers swatch-only color authoring,
+  saved-custom replacement, page-picker destination replacement, strict editor
+  contracts, and Posts Feed runtime mapping:
+  `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and `bun test tests/unit/widgets/postsFeedWidget.test.tsx`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-posts-feed-source-color-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude found no high blockers after implementation and requested only doc
+  tightening plus broader swatch test coverage. A fresh helper-agent audit
+  found metadata-wrapper drift, the stale `source.contentType` path, and stale
+  Wizard lifecycle docs; all were fixed before the final test/Playwright rerun.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
