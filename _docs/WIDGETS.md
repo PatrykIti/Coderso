@@ -150,6 +150,10 @@ Zasady:
   tylko human summaries zamiast JSON/ID/suffix payloadow, a legacy
   `triggerOverflow: "scroll"` normalizuje sie do zawijania, bo Tabs nie sa
   zatwierdzonym publicznym regionem poziomego scrolla.
+- `accordion` po TASK-336-19 stosuje ten sam kontrakt: Visual nie nadpisuje
+  Wizard-owned `defaultOpenIds` przy zmianie trybu otwierania, kolory sa
+  swatch-only bez raw token inputow, a Advanced pokazuje behavior/item/display
+  summaries zamiast JSON payloadow i technicznych DOM id suffixow.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

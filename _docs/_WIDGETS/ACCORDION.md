@@ -31,9 +31,9 @@ state behavior, and Accordion-local layout/styling controls.
 Wizard is setup-only in the v2 editor contract. It does not own variant, item
 copy, layout, motion, typography, or colors.
 
-Interim before `TASK-336-16`: Wizard still appears as a normal editor tab in
-the existing builder shell. The one-time Wizard lifecycle and `Run setup again`
-affordance are not part of `TASK-336-08`.
+After the one-time Wizard lifecycle, completed widgets show `Setup complete`
+with an explicit `Run setup again` action. Wizard is not a permanent daily
+editing tab.
 
 ### Visual
 Sections:
@@ -47,19 +47,22 @@ Notes:
   actions. Accordion-specific add/reorder UX is not shipped yet.
 - Item content owns title, description, and optional decorative icon edits.
 - Behavior and style owns open mode, collapsible behavior, motion, max-width,
-  padding, radius, title typography, and color-picker controls.
-- The starter default-open item remains Wizard-owned in this interim ownership
-  split.
+  padding, radius, title typography, and swatch-only color controls.
+- The starter default-open item remains Wizard-owned. Visual open-mode changes
+  preserve the Wizard-selected all-collapsed/default-open setup.
+- Saved legacy custom colors remain runtime-compatible, but normal Visual
+  authoring does not ask editors to type CSS variables or token strings.
 
 ### Advanced
-- runtime diagnostics for open mode, default open ids, collapsible behavior, and
-  motion
-- technical item/summary/content id suffixes
-- normalized payload snapshot
+- behavior summary for visitor opening rules, starting item, all-closed
+  behavior, and motion
+- saved item summary for title, summary text, and decorative icon state
+- saved display summary for preset, width, spacing, title style, and color
+  choices
 - read-only contract summary
 
-Advanced is technical/read-only only. It must not render writable Visual
-controls for variant, item content, behavior, layout, typography, or colors.
+Advanced is read-only and beginner-safe. It must not render writable Visual
+controls, raw JSON payloads, DOM id suffixes, CSS variables, or token text.
 
 ## Runtime Behavior Notes
 
@@ -87,13 +90,13 @@ controls for variant, item content, behavior, layout, typography, or colors.
   - `data-coderso-accordion-item`
   - `data-coderso-accordion-motion`
 
-## Clear Controls
+## Color Controls
 
-- `style.surfaceColor`, `style.borderColor`, `style.summaryTextColor`, and
-  `style.descriptionTextColor` are clearable in the current editor.
-- Clearing `surfaceColor` removes the background override from item containers.
-- Clearing the other color fields falls back to the Accordion defaults or the
-  selected variant fallback.
+- Visual color controls are swatch-only and hide raw value inputs.
+- Theme-default surface, border, and title text colors display as inherited
+  theme defaults instead of saved custom values.
+- Saved custom colors can be replaced with a swatch or cleared when the field
+  has a real custom value.
 
 ## Data Model (summary)
 

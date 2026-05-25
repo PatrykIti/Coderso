@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 953 | 2026-05-25 | Accordion editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
 | 952 | 2026-05-25 | Tabs editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
 | 951 | 2026-05-25 | Split Layout editor ownership | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
 | 950 | 2026-05-25 | Template Section editor ownership | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |

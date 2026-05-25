@@ -69,6 +69,9 @@ read-only diagnostics. It added these concrete cleanup requirements:
 - Dynamic/commerce/source: `entry-teaser`, `product-gallery`,
   `product-compare`, `newsletter`, `contact`
 - Site chrome: `navigation`, `footer`
+- Contract residual revisits after completed leaves: `section`, `grid-columns`,
+  `template-section`, `split-layout`, `tabs`, `accordion`, and shared
+  page-builder shell controls when fresh audits find remaining mode drift.
 
 ## Sub-Tasks
 
@@ -732,6 +735,23 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-tabs-advanced-readonly-2026-05-25.*`
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
+- In Progress (2026-05-25): next family targets Accordion residual drift found
+  by fresh helper-agent and Claude read-only reviews. Accordion Visual no
+  longer rewrites Wizard-owned `options.defaultOpenIds` when changing open
+  mode, preserving intentional all-collapsed one-time setup. Accordion Visual
+  colors now use swatch-only controls with replace/clear saved custom state
+  instead of visible raw CSS/token value inputs. Accordion Advanced renders
+  behavior, saved item, and saved display summaries only, removing raw JSON
+  payload and technical DOM id suffix diagnostics from the normal editor
+  surface. Fresh helper-agent post-review also found that the Visual default
+  open summary still displayed raw item IDs; it now resolves saved item titles
+  instead. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-accordion-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso` pass for this slice.
 
 ## Files to Change
 

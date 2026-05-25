@@ -303,10 +303,13 @@ test("accordion wizard and advanced editors render v2 ownership surfaces", () =>
   expect(wizardHtml).toContain("Visual owns daily item title edits");
   expect(wizardHtml).not.toContain("Variant");
   expect(wizardHtml).not.toContain("Behavior and Style");
-  expect(advancedHtml).toContain("Runtime diagnostics");
-  expect(advancedHtml).toContain("Technical ids");
-  expect(advancedHtml).toContain("Runtime payload");
+  expect(advancedHtml).toContain("Behavior summary");
+  expect(advancedHtml).toContain("Saved items summary");
+  expect(advancedHtml).toContain("Saved display summary");
   expect(advancedHtml).toContain("Contract summary");
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain("summary suffix");
+  expect(advancedHtml).not.toContain("&quot;items&quot;");
   expect(advancedHtml).not.toContain("Variant");
   expect(advancedHtml).not.toContain("Optional icon or emoji");
   expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
@@ -328,9 +331,9 @@ test("accordion ships a strict v2 editor contract", () => {
       "accordion.visual.variant",
       "accordion.visual.item-content",
       "accordion.visual.behavior-style",
-      "accordion.advanced.runtime-diagnostics",
-      "accordion.advanced.technical-ids",
-      "accordion.advanced.runtime-payload",
+      "accordion.advanced.behavior-summary",
+      "accordion.advanced.item-summary",
+      "accordion.advanced.display-summary",
       "accordion.advanced.contract-summary",
     ])
   );

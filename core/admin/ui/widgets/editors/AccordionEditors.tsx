@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 import {
+  accordionDefaults,
   accordionItemMax,
   accordionItemMin,
   accordionMaxWidthTokens,
@@ -33,7 +34,7 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -229,45 +230,44 @@ function clearStyleField(
   });
 }
 
+function resolveColorControlValue(value: string | undefined, themeDefault?: string) {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  return themeDefault && normalized === themeDefault ? undefined : normalized;
+}
+
 function ColorField({
   id,
   path,
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback,
   onClear,
+  themeDefault,
 }: {
   id: string;
   path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
   onClear: () => void;
+  themeDefault?: string;
 }) {
+  const controlValue = resolveColorControlValue(value, themeDefault);
+
   return (
     <WidgetControlRow id={id} label={label} path={path}>
-      {(fieldProps) => (
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label={label}
-            value={value}
-            onClear={onClear}
-            onRestoreValue={onChange}
-          />
-          <SharedColorFieldInputs
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            pickerFallback={pickerFallback}
-            inputId={fieldProps.id}
-            ariaLabelledby={fieldProps["aria-labelledby"]}
-            ariaDescribedby={fieldProps["aria-describedby"]}
-          />
-        </div>
+      {() => (
+        <SharedColorControl
+          label={label}
+          value={controlValue}
+          onChange={onChange}
+          onClear={controlValue ? onClear : undefined}
+          pickerFallback={pickerFallback}
+          showValueInput={false}
+        />
       )}
     </WidgetControlRow>
   );
@@ -596,6 +596,9 @@ function BehaviorSection({
   const items = normalizeAccordionItems(normalized.items, desiredCount);
   const openMode = normalized.options?.openMode ?? "single";
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
+  const defaultOpenLabels = defaultOpenIds
+    .map((id) => items.find((item) => item.id === id)?.title)
+    .filter((title): title is string => Boolean(title));
   const fallbackTokens = accordionVariantFallbackTokenMap[variant];
 
   return (
@@ -615,11 +618,6 @@ function BehaviorSection({
                 updateOptions(value, onChange, {
                   openMode: next as "single" | "multiple",
                   allowMultiple: next === "multiple",
-                  defaultOpenIds:
-                    next === "multiple"
-                      ? defaultOpenIds
-                      : [defaultOpenIds[0] ?? items[0]?.id ?? "1"],
-                  initiallyOpenId: defaultOpenIds[0] ?? items[0]?.id ?? "1",
                 })
               }
             >
@@ -662,7 +660,7 @@ function BehaviorSection({
         id="accordion.visual.default-open-summary"
         label="Default open setup"
         path="options.defaultOpenIds"
-        value={defaultOpenIds.length > 0 ? defaultOpenIds.join(", ") : "All collapsed"}
+        value={defaultOpenLabels.length > 0 ? defaultOpenLabels.join(", ") : "All collapsed"}
         help="Wizard owns the starter default open item until the one-time Wizard lifecycle lands."
       />
 
@@ -895,9 +893,9 @@ function BehaviorSection({
           label="Surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-          placeholder="var(--color-surface)"
           pickerFallback="#ffffff"
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+          themeDefault={accordionDefaults.style?.surfaceColor}
         />
         <ColorField
           id="accordion.visual.border-color"
@@ -905,9 +903,9 @@ function BehaviorSection({
           label="Border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          placeholder="var(--color-border)"
           pickerFallback="#d4d4d8"
           onClear={() => clearStyleField(value, onChange, "borderColor")}
+          themeDefault={accordionDefaults.style?.borderColor}
         />
         <ColorField
           id="accordion.visual.summary-text-color"
@@ -915,9 +913,9 @@ function BehaviorSection({
           label="Summary text color"
           value={normalized.style?.summaryTextColor}
           onChange={(next) => updateStyle(value, onChange, { summaryTextColor: next })}
-          placeholder="var(--color-text)"
           pickerFallback="#111827"
           onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
+          themeDefault={accordionDefaults.style?.summaryTextColor}
         />
         <ColorField
           id="accordion.visual.description-text-color"
@@ -925,20 +923,11 @@ function BehaviorSection({
           label="Body text color"
           value={normalized.style?.descriptionTextColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionTextColor: next })}
-          placeholder="var(--color-text)"
           pickerFallback="#6b7280"
           onClear={() => clearStyleField(value, onChange, "descriptionTextColor")}
         />
       </div>
     </EditorSection>
-  );
-}
-
-function DiagnosticsSnapshot({ value }: { value: AccordionData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
   );
 }
 
@@ -981,38 +970,61 @@ export function AccordionVisualEditor({
   );
 }
 
-export function AccordionAdvancedEditor({ value, context }: WidgetEditorProps<AccordionData>) {
+export function AccordionAdvancedEditor({
+  value,
+  variant,
+  context,
+}: WidgetEditorProps<AccordionData>) {
   const slotTargetCount = resolveAccordionSlotTargetCount(context);
   const desiredCount = slotTargetCount > 0 ? slotTargetCount : undefined;
   const normalized = normalizeValue(value, desiredCount);
   const items = normalizeAccordionItems(normalized.items, desiredCount);
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
   const openMode = normalized.options?.openMode ?? "single";
+  const selectedVariant = resolveVariant(variant);
+  const defaultOpenLabels = defaultOpenIds
+    .map((id) => items.find((item) => item.id === id)?.title)
+    .filter((title): title is string => Boolean(title));
+  const savedColorCount = [
+    resolveColorControlValue(normalized.style?.surfaceColor, accordionDefaults.style?.surfaceColor),
+    resolveColorControlValue(normalized.style?.borderColor, accordionDefaults.style?.borderColor),
+    resolveColorControlValue(
+      normalized.style?.summaryTextColor,
+      accordionDefaults.style?.summaryTextColor
+    ),
+    resolveColorControlValue(normalized.style?.descriptionTextColor),
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        id="accordion.advanced.runtime-diagnostics"
+        id="accordion.advanced.behavior-summary"
         mode="advanced"
         role="diagnostics"
-        title="Runtime diagnostics"
-        description="Read-only open-state and runtime behavior summary."
+        title="Behavior summary"
+        description="Read-only opening behavior and visitor interaction summary."
       >
         <ReadonlyWidgetSummaryRow
           id="accordion.advanced.open-mode"
-          label="Open mode"
+          label="Visitor opening"
           path="options.openMode"
-          value={openMode}
+          value={
+            openMode === "multiple"
+              ? "Visitors may open multiple items"
+              : "One item opens at a time"
+          }
         />
         <ReadonlyWidgetSummaryRow
           id="accordion.advanced.default-open"
-          label="Default open ids"
+          label="Starts with"
           path="options.defaultOpenIds"
-          value={defaultOpenIds.length > 0 ? defaultOpenIds.join(", ") : "All collapsed"}
+          value={
+            defaultOpenLabels.length > 0 ? defaultOpenLabels.join(", ") : "All items collapsed"
+          }
         />
         <ReadonlyWidgetSummaryRow
           id="accordion.advanced.collapsible"
-          label="Collapsible"
+          label="All-closed behavior"
           path="options.collapsible"
           value={
             normalized.options?.collapsible === false
@@ -1024,42 +1036,89 @@ export function AccordionAdvancedEditor({ value, context }: WidgetEditorProps<Ac
           id="accordion.advanced.motion"
           label="Motion"
           path="options.motion"
-          value={normalized.options?.motion ?? "none"}
+          value={
+            accordionMotionOptions.find((option) => option.id === normalized.options?.motion)
+              ?.label ?? "None"
+          }
         />
       </EditorSection>
       <EditorSection
-        id="accordion.advanced.technical-ids"
+        id="accordion.advanced.item-summary"
         mode="advanced"
-        role="technical"
-        title="Technical ids"
-        description="Read-only item, summary, and content id suffixes."
+        role="summary"
+        title="Saved items summary"
+        description="Read-only overview of the saved accordion items."
       >
         {items.map((item, index) => (
           <ReadonlyWidgetSummaryRow
             key={item.id}
-            id={`accordion.advanced.item.${item.id}.id`}
+            id={`accordion.advanced.item.${item.id}.summary`}
             label={`Item ${index + 1}`}
-            path={`items.${index}.id`}
-            value={`item=${item.id}; summary suffix=summary-${item.id}; content suffix=content-${item.id}`}
+            path={`items.${index}.title`}
+            value={`${item.title}; ${item.description ? "summary text saved" : "no summary text"}; ${
+              item.icon ? "icon saved" : "no icon"
+            }`}
           />
         ))}
       </EditorSection>
       <EditorSection
-        id="accordion.advanced.runtime-payload"
+        id="accordion.advanced.display-summary"
         mode="advanced"
-        role="diagnostics"
-        title="Runtime payload"
-        description="Normalized payload preview."
+        role="summary"
+        title="Saved display summary"
+        description="Read-only layout, style, and motion summary."
       >
-        <WidgetControlRow
-          id="accordion.advanced.normalized-payload"
-          label="Normalized payload"
-          path="items"
-          ownership="readonly"
-          readOnly
-        >
-          {() => <DiagnosticsSnapshot value={normalized} />}
-        </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.variant"
+          label="Style preset"
+          path="variant"
+          value={variantOptions.find((option) => option.id === selectedVariant)?.label ?? "Soft"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.width"
+          label="Width"
+          path="layout.maxWidth"
+          value={
+            accordionMaxWidthOptions.find((option) => option.id === normalized.layout?.maxWidth)
+              ?.label ?? "Full width"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.spacing"
+          label="Spacing"
+          path="style.summaryPadding"
+          value={`Heading ${
+            accordionPaddingOptions.find((option) => option.id === normalized.style?.summaryPadding)
+              ?.label ?? "Preset"
+          }; content ${
+            accordionPaddingOptions.find((option) => option.id === normalized.style?.contentPadding)
+              ?.label ?? "Preset"
+          }`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.title-style"
+          label="Title style"
+          path="style.summaryFontSize"
+          value={`${
+            accordionSummaryFontSizeOptions.find(
+              (option) => option.id === normalized.style?.summaryFontSize
+            )?.label ?? "Preset"
+          } size; ${
+            accordionSummaryFontWeightOptions.find(
+              (option) => option.id === normalized.style?.summaryFontWeight
+            )?.label ?? "Preset"
+          } weight`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="accordion.advanced.color-summary"
+          label="Color choices"
+          path="style.surfaceColor"
+          value={
+            savedColorCount > 0
+              ? `${savedColorCount} saved color choices`
+              : "Theme colors are inherited"
+          }
+        />
       </EditorSection>
       <EditorSection
         id="accordion.advanced.contract-summary"
@@ -1069,8 +1128,8 @@ export function AccordionAdvancedEditor({ value, context }: WidgetEditorProps<Ac
         description="Accordion runtime and editor ownership summary."
       >
         <p className="text-xs text-muted-foreground">
-          Visual owns variant, item content, behavior, layout, and style. Advanced is read-only
-          diagnostics.
+          Visual owns variant, item content, behavior, layout, and style. Advanced only summarizes
+          the saved state.
         </p>
       </EditorSection>
     </div>

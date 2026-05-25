@@ -122,24 +122,25 @@ Recommended semantic split:
 
 ## Sub-Tasks
 
-- [ ] TASK-336-01: Editor Contract Type and Registry Validator
-- [ ] TASK-336-02: Editor DOM Metadata and Control Ownership Enforcement
-- [ ] TASK-336-03: Playwright 38 Widget Fixture and Smoke Harness
-- [ ] TASK-336-04: Template Section Mode Ownership
-- [ ] TASK-336-05: Search Box Mode Ownership
-- [ ] TASK-336-06: Listing Filters Mode Ownership
-- [ ] TASK-336-07: Tabs Mode Ownership
-- [ ] TASK-336-08: Accordion Mode Ownership
-- [ ] TASK-336-09: Posts Feed Mode Ownership
-- [ ] TASK-336-10: Form Embed Mode Ownership
-- [ ] TASK-336-11: Hero Mode Ownership and Legacy Control Migration
-- [ ] TASK-336-12: Stats KPI Mode Ownership
-- [ ] TASK-336-13: P2 Source Style and Diagnostics Cleanup
-- [ ] TASK-336-14: Layout Widget Advanced Technical Token Policy
-- [ ] TASK-336-15: Renderer Fixture Overflow and Team UX Contract
-- [ ] TASK-336-16: Existing One-Time Wizard Lifecycle and Daily Work Tabs
+- [x] TASK-336-01: Editor Contract Type and Registry Validator
+- [x] TASK-336-02: Editor DOM Metadata and Control Ownership Enforcement
+- [x] TASK-336-03: Playwright 38 Widget Fixture and Smoke Harness
+- [x] TASK-336-04: Template Section Mode Ownership
+- [x] TASK-336-05: Search Box Mode Ownership
+- [x] TASK-336-06: Listing Filters Mode Ownership
+- [x] TASK-336-07: Tabs Mode Ownership
+- [x] TASK-336-08: Accordion Mode Ownership
+- [x] TASK-336-09: Posts Feed Mode Ownership
+- [x] TASK-336-10: Form Embed Mode Ownership
+- [x] TASK-336-11: Hero Mode Ownership and Legacy Control Migration
+- [x] TASK-336-12: Stats KPI Mode Ownership
+- [x] TASK-336-13: P2 Source Style and Diagnostics Cleanup
+- [x] TASK-336-14: Layout Widget Advanced Technical Token Policy
+- [x] TASK-336-15: Renderer Fixture Overflow and Team UX Contract
+- [x] TASK-336-16: Existing One-Time Wizard Lifecycle and Daily Work Tabs
 - [ ] TASK-336-17: Report Docs Changelog and Closure
-- [ ] TASK-336-18: Remaining Page Builder Widget Contract Coverage
+- [x] TASK-336-18: Remaining Page Builder Widget Contract Coverage
+- [ ] TASK-336-19: Remaining Widget UI Mode Drift Cleanup
 
 Numbering note: `TASK-336-18` was added after the initial closure leaf during
 task-family audit. It must land before `TASK-336-16` and `TASK-336-17`; closure

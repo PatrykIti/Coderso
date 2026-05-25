@@ -54,6 +54,11 @@ before the task can move to Done.
 - 2026-05-24: Lifecycle caveat: this task is an ownership cleanup only. Wizard
   remains visible as a standard editor tab until `TASK-336-16` ships the
   one-time Wizard lifecycle and `Run setup again` affordance.
+- 2026-05-25: Superseded by `TASK-336-19` follow-up cleanup. Accordion Visual
+  no longer rewrites Wizard-owned `options.defaultOpenIds` during open-mode
+  changes, Visual color authoring is swatch-only without raw CSS/token value
+  inputs, and Advanced now renders behavior/item/display summaries instead of
+  raw JSON payloads or technical DOM id suffixes.
 
 ## Files to Change
 

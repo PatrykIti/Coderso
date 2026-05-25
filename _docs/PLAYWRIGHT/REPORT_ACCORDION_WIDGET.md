@@ -354,6 +354,21 @@ Accordion poprawnie responsywny — `space-y-3` sprawia, że items stackują si�
   instance-reorder seam needed for Accordion U5/U6 and other slot-backed
   widgets.
 
+## 9. TASK-336-19 residual cleanup (2026-05-25)
+
+- Visual no longer mutates Wizard-owned `options.defaultOpenIds` when changing
+  between single and multiple open modes. Intentional all-collapsed setup from
+  the one-time Wizard remains stable during daily Visual edits.
+- Visual color authoring now uses swatch-only controls. Saved custom colors
+  remain compatible and can be replaced or cleared without asking editors to
+  type CSS variables or token strings.
+- Advanced now renders read-only behavior, saved-item, saved-display, and
+  contract summaries. Raw normalized JSON payloads and technical summary/content
+  id suffixes are no longer part of the normal editor UI.
+- Focused validation covers the editor wave, runtime widget test, strict editor
+  contract test, and targeted Playwright smoke evidence under
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-accordion-advanced-readonly-2026-05-25.*`.
+
 ---
 
 *Historical Playwright audit captured on 2026-05-16. Current owner/status notes

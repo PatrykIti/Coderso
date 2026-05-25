@@ -232,14 +232,6 @@ const writablePaths = (container: ParentNode) =>
     .map((element) => element.getAttribute("data-widget-control-path"))
     .filter((path): path is string => Boolean(path));
 
-const readDiagnostics = (container: ParentNode) => {
-  const diagnostics = container.querySelector("pre");
-  if (!(diagnostics instanceof HTMLPreElement)) {
-    throw new Error("Missing diagnostics preview");
-  }
-  return JSON.parse(diagnostics.textContent ?? "{}") as AccordionData;
-};
-
 type EditorKind = "wizard" | "visual" | "advanced";
 
 const renderEditor = async ({
@@ -467,30 +459,25 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
       'data-widget-editor-section="accordion.visual.item-content"'
     );
     expect(view.container.textContent).not.toContain("Initially open item");
+    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
+    expect(behaviorSection.textContent).toContain("Alpha");
+    expect(behaviorSection.textContent).not.toContain("alpha");
     expect(
       findSelectByOptions(view.container, ["2", "3", "4", String(accordionItemMax)])
     ).toBeUndefined();
-    const surfaceInput = findInputByPlaceholder(view.container, "var(--color-surface)");
-    const borderInput = findInputByPlaceholder(view.container, "var(--color-border)");
-    const [summaryInput, bodyInput] = findAllInputsByPlaceholder(
-      view.container,
-      "var(--color-text)"
-    );
-    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
-      (button.textContent ?? "").includes("Clear")
-    );
     const colorPickers = findInputsByType(view.container, "color");
 
-    expect((surfaceInput as HTMLInputElement | null | undefined)?.value).toBe("");
-    expect((borderInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.borderColor
-    );
-    expect((summaryInput as HTMLInputElement | null | undefined)?.value).toBe(
-      accordionDefaults.style?.summaryTextColor
-    );
-    expect((bodyInput as HTMLInputElement | null | undefined)?.value).toBe("");
-    expect(clearButtons).toHaveLength(4);
     expect(colorPickers).toHaveLength(4);
+    expect(findInputByPlaceholder(view.container, "var(--color-surface)")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "var(--color-border)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-text)")).toEqual([]);
+    expect(view.container.textContent).toContain("Theme default");
+    expect(view.container.textContent).not.toContain("var(--color");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).filter((button) =>
+        (button.textContent ?? "").includes("Clear")
+      )
+    ).toHaveLength(0);
 
     clickElement(findButtonByText(view.container, "Soft"));
     expect(view.getVariant()).toBe("soft");
@@ -520,10 +507,14 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
     setSelectValue(findSelectByOptions(view.container, ["sm", "base", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["medium", "semibold", "bold"]), "bold");
 
-    setInputValue(surfaceInput, "#101010");
-    setInputValue(borderInput, "#202020");
-    setInputValue(summaryInput, "#303030");
-    setInputValue(bodyInput, "#404040");
+    setInputValue(colorPickers[0], "#101010");
+    setInputValue(colorPickers[1], "#202020");
+    setInputValue(colorPickers[2], "#303030");
+    setInputValue(colorPickers[3], "#404040");
+    const clearButtons = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      (button.textContent ?? "").includes("Clear")
+    );
+    expect(clearButtons).toHaveLength(4);
     clickElement(clearButtons[1]);
     clickElement(clearButtons[2]);
     expect(view.getValue().style?.borderColor).toBe(accordionDefaults.style?.borderColor);
@@ -552,6 +543,38 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
         }),
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Accordion visual open mode keeps Wizard-owned all-collapsed setup", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      items: [
+        { id: "1", title: "Intro", description: "Start here" },
+        { id: "2", title: "Details", description: "More context" },
+      ],
+      options: {
+        openMode: "single",
+        defaultOpenIds: [],
+        collapsible: true,
+      },
+      style: accordionDefaults.style,
+    },
+  });
+
+  try {
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "multiple");
+    expect(view.getValue().options?.openMode).toBe("multiple");
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
+
+    setSelectValue(findSelectByOptions(view.container, ["single", "multiple"]), "single");
+    expect(view.getValue().options?.openMode).toBe("single");
+    expect(view.getValue().options?.defaultOpenIds).toEqual([]);
+    expect(view.getValue().options?.initiallyOpenId).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -604,38 +627,22 @@ test("Accordion advanced editor exposes read-only normalized diagnostics", async
   });
 
   try {
-    const diagnosticsSection = getSectionByTitle(view.container, "Runtime diagnostics");
-    const idsSection = getSectionByTitle(view.container, "Technical ids");
-    const payloadSection = getSectionByTitle(view.container, "Runtime payload");
+    const diagnosticsSection = getSectionByTitle(view.container, "Behavior summary");
+    const itemsSection = getSectionByTitle(view.container, "Saved items summary");
+    const displaySection = getSectionByTitle(view.container, "Saved display summary");
     const summarySection = getSectionByTitle(view.container, "Contract summary");
 
-    expect(diagnosticsSection.textContent).toContain("Open mode");
-    expect(diagnosticsSection.textContent).toContain("Default open ids");
-    expect(idsSection.textContent).toContain("summary suffix=summary-1");
-    expect(idsSection.textContent).toContain("content suffix=content-3");
-    expect(summarySection.textContent).toContain("Advanced is read-only diagnostics");
-    expect(readDiagnostics(payloadSection)).toEqual({
-      items: [
-        { id: "1", title: "Section 1" },
-        { id: "2", title: "Custom title", description: "Helpful details" },
-        { id: "3", title: "Section 3" },
-      ],
-      options: {
-        openMode: "single",
-        defaultOpenIds: ["1"],
-        collapsible: true,
-        initiallyOpenId: "1",
-        allowMultiple: false,
-        motion: "none",
-      },
-      style: {
-        borderColor: "accent-border",
-        summaryTextColor: accordionDefaults.style?.summaryTextColor,
-      },
-      layout: {
-        maxWidth: "full",
-      },
-    });
+    expect(diagnosticsSection.textContent).toContain("Visitor opening");
+    expect(diagnosticsSection.textContent).toContain("Starts with");
+    expect(itemsSection.textContent).toContain("Custom title; summary text saved; no icon");
+    expect(displaySection.textContent).toContain("Style preset");
+    expect(displaySection.textContent).toContain("1 saved color choices");
+    expect(summarySection.textContent).toContain("Advanced only summarizes the saved state");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).not.toContain("summary suffix");
+    expect(view.container.textContent).not.toContain("content suffix");
+    expect(view.container.textContent).not.toContain('"items"');
+    expect(view.container.textContent).not.toContain('"options"');
 
     expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
     expect(() => getSectionByTitle(view.container, "Item content")).toThrow();
