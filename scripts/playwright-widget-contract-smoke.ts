@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { chmod, mkdir, rm } from "node:fs/promises";
 
 type EditorMode = "wizard" | "visual" | "advanced";
@@ -57,6 +58,9 @@ type CommandResult = {
   stdout: string;
   stderr: string;
 };
+
+const playwrightCliOpenSettleMs = 500;
+const playwrightCliSessionMaxLength = 64;
 
 type AdminAuthStateResult = {
   attempted: boolean;
@@ -118,6 +122,7 @@ type SmokeReport = {
   environment: {
     adminUrl: string;
     frontUrl: string;
+    resolvedPlaywrightSession?: string;
     adminReachable: boolean | null;
     frontReachable: boolean | null;
     playwrightCliAvailable: boolean;
@@ -325,6 +330,23 @@ async function runCommand(command: string[], env?: Record<string, string>): Prom
     proc.exited,
   ]);
   return { stdout, stderr, exitCode };
+}
+
+async function openPlaywrightSession(session: string): Promise<CommandResult> {
+  const result = await runCommand(["playwright-cli", `-s=${session}`, "open", "about:blank"]);
+  if (result.exitCode === 0) {
+    await new Promise((resolve) => setTimeout(resolve, playwrightCliOpenSettleMs));
+  }
+  return result;
+}
+
+function resolvePlaywrightCliSessionName(session: string): string {
+  const safeSession = session.replace(/[^a-zA-Z0-9_-]+/g, "-");
+  if (safeSession.length <= playwrightCliSessionMaxLength) return safeSession;
+
+  const digest = createHash("sha256").update(safeSession).digest("hex").slice(0, 8);
+  const prefixLength = playwrightCliSessionMaxLength - digest.length - 1;
+  return `${safeSession.slice(0, prefixLength)}-${digest}`;
 }
 
 async function checkUrl(url: string): Promise<boolean> {
@@ -826,6 +848,9 @@ function renderMarkdown(report: SmokeReport): string {
     `- **Inventory:** ${report.inventory.actualWidgetCount}/${report.inventory.expectedWidgetCount} widgets`,
     `- **Admin:** ${report.admin.skipped ? "skipped" : report.environment.adminUrl}`,
     `- **Frontend:** ${report.public.skipped ? "skipped" : report.environment.frontUrl}`,
+    report.environment.resolvedPlaywrightSession
+      ? `- **Playwright session:** ${report.environment.resolvedPlaywrightSession}`
+      : undefined,
     "",
     "## Run Health",
     "",
@@ -870,7 +895,7 @@ function renderMarkdown(report: SmokeReport): string {
         .join("; ");
       return `| \`${item.widgetType}\` | ${item.status} | ${item.publicPath ?? "-"} | ${item.statusCode ?? "-"} | ${overflow} | ${notes || "-"} |`;
     }),
-  ];
+  ].filter((line): line is string => typeof line === "string");
   return `${lines.join("\n")}\n`;
 }
 
@@ -1069,11 +1094,21 @@ async function main() {
   if (!args.dryRun && report.environment.playwrightCliAvailable) {
     const scratchDir = ".tmp/playwright-widget-contract-smoke";
     const screenshotDir = `${scratchDir}/screenshots`;
+    const playwrightSession = resolvePlaywrightCliSessionName(args.session);
+    report.environment.resolvedPlaywrightSession = playwrightSession;
     let authStatePath: string | null = null;
     installAuthStateSignalCleanup(() => authStatePath);
     await mkdir(scratchDir, { recursive: true });
     await mkdir(screenshotDir, { recursive: true });
-    await runCommand(["playwright-cli", `-s=${args.session}`, "open", "about:blank"]);
+    const initialOpen = await openPlaywrightSession(playwrightSession);
+    if (initialOpen.exitCode !== 0) {
+      const error = `playwright_open_failed:${(initialOpen.stderr || initialOpen.stdout)
+        .trim()
+        .replace(/\s+/g, " ")
+        .slice(0, 240)}`;
+      if (!args.skipAdmin) report.admin.error = error;
+      if (!args.skipFront) report.public.error = error;
+    }
     try {
       if (!args.skipAdmin && report.environment.adminReachable && !report.admin.error) {
         authStatePath = `${scratchDir}/admin-auth-state.json`;
@@ -1097,16 +1132,36 @@ async function main() {
           };
           let directResult: AdminWidgetResult | null = null;
           for (const mode of item.requiredModes) {
-            await runCommand(["playwright-cli", `-s=${args.session}`, "close"]);
-            await runCommand(["playwright-cli", `-s=${args.session}`, "open", "about:blank"]);
+            await runCommand(["playwright-cli", `-s=${playwrightSession}`, "close"]);
+            const modeOpen = await openPlaywrightSession(playwrightSession);
+            if (modeOpen.exitCode !== 0) {
+              const detail = (modeOpen.stderr || modeOpen.stdout).trim().replace(/\s+/g, " ");
+              merged.modes.push(
+                createFailedAdminMode(
+                  mode,
+                  detail
+                    ? `playwright_open_failed:${detail.slice(0, 240)}`
+                    : "playwright_open_failed"
+                )
+              );
+              continue;
+            }
             const stateLoad = await runCommand([
               "playwright-cli",
-              `-s=${args.session}`,
+              `-s=${playwrightSession}`,
               "state-load",
               authStatePath,
             ]);
             if (stateLoad.exitCode !== 0) {
-              merged.modes.push(createFailedAdminMode(mode, "auth_state_load_failed"));
+              const detail = (stateLoad.stderr || stateLoad.stdout).trim().replace(/\s+/g, " ");
+              merged.modes.push(
+                createFailedAdminMode(
+                  mode,
+                  detail
+                    ? `auth_state_load_failed:${detail.slice(0, 240)}`
+                    : "auth_state_load_failed"
+                )
+              );
               continue;
             }
             const adminCodePath = `${scratchDir}/admin-probe-${item.widgetType}-${mode}.js`;
@@ -1117,7 +1172,7 @@ async function main() {
                 login: { attempted: boolean; authenticated: boolean | null; error?: string | null };
                 results: AdminWidgetResult[];
                 error?: string;
-              }>(args.session, adminCodePath);
+              }>(playwrightSession, adminCodePath);
               report.admin.loginAttempted =
                 report.admin.loginAttempted || adminResult.login.attempted;
               report.admin.authenticated =
@@ -1158,25 +1213,33 @@ async function main() {
         }
       }
       if (!args.skipFront && report.environment.frontReachable && !report.public.error) {
-        await runCommand(["playwright-cli", `-s=${args.session}`, "close"]);
-        await runCommand(["playwright-cli", `-s=${args.session}`, "open", "about:blank"]);
+        await runCommand(["playwright-cli", `-s=${playwrightSession}`, "close"]);
+        const publicOpen = await openPlaywrightSession(playwrightSession);
+        if (publicOpen.exitCode !== 0) {
+          const detail = (publicOpen.stderr || publicOpen.stdout).trim().replace(/\s+/g, " ");
+          report.public.error = detail
+            ? `playwright_open_failed:${detail.slice(0, 240)}`
+            : "playwright_open_failed";
+        }
         const publicCodePath = `${scratchDir}/public-probe.js`;
-        await writeCodeFile(
-          publicCodePath,
-          buildPublicProbeCode(args.frontUrl, selectedCases, screenshotDir)
-        );
-        try {
-          const publicResult = await runPlaywrightCode<{ results: PublicWidgetResult[] }>(
-            args.session,
-            publicCodePath
+        if (!report.public.error) {
+          await writeCodeFile(
+            publicCodePath,
+            buildPublicProbeCode(args.frontUrl, selectedCases, screenshotDir)
           );
-          report.public.results = publicResult.results;
-        } catch (error) {
-          report.public.error = error instanceof Error ? error.message : String(error);
+          try {
+            const publicResult = await runPlaywrightCode<{ results: PublicWidgetResult[] }>(
+              playwrightSession,
+              publicCodePath
+            );
+            report.public.results = publicResult.results;
+          } catch (error) {
+            report.public.error = error instanceof Error ? error.message : String(error);
+          }
         }
       }
       if (!args.keepOpen) {
-        await runCommand(["playwright-cli", `-s=${args.session}`, "close"]);
+        await runCommand(["playwright-cli", `-s=${playwrightSession}`, "close"]);
       }
     } finally {
       if (authStatePath) {
@@ -1223,6 +1286,7 @@ export {
   shouldCountOverflowOwner,
   isAdminFixtureUnopenableError,
   hasStrictFailure,
+  resolvePlaywrightCliSessionName,
   summarize,
   renderMarkdown,
 };

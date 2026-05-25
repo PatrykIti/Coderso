@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-336-18
-**Status:** In Progress (2026-05-24)
+**Status:** In Progress (2026-05-25)
 
 ---
 
@@ -470,6 +470,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   Visual now owns `options.outputMode` through a friendly source-preference
   control, so saved `html`/`blocks` widgets are not stranded after Advanced
   becomes read-only.
+- In Progress (2026-05-25): twenty-fifth implementation family targets Compare
+  Timeline Advanced raw metadata and writable behavior drift. Advanced now
+  renders read-only runtime layout, guide, highlight, motion/order, normalized
+  track ID, axis step ID, step description, and step-count diagnostics.
+  Add/remove step, guide style, raw step ID/description, and highlight target
+  mutation remain in Visual instead of Advanced. Visual color fields now use
+  swatch-only authoring while saved custom CSS/token values stay
+  replace-or-clear compatible, and fresh defaults now use swatch-safe colors
+  instead of seeded CSS variables. Visual also exposes explicit ownership
+  metadata for visible daily-editing controls so Playwright evidence is no
+  longer an empty-path smoke; highlight-only ownership paths are covered by the
+  focused editor-wave suite because the published Playwright fixture uses the
+  non-highlight Visual state. Compare payload normalization is now a
+  confirm-gated support action rather than an immediate mutation. Focused
+  Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-compare-timeline-advanced-readonly-2026-05-25.*`
+  with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. The smoke runner now shortens long `playwright-cli`
+  session names to avoid false `auth_state_load_failed` results from CLI
+  session-name limits.
 
 ## Files to Change
 

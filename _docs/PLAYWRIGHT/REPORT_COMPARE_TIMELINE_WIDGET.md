@@ -487,3 +487,21 @@ className={`grid gap-2 grid-cols-1 sm:grid-cols-2 lg:${gridClass}`}
 | R7 | fixed | TASK-260-01 | Track rows and step cells now keep a minimum visible height in sparse states. |
 | R8 | fixed | TASK-260-01 | `guides.enabled=false` now removes borders instead of falling back to solid borders. |
 | R9 | fixed | TASK-260-01 | Track rows and step cells now use overflow-safe rendering for long labels. |
+
+## Status po TASK-336-19 (2026-05-25)
+
+- The old Advanced editor findings in sections 2.3, 3.1, 4.8, and 4.9 are now
+  superseded for the current editor contract: Add/Remove step, step
+  descriptions, guide style, highlight target, and layout controls are owned by
+  Visual, while Advanced is read-only diagnostics plus confirmed
+  normalization support.
+- Visual color authoring no longer exposes raw CSS/token text fields. Existing
+  token/CSS values remain runtime-compatible as saved custom color state that
+  can be replaced with a swatch or cleared. Fresh defaults now use swatch-safe
+  colors instead of saved CSS-variable tokens.
+- Current validation evidence:
+  `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-compare-timeline-advanced-readonly-2026-05-25.*`,
+  which reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.

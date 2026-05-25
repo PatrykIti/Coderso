@@ -1156,6 +1156,40 @@ raw source authoring in Advanced and raw color-token inputs in Visual.
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
 
+## TASK-336-19 Compare Timeline Advanced Diagnostics Evidence (2026-05-25)
+
+The twenty-fifth TASK-336-19 implementation family targets Compare Timeline
+Advanced raw metadata and writable behavior drift.
+
+- Compare Timeline Advanced no longer exposes editable Add/Remove step, guide
+  style, raw step ID, raw step description, or highlight target controls.
+- Advanced now reports read-only runtime layout, guide, highlight,
+  motion/order, normalized track ID, axis step ID, description, and step-count
+  diagnostics.
+- Compare Timeline Visual color fields now use swatch-only authoring. Saved
+  custom token/CSS values stay compatible as replace-or-clear state instead of
+  editable raw text fields, and fresh defaults now use swatch-safe color values
+  instead of seeded CSS variables.
+- Compare Timeline Visual now exposes explicit `data-widget-control-path`
+  ownership metadata for the visible daily-editing controls, so targeted smoke
+  evidence no longer reports an empty Visual path set. The published fixture
+  covers the non-highlight Visual state; the focused editor-wave suite covers
+  highlight-only Visual ownership paths.
+- Payload normalization remains available only as a confirm-gated support
+  action, so opening Advanced or clicking the initial normalize button does not
+  mutate widget data.
+- Focused Vitest evidence covers read-only Advanced
+  diagnostics, confirm-gated normalization, SSR editor metadata, and strict
+  editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-compare-timeline-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- The smoke runner now normalizes long `playwright-cli` session names before
+  opening browser sessions; this avoids false `auth_state_load_failed` results
+  when descriptive task names exceed the CLI session-name limit.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

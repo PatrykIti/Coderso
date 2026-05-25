@@ -33,11 +33,12 @@ Typical use cases:
 
 Sections:
 1. Variant and compare structure
-2. Axis steps and track labels
-3. Markers and segment mapping
-4. Highlight and guide styles
-5. Colors and typography
-6. Spacing and layout preview hints
+2. Section heading
+3. Axis steps and track labels
+4. Markers and segment mapping
+5. Highlight and guide styles
+6. Colors and typography
+7. Spacing and layout preview hints
 
 Notes:
 - Compare Timeline owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -45,18 +46,22 @@ Notes:
 - In highlight mode, both tracks expose segment editors.
 - Visual is the single truthful owner for spacing, axis label position, max
   width, section padding, and render order.
+- Visual color authoring is swatch-only. Legacy custom CSS/token color values
+  stay runtime-compatible as saved custom color state that editors can replace
+  with a swatch or clear where supported. Fresh defaults use swatch-safe color
+  values instead of saved CSS-variable tokens.
 - Step and segment destination authoring uses the shared page-first destination
   picker. Legacy custom destinations stay replace-or-clear compatible instead
   of editable raw URL fields.
 
 ### Advanced
 
-- Guide toggles/styles
-- Raw metadata fields (track IDs, axis step IDs, raw step descriptions)
-- Highlight target selection with label + stable ID copy
-- Normalization utility action (stable IDs, clamped markers/segments, safe step count)
+- Read-only runtime layout, guide, highlight, motion, and render-order diagnostics
+- Read-only normalized track IDs, axis step IDs, descriptions, and step-count diagnostics
+- Confirmed normalization support action for stable IDs, clamped markers/segments, and safe step count
 
-Advanced does not duplicate Visual layout controls.
+Advanced does not duplicate Visual layout controls and does not expose raw IDs
+or step descriptions as editable fields for normal authoring.
 
 ## Runtime Behavior Notes
 
@@ -167,11 +172,11 @@ tokens remain explicit semantic choices; they are not clearable style sentinels.
   "style": {
     "highlightColor": "#f59e0b",
     "highlightLabelStyle": "solid",
-    "markerColor": "var(--color-primary)",
-    "trackLabelColor": "var(--color-text)",
-    "stepLabelColor": "var(--color-text)",
-    "mutedStepColor": "var(--color-text)",
-    "guideColor": "var(--color-border)",
+    "markerColor": "#1d4ed8",
+    "trackLabelColor": "#0f172a",
+    "stepLabelColor": "#0f172a",
+    "mutedStepColor": "#334155",
+    "guideColor": "#e2e8f0",
     "trackBackgroundColor": "#ffffff",
     "trackLabelSize": "base",
     "stepLabelSize": "xs",
@@ -190,5 +195,5 @@ tokens remain explicit semantic choices; they are not clearable style sentinels.
 - Contract target: Wizard seeds comparison copy, axis, and tracks; Visual owns
   axis/tracks/highlights/layout/style; Advanced is read-only runtime
   diagnostics.
-- Raw step IDs and writable Advanced guide/highlight controls are routed to
-  `TASK-336-19`.
+- `TASK-336-19` closed the raw step ID, writable Advanced guide/highlight, and
+  Visual raw color authoring drift for this widget.

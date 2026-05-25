@@ -302,7 +302,7 @@ test("compare timeline renderer supports both-track highlight, track order, and 
   expect(html).not.toContain("javascript:alert");
 });
 
-test("compare timeline advanced keeps technical-only controls", () => {
+test("compare timeline advanced keeps technical diagnostics read-only", () => {
   const html = renderToString(
     <CompareTimelineAdvancedEditor
       value={compareTimelineDefaults}
@@ -312,10 +312,12 @@ test("compare timeline advanced keeps technical-only controls", () => {
     />
   );
 
-  expect(html).toContain("Layout tokens");
-  expect(html).toContain("Raw metadata fields");
-  expect(html).toContain("Data normalization");
+  expect(html).toContain("Runtime layout diagnostics");
+  expect(html).toContain("Metadata diagnostics");
+  expect(html).toContain("Normalization support");
   expect(html).not.toContain("Colors and typography");
   expect(html).not.toContain("Track spacing token");
-  expect(html).toContain("Visual so editors have one truthful place to adjust layout");
+  expect(html).not.toContain("Raw metadata fields");
+  expect(html).not.toContain("Add step");
+  expect(html).toContain("Visual owns guide, highlight, spacing, label, motion, and style changes");
 });

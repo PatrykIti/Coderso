@@ -29,13 +29,14 @@ import {
   type CompareTrackSegment,
 } from "../../../../widgets/core/compareTimeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
-  ClearableFieldHeader,
   ColorContrastNotice,
   type ColorContrastAdvisory,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
@@ -61,24 +62,83 @@ const trackSpacingOptions = ["none", "sm", "md", "lg", "xl"] as const;
 const maxWidthOptions = ["none", "4xl", "5xl", "6xl", "7xl"] as const;
 const paddingOptions = ["sm", "md", "lg"] as const;
 const motionOptions = ["none", "fade", "slide"] as const;
-const trackOrderOptions = [
-  { id: "a-first", label: "Traditional first" },
-  { id: "b-first", label: "With us first" },
-] as const;
 const highlightLabelStyles = ["solid", "outline", "subtle"] as const;
 const trackLabelSizes = ["none", "sm", "base", "lg"] as const;
 const stepLabelSizes = ["none", "xs", "sm", "base"] as const;
 const segmentLabelSizes = ["none", "xs", "sm", "base"] as const;
 const fontWeightOptions: CompareTimelineFontWeight[] = ["normal", "medium", "semibold", "bold"];
 const markerShapeOptions: CompareTimelineMarkerShape[] = ["rounded", "circle", "numbered", "check"];
-const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
+
+const guideStyleLabels: Record<(typeof guideStyles)[number], string> = {
+  solid: "Solid",
+  dashed: "Dashed",
+};
+
+const highlightLabelStyleLabels: Record<(typeof highlightLabelStyles)[number], string> = {
+  solid: "Filled badge",
+  outline: "Outlined badge",
+  subtle: "Soft badge",
+};
+
+const labelSizeLabels = {
+  none: "Hidden",
+  xs: "Tiny",
+  sm: "Small",
+  base: "Default",
+  lg: "Large",
+} as const;
+
+const fontWeightLabels: Record<CompareTimelineFontWeight, string> = {
+  normal: "Regular",
+  medium: "Medium emphasis",
+  semibold: "Strong emphasis",
+  bold: "Bold",
+};
+
+const markerShapeLabels: Record<CompareTimelineMarkerShape, string> = {
+  rounded: "Rounded square",
+  circle: "Circle",
+  numbered: "Numbered",
+  check: "Check mark",
+};
+
+const trackSpacingLabels: Record<(typeof trackSpacingOptions)[number], string> = {
+  none: "No gap",
+  sm: "Compact",
+  md: "Comfortable",
+  lg: "Spacious",
+  xl: "Extra spacious",
+};
+
+const labelPositionLabels: Record<(typeof labelPositionOptions)[number], string> = {
+  top: "Above axis",
+  bottom: "Below axis",
+};
+
+const maxWidthLabels: Record<(typeof maxWidthOptions)[number], string> = {
+  none: "Full width",
+  "4xl": "Compact width",
+  "5xl": "Comfortable width",
+  "6xl": "Wide width",
+  "7xl": "Extra-wide width",
+};
+
+const paddingLabels: Record<(typeof paddingOptions)[number], string> = {
+  sm: "Compact padding",
+  md: "Comfortable padding",
+  lg: "Spacious padding",
+};
+
+const motionLabels: Record<(typeof motionOptions)[number], string> = {
+  none: "No animation",
+  fade: "Fade in",
+  slide: "Slide in",
+};
 
 const stepCountOptions = Array.from(
   { length: compareAxisStepMax - compareAxisStepMin + 1 },
   (_, index) => compareAxisStepMin + index
 );
-
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
 type CompareGuides = NonNullable<CompareTimelineData["guides"]>;
 type CompareStyle = NonNullable<CompareTimelineData["style"]>;
@@ -86,15 +146,12 @@ type CompareLayout = NonNullable<CompareTimelineData["layout"]>;
 type CompareHighlight = NonNullable<CompareTimelineData["highlight"]>;
 
 const spacingTokenDescriptions: Record<string, string> = {
-  none: "0px gap",
-  sm: "12px gap",
-  md: "16px gap",
-  lg: "24px gap",
-  xl: "32px gap",
+  none: "No extra breathing room between tracks.",
+  sm: "A compact gap between tracks.",
+  md: "Comfortable breathing room between tracks.",
+  lg: "A spacious gap between tracks.",
+  xl: "The most generous track spacing.",
 };
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 function pickContrastAdvisory(advisories: ColorContrastAdvisory[]) {
   return (
@@ -404,8 +461,27 @@ function resolveTrackHighlightHint(normalized: CompareTimelineData, trackId: str
   return "Saved segments stay on this track but render only after you include it in Highlight targets.";
 }
 
+function resolveTrackOrderOptions(tracks: CompareTrack[]) {
+  const firstLabel = tracks[0]?.label || "Track 1";
+  const secondLabel = tracks[1]?.label || "Track 2";
+
+  return [
+    { id: "a-first" as const, label: `${firstLabel} first` },
+    { id: "b-first" as const, label: `${secondLabel} first` },
+  ];
+}
+
+function resolveTrackOrderSummary(normalized: CompareTimelineData) {
+  const options = resolveTrackOrderOptions(normalized.tracks);
+  return (
+    options.find((option) => option.id === (normalized.layout?.trackOrder ?? "a-first"))?.label ??
+    options[0]!.label
+  );
+}
+
 function ColorField({
   label,
+  path,
   value,
   onChange,
   onClear,
@@ -413,6 +489,7 @@ function ColorField({
   pickerFallback,
 }: {
   label: string;
+  path: string;
   value: string | undefined;
   onChange: (next: string) => void;
   onClear?: () => void;
@@ -420,26 +497,16 @@ function ColorField({
   pickerFallback: string;
 }) {
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
+    <div data-widget-control-path={path}>
+      <SharedColorControl
         label={label}
         value={value}
+        onChange={onChange}
         onClear={onClear}
-        onRestoreValue={onChange}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+        showValueInput={false}
       />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
     </div>
   );
 }
@@ -881,21 +948,50 @@ export function CompareTimelineVisualEditor({
   const highlightEnabled = resolvedVariant === "dual-track-highlight";
   const { highlightMode } = getHighlightContext(normalized);
   const hasPreservedSegments = normalized.tracks.some((track) => (track.segments?.length ?? 0) > 0);
+  const trackOrderOptions = resolveTrackOrderOptions(normalized.tracks);
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="compare-timeline.visual.variant"
         title="Variant and compare structure"
         description="Select how the comparison story is presented."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <div data-widget-control-path="variant">
+          <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        </div>
       </EditorSection>
 
       <EditorSection
+        id="compare-timeline.visual.section-heading"
+        title="Section heading"
+        description="Name the compare block before tuning the axis and tracks."
+      >
+        <div className="grid gap-2">
+          <div data-widget-control-path="header.title">
+            <Input
+              value={normalized.header?.title ?? ""}
+              onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+              placeholder="Optional section title"
+            />
+          </div>
+          <div data-widget-control-path="header.subtitle">
+            <Textarea
+              value={normalized.header?.subtitle ?? ""}
+              onChange={(event) => updateHeader(value, onChange, { subtitle: event.target.value })}
+              placeholder="Optional supporting subtitle"
+              rows={2}
+            />
+          </div>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        id="compare-timeline.visual.axis-tracks"
         title="Axis steps and track labels"
         description="Define axis wording and track names shown in preview."
       >
-        <div className="space-y-3 rounded-lg border p-3">
+        <div className="space-y-3 rounded-lg border p-3" data-widget-control-path="axis.steps">
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[12rem] flex-1 space-y-2">
               <p className="text-sm font-medium">Axis step count</p>
@@ -983,7 +1079,7 @@ export function CompareTimelineVisualEditor({
           ))}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-widget-control-path="tracks">
           <p className="text-sm font-medium">Track labels</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {normalized.tracks.map((track, trackIndex) => (
@@ -1001,11 +1097,16 @@ export function CompareTimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="compare-timeline.visual.markers-segments"
         title="Markers and segment mapping"
         description="Map active points per track and configure highlight ranges when needed."
       >
         {highlightEnabled ? (
-          <div className="space-y-2 rounded-lg border p-3">
+          <div
+            className="space-y-2 rounded-lg border p-3"
+            data-widget-control-path="highlight.targetTrackId"
+          >
+            <span className="sr-only" data-widget-control-path="highlight.targetTrackIds" />
             <p className="text-sm font-medium">Highlight targets</p>
             <Select
               value={highlightMode}
@@ -1067,10 +1168,14 @@ export function CompareTimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="compare-timeline.visual.highlight-guides"
         title="Highlight and guide styles"
         description="Tune emphasis style and guide lines for better readability."
       >
-        <div className="flex items-center justify-between rounded-lg border p-3">
+        <div
+          className="flex items-center justify-between rounded-lg border p-3"
+          data-widget-control-path="guides.enabled"
+        >
           <div>
             <p className="text-sm font-medium">Show guides</p>
             <p className="text-xs text-muted-foreground">
@@ -1084,7 +1189,7 @@ export function CompareTimelineVisualEditor({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="guides.style">
             <p className="text-sm font-medium">Guide style</p>
             <Select
               value={normalized.guides?.style ?? "dashed"}
@@ -1098,7 +1203,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {guideStyles.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {guideStyleLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1106,7 +1211,7 @@ export function CompareTimelineVisualEditor({
           </div>
 
           {highlightEnabled ? (
-            <div className="space-y-2">
+            <div className="space-y-2" data-widget-control-path="style.highlightLabelStyle">
               <p className="text-sm font-medium">Highlight label style</p>
               <Select
                 value={normalized.style?.highlightLabelStyle ?? "solid"}
@@ -1122,7 +1227,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {highlightLabelStyles.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {formatTokenOptionLabel(option)}
+                      {highlightLabelStyleLabels[option]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1133,6 +1238,7 @@ export function CompareTimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="compare-timeline.visual.colors-typography"
         title="Colors and typography"
         description="Control comparison contrast, label colors, and text scale."
       >
@@ -1140,6 +1246,7 @@ export function CompareTimelineVisualEditor({
           {highlightEnabled ? (
             <ColorField
               label="Highlight color"
+              path="style.highlightColor"
               value={normalized.style?.highlightColor}
               onChange={(next) => updateStyle(value, onChange, { highlightColor: next })}
               onClear={() => clearStyle(value, onChange, "highlightColor")}
@@ -1150,6 +1257,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Marker color"
+            path="style.markerColor"
             value={normalized.style?.markerColor}
             onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
             onClear={() => clearStyle(value, onChange, "markerColor")}
@@ -1159,6 +1267,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Track label color"
+            path="style.trackLabelColor"
             value={normalized.style?.trackLabelColor}
             onChange={(next) => updateStyle(value, onChange, { trackLabelColor: next })}
             onClear={() => clearStyle(value, onChange, "trackLabelColor")}
@@ -1168,6 +1277,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Step label color"
+            path="style.stepLabelColor"
             value={normalized.style?.stepLabelColor}
             onChange={(next) => updateStyle(value, onChange, { stepLabelColor: next })}
             onClear={() => clearStyle(value, onChange, "stepLabelColor")}
@@ -1177,6 +1287,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Muted step color"
+            path="style.mutedStepColor"
             value={normalized.style?.mutedStepColor}
             onChange={(next) => updateStyle(value, onChange, { mutedStepColor: next })}
             onClear={() => clearStyle(value, onChange, "mutedStepColor")}
@@ -1186,6 +1297,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Guide color"
+            path="style.guideColor"
             value={normalized.style?.guideColor}
             onChange={(next) => updateStyle(value, onChange, { guideColor: next })}
             onClear={() => clearStyle(value, onChange, "guideColor")}
@@ -1195,6 +1307,7 @@ export function CompareTimelineVisualEditor({
 
           <ColorField
             label="Track background color"
+            path="style.trackBackgroundColor"
             value={normalized.style?.trackBackgroundColor}
             onChange={(next) => updateStyle(value, onChange, { trackBackgroundColor: next })}
             onClear={() => clearStyle(value, onChange, "trackBackgroundColor")}
@@ -1208,7 +1321,7 @@ export function CompareTimelineVisualEditor({
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="style.trackLabelSize">
             <p className="text-sm font-medium">Track label size</p>
             <Select
               value={normalized.style?.trackLabelSize ?? "base"}
@@ -1224,14 +1337,14 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {labelSizeLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="style.stepLabelSize">
             <p className="text-sm font-medium">Step label size</p>
             <Select
               value={normalized.style?.stepLabelSize ?? "xs"}
@@ -1247,7 +1360,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {stepLabelSizes.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {labelSizeLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1255,7 +1368,7 @@ export function CompareTimelineVisualEditor({
           </div>
 
           {highlightEnabled ? (
-            <div className="space-y-2">
+            <div className="space-y-2" data-widget-control-path="style.segmentLabelSize">
               <p className="text-sm font-medium">Segment label size</p>
               <Select
                 value={normalized.style?.segmentLabelSize ?? "xs"}
@@ -1271,7 +1384,7 @@ export function CompareTimelineVisualEditor({
                 <SelectContent>
                   {segmentLabelSizes.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {formatTokenOptionLabel(option)}
+                      {labelSizeLabels[option]}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1281,7 +1394,7 @@ export function CompareTimelineVisualEditor({
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="style.trackLabelFontWeight">
             <p className="text-sm font-medium">Track label weight</p>
             <Select
               value={normalized.style?.trackLabelFontWeight ?? "semibold"}
@@ -1297,14 +1410,14 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {fontWeightOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {fontWeightLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="style.stepLabelFontWeight">
             <p className="text-sm font-medium">Step label weight</p>
             <Select
               value={normalized.style?.stepLabelFontWeight ?? "semibold"}
@@ -1320,14 +1433,14 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {fontWeightOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {fontWeightLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="style.segmentLabelFontWeight">
             <p className="text-sm font-medium">Segment label weight</p>
             <Select
               value={normalized.style?.segmentLabelFontWeight ?? "normal"}
@@ -1343,7 +1456,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {fontWeightOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {fontWeightLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1351,7 +1464,7 @@ export function CompareTimelineVisualEditor({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-widget-control-path="style.markerShape">
           <p className="text-sm font-medium">Marker shape</p>
           <Select
             value={normalized.style?.markerShape ?? "rounded"}
@@ -1365,7 +1478,7 @@ export function CompareTimelineVisualEditor({
             <SelectContent>
               {markerShapeOptions.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {formatTokenOptionLabel(option)}
+                  {markerShapeLabels[option]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1374,28 +1487,12 @@ export function CompareTimelineVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="compare-timeline.visual.spacing-layout"
         title="Spacing and layout preview hints"
         description="Adjust density and axis label placement for desktop/tablet/mobile preview modes."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section heading</p>
-          <div className="grid gap-2">
-            <Input
-              value={normalized.header?.title ?? ""}
-              onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-              placeholder="Optional section title"
-            />
-            <Textarea
-              value={normalized.header?.subtitle ?? ""}
-              onChange={(event) => updateHeader(value, onChange, { subtitle: event.target.value })}
-              placeholder="Optional supporting subtitle"
-              rows={2}
-            />
-          </div>
-        </div>
-
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.trackSpacing">
             <p className="text-sm font-medium">Track spacing</p>
             <Select
               value={normalized.layout?.trackSpacing ?? "md"}
@@ -1411,7 +1508,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {trackSpacingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {trackSpacingLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1421,7 +1518,7 @@ export function CompareTimelineVisualEditor({
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.labelPosition">
             <p className="text-sm font-medium">Axis label position</p>
             <Select
               value={normalized.layout?.labelPosition ?? "top"}
@@ -1437,7 +1534,7 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {labelPositionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {labelPositionLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1446,7 +1543,7 @@ export function CompareTimelineVisualEditor({
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.maxWidth">
             <p className="text-sm font-medium">Max width</p>
             <Select
               value={normalized.layout?.maxWidth ?? "6xl"}
@@ -1460,14 +1557,14 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {maxWidthOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {maxWidthLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.padding">
             <p className="text-sm font-medium">Section padding</p>
             <Select
               value={normalized.layout?.padding ?? "md"}
@@ -1481,14 +1578,14 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {paddingOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {paddingLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.trackOrder">
             <p className="text-sm font-medium">Track order</p>
             <Select
               value={normalized.layout?.trackOrder ?? "a-first"}
@@ -1509,7 +1606,7 @@ export function CompareTimelineVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-widget-control-path="layout.motion">
             <p className="text-sm font-medium">Motion</p>
             <Select
               value={normalized.layout?.motion ?? "none"}
@@ -1523,13 +1620,13 @@ export function CompareTimelineVisualEditor({
               <SelectContent>
                 {motionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
+                    {motionLabels[option]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Uses CSS-only motion-safe classes and respects reduced-motion preferences.
+              Animation turns off automatically for visitors who prefer reduced motion.
             </p>
           </div>
         </div>
@@ -1548,139 +1645,147 @@ export function CompareTimelineAdvancedEditor({
 }: WidgetEditorProps<CompareTimelineData>) {
   const normalized = normalizeValue(value);
   const { highlightMode } = getHighlightContext(normalized);
+  const normalizationSignature = JSON.stringify(value);
+  const highlightTrack =
+    highlightMode === "both" ? null : normalized.tracks.find((track) => track.id === highlightMode);
+  const highlightSummary =
+    highlightMode === "both" ? "Both tracks" : (highlightTrack?.label ?? "Track");
+  const [confirmNormalizeSignature, setConfirmNormalizeSignature] = useState<string | null>(null);
+  const confirmNormalize = confirmNormalizeSignature === normalizationSignature;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Layout tokens"
-        description="Technical controls for axis placement, spacing, and guide rendering."
+        id="compare-timeline.advanced.runtime-layout"
+        title="Runtime layout diagnostics"
+        description="Read-only layout, guide, highlight, and style summary."
       >
-        <p className="text-xs text-muted-foreground">
-          Track spacing, axis label position, max width, padding, render order, and motion are owned
-          by Visual so editors have one truthful place to adjust layout. Advanced keeps only guide
-          toggles and raw metadata diagnostics.
-        </p>
-
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Guide lines enabled</p>
-            <p className="text-xs text-muted-foreground">
-              Toggle track guide borders regardless of visual mode presets.
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Guide lines</p>
+            <p className="mt-1 text-muted-foreground">
+              {(normalized.guides?.enabled ?? true) ? "Enabled" : "Disabled"} ·{" "}
+              {guideStyleLabels[normalized.guides?.style ?? "dashed"]}
             </p>
           </div>
-          <Switch
-            checked={normalized.guides?.enabled ?? true}
-            onCheckedChange={(checked) => updateGuides(value, onChange, { enabled: checked })}
-          />
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Highlight target</p>
+            <p className="mt-1 text-muted-foreground">{highlightSummary}</p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Layout</p>
+            <p className="mt-1 text-muted-foreground">
+              Spacing {spacingTokenDescriptions[normalized.layout?.trackSpacing ?? "md"]} · Labels{" "}
+              {labelPositionLabels[normalized.layout?.labelPosition ?? "top"]} · Width{" "}
+              {maxWidthLabels[normalized.layout?.maxWidth ?? "6xl"]}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Motion and order</p>
+            <p className="mt-1 text-muted-foreground">
+              {motionLabels[normalized.layout?.motion ?? "none"]} ·{" "}
+              {resolveTrackOrderSummary(normalized)}
+            </p>
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Guide line style</p>
-          <Select
-            value={normalized.guides?.style ?? "dashed"}
-            onValueChange={(next) =>
-              updateGuides(value, onChange, { style: next as CompareGuides["style"] })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Guide style" />
-            </SelectTrigger>
-            <SelectContent>
-              {guideStyles.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {formatTokenOptionLabel(option)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Visual owns guide, highlight, spacing, label, motion, and style changes so editors have
+          one truthful place to adjust presentation.
+        </p>
       </EditorSection>
 
       <EditorSection
-        title="Raw metadata fields"
-        description="Expert-only metadata for stable IDs and optional axis descriptions."
+        id="compare-timeline.advanced.metadata"
+        title="Metadata diagnostics"
+        description="Read-only normalized IDs, step descriptions, and runtime counts."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Track IDs</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {normalized.tracks.map((track) => (
-              <Input key={track.id} value={track.id} readOnly />
-            ))}
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Track references</p>
+            <p className="mt-1 text-muted-foreground">
+              {normalized.tracks.map((track) => track.label).join(", ")}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Internal support references are available below only for troubleshooting.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Track IDs are normalized to `a` and `b` for deterministic rendering.
-          </p>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Axis step count</p>
+            <p className="mt-1 text-muted-foreground">
+              {normalized.axis.steps.length} steps · supported range {compareAxisStepMin}-
+              {compareAxisStepMax}
+            </p>
+          </div>
         </div>
 
         <div className="space-y-3">
-          <p className="text-sm font-medium">Axis step IDs and descriptions</p>
+          <p className="text-sm font-medium">Axis steps</p>
           {normalized.axis.steps.map((step, stepIndex) => (
-            <div key={step.id ?? `${stepIndex}`} className="space-y-2 rounded-lg border p-3">
-              <Input
-                value={step.id ?? ""}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, { id: event.target.value })
-                }
-                placeholder={`step-${stepIndex + 1}`}
-              />
-              <Textarea
-                value={step.description ?? ""}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, {
-                    description: event.target.value,
-                  })
-                }
-                placeholder="Optional step description"
-              />
-              <p className="text-xs text-muted-foreground">
-                Visual owns the user-facing label, icon, and link fields for this step.
+            <div key={step.id ?? `${stepIndex}`} className="rounded-lg border bg-muted/20 p-3">
+              <p className="text-sm font-medium">
+                {step.label.trim() ? step.label : `Step ${stepIndex + 1}`}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {step.description?.trim()
+                  ? step.description
+                  : "No optional description configured."}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Highlight target track</p>
-          <Select
-            value={highlightMode}
-            onValueChange={(next) => updateHighlightTargets(value, onChange, next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Target track" />
-            </SelectTrigger>
-            <SelectContent>
-              {normalized.tracks.map((track) => (
-                <SelectItem key={track.id} value={track.id}>
-                  {`${track.label} (${track.id})`}
-                </SelectItem>
-              ))}
-              <SelectItem value="both">Both tracks (a + b)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <details className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-medium text-foreground">
+            Show internal support references
+          </summary>
+          <div className="mt-3 space-y-2">
+            <p>
+              Tracks: {normalized.tracks.map((track) => `${track.label}: ${track.id}`).join(", ")}
+            </p>
+            <p>
+              Steps:{" "}
+              {normalized.axis.steps
+                .map((step, stepIndex) => {
+                  const label = step.label.trim() ? step.label : `Step ${stepIndex + 1}`;
+                  return `${label}: ${step.id ?? `step-${stepIndex + 1}`}`;
+                })
+                .join(", ")}
+            </p>
+          </div>
+        </details>
       </EditorSection>
 
       <EditorSection
-        title="Data normalization"
-        description="Apply deterministic normalization for axis count, IDs, markers, and segments."
+        id="compare-timeline.advanced.normalization"
+        title="Normalization support"
+        description="Confirmed deterministic cleanup for axis count, IDs, markers, and segments."
       >
         <p className="text-xs text-muted-foreground">
           Current axis steps: {normalized.axis.steps.length}. Runtime rules enforce{" "}
           {compareAxisStepMin}-{compareAxisStepMax} steps, stable IDs, and clamped marker/segment
           ranges.
         </p>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
-            Normalize compare payload
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => addAxisStep(value, onChange)}>
-            Add step
-          </Button>
-          <Button type="button" variant="ghost" onClick={() => removeAxisStep(value, onChange)}>
-            Remove step
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setConfirmNormalizeSignature(normalizationSignature)}
+        >
+          Normalize compare payload
+        </Button>
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={confirmNormalize}
+        onOpenChange={(open) => setConfirmNormalizeSignature(open ? normalizationSignature : null)}
+        title="Normalize compare timeline"
+        description="Normalize this compare timeline now? Current copy is preserved while IDs, marker ranges, segment ranges, and count guard rails are reapplied."
+        confirmLabel="Normalize"
+        onConfirm={() => {
+          if (!confirmNormalize) return;
+          onChange(normalized);
+          setConfirmNormalizeSignature(null);
+        }}
+      />
     </div>
   );
 }

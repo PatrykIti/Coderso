@@ -58,7 +58,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | In progress (2026-05-24): DOM metadata, raw media URLs, link destinations, Contact map/social authoring, FAQ search wording, and Advanced read-only batch 1 are implemented; remaining source IDs, Newsletter Visual integration drift, and one-time Wizard duplicate exposure follow in dependency order |
+| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | In progress (2026-05-25): DOM metadata, raw media/link authoring, Contact map/social authoring, Newsletter/commerce/gallery/pricing/team/footer drift, Hero media/rich-copy/overlay/color waves, FAQ/CTA/Stats/Rich Text color/source waves, and Compare Timeline Advanced/color cleanup are implemented with targeted Vitest/Playwright evidence; remaining widget families continue in dependency order |
 ---
 
 ## Done

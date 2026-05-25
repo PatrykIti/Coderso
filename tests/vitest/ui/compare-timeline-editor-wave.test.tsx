@@ -187,6 +187,36 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div data-compare-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -534,6 +564,53 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     expect(colorInputs[1]?.value).toBe("#1d4ed8");
     expect(colorInputs[5]?.value).toBe("#e2e8f0");
     expect(colorInputs[6]?.value).toBe("#ffffff");
+    expect(colorsSection?.querySelector("input:not([type='color'])")).toBeNull();
+    const writablePaths = Array.from(view.container.querySelectorAll("[data-widget-control-path]"))
+      .map((element) => element.getAttribute("data-widget-control-path"))
+      .filter(Boolean);
+    expect(new Set(writablePaths)).toEqual(
+      new Set([
+        "variant",
+        "axis.steps",
+        "tracks",
+        "highlight.targetTrackId",
+        "highlight.targetTrackIds",
+        "guides.enabled",
+        "guides.style",
+        "style.highlightLabelStyle",
+        "style.highlightColor",
+        "style.markerColor",
+        "style.trackLabelColor",
+        "style.stepLabelColor",
+        "style.mutedStepColor",
+        "style.guideColor",
+        "style.trackBackgroundColor",
+        "style.trackLabelSize",
+        "style.stepLabelSize",
+        "style.segmentLabelSize",
+        "style.trackLabelFontWeight",
+        "style.stepLabelFontWeight",
+        "style.segmentLabelFontWeight",
+        "style.markerShape",
+        "header.title",
+        "header.subtitle",
+        "layout.trackSpacing",
+        "layout.labelPosition",
+        "layout.maxWidth",
+        "layout.padding",
+        "layout.trackOrder",
+        "layout.motion",
+      ])
+    );
+
+    const highlightOnlyPaths = new Set(
+      Array.from((markersSection as ParentNode).querySelectorAll("[data-widget-control-path]"))
+        .map((element) => element.getAttribute("data-widget-control-path"))
+        .filter(Boolean)
+    );
+    expect(highlightOnlyPaths).toEqual(
+      new Set(["highlight.targetTrackId", "highlight.targetTrackIds"])
+    );
 
     setInputValue(colorInputs[0], "#ffaa00");
     setInputValue(colorInputs[1], "#2244ff");
@@ -542,9 +619,6 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     setInputValue(colorInputs[4], "#556677");
     setInputValue(colorInputs[5], "#0f172a");
     setInputValue(colorInputs[6], "#f8fafc");
-    setInputValue(findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[0], "#102030");
-    setInputValue(findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1], "#203040");
-    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#334155"), "#304050");
 
     const trackLabelSizeSelect = findSelectByOptions(colorsSection as ParentNode, [
       "sm",
@@ -611,12 +685,16 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       findSelectByOptions(spacingSection as ParentNode, ["none", "fade", "slide"]),
       "slide"
     );
+    expect(spacingSection?.textContent).toContain("Current state first");
+    expect(spacingSection?.textContent).toContain("Future state first");
+
+    const headingSection = findSectionByTitle(view.container, "Section heading");
     setInputValue(
-      findInputByPlaceholder(spacingSection as ParentNode, "Optional section title"),
+      findInputByPlaceholder(headingSection as ParentNode, "Optional section title"),
       "Compare adoption"
     );
     setTextareaValue(
-      findTextareaByPlaceholder(spacingSection as ParentNode, "Optional supporting subtitle"),
+      findTextareaByPlaceholder(headingSection as ParentNode, "Optional supporting subtitle"),
       "Explain the rollout delta"
     );
 
@@ -649,9 +727,9 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
         highlightColor: "#ffaa00",
         highlightLabelStyle: "subtle",
         markerColor: "#2244ff",
-        trackLabelColor: "#102030",
-        stepLabelColor: "#203040",
-        mutedStepColor: "#304050",
+        trackLabelColor: "#334455",
+        stepLabelColor: "#445566",
+        mutedStepColor: "#556677",
         guideColor: "#0f172a",
         trackBackgroundColor: "#f8fafc",
         trackLabelSize: "lg",
@@ -684,7 +762,7 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
   }
 });
 
-test("CompareTimeline advanced editor covers normalization, metadata edits, and axis count guard rails", async () => {
+test("CompareTimeline advanced editor keeps diagnostics read-only and confirms normalization", async () => {
   const { CompareTimelineAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
@@ -744,22 +822,30 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Layout tokens");
-    expect(view.container.textContent).toContain("Raw metadata fields");
-    expect(view.container.textContent).toContain("Data normalization");
+    expect(view.container.textContent).toContain("Runtime layout diagnostics");
+    expect(view.container.textContent).toContain("Metadata diagnostics");
+    expect(view.container.textContent).toContain("Normalization support");
+    expect(view.container.textContent).toContain("Fast lane");
+    expect(view.container.textContent).toContain("Show internal support references");
     expect(normalizeText(view.container.textContent)).toContain("current axis steps: 6.");
-
-    const trackIdInputs = Array.from(
-      view.container.querySelectorAll("input[readonly]")
-    ) as HTMLInputElement[];
-    expect(trackIdInputs.map((input) => input.value)).toEqual(["a", "b"]);
+    expect(normalizeText(view.container.textContent)).toContain(
+      "track referencestraditional, fast lane"
+    );
     expect(view.container.textContent).not.toContain("Track spacing token");
-
-    clickButtonByText(view.container, "Add step");
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.axis.steps).toHaveLength(7);
+    expect(view.container.textContent).not.toContain("Raw metadata fields");
+    expect(view.container.textContent).not.toContain("support key");
+    expect(view.container.querySelector("input")).toBeNull();
+    expect(view.container.querySelector("textarea")).toBeNull();
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(view.container.textContent).not.toContain("Add step");
+    expect(view.container.textContent).not.toContain("Remove step");
+    expect(onChangeSpy).not.toHaveBeenCalled();
 
     clickButtonByText(view.container, "Normalize compare payload");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Normalize compare timeline");
+
+    clickButtonByText(view.container, "Normalize", 1);
     expect(latestValue.axis.steps.map((step) => step.id)).toEqual([
       "step-1",
       "step-2",
@@ -767,7 +853,6 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
       "launch",
       "step-4",
       "step-6",
-      "step-7",
     ]);
     expect(latestValue.axis.steps.map((step) => step.label)).toEqual([
       "Plan",
@@ -776,7 +861,6 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
       "Launch",
       "Review",
       "Scale",
-      "Approve",
     ]);
     expect(latestValue.tracks).toEqual([
       {
@@ -805,45 +889,12 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
       trackOrder: "a-first",
       motion: "none",
     });
-
-    clickButtonByText(view.container, "Remove step");
-    clickButtonByText(view.container, "Remove step");
-    clickButtonByText(view.container, "Remove step");
-    clickButtonByText(view.container, "Remove step");
-    expect(latestValue.axis.steps).toHaveLength(3);
-    expect(latestValue.tracks[0]?.markers).toEqual([0, 2]);
-    expect(latestValue.tracks[0]?.segments).toEqual([
-      { from: 1, to: 2, label: "slow", href: undefined },
-      { from: 2, to: 2, label: undefined, href: undefined },
-    ]);
-
-    const callsAtMinimum = onChangeSpy.mock.calls.length;
-    clickButtonByText(view.container, "Remove step");
-    expect(onChangeSpy).toHaveBeenCalledTimes(callsAtMinimum);
-    expect(latestValue.axis.steps).toHaveLength(3);
-
-    toggleCheckbox(view.container.querySelector("input[type='checkbox']"));
-    setSelectValue(findSelectByOptions(view.container, ["solid", "dashed"]), "solid");
-    setInputValue(findInputByPlaceholder(view.container, "step-1"), "kickoff");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Optional step description"),
-      "Intro"
-    );
-    setSelectValue(findSelectByOptions(view.container, ["a", "b", "both"]), "both");
-    expect(latestValue.guides).toEqual({ enabled: true, style: "solid" });
-    expect(latestValue.axis.steps[0]).toEqual(
-      expect.objectContaining({
-        id: "kickoff",
-        description: "Intro",
-      })
-    );
-    expect(latestValue.highlight).toEqual({ targetTrackId: "b", targetTrackIds: ["a", "b"] });
   } finally {
     view.cleanup();
   }
 });
 
-test("CompareTimeline editors cover visual marker toggles, raw color tokens, and advanced add-step growth", async () => {
+test("CompareTimeline editors cover visual marker toggles, saved custom colors, and advanced diagnostics", async () => {
   const { CompareTimelineAdvancedEditor, CompareTimelineVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
@@ -857,7 +908,11 @@ test("CompareTimeline editors cover visual marker toggles, raw color tokens, and
     ],
     guides: { enabled: true, style: "solid" },
     layout: { trackSpacing: "md", labelPosition: "top" },
-    style: {},
+    style: {
+      trackLabelColor: "var(--track-label)",
+      stepLabelColor: "var(--step-label)",
+      mutedStepColor: "muted-step-token",
+    },
   };
 
   const VisualHarness = () => {
@@ -886,28 +941,42 @@ test("CompareTimeline editors cover visual marker toggles, raw color tokens, and
     expect(latestVisualValue.tracks[1]?.markers).toEqual([0, 2]);
 
     const colorsSection = findSectionByTitle(visualView.container, "Colors and typography");
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "#0f172a"),
-      "var(--track-label)"
-    );
-    setInputValue(
-      findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1],
-      "var(--step-label)"
-    );
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "#334155"),
-      "muted-step-token"
-    );
+    expect(colorsSection?.textContent).toContain("Saved custom color");
+    expect(colorsSection?.querySelector("input:not([type='color'])")).toBeNull();
+
+    const colorInputs = Array.from(
+      colorsSection?.querySelectorAll("input[type='color']") ?? []
+    ) as HTMLInputElement[];
+    setInputValue(colorInputs[1], "#102030");
+    setInputValue(colorInputs[2], "#203040");
+    setInputValue(colorInputs[3], "#304050");
 
     expect(latestVisualValue.style).toEqual(
       expect.objectContaining({
-        trackLabelColor: "var(--track-label)",
-        stepLabelColor: "var(--step-label)",
-        mutedStepColor: "muted-step-token",
+        trackLabelColor: "#102030",
+        stepLabelColor: "#203040",
+        mutedStepColor: "#304050",
       })
     );
   } finally {
     visualView.cleanup();
+  }
+
+  const defaultView = mount(
+    <CompareTimelineVisualEditor
+      value={compareTimelineDefaults}
+      onChange={() => undefined}
+      variant="dual-track"
+    />
+  );
+
+  try {
+    const colorsSection = findSectionByTitle(defaultView.container, "Colors and typography");
+    expect(colorsSection?.textContent).not.toContain("Saved custom color");
+    expect(colorsSection?.textContent).toContain("Selected color");
+    expect(colorsSection?.querySelector("input:not([type='color'])")).toBeNull();
+  } finally {
+    defaultView.cleanup();
   }
 
   let latestAdvancedValue: CompareTimelineData = {
@@ -938,17 +1007,13 @@ test("CompareTimeline editors cover visual marker toggles, raw color tokens, and
   const advancedView = mount(<AdvancedHarness />);
 
   try {
-    clickButtonByText(advancedView.container, "Add step");
-    expect(latestAdvancedValue.axis.steps).toHaveLength(4);
-    expect(latestAdvancedValue.axis.steps[3]).toEqual(
-      expect.objectContaining({
-        id: "step-4",
-        label: "Optimize",
-      })
-    );
-
-    setSelectValue(findSelectByOptions(advancedView.container, ["a", "b", "both"]), "b");
-    expect(latestAdvancedValue.highlight).toEqual({ targetTrackId: "b", targetTrackIds: ["b"] });
+    expect(advancedView.container.textContent).toContain("Runtime layout diagnostics");
+    expect(advancedView.container.textContent).toContain("Track references");
+    expect(advancedView.container.textContent).not.toContain("Add step");
+    expect(advancedView.container.querySelector("input")).toBeNull();
+    expect(advancedView.container.querySelector("textarea")).toBeNull();
+    expect(advancedView.container.querySelector("select")).toBeNull();
+    expect(latestAdvancedValue.axis.steps).toHaveLength(3);
   } finally {
     advancedView.cleanup();
   }

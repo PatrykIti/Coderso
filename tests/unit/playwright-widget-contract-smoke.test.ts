@@ -11,6 +11,7 @@ import {
   isAdminFixtureUnopenableError,
   parseArgs,
   renderMarkdown,
+  resolvePlaywrightCliSessionName,
   selectCases,
   shouldCountOverflowOwner,
   summarize,
@@ -69,6 +70,7 @@ function makeReport(overrides: Partial<SmokeReport> = {}): SmokeReport {
     environment: {
       adminUrl: "http://localhost:5173/admin",
       frontUrl: "http://localhost:3000",
+      resolvedPlaywrightSession: "widget-contract-smoke",
       adminReachable: true,
       frontReachable: true,
       playwrightCliAvailable: true,
@@ -171,6 +173,19 @@ describe("playwright widget contract smoke helpers", () => {
     expect(() => selectCases(inventory, parseArgs(["--widget", "missing"]))).toThrow(
       "widget_not_found:missing"
     );
+  });
+
+  test("normalizes long playwright-cli session names for stable browser reuse", () => {
+    const longSession =
+      "widget-contract-smoke-task-336-19-compare-timeline-advanced-readonly-2026-05-25";
+    const resolved = resolvePlaywrightCliSessionName(longSession);
+    const specialChars = resolvePlaywrightCliSessionName("widget smoke/task 336");
+
+    expect(resolved.length).toBeLessThanOrEqual(64);
+    expect(resolved).toMatch(/^widget-contract-smoke-task-336-19-compare-timeline-/);
+    expect(resolved).toMatch(/-[a-f0-9]{8}$/);
+    expect(resolvePlaywrightCliSessionName("ct-adv-ro")).toBe("ct-adv-ro");
+    expect(specialChars).toBe("widget-smoke-task-336");
   });
 
   test("extracts JSON from the current playwright-cli markdown envelope", () => {
@@ -423,6 +438,7 @@ describe("playwright widget contract smoke helpers", () => {
     );
 
     expect(markdown).toContain("- Admin auth: authenticated");
+    expect(markdown).toContain("- **Playwright session:** widget-contract-smoke");
     expect(markdown).toContain("wizard:failed r1/s1/v0");
     expect(markdown).toContain(
       "screenshot: .tmp/playwright-widget-contract-smoke/screenshots/public-hero.png"
