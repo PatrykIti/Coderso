@@ -192,6 +192,27 @@ vi.mock("@/services/listingsClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "search-page",
+      title: "Search",
+      slug: "search",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "results-page",
+      title: "Results",
+      slug: "results",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -268,6 +289,11 @@ const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =
       element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByAriaLabel = (container: ParentNode, label: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
+
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -340,11 +366,11 @@ test("SearchBox wizard owns source setup without copy or style controls", async 
   }
 });
 
-test("SearchBox wizard owns global and route-submit source configuration", async () => {
+test("SearchBox wizard owns global and route-submit source configuration without raw technical fields", async () => {
   const { SearchBoxWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
-  let latestValue: SearchBoxData = { mode: "global", endpoint: "/api/custom-search" };
+  let latestValue: SearchBoxData = { mode: "global" };
   const Harness = () => {
     const [value, setValue] = useState<SearchBoxData>(latestValue);
     return (
@@ -363,7 +389,9 @@ test("SearchBox wizard owns global and route-submit source configuration", async
   const view = mount(<Harness />);
   try {
     await flush();
-    setInputValue(findInputByPlaceholder(view.container, "/api/search"), "/api/site-search");
+    expect(view.container.textContent).toContain("built-in public search service");
+    expect(view.container.textContent).not.toContain("{ items:");
+    expect(findInputByPlaceholder(view.container, "/api/search")).toBeUndefined();
 
     const toggles = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
     setCheckboxValue(toggles[0], false);
@@ -372,7 +400,7 @@ test("SearchBox wizard owns global and route-submit source configuration", async
 
     expect(latestValue).toMatchObject({
       mode: "global",
-      endpoint: "/api/site-search",
+      endpoint: "/api/search",
       sources: {
         pages: false,
         entries: false,
@@ -381,21 +409,28 @@ test("SearchBox wizard owns global and route-submit source configuration", async
     });
     expect(writablePaths(view.container)).toEqual([
       "mode",
-      "endpoint",
       "sources.pages",
       "sources.entries",
       "sources.posts",
     ]);
 
     setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "route-submit");
-    setInputValue(findInputByPlaceholder(view.container, "/search"), "/results");
-    setInputValue(findInputByPlaceholder(view.container, "q"), "term");
+    await flush();
+    setSelectValue(
+      findSelectByOptions(view.container, [
+        "__coderso_link_empty__",
+        "search-page",
+        "results-page",
+      ]),
+      "results-page"
+    );
 
     expect(latestValue).toMatchObject({
       mode: "route-submit",
       targetRoute: "/results",
-      queryParam: "term",
     });
+    expect(findInputByPlaceholder(view.container, "q")).toBeUndefined();
+    expect(writablePaths(view.container)).toEqual(["mode", "targetRoute"]);
   } finally {
     view.cleanup();
   }
@@ -437,7 +472,7 @@ test("SearchBox visual owns visitor copy, interaction, and surface only", async 
     );
     setSelectValue(findSelectByOptions(view.container, ["full", "compact"]), "compact");
     setCheckboxValue(view.container.querySelector('input[type="checkbox"]'), false);
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#ffffff");
+    setInputValue(findInputByAriaLabel(view.container, "Frame background swatch"), "#112233");
 
     expect(latestValue).toMatchObject({
       title: "Catalog search",
@@ -447,9 +482,10 @@ test("SearchBox visual owns visitor copy, interaction, and surface only", async 
       displayMode: "compact",
       autoApply: false,
       style: {
-        frameBackground: "#ffffff",
+        frameBackground: "#112233",
       },
     });
+    expect(findInputByAriaLabel(view.container, "Frame background value")).toBeUndefined();
     expect(writablePaths(view.container)).toEqual([
       "title",
       "description",
@@ -510,7 +546,7 @@ test("SearchBox wizard exposes retry for listing query loading errors", async ()
   }
 });
 
-test("SearchBox advanced is read-only diagnostics and runtime payload", async () => {
+test("SearchBox advanced is read-only diagnostics and human runtime status", async () => {
   const { SearchBoxAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
@@ -537,20 +573,117 @@ test("SearchBox advanced is read-only diagnostics and runtime payload", async ()
 
   try {
     expect(view.container.textContent).toContain("Runtime diagnostics");
-    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Runtime status");
     expect(view.container.textContent).toContain("Contract summary");
     expect(writablePaths(view.container)).toEqual([]);
     expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    expect(view.container.querySelector("textarea")).toBeNull();
+    expect(view.container.textContent).not.toContain('"resolved"');
 
-    const snapshot = view.container.querySelector("textarea[readonly]");
-    const snapshotValue =
-      snapshot instanceof HTMLTextAreaElement ? snapshot.value : (snapshot?.textContent ?? "");
-    expect(snapshotValue).toContain('"query": "launch"');
-    expect(snapshotValue).toContain('"rejectedTokens": [');
-    expect(snapshotValue).toContain('"__page"');
-    expect(snapshotValue).toContain('"bad"');
-    expect(snapshotValue).toContain('"error": "upstream-error"');
+    expect(view.container.textContent).toContain("launch");
+    expect(view.container.textContent).toContain("2 tokens ignored");
+    expect(view.container.textContent).toContain("upstream-error");
   } finally {
     view.cleanup();
+  }
+});
+
+test("SearchBox keeps legacy provider settings support-owned without raw author fields", async () => {
+  const { SearchBoxWizardEditor, SearchBoxAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
+
+  let latestValue: SearchBoxData = {
+    mode: "global",
+    endpoint: "/api/custom-search",
+    queryParam: "legacyParam",
+  };
+  const WizardHarness = () => {
+    const [value, setValue] = useState<SearchBoxData>(latestValue);
+    return (
+      <SearchBoxWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const wizardView = mount(<WizardHarness />);
+  try {
+    await flush();
+    expect(wizardView.container.textContent).toContain("custom search provider");
+    expect(wizardView.container.textContent).not.toContain("/api/custom-search");
+    expect(findInputByPlaceholder(wizardView.container, "/api/search")).toBeUndefined();
+    expect(findInputByPlaceholder(wizardView.container, "legacyParam")).toBeUndefined();
+    expect(latestValue).toMatchObject({
+      mode: "global",
+      endpoint: "/api/custom-search",
+      queryParam: "legacyParam",
+    });
+  } finally {
+    wizardView.cleanup();
+  }
+
+  latestValue = {
+    mode: "route-submit",
+    endpoint: "/api/custom-search",
+    targetRoute: "/legacy-search",
+    queryParam: "legacyParam",
+  };
+  const RouteWizardHarness = () => {
+    const [value, setValue] = useState<SearchBoxData>(latestValue);
+    return (
+      <SearchBoxWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const routeWizardView = mount(<RouteWizardHarness />);
+  try {
+    await flush();
+    expect(routeWizardView.container.textContent).not.toContain("/api/custom-search");
+    expect(routeWizardView.container.textContent).not.toContain("legacyParam");
+    expect(findInputByPlaceholder(routeWizardView.container, "legacyParam")).toBeUndefined();
+    expect(latestValue).toMatchObject({
+      mode: "route-submit",
+      endpoint: "/api/custom-search",
+      targetRoute: "/legacy-search",
+      queryParam: "legacyParam",
+    });
+  } finally {
+    routeWizardView.cleanup();
+  }
+
+  const advancedView = mount(
+    <SearchBoxAdvancedEditor
+      value={latestValue}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+  try {
+    expect(advancedView.container.textContent).toContain(
+      "Custom search provider configured by support"
+    );
+    expect(advancedView.container.textContent).toContain(
+      "Custom search term routing configured by support"
+    );
+    expect(advancedView.container.textContent).not.toContain("/api/custom-search");
+    expect(writablePaths(advancedView.container)).toEqual([]);
+    expect(advancedView.container.querySelector("textarea")).toBeNull();
+  } finally {
+    advancedView.cleanup();
   }
 });

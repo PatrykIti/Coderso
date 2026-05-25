@@ -158,6 +158,11 @@ Zasady:
   truthful helper-search metadata, swatch-only color controls, Visual-owned
   daily filters/presentation/pagination, oraz Advanced-only human summaries
   bez raw JSON, runtime payloadow, internal IDs lub raw path guidance.
+- `search-box` po TASK-336-19 nie pokazuje juz endpointow, query-param names,
+  raw CSS/token inputs ani JSON runtime payloadow zwyklemu autorowi. Wizard
+  wybiera source i page-first results destination, Visual zarzadza copy,
+  interaction i swatches, a Advanced pokazuje human support diagnostics bez
+  raw provider/query values.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

@@ -13,19 +13,20 @@ Render a bounded listing or global public search form with runtime-safe source
 
 - `default`
 
-## Editor Modes (current after TASK-336-05)
+## Editor Modes (current after TASK-336-19)
 
 ### Wizard
 - owns first-time source/setup:
   - `mode`
   - `listingQueryId`
-  - `endpoint`
   - `targetRoute`
-  - `queryParam`
   - `sources.pages`
   - `sources.entries`
   - `sources.posts`
 - shows listing-query loading, empty, error, and retry guidance
+- route-submit target pages use the shared page destination picker
+- public endpoint and query-key values are support-owned diagnostics, not
+  ordinary author inputs
 
 ### Visual
 - owns visitor-facing copy:
@@ -40,10 +41,11 @@ Render a bounded listing or global public search form with runtime-safe source
   - `style.frameBorderColor`
   - `style.actionBackground`
 - does not expose source, route, query-param, or endpoint controls
+- color controls are swatch-first and do not ask authors to type CSS tokens
 
 ### Advanced
 - read-only runtime diagnostics for source/routing state
-- read-only runtime payload snapshot
+- read-only human runtime status
 - read-only contract summary
 - no duplicate writable copy, source, or style controls
 
@@ -69,6 +71,9 @@ Render a bounded listing or global public search form with runtime-safe source
 - Listing mode binds to `listingRuntimeTokens.search`; global mode uses the
   configured public search endpoint and source toggles; route-submit binds to a
   sanitized public route and configurable query parameter.
+- The editor keeps endpoint and query parameter values backward-compatible in
+  the stored data model, but ordinary authors manage only source, destination
+  page, copy, interaction, and swatches.
 
 ## Clear Controls
 

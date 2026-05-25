@@ -89,9 +89,7 @@ const searchBoxEditorContract = {
       writablePaths: [
         "mode",
         "listingQueryId",
-        "endpoint",
         "targetRoute",
-        "queryParam",
         "sources.pages",
         "sources.entries",
         "sources.posts",
@@ -128,8 +126,8 @@ const searchBoxEditorContract = {
     },
     {
       mode: "advanced",
-      id: "search-box.advanced.runtime-payload",
-      title: "Runtime payload",
+      id: "search-box.advanced.runtime-status",
+      title: "Runtime status",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["resolved.query", "resolved.rejectedTokens", "resolved.error"],

@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,8 @@ import {
 } from "../../../../widgets/core/searchBox";
 import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { useListingQueries } from "../../listings/hooks/useListingQueries";
-import { ClearableInputField } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -112,6 +113,10 @@ function SearchMode({
     selectedListingQuery === NO_LISTING_QUERY_VALUE
       ? "No listing query selected"
       : (items.find((item) => item.id === selectedListingQuery)?.name ?? "Selected listing query");
+  const hasCustomEndpoint =
+    typeof normalized.endpoint === "string" &&
+    normalized.endpoint.trim() !== "" &&
+    normalized.endpoint.trim() !== searchBoxDefaults.endpoint;
 
   return (
     <EditorSection
@@ -206,24 +211,11 @@ function SearchMode({
         </WidgetControlRow>
       ) : mode === "global" ? (
         <div className="space-y-3">
-          <WidgetControlRow id="search-box.wizard.endpoint" label="Search endpoint" path="endpoint">
-            {(fieldProps) => (
-              <Input
-                {...fieldProps}
-                value={normalized.endpoint ?? ""}
-                onChange={(event) =>
-                  updateValue(value, onChange, (current) => ({
-                    ...current,
-                    endpoint: event.target.value,
-                  }))
-                }
-                placeholder="/api/search"
-              />
-            )}
-          </WidgetControlRow>
-          <p className="text-xs text-muted-foreground">
-            Endpoint should return <code>{"{ items: [...] }"}</code>.
-          </p>
+          <div className="rounded-md border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+            {hasCustomEndpoint
+              ? "A custom search provider is already configured by support. Source choices below stay safe for authors."
+              : "Global search uses the built-in public search service. Provider details stay in Advanced diagnostics for support."}
+          </div>
           <div className="space-y-2 rounded-md border border-border/70 bg-background/60 p-3">
             <p className="text-sm font-medium">Global search sources</p>
             <WidgetControlRow
@@ -289,45 +281,33 @@ function SearchMode({
           </div>
         </div>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="space-y-3">
           <WidgetControlRow
             id="search-box.wizard.target-route"
-            label="Target route"
+            label="Search results page"
             path="targetRoute"
           >
             {(fieldProps) => (
-              <Input
-                {...fieldProps}
+              <LinkDestinationField
+                fieldId={fieldProps.id}
+                label="Search results page"
                 value={normalized.targetRoute ?? "/search"}
-                onChange={(event) =>
+                onChange={(nextTargetRoute) =>
                   updateValue(value, onChange, (current) => ({
                     ...current,
-                    targetRoute: event.target.value,
+                    targetRoute: nextTargetRoute || "/search",
                   }))
                 }
-                placeholder="/search"
+                emptyLabel="Default search page"
+                helpText="Choose the published page that receives visitor searches."
               />
             )}
           </WidgetControlRow>
-          <WidgetControlRow
-            id="search-box.wizard.query-param"
-            label="Query param"
-            path="queryParam"
-          >
-            {(fieldProps) => (
-              <Input
-                {...fieldProps}
-                value={normalized.queryParam ?? "q"}
-                onChange={(event) =>
-                  updateValue(value, onChange, (current) => ({
-                    ...current,
-                    queryParam: event.target.value,
-                  }))
-                }
-                placeholder="q"
-              />
-            )}
-          </WidgetControlRow>
+          <p className="text-xs text-muted-foreground">
+            {
+              "The visitor's search term is forwarded automatically; the technical parameter name stays support-owned."
+            }
+          </p>
         </div>
       )}
     </EditorSection>
@@ -486,38 +466,67 @@ function SearchInteractionEditor({
         <p className="text-xs text-muted-foreground">
           {mode === "global"
             ? "Global search runs against the setup sources selected in Wizard."
-            : "Route-submit mode forwards the query to a public page route using the configured parameter name."}
+            : "Route-submit mode forwards the visitor query to the selected public results page."}
         </p>
       )}
     </EditorSection>
   );
 }
 
-function RuntimeSnapshot({ value }: { value: SearchBoxData }) {
+function RuntimeStatus({ value }: { value: SearchBoxData }) {
   const normalized = normalizeSearchBoxData(value);
-  const snapshot = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          resolved: normalized.resolved,
-        },
-        null,
-        2
-      ),
-    [normalized]
-  );
+  const rejectedTokens = normalized.resolved?.rejectedTokens ?? [];
+  const rejectedSummary =
+    rejectedTokens.length > 0
+      ? `${rejectedTokens.length} token${rejectedTokens.length === 1 ? "" : "s"} ignored`
+      : "No ignored tokens";
 
   return (
     <EditorSection
-      id="search-box.advanced.runtime-payload"
+      id="search-box.advanced.runtime-status"
       mode="advanced"
       role="diagnostics"
-      title="Runtime payload"
-      description="Read-only runtime data from SSR."
+      title="Runtime status"
+      description="Read-only visitor-query diagnostics without raw payloads."
     >
-      <Textarea value={snapshot} readOnly rows={8} className="font-mono text-xs" />
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-query"
+        label="Last visitor query"
+        path="resolved.query"
+        value={normalized.resolved?.query || "No query captured"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-rejected"
+        label="Ignored filters"
+        path="resolved.rejectedTokens"
+        value={rejectedSummary}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="search-box.advanced.runtime-error"
+        label="Runtime health"
+        path="resolved.error"
+        value={normalized.resolved?.error || "No runtime errors reported"}
+      />
     </EditorSection>
   );
+}
+
+function describeEndpoint(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.endpoint) return "Built-in public search service";
+  return "Custom search provider configured by support";
+}
+
+function describeTargetRoute(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.targetRoute) return "Default search results page";
+  return "Custom results page configured";
+}
+
+function describeQueryParam(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === searchBoxDefaults.queryParam) return "Standard search term routing";
+  return "Custom search term routing configured by support";
 }
 
 function SurfaceEditor({
@@ -543,12 +552,14 @@ function SurfaceEditor({
         path="style.frameBackground"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Frame background"
             value={normalized.style?.frameBackground}
             onChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBackground: next })}
             onClear={() => clearStyle(value, onChange, "frameBackground")}
-            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
@@ -558,12 +569,14 @@ function SurfaceEditor({
         path="style.frameBorderColor"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Frame border"
             value={normalized.style?.frameBorderColor}
             onChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { frameBorderColor: next })}
             onClear={() => clearStyle(value, onChange, "frameBorderColor")}
-            placeholder="var(--color-border)"
+            pickerFallback="#d4d4d8"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
@@ -573,12 +586,14 @@ function SurfaceEditor({
         path="style.actionBackground"
       >
         {() => (
-          <ClearableInputField
+          <SharedColorControl
             label="Action background"
             value={normalized.style?.actionBackground}
             onChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { actionBackground: next })}
             onClear={() => clearStyle(value, onChange, "actionBackground")}
-            placeholder="var(--color-primary)"
+            pickerFallback="#2563eb"
+            showValueInput={false}
           />
         )}
       </WidgetControlRow>
@@ -626,33 +641,34 @@ export function SearchBoxAdvancedEditor({ value }: WidgetEditorProps<SearchBoxDa
         />
         <ReadonlyWidgetSummaryRow
           id="search-box.advanced.endpoint"
-          label="Endpoint"
+          label="Search provider"
           path="endpoint"
-          value={normalized.endpoint || "Not configured"}
+          value={describeEndpoint(normalized.endpoint)}
         />
         <ReadonlyWidgetSummaryRow
           id="search-box.advanced.route-target"
-          label="Route target"
+          label="Results page"
           path="targetRoute"
-          value={normalized.targetRoute || "Not configured"}
+          value={describeTargetRoute(normalized.targetRoute)}
         />
         <ReadonlyWidgetSummaryRow
           id="search-box.advanced.query-param"
-          label="Query parameter"
+          label="Search term routing"
           path="queryParam"
-          value={normalized.queryParam || "q"}
+          value={describeQueryParam(normalized.queryParam)}
         />
       </EditorSection>
-      <RuntimeSnapshot value={value} />
+      <RuntimeStatus value={value} />
       <EditorSection
         id="search-box.advanced.contract-summary"
         mode="advanced"
         role="summary"
         title="Contract summary"
-        description="Listing mode uses lq.<queryId>.__q, global mode keeps /api/search, and route-submit forwards q-like params to a public page route."
+        description="Wizard chooses the search source once. Visual edits visitor copy and swatches. Advanced stays read-only for support."
       >
         <p className="text-xs text-muted-foreground">
-          Defaults come from <code>searchBoxDefaults</code>.
+          Built-in endpoints, query keys, and runtime state are support-owned implementation
+          details.
         </p>
       </EditorSection>
     </>

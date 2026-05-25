@@ -136,14 +136,16 @@ Regression-test shape:
 
 Completed on 2026-05-24.
 
-Final ownership:
+Final ownership after the 2026-05-25 TASK-336-19 refinement:
 
-- `Wizard` owns `mode`, listing query binding, global endpoint/source toggles,
-  route target, and query parameter setup.
+- `Wizard` owns `mode`, listing query binding, global source toggles, and the
+  page-first route-submit destination. Endpoint and query parameter values
+  remain backward-compatible in saved data, but ordinary authors no longer type
+  them.
 - `Visual` owns visitor copy, display mode, auto-apply behavior, and search
-  surface style.
-- `Advanced` is read-only runtime diagnostics, runtime payload, and contract
-  summary.
+  surface style through swatch-first controls.
+- `Advanced` is read-only runtime/source diagnostics and contract summary with
+  human support labels instead of raw JSON/runtime payload output.
 
 Validation:
 

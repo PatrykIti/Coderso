@@ -177,10 +177,10 @@ test("search box editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(advanced).toContain("Runtime payload");
+  expect(advanced).toContain("Runtime status");
   expect(advanced).toContain("Runtime diagnostics");
   expect(advanced).toContain("Contract summary");
-  expect(advanced).toContain("route-submit");
+  expect(advanced).toContain("support-owned");
 });
 
 test("search box declares a valid editor ownership contract", () => {
@@ -200,7 +200,7 @@ test("search box declares a valid editor ownership contract", () => {
     "search-box.visual.search-interaction",
     "search-box.visual.search-surface",
     "search-box.advanced.runtime-diagnostics",
-    "search-box.advanced.runtime-payload",
+    "search-box.advanced.runtime-status",
     "search-box.advanced.contract-summary",
   ]);
 });

@@ -843,6 +843,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   missing metadata `0`, and raw path inputs `0`. Claude final read-only audit
   returned `PASS`; helper-agent final audit found no blocking code drift and
   the focused probe closes its artifact-coverage note.
+- In Progress (2026-05-25): Search Box residual drift is superseded under this
+  task after fresh helper-agent audit found no blocking code drift in the new
+  direction but required stronger compatibility tests and stored Playwright
+  evidence before closure. Search Box now keeps Wizard source setup
+  beginner-safe by removing raw endpoint/query-param text fields, uses the
+  shared page-first destination picker for route-submit results pages, keeps
+  legacy custom provider/query values support-owned without displaying raw
+  values to ordinary authors, converts Visual color controls to swatch-only
+  controls, and replaces the Advanced raw runtime payload textarea with human
+  read-only runtime/source summaries. Targeted Vitest evidence currently
+  passes `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 30/30 tests, including legacy provider/query preservation without raw
+  author fields. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-search-box-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-search-box-focused-2026-05-25.*`
+  opens Wizard via `Run setup again`, switches through Listing, Global, and
+  Route-submit setup, reports `wizardPassed=true`, missing metadata `0`, raw
+  endpoint/query/CSS inputs `0`, and route-submit page picker `1`. Claude
+  read-only review is pending retry because the local Claude session limit was
+  reached before reset.
 
 ## Files to Change
 
