@@ -27,6 +27,7 @@ import { previewEntryTeaser } from "@/services/entryTeaserPreviewClient";
 
 import {
   type EntryTeaserDataSourceMode,
+  type EntryTeaserRuntimeItem,
   normalizeEntryTeaserData,
   resolveEntryTeaserVariant,
   type EntryTeaserCtaHrefMode,
@@ -43,10 +44,15 @@ import {
   type EntryTeaserRadius,
   type EntryTeaserSpacing,
 } from "../../../../widgets/core/entryTeaser";
-import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
-import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+  WidgetPreviewState,
+} from "../../../../widgets/types";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: EntryTeaserVariantId;
@@ -83,7 +89,7 @@ const dataSourceModeOptions: Array<{ id: EntryTeaserDataSourceMode; label: strin
 
 const hrefModeOptions: Array<{ id: EntryTeaserCtaHrefMode; label: string }> = [
   { id: "auto", label: "Auto entry URL" },
-  { id: "custom", label: "Custom URL" },
+  { id: "custom", label: "Selected site page" },
 ];
 
 const ctaStyleOptions: Array<{ id: EntryTeaserCtaStyle; label: string }> = [
@@ -247,20 +253,43 @@ const resolveSourcePickerError = (
 function EditorSection({
   id,
   title,
+  mode,
+  role,
   description,
   children,
 }: {
   id?: string;
   title: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      title={title}
+      mode={mode}
+      role={role}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
+}
+
+function controlAttributes(
+  id: string,
+  path: string,
+  ownership: "writable" | "readonly" = "writable"
+) {
+  return {
+    "data-widget-control": id,
+    "data-widget-control-path": path,
+    "data-widget-control-ownership": ownership,
+    "data-widget-control-readonly": ownership === "readonly" ? "true" : undefined,
+  } satisfies Record<string, string | undefined>;
 }
 
 function VariantCards({
@@ -806,7 +835,10 @@ function resolvePreviewResolvedData(
   return normalized.resolved ?? { item: null };
 }
 
-function buildSourceSummaryLines(normalized: EntryTeaserData) {
+const optionLabel = (options: Array<{ id: string; label: string }>, value: string | undefined) =>
+  options.find((option) => option.id === value)?.label ?? (value?.trim() || "Not configured");
+
+function buildSourceDiagnosticLines(normalized: EntryTeaserData) {
   const source = normalized.source ?? {};
   if (source.mode === "listing") {
     const listingModeLabel =
@@ -831,6 +863,35 @@ function buildSourceSummaryLines(normalized: EntryTeaserData) {
       ? `Entry ID: ${(source.entryId ?? "").trim() || "Not selected"}`
       : `Mode: ${sourceModeOptions.find((option) => option.id === normalized.sourceMode)?.label ?? "Latest entry"}`,
   ];
+}
+
+function buildVisualSourceSummaryLines(normalized: EntryTeaserData) {
+  const source = normalized.source ?? {};
+  const sourceModeLabel = optionLabel(sourceModeOptions, normalized.sourceMode ?? "latest");
+  if (source.mode === "listing") {
+    return [
+      "Source type: Listing query",
+      `Selection: ${(source.listingQueryId ?? "").trim() ? "Configured" : "Not selected"}`,
+      `Mode: ${sourceModeLabel}`,
+      normalized.sourceMode === "manual"
+        ? `Manual row: ${
+            (source.listingManualTarget?.entryId ?? "").trim() ||
+            (source.listingManualTarget?.rowId ?? "").trim()
+              ? "Configured"
+              : "Not selected"
+          }`
+        : null,
+    ].filter((line): line is string => typeof line === "string");
+  }
+
+  return [
+    "Source type: Content type",
+    `Selection: ${(source.contentTypeId ?? "").trim() ? "Configured" : "Not selected"}`,
+    `Mode: ${sourceModeLabel}`,
+    normalized.sourceMode === "manual"
+      ? `Manual entry: ${(source.entryId ?? "").trim() ? "Configured" : "Not selected"}`
+      : null,
+  ].filter((line): line is string => typeof line === "string");
 }
 
 function SourcePickerFields({
@@ -983,7 +1044,10 @@ function SourcePickerFields({
     <div className="space-y-3">
       {dataSourceMode === "listing" ? (
         <>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("entry-teaser.wizard.sourceMode.listing", "sourceMode")}
+          >
             <p className="text-sm font-medium">Source mode</p>
             <Select
               value={sourceMode}
@@ -1020,7 +1084,13 @@ function SourcePickerFields({
               deterministic manual row.
             </p>
           </div>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes(
+              "entry-teaser.wizard.source.listingQueryId",
+              "source.listingQueryId"
+            )}
+          >
             <p className="text-sm font-medium">Listing query</p>
             <Select
               value={selectedListingQueryValue}
@@ -1049,7 +1119,13 @@ function SourcePickerFields({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes(
+              "entry-teaser.wizard.source.listingTemplateId",
+              "source.listingTemplateId"
+            )}
+          >
             <p className="text-sm font-medium">Listing template</p>
             <Select
               value={selectedListingTemplateValue}
@@ -1093,7 +1169,13 @@ function SourcePickerFields({
             </div>
           ) : null}
           {sourceMode === "manual" ? (
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes(
+                "entry-teaser.wizard.source.listingManualTarget.rowId",
+                "source.listingManualTarget.rowId"
+              )}
+            >
               <p className="text-sm font-medium">Manual listing row</p>
               <Select
                 value={selectedListingManualValue}
@@ -1162,7 +1244,13 @@ function SourcePickerFields({
         </>
       ) : (
         <>
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes(
+              "entry-teaser.wizard.source.contentTypeId",
+              "source.contentTypeId"
+            )}
+          >
             <p className="text-sm font-medium">Content type</p>
             <Select
               value={selectedTypeValue}
@@ -1204,7 +1292,10 @@ function SourcePickerFields({
           </div>
 
           {sourceMode === "manual" ? (
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              {...controlAttributes("entry-teaser.wizard.source.entryId", "source.entryId")}
+            >
               <p className="text-sm font-medium">Manual entry</p>
               <Select
                 value={selectedEntryValue}
@@ -1269,12 +1360,15 @@ function SourceSummaryCard({
 }) {
   const normalized = normalizeValue(value);
   const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
-  const summaryLines = buildSourceSummaryLines(normalized);
+  const summaryLines = buildVisualSourceSummaryLines(normalized);
   const previewTitle = resolved.item?.title?.trim();
   const previewStatus = resolved.item?.status?.trim();
 
   return (
     <EditorSection
+      id="entry-teaser.visual.source-summary"
+      mode="visual"
+      role="source"
       title="Source summary"
       description="Use Wizard mode to change the source. Visual mode keeps this as read-only context."
     >
@@ -1386,11 +1480,17 @@ function SectionContextFields({
 
   return (
     <EditorSection
+      id="entry-teaser.visual.section-context"
+      mode="visual"
+      role="content"
       title="Section context"
       description="Add an optional section heading and control the teaser title level."
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.section.title", "section.title")}
+        >
           <p className="text-sm font-medium">Section heading</p>
           <Input
             value={normalized.section?.title ?? ""}
@@ -1398,7 +1498,10 @@ function SectionContextFields({
             placeholder="Featured article"
           />
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.section.headingLevel", "section.headingLevel")}
+        >
           <p className="text-sm font-medium">Section heading level</p>
           <Select
             value={normalized.section?.headingLevel ?? "h2"}
@@ -1419,7 +1522,10 @@ function SectionContextFields({
           </Select>
         </div>
       </div>
-      <div className="space-y-2">
+      <div
+        className="space-y-2"
+        {...controlAttributes("entry-teaser.visual.title.headingLevel", "title.headingLevel")}
+      >
         <p className="text-sm font-medium">Entry title heading level</p>
         <Select
           value={normalized.title?.headingLevel ?? "h3"}
@@ -1454,11 +1560,17 @@ function LayoutAndMediaFields({
 
   return (
     <EditorSection
+      id="entry-teaser.visual.presentation-layout-media"
+      mode="visual"
+      role="visual"
       title="Layout and media"
-      description="Control width, media presentation, and tag density with fixed teaser tokens."
+      description="Control width and media presentation with fixed teaser tokens."
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.layout.maxWidth", "layout.maxWidth")}
+        >
           <p className="text-sm font-medium">Max width</p>
           <Select
             value={normalized.layout?.maxWidth ?? "lg"}
@@ -1478,29 +1590,10 @@ function LayoutAndMediaFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Tag limit</p>
-          <Select
-            value={String(normalized.fields?.tagLimit ?? 5)}
-            onValueChange={(next) =>
-              updateFields(value, onChange, { tagLimit: Number.parseInt(next, 10) })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select tag limit" />
-            </SelectTrigger>
-            <SelectContent>
-              {tagLimitOptions.map((option) => (
-                <SelectItem key={option.value} value={String(option.value)}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.media.mode", "media.mode")}
+        >
           <p className="text-sm font-medium">Media mode</p>
           <Select
             value={normalized.media?.mode ?? "image"}
@@ -1520,7 +1613,12 @@ function LayoutAndMediaFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.media.aspect", "media.aspect")}
+        >
           <p className="text-sm font-medium">Image aspect</p>
           <Select
             value={normalized.media?.aspect ?? "auto"}
@@ -1540,9 +1638,10 @@ function LayoutAndMediaFields({
             </SelectContent>
           </Select>
         </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.media.height", "media.height")}
+        >
           <p className="text-sm font-medium">Media height</p>
           <Select
             value={normalized.media?.height ?? "auto"}
@@ -1562,19 +1661,117 @@ function LayoutAndMediaFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Object fit</p>
+      </div>
+      <div
+        className="space-y-2"
+        {...controlAttributes("entry-teaser.visual.media.fit", "media.fit")}
+      >
+        <p className="text-sm font-medium">Object fit</p>
+        <Select
+          value={normalized.media?.fit ?? "cover"}
+          onValueChange={(next) =>
+            updateMedia(value, onChange, { fit: next as EntryTeaserObjectFit })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select object fit" />
+          </SelectTrigger>
+          <SelectContent>
+            {mediaFitOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </EditorSection>
+  );
+}
+
+function StyleFields({
+  value,
+  onChange,
+}: {
+  value: EntryTeaserData;
+  onChange: (next: EntryTeaserData) => void;
+}) {
+  const normalized = normalizeValue(value);
+
+  return (
+    <EditorSection
+      id="entry-teaser.visual.presentation-style"
+      mode="visual"
+      role="visual"
+      title="Style"
+      description="Use swatches and fixed tokens. Saved custom colors can be replaced or cleared."
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div {...controlAttributes("entry-teaser.visual.style.surface", "style.surface")}>
+          <SharedColorControl
+            label="Surface color"
+            value={value.style?.surface}
+            onChange={(next) => updateStyle(value, onChange, { surface: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { surface: next })}
+            onClear={() => clearStyle(value, onChange, "surface")}
+            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+        </div>
+        <div {...controlAttributes("entry-teaser.visual.style.border", "style.border")}>
+          <SharedColorControl
+            label="Border color"
+            value={value.style?.border}
+            onChange={(next) => updateStyle(value, onChange, { border: next })}
+            onSwatchChange={(next) => updateStyle(value, onChange, { border: next })}
+            onClear={() => clearStyle(value, onChange, "border")}
+            placeholder="var(--color-border)"
+            pickerFallback="#d4d4d8"
+            showValueInput={false}
+          />
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.style.radius", "style.radius")}
+        >
+          <p className="text-sm font-medium">Radius token</p>
           <Select
-            value={normalized.media?.fit ?? "cover"}
+            value={normalized.style?.radius ?? "lg"}
             onValueChange={(next) =>
-              updateMedia(value, onChange, { fit: next as EntryTeaserObjectFit })
+              updateStyle(value, onChange, { radius: next as EntryTeaserRadius })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select object fit" />
+              <SelectValue placeholder="Select radius" />
             </SelectTrigger>
             <SelectContent>
-              {mediaFitOptions.map((option) => (
+              {radiusOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.style.spacing", "style.spacing")}
+        >
+          <p className="text-sm font-medium">Spacing token</p>
+          <Select
+            value={normalized.style?.spacing ?? "md"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { spacing: next as EntryTeaserSpacing })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select spacing" />
+            </SelectTrigger>
+            <SelectContent>
+              {spacingOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>
@@ -1587,6 +1784,24 @@ function LayoutAndMediaFields({
   );
 }
 
+function runtimeStatusLabel(
+  previewState: WidgetPreviewState | null | undefined,
+  resolved: NonNullable<EntryTeaserData["resolved"]>
+) {
+  if (previewState?.status === "loading") return "Loading preview";
+  if (previewState?.status === "error") return previewState.message || "Preview error";
+  if (resolved.error?.trim()) return resolved.error;
+  if (resolved.item) return "Resolved";
+  return "No resolved item";
+}
+
+function resolvedItemLabel(item: EntryTeaserRuntimeItem | null | undefined) {
+  if (!item) return "Not resolved";
+  const title = item.title?.trim() || "Untitled entry";
+  const status = item.status?.trim();
+  return status ? `${title} (${status})` : title;
+}
+
 function RuntimeSnapshotSection({
   value,
   context,
@@ -1596,42 +1811,151 @@ function RuntimeSnapshotSection({
 }) {
   const normalized = normalizeValue(value);
   const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
-  const snapshotJson = JSON.stringify(resolved ?? { item: null }, null, 2);
-  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
-
-  const handleCopy = async () => {
-    try {
-      const clipboard = globalThis.navigator?.clipboard;
-      if (!clipboard?.writeText) {
-        throw new Error("clipboard_unavailable");
-      }
-      await clipboard.writeText(snapshotJson);
-      setCopyStatus("copied");
-    } catch {
-      setCopyStatus("error");
-    }
-  };
 
   return (
     <EditorSection
-      title="Runtime payload snapshot"
-      description="Read-only resolved payload from runtime preview/public rendering."
+      id="entry-teaser.advanced.runtime-summary"
+      mode="advanced"
+      role="diagnostics"
+      title="Runtime summary"
+      description="Read-only preview status for support without exposing raw payload JSON."
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <Button type="button" size="sm" variant="outline" onClick={() => void handleCopy()}>
-          Copy JSON
-        </Button>
-        {copyStatus === "copied" ? (
-          <p className="text-xs text-muted-foreground">Snapshot copied.</p>
-        ) : copyStatus === "error" ? (
-          <p className="text-xs text-destructive">
-            Clipboard copy failed. You can still inspect the JSON below.
-          </p>
-        ) : null}
-      </div>
-      <pre className="max-h-64 overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed">
-        {snapshotJson}
-      </pre>
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.runtime.status"
+        label="Preview status"
+        path="runtime.previewState"
+        value={runtimeStatusLabel(context?.previewState, resolved)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.runtime.item"
+        label="Resolved item"
+        path="resolved.item"
+        value={resolvedItemLabel(resolved.item)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.runtime.source"
+        label="Runtime source"
+        path="resolved"
+        value={
+          normalized.source?.mode === "listing"
+            ? resolved.listingQueryId?.trim()
+              ? "Listing query resolved"
+              : "Listing query pending"
+            : resolved.sourceTypeSlug?.trim()
+              ? "Content type resolved"
+              : "Content type pending"
+        }
+      />
+    </EditorSection>
+  );
+}
+
+function SourceDiagnosticsSection({
+  value,
+  context,
+}: {
+  value: EntryTeaserData;
+  context?: WidgetEditorProps<EntryTeaserData>["context"];
+}) {
+  const resolved = resolvePreviewResolvedData(value, context?.previewState);
+  const sourceLines = buildSourceDiagnosticLines(value);
+
+  return (
+    <EditorSection
+      id="entry-teaser.advanced.source-diagnostics"
+      mode="advanced"
+      role="diagnostics"
+      title="Source diagnostics"
+      description="Read-only source state for support. Change source settings in Wizard."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.source.type"
+        label="Source type"
+        path="source.mode"
+        value={
+          dataSourceModeOptions.find((option) => option.id === (value.source?.mode ?? "legacy"))
+            ?.label ?? "Content type"
+        }
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.source.mode"
+        label="Resolve mode"
+        path="sourceMode"
+        value={optionLabel(sourceModeOptions, value.sourceMode ?? "latest")}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.source.state"
+        label="Setup state"
+        path="source"
+        value={sourceLines.join(" | ")}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.source.preview"
+        label="Preview item"
+        path="resolved.item"
+        value={resolvedItemLabel(resolved.item)}
+      />
+    </EditorSection>
+  );
+}
+
+function PresentationDiagnosticsSection({
+  value,
+  variant,
+}: {
+  value: EntryTeaserData;
+  variant?: string;
+}) {
+  const resolvedVariant = resolveEntryTeaserVariant(variant ?? "horizontal");
+
+  return (
+    <EditorSection
+      id="entry-teaser.advanced.presentation-diagnostics"
+      mode="advanced"
+      role="diagnostics"
+      title="Presentation diagnostics"
+      description="Read-only presentation summary. Change layout, media, and style in Visual."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.presentation.variant"
+        label="Variant"
+        path="variant"
+        value={optionLabel(variantOptions, resolvedVariant)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.presentation.media"
+        label="Media"
+        path="media"
+        value={`${optionLabel(mediaModeOptions, value.media?.mode ?? "image")} / ${optionLabel(
+          mediaAspectOptions,
+          value.media?.aspect ?? "auto"
+        )} / ${optionLabel(mediaHeightOptions, value.media?.height ?? "auto")}`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.presentation.layout"
+        label="Layout"
+        path="layout.maxWidth"
+        value={optionLabel(maxWidthOptions, value.layout?.maxWidth ?? "lg")}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.presentation.style"
+        label="Style"
+        path="style"
+        value={`Radius ${optionLabel(radiusOptions, value.style?.radius ?? "lg")}, spacing ${optionLabel(
+          spacingOptions,
+          value.style?.spacing ?? "md"
+        )}`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="entry-teaser.advanced.presentation.colors"
+        label="Colors"
+        path="style.surface"
+        value={
+          value.style?.surface || value.style?.border
+            ? "Custom colors configured"
+            : "Theme defaults"
+        }
+      />
     </EditorSection>
   );
 }
@@ -1645,37 +1969,37 @@ function EntryTeaserCtaFields({
 }) {
   const normalized = normalizeValue(value);
   const currentCustomHref = normalized.cta?.href ?? "";
-  const [customHrefDraft, setCustomHrefDraft] = useState(currentCustomHref);
-  const customHrefValidation =
-    customHrefDraft.trim().length > 0 &&
-    !normalizeWidgetSafeHref(customHrefDraft, {
-      allowRelative: true,
-      allowHash: true,
-      allowHttp: true,
-    })
-      ? "Use a relative path, hash link, or http(s) URL."
-      : null;
 
   return (
-    <EditorSection title="CTA behavior" description="Configure teaser action link.">
+    <EditorSection
+      id="entry-teaser.visual.cta"
+      mode="visual"
+      role="content"
+      title="CTA behavior"
+      description="Configure teaser action link with page-first destination authoring."
+    >
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.cta.label", "cta.label")}
+        >
           <p className="text-sm font-medium">CTA label</p>
           <Input
             value={normalized.cta?.label ?? "Read more"}
             onChange={(event) => updateCta(value, onChange, { label: event.target.value })}
             placeholder="Read more"
+            maxLength={32}
           />
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Href mode</p>
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.cta.hrefMode", "cta.hrefMode")}
+        >
+          <p className="text-sm font-medium">Destination mode</p>
           <Select
             value={normalized.cta?.hrefMode ?? "auto"}
             onValueChange={(next) => {
               const nextMode = next as EntryTeaserCtaHrefMode;
-              if (nextMode === "custom") {
-                setCustomHrefDraft(currentCustomHref);
-              }
               updateCta(value, onChange, {
                 hrefMode: nextMode,
                 href: nextMode === "custom" ? currentCustomHref : "",
@@ -1701,36 +2025,32 @@ function EntryTeaserCtaFields({
         </div>
       </div>
       {(normalized.cta?.hrefMode ?? "auto") === "custom" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Custom URL</p>
-          <Input
-            value={customHrefDraft}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setCustomHrefDraft(nextValue);
-              updateCta(value, onChange, { href: nextValue });
-            }}
-            placeholder="/blog/entry-slug or https://..."
+        <div {...controlAttributes("entry-teaser.visual.cta.href", "cta.href")}>
+          <LinkDestinationField
+            fieldId="entry-teaser.visual.cta.destination"
+            label="CTA destination"
+            value={currentCustomHref}
+            onChange={(next) => updateCta(value, onChange, { href: next })}
+            emptyLabel="No custom destination"
+            helpText="Pick a published site page. Saved custom/hash/external destinations stay replace-or-clear compatible."
           />
-          {customHrefValidation ? (
-            <p className="text-xs text-destructive">{customHrefValidation}</p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Leave the field empty to keep the CTA visible but non-navigating until a valid URL is
-              set.
-            </p>
-          )}
         </div>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+        <label
+          className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+          {...controlAttributes("entry-teaser.visual.cta.opensInNewTab", "cta.opensInNewTab")}
+        >
           <span className="text-sm">Open in new tab</span>
           <Switch
             checked={normalized.cta?.opensInNewTab ?? false}
             onCheckedChange={(checked) => updateCta(value, onChange, { opensInNewTab: checked })}
           />
         </label>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.cta.style", "cta.style")}
+        >
           <p className="text-sm font-medium">CTA style</p>
           <Select
             value={normalized.cta?.style ?? "link"}
@@ -1758,15 +2078,11 @@ function EntryTeaserCtaFields({
 export function EntryTeaserWizardEditor({
   value,
   onChange,
-  variant,
-  onVariantChange,
   context,
 }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
   const dataSourceMode = normalized.source?.mode ?? "legacy";
   const sourceMode = normalized.sourceMode ?? "latest";
-  const resolvedVariant = resolveEntryTeaserVariant(variant);
-
   useEntryTeaserAdminPreview({
     value,
     active: context?.editorMode === "wizard" && typeof context?.setPreviewState === "function",
@@ -1775,8 +2091,17 @@ export function EntryTeaserWizardEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection title="Source mode" description="Choose where teaser content comes from.">
-        <div className="space-y-2">
+      <EditorSection
+        id="entry-teaser.wizard.source-setup"
+        mode="wizard"
+        role="source"
+        title="Source mode"
+        description="Choose where teaser content comes from. Layout and presentation stay in Visual."
+      >
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.wizard.source.mode", "source.mode")}
+        >
           <p className="text-sm font-medium">Source type</p>
           <Select
             value={dataSourceMode}
@@ -1797,7 +2122,10 @@ export function EntryTeaserWizardEditor({
           </Select>
         </div>
         {dataSourceMode === "legacy" ? (
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("entry-teaser.wizard.sourceMode.legacy", "sourceMode")}
+          >
             <p className="text-sm font-medium">Mode</p>
             <Select
               value={sourceMode}
@@ -1832,13 +2160,6 @@ export function EntryTeaserWizardEditor({
           sourceMode={sourceMode}
         />
       </EditorSection>
-
-      <EditorSection
-        title="Variant"
-        description="Pick teaser card orientation with a visual thumbnail."
-      >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
-      </EditorSection>
     </div>
   );
 }
@@ -1861,8 +2182,16 @@ export function EntryTeaserVisualEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection title="Variant and structure" description="Control teaser layout direction.">
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+      <EditorSection
+        id="entry-teaser.visual.content-display"
+        mode="visual"
+        role="content"
+        title="Variant and structure"
+        description="Control teaser layout direction."
+      >
+        <div {...controlAttributes("entry-teaser.visual.variant", "variant")}>
+          <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        </div>
       </EditorSection>
 
       <SectionContextFields value={value} onChange={onChange} />
@@ -1870,38 +2199,76 @@ export function EntryTeaserVisualEditor({
       <SourceSummaryCard value={value} context={context} />
 
       <EditorSection
+        id="entry-teaser.visual.content-fields"
+        mode="visual"
+        role="content"
         title="Teaser content fields"
         description="Toggle visible entry properties in teaser card and verify the local preview response."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+          <label
+            className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+            {...controlAttributes("entry-teaser.visual.fields.showImage", "fields.showImage")}
+          >
             <span className="text-sm">Show image</span>
             <Switch
               checked={normalized.fields?.showImage ?? true}
               onCheckedChange={(checked) => updateFields(value, onChange, { showImage: checked })}
             />
           </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+          <label
+            className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+            {...controlAttributes("entry-teaser.visual.fields.showExcerpt", "fields.showExcerpt")}
+          >
             <span className="text-sm">Show excerpt</span>
             <Switch
               checked={normalized.fields?.showExcerpt ?? true}
               onCheckedChange={(checked) => updateFields(value, onChange, { showExcerpt: checked })}
             />
           </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+          <label
+            className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+            {...controlAttributes("entry-teaser.visual.fields.showMeta", "fields.showMeta")}
+          >
             <span className="text-sm">Show meta</span>
             <Switch
               checked={normalized.fields?.showMeta ?? true}
               onCheckedChange={(checked) => updateFields(value, onChange, { showMeta: checked })}
             />
           </label>
-          <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+          <label
+            className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+            {...controlAttributes("entry-teaser.visual.fields.showTags", "fields.showTags")}
+          >
             <span className="text-sm">Show tags</span>
             <Switch
               checked={normalized.fields?.showTags ?? true}
               onCheckedChange={(checked) => updateFields(value, onChange, { showTags: checked })}
             />
           </label>
+        </div>
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.fields.tagLimit", "fields.tagLimit")}
+        >
+          <p className="text-sm font-medium">Tag limit</p>
+          <Select
+            value={String(normalized.fields?.tagLimit ?? 5)}
+            onValueChange={(next) =>
+              updateFields(value, onChange, { tagLimit: Number.parseInt(next, 10) })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select tag limit" />
+            </SelectTrigger>
+            <SelectContent>
+              {tagLimitOptions.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <p className="text-xs text-muted-foreground">
           These toggles update the teaser preview using resolved entry data when the source can be
@@ -1910,6 +2277,10 @@ export function EntryTeaserVisualEditor({
         <FieldTogglePreview value={value} variant={resolvedVariant} context={context} />
       </EditorSection>
 
+      <LayoutAndMediaFields value={value} onChange={onChange} />
+
+      <StyleFields value={value} onChange={onChange} />
+
       <EntryTeaserCtaFields
         key={context?.blockId ?? "entry-teaser-cta"}
         value={value}
@@ -1917,18 +2288,28 @@ export function EntryTeaserVisualEditor({
       />
 
       <EditorSection
+        id="entry-teaser.visual.fallback"
+        mode="visual"
+        role="content"
         title="Fallback state"
         description="Edit the empty-state copy and featured-entry fallback behavior together."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.fallback.title", "fallback.title")}
+        >
           <p className="text-sm font-medium">Fallback title</p>
           <Input
             value={normalized.fallback?.title ?? ""}
             onChange={(event) => updateFallback(value, onChange, { title: event.target.value })}
             placeholder="No entry selected"
+            maxLength={60}
           />
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("entry-teaser.visual.fallback.description", "fallback.description")}
+        >
           <p className="text-sm font-medium">Fallback description</p>
           <Textarea
             value={normalized.fallback?.description ?? ""}
@@ -1937,9 +2318,16 @@ export function EntryTeaserVisualEditor({
             }
             rows={3}
             placeholder="Choose a source mode and content type."
+            maxLength={200}
           />
         </div>
-        <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
+        <label
+          className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2"
+          {...controlAttributes(
+            "entry-teaser.visual.fallback.fallbackToLatest",
+            "fallback.fallbackToLatest"
+          )}
+        >
           <span className="text-sm">Fallback to latest when featured is missing</span>
           <Switch
             checked={normalized.fallback?.fallbackToLatest ?? true}
@@ -1955,7 +2343,7 @@ export function EntryTeaserVisualEditor({
 
 export function EntryTeaserAdvancedEditor({
   value,
-  onChange,
+  variant,
   context,
 }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
@@ -1968,73 +2356,8 @@ export function EntryTeaserAdvancedEditor({
 
   return (
     <div className="space-y-4">
-      <LayoutAndMediaFields value={value} onChange={onChange} />
-
-      <EditorSection title="Style tokens" description="Direct style tokens for teaser surface.">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SharedColorControl
-            label="Surface color"
-            value={normalized.style?.surface}
-            onChange={(next) => updateStyle(value, onChange, { surface: next })}
-            onSwatchChange={(next) => updateStyle(value, onChange, { surface: next })}
-            onClear={() => clearStyle(value, onChange, "surface")}
-            placeholder="var(--color-bg)"
-            pickerFallback="#ffffff"
-          />
-          <SharedColorControl
-            label="Border color"
-            value={normalized.style?.border}
-            onChange={(next) => updateStyle(value, onChange, { border: next })}
-            onSwatchChange={(next) => updateStyle(value, onChange, { border: next })}
-            onClear={() => clearStyle(value, onChange, "border")}
-            placeholder="var(--color-border)"
-            pickerFallback="#d4d4d8"
-          />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Radius token</p>
-            <Select
-              value={normalized.style?.radius ?? "lg"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { radius: next as EntryTeaserRadius })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Spacing token</p>
-            <Select
-              value={normalized.style?.spacing ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { spacing: next as EntryTeaserSpacing })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </EditorSection>
-
+      <SourceDiagnosticsSection value={normalized} context={context} />
+      <PresentationDiagnosticsSection value={normalized} variant={variant} />
       <RuntimeSnapshotSection value={value} context={context} />
     </div>
   );

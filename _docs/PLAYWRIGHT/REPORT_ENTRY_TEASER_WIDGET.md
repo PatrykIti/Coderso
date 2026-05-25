@@ -4,6 +4,35 @@
 
 ---
 
+## TASK-336-19 Contract Update (2026-05-25)
+
+Entry Teaser was re-audited for the shared `Wizard / Visual / Advanced`
+ownership contract.
+
+- Wizard is now source setup-only and no longer owns `variant`.
+- Visual owns daily editing: variant, content fields, tag limit, media, layout,
+  style, CTA behavior, fallback copy, and page-first custom destination picking.
+- Advanced is read-only diagnostics only: source, presentation, and runtime
+  summary rows; no editable layout/media/style controls and no raw JSON
+  payload preview.
+- Visual color authoring is swatch-only; saved custom CSS/token colors stay
+  replace-or-clear compatible, and fresh defaults no longer persist CSS
+  variable surface/border strings.
+- `cta.label`, `fallback.title`, and `fallback.description` are length-bounded
+  in the editor and normalizer.
+
+Validation evidence:
+
+- `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/widgets/entryTeaser.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- `bun test tests/unit/widgets/entryTeaser.test.tsx tests/integration/routes/entryTeaserPreview.test.ts tests/integration/routes/widgets.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-entry-teaser-advanced-readonly-2026-05-25.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+
+---
+
 ## Closure Update (2026-05-18)
 
 Poniższe sekcje `1-8` zachowują historyczny raport z 2026-05-16. Ten blok

@@ -561,6 +561,39 @@ read-only diagnostics. It added these concrete cleanup requirements:
   found only section metadata and docs/contract-section alignment drift; those
   findings were fixed before the final targeted Vitest, Playwright, lint,
   typecheck, and `gates:coderso` reruns.
+- In Progress (2026-05-25): twenty-ninth implementation family targets Entry
+  Teaser source/presentation ownership, custom destination authoring, and
+  Advanced diagnostics drift. Wizard is now source setup only and no longer
+  writes `variant`; Visual owns variant, content fields, tag density, media,
+  layout, style, fallback copy, and CTA behavior. Visual custom CTA authoring
+  uses the shared page-first `LinkDestinationField`, preserving saved custom,
+  hash, and external hrefs as replace-or-clear compatibility state. Visual
+  surface/border colors are swatch-only, saved custom CSS/token colors remain
+  replace-or-clear compatible, and fresh defaults no longer persist CSS
+  variable strings for `style.surface`/`style.border`. Advanced no longer
+  receives `onChange`; it renders read-only source, presentation, and runtime
+  summary rows only, with no editable inputs/selects/textareas or raw preview
+  JSON. CTA/fallback copy now has bounded editor and normalizer limits. A fresh
+  helper-agent audit and Claude read-only audit both identified the stale
+  writable Advanced layout/style block, raw URL field, raw color text field,
+  and stale Wizard/Visual duplicate allowance as the primary drifts; those
+  findings are implemented in this slice. Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/widgets/entryTeaser.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Focused Bun evidence passes
+  `bun test tests/unit/widgets/entryTeaser.test.tsx tests/integration/routes/entryTeaserPreview.test.ts tests/integration/routes/widgets.test.ts`.
+  `bun --cwd core lint` and `bun --cwd core lint:types` pass. Targeted
+  Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-entry-teaser-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`; the rerun after ownership metadata hardening shows Visual
+  writable paths for variant, headings, field toggles, media, layout, style,
+  CTA, and fallback while Advanced stays empty. `bun run gates:coderso`
+  passes after the final metadata patch. Fresh post-implementation helper-agent
+  review found a medium metadata coverage gap and no high issues; the metadata
+  gap was fixed and the agent was closed. Final Claude read-only UI/UX review
+  returned PASS with only a low informational note that Playwright validates
+  the daily Visual/Advanced path while Wizard source-only ownership remains
+  covered by focused Vitest/source review.
 
 ## Files to Change
 

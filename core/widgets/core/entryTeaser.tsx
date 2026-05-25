@@ -268,8 +268,6 @@ export const entryTeaserDefaults: EntryTeaserData = {
     style: "link",
   },
   style: {
-    surface: "var(--color-bg)",
-    border: "var(--color-border)",
     radius: "lg",
     spacing: "md",
   },
@@ -302,14 +300,6 @@ export const entryTeaserDefaults: EntryTeaserData = {
   },
 };
 
-const entryTeaserWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the teaser layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const entryTeaserEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -319,7 +309,6 @@ export const entryTeaserEditorContract: WidgetEditorContract = {
       title: "Source setup",
       role: "source",
       writablePaths: [
-        "variant",
         "sourceMode",
         "source.mode",
         "source.listingQueryId",
@@ -329,7 +318,6 @@ export const entryTeaserEditorContract: WidgetEditorContract = {
         "source.contentTypeId",
         "source.entryId",
       ],
-      allowedDuplicateWritablePaths: entryTeaserWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -355,7 +343,6 @@ export const entryTeaserEditorContract: WidgetEditorContract = {
         "fallback.description",
         "fallback.fallbackToLatest",
       ],
-      allowedDuplicateWritablePaths: entryTeaserWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -384,11 +371,19 @@ export const entryTeaserEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "entry-teaser.advanced.runtime-payload",
-      title: "Runtime payload",
+      id: "entry-teaser.advanced.presentation-diagnostics",
+      title: "Presentation diagnostics",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["runtime.normalizedData"],
+      readOnlyPaths: ["variant", "fields.tagLimit", "media", "layout", "style"],
+    },
+    {
+      mode: "advanced",
+      id: "entry-teaser.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved", "runtime.previewState"],
     },
   ],
 };
@@ -489,6 +484,12 @@ const defaultVariantMediaDimensionsMap: Record<
 
 const resolveString = (value: string | undefined, fallback: string) =>
   typeof value === "string" ? value : fallback;
+
+const limitString = (value: string, maxLength: number) =>
+  value.length > maxLength ? value.slice(0, maxLength) : value;
+
+const resolveLimitedString = (value: string | undefined, fallback: string, maxLength: number) =>
+  limitString(resolveString(value, fallback), maxLength);
 
 const resolveOptionalString = (value: string | undefined) =>
   typeof value === "string" ? value : undefined;
@@ -644,8 +645,6 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     style: "link" as const,
   };
   const styleDefaults = entryTeaserDefaults.style ?? {
-    surface: "var(--color-bg)",
-    border: "var(--color-border)",
     radius: "lg" as const,
     spacing: "md" as const,
   };
@@ -713,7 +712,7 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       tagLimit: clampEntryTeaserTagLimit(data.fields?.tagLimit, fieldDefaults.tagLimit ?? 5),
     },
     cta: {
-      label: resolveString(data.cta?.label, ctaDefaults.label ?? "Read more"),
+      label: resolveLimitedString(data.cta?.label, ctaDefaults.label ?? "Read more", 32),
       hrefMode: ctaHrefMode,
       href:
         ctaHrefMode === "custom"
@@ -758,11 +757,16 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       maxWidth: resolveEntryTeaserMaxWidth(data.layout?.maxWidth ?? layoutDefaults.maxWidth),
     },
     fallback: {
-      title: resolveString(data.fallback?.title, fallbackDefaults.title ?? "No entry selected"),
-      description: resolveString(
+      title: resolveLimitedString(
+        data.fallback?.title,
+        fallbackDefaults.title ?? "No entry selected",
+        60
+      ),
+      description: resolveLimitedString(
         data.fallback?.description,
         fallbackDefaults.description ??
-          "Choose a source mode and content type to render teaser content."
+          "Choose a source mode and content type to render teaser content.",
+        200
       ),
       fallbackToLatest:
         typeof data.fallback?.fallbackToLatest === "boolean"

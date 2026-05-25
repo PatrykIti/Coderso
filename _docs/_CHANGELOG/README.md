@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 946 | 2026-05-25 | Entry Teaser editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 945 | 2026-05-24 | One-time widget Wizard lifecycle | CMS Widgets/Admin UI/Builder/Playwright/QA/Docs |
 | 944 | 2026-05-24 | Remaining widget editor contracts | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
 | 943 | 2026-05-24 | Widget frontend fixtures and overflow contract | CMS Widgets/Runtime/Frontend CSS/Playwright/QA/Docs |

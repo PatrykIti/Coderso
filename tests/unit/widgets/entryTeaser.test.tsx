@@ -267,8 +267,8 @@ test("entry teaser editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Source mode");
-  expect(wizardHtml).toContain("Variant");
-  expect(wizardHtml).toContain('data-variant-thumbnail="horizontal"');
+  expect(wizardHtml).not.toContain("Variant");
+  expect(wizardHtml).not.toContain('data-variant-thumbnail="horizontal"');
 
   const visualHtml = renderToString(
     <EntryTeaserVisualEditor
@@ -281,6 +281,8 @@ test("entry teaser editors render expected sections", () => {
   expect(visualHtml).toContain("Variant and structure");
   expect(visualHtml).toContain("Section context");
   expect(visualHtml).toContain("Source summary");
+  expect(visualHtml).toContain("Layout and media");
+  expect(visualHtml).toContain("Style");
   expect(visualHtml).toContain("CTA behavior");
   expect(visualHtml).toContain("Fallback state");
 
@@ -292,9 +294,12 @@ test("entry teaser editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Layout and media");
-  expect(advancedHtml).toContain("Style tokens");
-  expect(advancedHtml).toContain("Runtime payload snapshot");
+  expect(advancedHtml).toContain("Source diagnostics");
+  expect(advancedHtml).toContain("Presentation diagnostics");
+  expect(advancedHtml).toContain("Runtime summary");
+  expect(advancedHtml).not.toContain("<select");
+  expect(advancedHtml).not.toContain("<input");
+  expect(advancedHtml).not.toContain("<textarea");
 });
 
 test("entry teaser normalization keeps deterministic fallback defaults", () => {
@@ -318,6 +323,23 @@ test("entry teaser normalization keeps deterministic fallback defaults", () => {
   expect(normalized.media?.height).toBe("auto");
   expect(normalized.layout?.maxWidth).toBe("lg");
   expect(normalized.style?.radius).toBe("lg");
+});
+
+test("entry teaser normalization clamps editor-facing copy lengths", () => {
+  const normalized = normalizeEntryTeaserData({
+    cta: {
+      label: "Read the complete launch announcement today",
+      hrefMode: "auto",
+    },
+    fallback: {
+      title: "This fallback title is intentionally longer than the configured editor limit",
+      description: "x".repeat(240),
+    },
+  });
+
+  expect(normalized.cta?.label).toHaveLength(32);
+  expect(normalized.fallback?.title).toHaveLength(60);
+  expect(normalized.fallback?.description).toHaveLength(200);
 });
 
 test("entry teaser render falls back to horizontal for unknown variant intentionally", () => {

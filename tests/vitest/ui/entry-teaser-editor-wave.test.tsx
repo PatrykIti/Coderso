@@ -85,15 +85,33 @@ const entryTeaserState = vi.hoisted(() => ({
       status: "published",
     },
   ] as Record<string, unknown>[],
+  pages: [
+    {
+      id: "custom-entry-page",
+      title: "Custom entry",
+      slug: "custom-entry",
+      status: "published",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    },
+    {
+      id: "draft-page",
+      title: "Draft page",
+      slug: "draft-page",
+      status: "draft",
+      updatedAt: "2026-03-08T10:00:00.000Z",
+    },
+  ],
   contentTypesError: null as unknown,
   entriesError: null as unknown,
   listingsError: null as unknown,
   listingPreviewError: null as unknown,
+  pagesError: null as unknown,
   reset() {
     this.contentTypesError = null;
     this.entriesError = null;
     this.listingsError = null;
     this.listingPreviewError = null;
+    this.pagesError = null;
   },
 }));
 
@@ -327,6 +345,13 @@ vi.mock("@/services/entryTeaserPreviewClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => {
+    if (entryTeaserState.pagesError) throw entryTeaserState.pagesError;
+    return entryTeaserState.pages;
+  }),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -429,8 +454,8 @@ const normalizeText = (value: string | null | undefined) =>
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3, p, span")).some(
+      (element) => normalizeText(element.textContent) === normalizeText(title)
     )
   );
 
@@ -536,15 +561,7 @@ afterEach(() => {
   previewClientState.reset();
 });
 
-test("EntryTeaser advanced editor updates layout/media, style tokens, and runtime snapshot copy", async () => {
-  const clipboardWrite = vi.fn().mockResolvedValue(undefined);
-  Object.defineProperty(globalThis.navigator, "clipboard", {
-    configurable: true,
-    value: {
-      writeText: clipboardWrite,
-    },
-  });
-
+test("EntryTeaser visual editor owns layout/media/style while advanced stays read-only", async () => {
   const view = await renderEditors({
     initialValue: {
       sourceMode: "featured",
@@ -575,31 +592,38 @@ test("EntryTeaser advanced editor updates layout/media, style tokens, and runtim
   try {
     await flush();
 
+    const teaserFieldsSection = findSectionByTitle(view.container, "Teaser content fields");
+    if (!(teaserFieldsSection instanceof HTMLElement)) {
+      throw new Error("Missing teaser content fields section");
+    }
+    setSelectValue(findSelectByOptions(teaserFieldsSection, ["0", "3", "5", "8", "12"]), "12");
+
     const layoutSection = findSectionByTitle(view.container, "Layout and media");
     if (!(layoutSection instanceof HTMLElement)) {
       throw new Error("Missing layout and media section");
     }
 
     setSelectValue(findSelectByOptions(layoutSection, ["sm", "md", "lg", "xl", "full"]), "full");
-    setSelectValue(findSelectByOptions(layoutSection, ["0", "3", "5", "8", "12"]), "12");
     setSelectValue(findSelectByOptions(layoutSection, ["image", "icon", "none"]), "icon");
     setSelectValue(findSelectByOptions(layoutSection, ["auto", "16:9", "4:3", "1:1"]), "4:3");
     setSelectValue(findSelectByOptions(layoutSection, ["auto", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(layoutSection, ["cover", "contain"]), "contain");
 
-    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    const styleTokensSection = findSectionByTitle(view.container, "Style");
     if (!(styleTokensSection instanceof HTMLElement)) {
-      throw new Error("Missing style tokens section");
+      throw new Error("Missing style section");
     }
 
     setInputValue(
-      findInputByPlaceholder(styleTokensSection, "var(--color-bg)"),
-      "var(--teaser-surface)"
+      styleTokensSection.querySelector('input[aria-label="Surface color swatch"]'),
+      "#445566"
     );
     setInputValue(
-      findInputByPlaceholder(styleTokensSection, "var(--color-border)"),
-      "var(--teaser-border)"
+      styleTokensSection.querySelector('input[aria-label="Border color swatch"]'),
+      "#334455"
     );
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-bg)")).toBeUndefined();
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-border)")).toBeUndefined();
     const radiusSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg", "xl"]);
     const spacingSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg"]);
     expect(
@@ -610,9 +634,6 @@ test("EntryTeaser advanced editor updates layout/media, style tokens, and runtim
     ).toContain("none");
     setSelectValue(radiusSelect, "sm");
     setSelectValue(spacingSelect, "lg");
-
-    clickButtonByText(view.container, "Copy JSON");
-    await flush();
 
     expect(view.getLatestValue()).toMatchObject({
       fields: {
@@ -628,25 +649,28 @@ test("EntryTeaser advanced editor updates layout/media, style tokens, and runtim
         fit: "contain",
       },
       style: {
-        surface: "var(--teaser-surface)",
-        border: "var(--teaser-border)",
+        surface: "#445566",
+        border: "#334455",
         radius: "sm",
         spacing: "lg",
       },
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"error": "Pending runtime resolution"');
-    expect(clipboardWrite).toHaveBeenCalledWith(
-      expect.stringContaining('"error": "Pending runtime resolution"')
-    );
-    expect(view.container.textContent).toContain("Snapshot copied.");
+    for (const title of ["Source diagnostics", "Presentation diagnostics", "Runtime summary"]) {
+      const section = findSectionByTitle(view.container, title);
+      if (!(section instanceof HTMLElement)) {
+        throw new Error(`Missing advanced section: ${title}`);
+      }
+      expect(section.querySelector("input, select, textarea, button")).toBeNull();
+    }
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Pending runtime resolution");
   } finally {
     view.cleanup();
   }
 });
 
-test("EntryTeaser advanced editor adopts shared color swatch, text, and clear controls", async () => {
+test("EntryTeaser visual editor adopts swatch-only color controls with saved custom compatibility", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
@@ -659,20 +683,25 @@ test("EntryTeaser advanced editor adopts shared color swatch, text, and clear co
   });
 
   try {
-    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    const styleTokensSection = findSectionByTitle(view.container, "Style");
     if (!(styleTokensSection instanceof HTMLElement)) {
-      throw new Error("Missing style tokens section");
+      throw new Error("Missing style section");
     }
 
     const surfaceSwatch = styleTokensSection.querySelector(
       'input[aria-label="Surface color swatch"]'
     );
-    const borderValue = styleTokensSection.querySelector('input[aria-label="Border color value"]');
+    const borderSwatch = styleTokensSection.querySelector(
+      'input[aria-label="Border color swatch"]'
+    );
     expect(surfaceSwatch).toBeTruthy();
-    expect(borderValue).toBeTruthy();
+    expect(borderSwatch).toBeTruthy();
+    expect(styleTokensSection.querySelector('input[aria-label="Surface color value"]')).toBeNull();
+    expect(styleTokensSection.querySelector('input[aria-label="Border color value"]')).toBeNull();
+    expect(styleTokensSection.textContent).toContain("Saved custom color");
 
     setInputValue(surfaceSwatch, "#445566");
-    setInputValue(borderValue, "var(--border-strong)");
+    setInputValue(borderSwatch, "#778899");
 
     const clearButtons = Array.from(styleTokensSection.querySelectorAll("button")).filter(
       (button) => button.textContent?.includes("Clear")
@@ -681,7 +710,7 @@ test("EntryTeaser advanced editor adopts shared color swatch, text, and clear co
 
     expect(view.getLatestValue()).toMatchObject({
       style: expect.objectContaining({
-        border: "var(--border-strong)",
+        border: "#778899",
       }),
     });
     expect(view.getLatestValue().style?.surface).toBeUndefined();
@@ -753,7 +782,7 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
     if (!(visualSection instanceof HTMLElement)) {
       throw new Error("Missing visual source summary section");
     }
-    expect(visualSection.textContent).toContain("Content type ID: Not selected");
+    expect(visualSection.textContent).toContain("Selection: Not selected");
 
     const teaserFieldsSection = findSectionByTitle(view.container, "Teaser content fields");
     if (!(teaserFieldsSection instanceof HTMLElement)) {
@@ -769,12 +798,13 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
       findTextareaByPlaceholder(view.container, "Choose a source mode and content type.")?.value
     ).toBe("");
 
-    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    const styleTokensSection = findSectionByTitle(view.container, "Style");
     if (!(styleTokensSection instanceof HTMLElement)) {
-      throw new Error("Missing style tokens section");
+      throw new Error("Missing style section");
     }
-    expect(findInputByPlaceholder(styleTokensSection, "var(--color-bg)")?.value).toBe("");
-    expect(findInputByPlaceholder(styleTokensSection, "var(--color-border)")?.value).toBe("");
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-bg)")).toBeUndefined();
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-border)")).toBeUndefined();
+    expect(styleTokensSection.textContent).toContain("Theme default");
     const radiusSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg", "xl"]);
     const spacingSelect = findSelectByOptions(styleTokensSection, ["none", "sm", "md", "lg"]);
     expect(
@@ -792,8 +822,8 @@ test("EntryTeaser editors fall back safely for sparse normalized values and igno
     }
     expect(findCheckboxes(fallbackSection)[0]?.checked).toBe(true);
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"item": null');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("No resolved item");
   } finally {
     view?.cleanup();
     vi.doUnmock("../../../core/widgets/core/entryTeaser");
@@ -1037,7 +1067,7 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
 
     expect(view.container.textContent).toContain("Source mode");
     expect(view.container.textContent).toContain("Variant and structure");
-    expect(view.container.textContent).toContain("Runtime payload snapshot");
+    expect(view.container.textContent).toContain("Runtime summary");
 
     React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["legacy", "listing"]), "legacy");
@@ -1069,9 +1099,9 @@ test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, a
     await flush();
 
     React.act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "/blog/entry-slug or https://..."),
-        "/custom-entry"
+      setSelectValue(
+        findSelectByOptions(view.container, ["__coderso_link_empty__", "custom-entry-page"]),
+        "custom-entry-page"
       );
       setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
       setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg", "xl"]), "xl");
