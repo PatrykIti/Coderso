@@ -333,8 +333,27 @@ Validation from the closure pass:
 | R3 | `fixed` | `TASK-264-05` | Public DOM now exposes bounded marker kinds instead of raw style strings. |
 | R4 | `fixed` | `TASK-264-01` | Label text now stays on one line through runtime `whitespace-nowrap`. |
 
+## Status po TASK-336-19 (2026-05-25)
+
+Fresh helper-agent and Claude-oriented contract review re-opened Divider because
+the earlier layout-token closure still left Advanced with hidden writable
+controls, raw JSON payload diagnostics, stale section names, and incomplete
+Wizard/Visual ownership metadata.
+
+Targeted evidence from this slice:
+- `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-divider-advanced-readonly-2026-05-25.md`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-divider-advanced-readonly-2026-05-25.json`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| Advanced hidden mutators | `fixed-task-336-19` | `TASK-336-19` | Divider Advanced now renders read-only runtime/support summaries only and exposes no writable editor groups. |
+| Raw payload snapshot | `fixed-task-336-19` | `TASK-336-19` | The visible JSON payload snapshot was removed from Advanced; diagnostics use human line/width/spacing/support rows. |
+| Wizard/Visual metadata gap | `fixed-task-336-19` | `TASK-336-19` | Divider controls now use `WidgetControlRow` metadata, and Wizard is narrowed to one-time style/label setup while Visual owns daily line, width, color, and spacing. |
+| Beginner-facing CSS/token authoring | `fixed-task-336-19` | `TASK-336-19` | Width, spacing, opacity, and thickness controls show friendly labels or saved-custom compatibility state instead of raw CSS values or token numbers. |
+
 Additional closure notes:
 - `8.1` remains `excluded` CMS/session scope.
 - `_docs/_WIDGETS/tmp/divider/MATRIX.md` remains archived research reference; no new research pass was required to close the shipped Divider contract.
 
-*Raport zakończony — 2026-05-16; closure refreshed — 2026-05-17.*
+*Raport zakończony — 2026-05-16; closure refreshed — 2026-05-17; TASK-336-19 refreshed — 2026-05-25.*

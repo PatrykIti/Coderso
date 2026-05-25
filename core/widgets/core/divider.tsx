@@ -76,12 +76,33 @@ export const dividerEditorContract: WidgetEditorContract = {
       id: "divider.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
+      writablePaths: ["variant", "label"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Divider style; Visual remains the daily appearance owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "label",
+          reason:
+            "Wizard seeds an optional one-time center label; Visual remains the daily label owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "divider.visual.preview",
+      title: "Preview",
+      role: "summary",
       writablePaths: [],
     },
     {
       mode: "visual",
-      id: "divider.visual.appearance",
-      title: "Appearance and rhythm",
+      id: "divider.visual.variant-label",
+      title: "Variant and label",
       role: "visual",
       writablePaths: [
         "variant",
@@ -92,6 +113,28 @@ export const dividerEditorContract: WidgetEditorContract = {
         "labelTransform",
         "labelLetterSpacing",
         "labelGap",
+      ],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Divider style; Visual remains the daily appearance owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "label",
+          reason:
+            "Wizard seeds an optional one-time center label; Visual remains the daily label owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "divider.visual.line-width",
+      title: "Line style and width",
+      role: "visual",
+      writablePaths: [
         "thickness",
         "color",
         "width",
@@ -102,14 +145,26 @@ export const dividerEditorContract: WidgetEditorContract = {
         "opacity",
         "dashPattern",
         "visibility",
-        "marginTop",
-        "marginBottom",
       ],
+    },
+    {
+      mode: "visual",
+      id: "divider.visual.spacing",
+      title: "Spacing around divider",
+      role: "layout",
+      writablePaths: ["marginTop", "marginBottom"],
+    },
+    {
+      mode: "advanced",
+      id: "divider.advanced.preview",
+      title: "Preview",
+      role: "summary",
+      writablePaths: [],
     },
     {
       mode: "advanced",
       id: "divider.advanced.computed-summary",
-      title: "Computed divider summary",
+      title: "Runtime divider summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [
@@ -134,6 +189,14 @@ export const dividerEditorContract: WidgetEditorContract = {
         "marginTop",
         "marginBottom",
       ],
+    },
+    {
+      mode: "advanced",
+      id: "divider.advanced.support-summary",
+      title: "Support summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["customWidth", "marginTop", "marginBottom", "visibility"],
     },
   ],
 };
@@ -203,10 +266,33 @@ export const dividerSpaceCssValueMap: Record<DividerSpaceToken, string> = {
   "24": "6rem",
 };
 
+export const dividerSpaceDisplayLabelMap: Record<DividerSpaceToken, string> = {
+  none: "No extra space",
+  "0": "No extra space",
+  "1": "Micro gap",
+  "2": "Tiny gap",
+  "3": "Extra small gap",
+  "4": "Small gap",
+  "5": "Small plus gap",
+  "6": "Compact gap",
+  "8": "Card gap",
+  "10": "Comfortable gap",
+  "12": "Standard gap",
+  "16": "Section gap",
+  "20": "Large section gap",
+  "24": "Hero gap",
+};
+
 export const dividerContainerWidthCssValueMap: Record<DividerContainerWidth, string> = {
   sm: "min(100%, 40rem)",
   md: "min(100%, 48rem)",
   lg: "min(100%, 64rem)",
+};
+
+export const dividerContainerWidthDisplayLabelMap: Record<DividerContainerWidth, string> = {
+  sm: "Narrow content width",
+  md: "Standard content width",
+  lg: "Wide content width",
 };
 
 export const dividerLabelGapClassMap: Record<DividerLabelGap, string> = {
@@ -348,6 +434,48 @@ const resolveDividerWidthKind = (
 
 export const resolveDividerSpaceCss = (value: string): string =>
   isDividerSpaceToken(value) ? dividerSpaceCssValueMap[value] : value;
+
+export function describeDividerSpace(value: string | undefined): string {
+  const normalized = value?.trim();
+  if (!normalized) return "Default spacing";
+  if (isDividerSpaceToken(normalized)) return dividerSpaceDisplayLabelMap[normalized];
+  return "Saved custom spacing";
+}
+
+export function describeDividerContainerWidth(value: string | undefined): string {
+  if (value === "sm" || value === "md" || value === "lg") {
+    return dividerContainerWidthDisplayLabelMap[value];
+  }
+  return dividerContainerWidthDisplayLabelMap.md;
+}
+
+export function describeDividerCustomWidth(value: string | undefined): string {
+  if (value === "240px") return "Small fixed width";
+  if (value === "320px") return "Default fixed width";
+  if (value === "480px") return "Medium fixed width";
+  if (value === "640px") return "Wide fixed width";
+  if (value === "75%") return "Three-quarter width";
+  return "Saved custom width";
+}
+
+export function describeDividerThickness(value: number | undefined): string {
+  const normalized = clampThickness(value);
+  if (normalized <= 1) return "Hairline";
+  if (normalized === 2) return "Thin";
+  if (normalized === 3) return "Regular";
+  if (normalized === 4) return "Strong";
+  if (normalized === 5) return "Bold";
+  if (normalized === 6) return "Heavy";
+  if (normalized === 7) return "Extra heavy";
+  return "Maximum weight";
+}
+
+export function describeDividerOpacity(value: string | undefined): string {
+  if (value === "25") return "Faint";
+  if (value === "50") return "Muted";
+  if (value === "75") return "Soft";
+  return "Solid";
+}
 
 function resolveDividerWidthCss(
   width: DividerWidthMode,

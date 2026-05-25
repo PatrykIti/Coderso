@@ -205,7 +205,8 @@ test("divider editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Divider style");
-  expect(wizardHtml).toContain("Line thickness");
+  expect(wizardHtml).toContain("Visual owns line weight, color, width, and spacing after setup.");
+  expect(wizardHtml).toContain('data-widget-control-path="variant"');
 
   const visualHtml = renderToString(
     <DividerVisualEditor
@@ -219,6 +220,8 @@ test("divider editors render expected sections", () => {
   expect(visualHtml).toContain("Line style and width");
   expect(visualHtml).toContain("Spacing around divider");
   expect(visualHtml).toContain("Live divider preview");
+  expect(visualHtml).toContain('data-widget-control-path="thickness"');
+  expect(visualHtml).toContain('data-widget-control-path="marginTop"');
 
   const advancedHtml = renderToString(
     <DividerAdvancedEditor
@@ -228,7 +231,12 @@ test("divider editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical divider tokens");
-  expect(advancedHtml).toContain("Normalization and safeguards");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("Runtime divider summary");
+  expect(advancedHtml).toContain("Support summary");
+  expect(advancedHtml).toContain('data-widget-editor-section="divider.advanced.computed-summary"');
+  expect(advancedHtml).toContain('data-widget-editor-section="divider.advanced.support-summary"');
+  expect(advancedHtml).toContain('data-widget-control-readonly="true"');
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain("Raw payload");
+  expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
 });

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 955 | 2026-05-25 | Divider editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
 | 954 | 2026-05-25 | Spacer editor drift cleanup | CMS Widgets/Admin UI/Layout/Contracts/QA/Docs |
 | 953 | 2026-05-25 | Accordion editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
 | 952 | 2026-05-25 | Tabs editor drift cleanup | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |

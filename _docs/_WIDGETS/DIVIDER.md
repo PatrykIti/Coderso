@@ -25,11 +25,10 @@ None.
 - live preview
 - divider style
 - optional center label
-- line thickness
-- line color
-- width mode plus preset width support
-- horizontal alignment for non-full widths
-- top and bottom spacing tokens
+
+Wizard is a one-time setup surface. It seeds the basic separator style and
+optional label only. Completed widgets use Visual for daily line, width, color,
+alignment, and spacing changes.
 
 ### Visual
 Sections:
@@ -43,19 +42,21 @@ Notes:
 - `label-center` adds label color, typography, letter-spacing, gap, and clear-label controls.
 - Line color uses a swatch-first control and spacing uses token presets; Visual
   does not expose raw CSS/token text entry for nontechnical authoring.
+- Width and spacing compatibility values remain supported, but normal Visual
+  authoring uses friendly width and rhythm labels instead of raw CSS lengths.
 
 ### Advanced
 Sections:
 1. `Preview`
-2. `Technical divider tokens`
-3. `Normalization and safeguards`
-4. `Raw payload snapshot`
+2. `Runtime divider summary`
+3. `Support summary`
 
 Notes:
 - Advanced is read-only diagnostics; variant, line, width, color, and spacing
   edits are Visual-owned.
-- Raw payload and normalization sections are for support/debugging, not daily
-  authoring.
+- Advanced shows human runtime/support summaries only. It does not render raw
+  JSON payload snapshots, hidden mutators, raw CSS/length text entry, or
+  writable line/width/spacing controls.
 
 ## Runtime Behavior Notes
 
@@ -126,3 +127,5 @@ Exposed markers:
   new editor authoring requires explicit CSS lengths.
 - Existing dashed variants keep their dashed baseline even when `lineStyle`
   was not previously persisted.
+- Saved custom width and spacing values remain compatible and can be replaced
+  through friendly Visual presets.

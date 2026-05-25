@@ -194,3 +194,9 @@ Regression-test shape:
   the raw payload snapshot, makes Advanced read-only runtime/support summaries,
   exposes truthful control metadata, and records strict Playwright evidence in
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.*`.
+- Supersession (2026-05-25): Divider was re-opened under `TASK-336-19` after a
+  fresh agent audit found hidden Advanced mutators, raw JSON diagnostics, stale
+  Advanced section names, and incomplete Wizard/Visual metadata. The
+  TASK-336-19 Divider slice narrows Wizard to one-time style/label setup,
+  moves daily line/width/color/spacing ownership to Visual, and makes Advanced
+  read-only runtime/support summaries without raw payload snapshots.

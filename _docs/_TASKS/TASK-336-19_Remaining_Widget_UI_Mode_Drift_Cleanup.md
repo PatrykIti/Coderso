@@ -772,6 +772,25 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `git diff --check`, `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.json`,
   `bun --cwd core lint`, `bun --cwd core lint:types`, and
   `bun run gates:coderso` pass for this slice.
+- In Progress (2026-05-25): Divider residual drift is superseded under this
+  task. Fresh helper-agent read-only review found that Advanced still exposed
+  hidden writable editor groups, raw JSON payload diagnostics, stale section
+  names, and incomplete Wizard/Visual control metadata. Divider Wizard is now
+  narrowed to one-time style/label setup, Visual owns daily line/width/color
+  and spacing controls, and Advanced renders read-only runtime/support
+  summaries without raw payload snapshots or hidden mutators. Beginner-facing
+  width, spacing, thickness, and opacity controls use friendly labels or
+  saved-custom compatibility state instead of raw CSS/token values. Targeted
+  Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-divider-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. `bun test tests/unit/playwright-widget-contract-smoke.test.ts`,
+  `git diff --check`,
+  `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-divider-advanced-readonly-2026-05-25.json`,
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso` pass for this slice.
 
 ## Files to Change
 
