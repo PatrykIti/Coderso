@@ -33,7 +33,7 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions = [
   { id: "columns-2", label: "Columns 2" },
@@ -128,6 +128,15 @@ const socialTypeOptions = footerSocialTypes.map((type) => ({
   label: resolveFooterSocialLabel(type),
 }));
 
+type FooterControlOwnership = "writable" | "readonly" | "action" | "preview";
+
+type FooterControlMetadata = {
+  id?: string;
+  path?: string;
+  ownership?: FooterControlOwnership;
+  readOnly?: boolean;
+};
+
 const emptySocialLink: FooterSocial = {
   type: "linkedin",
   href: "",
@@ -158,6 +167,30 @@ const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
   next.splice(toIndex, 0, item);
   return next;
 };
+
+const controlAttributes = ({ id, path, ownership, readOnly }: FooterControlMetadata) => {
+  const controlId = id ?? path;
+  if (!controlId) return {};
+  const resolvedReadOnly = readOnly === true || ownership === "readonly";
+  const resolvedOwnership =
+    ownership ?? (resolvedReadOnly ? "readonly" : path ? "writable" : undefined);
+  return {
+    "data-widget-control": controlId,
+    "data-widget-control-path": path,
+    "data-widget-control-ownership": resolvedOwnership,
+    "data-widget-control-readonly": resolvedReadOnly ? "true" : undefined,
+  } satisfies Record<string, string | undefined>;
+};
+
+const optionLabel = (options: Array<{ id: string; label: string }>, value: string | undefined) =>
+  options.find((option) => option.id === value)?.label ?? (value?.trim() || "Default");
+
+const colorDiagnostic = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "Theme default";
+};
+
+const actionAttributes = (id: string) => controlAttributes({ id, ownership: "action" });
 
 export const resolveEditableFooterColumns = (value: FooterData, variant: string) => {
   const visibleCount = resolveFooterColumnCount(variant);
@@ -489,13 +522,17 @@ function FieldLabel({
   label,
   description,
   children,
+  id,
+  path,
+  ownership,
+  readOnly,
 }: {
   label: string;
   description?: string;
   children: ReactNode;
-}) {
+} & FooterControlMetadata) {
   return (
-    <label className="space-y-1 text-sm">
+    <label className="space-y-1 text-sm" {...controlAttributes({ id, path, ownership, readOnly })}>
       <span className="font-medium text-foreground">{label}</span>
       {description ? (
         <span className="block text-xs text-muted-foreground">{description}</span>
@@ -511,15 +548,19 @@ function LabeledSelectField({
   value,
   onValueChange,
   options,
+  id,
+  path,
+  ownership,
+  readOnly,
 }: {
   label: string;
   description?: string;
   value: string;
   onValueChange: (next: string) => void;
   options: Array<{ id: string; label: string }>;
-}) {
+} & FooterControlMetadata) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" {...controlAttributes({ id, path, ownership, readOnly })}>
       <p className="text-sm font-medium">{label}</p>
       {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
       <Select value={value} onValueChange={onValueChange}>
@@ -543,14 +584,21 @@ function SwitchField({
   description,
   checked,
   onCheckedChange,
+  id,
+  path,
+  ownership,
+  readOnly,
 }: {
   label: string;
   description: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-}) {
+} & FooterControlMetadata) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border p-3">
+    <div
+      className="flex items-start justify-between gap-3 rounded-lg border p-3"
+      {...controlAttributes({ id, path, ownership, readOnly })}
+    >
       <div className="space-y-1">
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
@@ -563,9 +611,11 @@ function SwitchField({
 function BrandLogoField({
   value,
   onChange,
+  path = "brand.logoUrl",
 }: {
   value: FooterData;
   onChange: (next: FooterData) => void;
+  path?: string;
 }) {
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
@@ -594,7 +644,10 @@ function BrandLogoField({
   };
 
   return (
-    <div className="space-y-3 rounded-md border bg-muted/10 p-3">
+    <div
+      className="space-y-3 rounded-md border bg-muted/10 p-3"
+      {...controlAttributes({ id: "footer.brand.logoUrl", path })}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">Logo image</p>
@@ -655,6 +708,8 @@ function ColorField({
   placeholder,
   pickerFallback = "#111827",
   onClear,
+  id,
+  path,
 }: {
   label: string;
   value: string | undefined;
@@ -662,25 +717,30 @@ function ColorField({
   placeholder: string;
   pickerFallback?: string;
   onClear?: () => void;
-}) {
+} & FooterControlMetadata) {
   return (
-    <SharedColorControl
-      label={label}
-      value={value}
-      onChange={onChange}
-      onClear={onClear}
-      placeholder={placeholder}
-      pickerFallback={pickerFallback}
-    />
+    <div {...controlAttributes({ id, path })}>
+      <SharedColorControl
+        label={label}
+        value={value}
+        onChange={onChange}
+        onClear={onClear}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+        showValueInput={false}
+      />
+    </div>
   );
 }
 
 function FooterVariantSelect({
   value,
   onChange,
+  path = "variant",
 }: {
   value: string;
   onChange?: (next: string) => void;
+  path?: string;
 }) {
   return (
     <LabeledSelectField
@@ -688,6 +748,8 @@ function FooterVariantSelect({
       value={value}
       onValueChange={(next) => onChange?.(next)}
       options={variantOptions}
+      id="footer.variant"
+      path={path}
     />
   );
 }
@@ -701,14 +763,14 @@ function BrandEditor({
 }) {
   return (
     <div className="space-y-3">
-      <FieldLabel label="Brand name">
+      <FieldLabel label="Brand name" id="footer.brand.logoText" path="brand.logoText">
         <Input
           value={value.brand?.logoText ?? ""}
           onChange={(event) => updateFooterBrand(value, onChange, { logoText: event.target.value })}
           placeholder="Coderso"
         />
       </FieldLabel>
-      <FieldLabel label="Tagline">
+      <FieldLabel label="Tagline" id="footer.brand.tagline" path="brand.tagline">
         <Input
           value={value.brand?.tagline ?? ""}
           onChange={(event) => updateFooterBrand(value, onChange, { tagline: event.target.value })}
@@ -719,6 +781,8 @@ function BrandEditor({
       <FieldLabel
         label="Logo alt text"
         description="Used when the footer shows a logo image without visible brand copy."
+        id="footer.brand.logoAlt"
+        path="brand.logoAlt"
       >
         <Input
           value={value.brand?.logoAlt ?? ""}
@@ -749,9 +813,11 @@ function LegalEditor({
           description="Hide the legal row without deleting its current copyright or link data."
           checked={value.legal?.enabled !== false}
           onCheckedChange={(checked) => updateFooterLegal(value, onChange, { enabled: checked })}
+          id="footer.legal.enabled"
+          path="legal.enabled"
         />
       ) : null}
-      <FieldLabel label="Copyright">
+      <FieldLabel label="Copyright" id="footer.legal.copyright" path="legal.copyright">
         <Input
           value={value.legal?.copyright ?? ""}
           onChange={(event) =>
@@ -763,7 +829,11 @@ function LegalEditor({
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="space-y-3 rounded-lg border p-3">
           <p className="text-sm font-semibold">Privacy link</p>
-          <FieldLabel label="Privacy label">
+          <FieldLabel
+            label="Privacy label"
+            id="footer.legal.privacyLabel"
+            path="legal.privacyLabel"
+          >
             <Input
               value={value.legal?.privacyLabel ?? ""}
               onChange={(event) =>
@@ -772,14 +842,16 @@ function LegalEditor({
               placeholder="Privacy"
             />
           </FieldLabel>
-          <LinkDestinationField
-            fieldId="footer-legal-privacy"
-            label="Privacy destination"
-            value={value.legal?.privacy}
-            onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
-            emptyLabel="No privacy destination"
-            helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
-          />
+          <div {...controlAttributes({ id: "footer.legal.privacy", path: "legal.privacy" })}>
+            <LinkDestinationField
+              fieldId="footer-legal-privacy"
+              label="Privacy destination"
+              value={value.legal?.privacy}
+              onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
+              emptyLabel="No privacy destination"
+              helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
+            />
+          </div>
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -788,12 +860,14 @@ function LegalEditor({
                 updateFooterLegal(value, onChange, { privacyTarget: next as FooterLinkTarget })
               }
               options={linkTargetOptions}
+              id="footer.legal.privacyTarget"
+              path="legal.privacyTarget"
             />
           ) : null}
         </div>
         <div className="space-y-3 rounded-lg border p-3">
           <p className="text-sm font-semibold">Terms link</p>
-          <FieldLabel label="Terms label">
+          <FieldLabel label="Terms label" id="footer.legal.termsLabel" path="legal.termsLabel">
             <Input
               value={value.legal?.termsLabel ?? ""}
               onChange={(event) =>
@@ -802,14 +876,16 @@ function LegalEditor({
               placeholder="Terms"
             />
           </FieldLabel>
-          <LinkDestinationField
-            fieldId="footer-legal-terms"
-            label="Terms destination"
-            value={value.legal?.terms}
-            onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
-            emptyLabel="No terms destination"
-            helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
-          />
+          <div {...controlAttributes({ id: "footer.legal.terms", path: "legal.terms" })}>
+            <LinkDestinationField
+              fieldId="footer-legal-terms"
+              label="Terms destination"
+              value={value.legal?.terms}
+              onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
+              emptyLabel="No terms destination"
+              helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
+            />
+          </div>
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -818,6 +894,8 @@ function LegalEditor({
                 updateFooterLegal(value, onChange, { termsTarget: next as FooterLinkTarget })
               }
               options={linkTargetOptions}
+              id="footer.legal.termsTarget"
+              path="legal.termsTarget"
             />
           ) : null}
         </div>
@@ -857,7 +935,11 @@ function ColumnsQuickSetup({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Column {index + 1}
             </p>
-            <FieldLabel label={`Column ${index + 1} title`}>
+            <FieldLabel
+              label={`Column ${index + 1} title`}
+              id={`footer.wizard.columns.${index}.title`}
+              path={`columns.${index}.title`}
+            >
               <Input
                 value={column.title}
                 onChange={(event) =>
@@ -869,7 +951,11 @@ function ColumnsQuickSetup({
               />
             </FieldLabel>
             <div className="grid gap-2 sm:grid-cols-2">
-              <FieldLabel label={`Column ${index + 1} first link label`}>
+              <FieldLabel
+                label={`Column ${index + 1} first link label`}
+                id={`footer.wizard.columns.${index}.links.0.label`}
+                path={`columns.${index}.links.0.label`}
+              >
                 <Input
                   value={firstLink.label}
                   onChange={(event) =>
@@ -880,18 +966,25 @@ function ColumnsQuickSetup({
                   placeholder="First link label"
                 />
               </FieldLabel>
-              <LinkDestinationField
-                fieldId={`footer-wizard-column-${index + 1}-first-link`}
-                label={`Column ${index + 1} first link destination`}
-                value={firstLink.href}
-                onChange={(next) =>
-                  updateColumnLink(value, onChange, variant, index, 0, {
-                    href: next,
-                  })
-                }
-                emptyLabel="No destination"
-                helpText="Pick a page for this starter footer link. Saved custom destinations stay replace-or-clear compatible."
-              />
+              <div
+                {...controlAttributes({
+                  id: `footer.wizard.columns.${index}.links.0.href`,
+                  path: `columns.${index}.links.0.href`,
+                })}
+              >
+                <LinkDestinationField
+                  fieldId={`footer-wizard-column-${index + 1}-first-link`}
+                  label={`Column ${index + 1} first link destination`}
+                  value={firstLink.href}
+                  onChange={(next) =>
+                    updateColumnLink(value, onChange, variant, index, 0, {
+                      href: next,
+                    })
+                  }
+                  emptyLabel="No destination"
+                  helpText="Pick a page for this starter footer link. Saved custom destinations stay replace-or-clear compatible."
+                />
+              </div>
             </div>
             {hiddenLinkCount > 0 ? (
               <p className="text-xs text-muted-foreground">
@@ -992,6 +1085,7 @@ function SocialLinksEditor({
                   variant="outline"
                   onClick={() => moveSocial(index, -1)}
                   disabled={index === 0}
+                  {...actionAttributes(`footer.social.${index}.moveUp`)}
                 >
                   Move up
                 </Button>
@@ -1001,10 +1095,17 @@ function SocialLinksEditor({
                   variant="outline"
                   onClick={() => moveSocial(index, 1)}
                   disabled={index === visibleItems.length - 1}
+                  {...actionAttributes(`footer.social.${index}.moveDown`)}
                 >
                   Move down
                 </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => removeSocial(index)}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => removeSocial(index)}
+                  {...actionAttributes(`footer.social.${index}.remove`)}
+                >
                   Remove
                 </Button>
               </div>
@@ -1015,20 +1116,31 @@ function SocialLinksEditor({
                 value={selectedType}
                 onValueChange={(next) => updateSocialType(index, next)}
                 options={socialTypeOptions}
+                id={`footer.social.${index}.type`}
+                path={`social.${index}.type`}
               />
               {selectedType === "custom" ? (
-                <LinkDestinationField
-                  fieldId={`footer-social-${index + 1}-custom-destination`}
-                  label="Custom destination"
-                  value={item.href}
-                  onChange={(next) => updateSocial(index, { href: next })}
-                  emptyLabel="No custom destination"
-                  helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
-                />
+                <div
+                  {...controlAttributes({
+                    id: `footer.social.${index}.href`,
+                    path: `social.${index}.href`,
+                  })}
+                >
+                  <LinkDestinationField
+                    fieldId={`footer-social-${index + 1}-custom-destination`}
+                    label="Custom destination"
+                    value={item.href}
+                    onChange={(next) => updateSocial(index, { href: next })}
+                    emptyLabel="No custom destination"
+                    helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
+                  />
+                </div>
               ) : (
                 <FieldLabel
                   label="Profile name"
                   description="The editor builds the safe profile destination from this value."
+                  id={`footer.social.${index}.href`}
+                  path={`social.${index}.href`}
                 >
                   <Input
                     value={readFooterSocialProfile(selectedType, item.href)}
@@ -1055,13 +1167,18 @@ function SocialLinksEditor({
                   variant="outline"
                   size="sm"
                   onClick={() => updateSocial(index, { href: "" })}
+                  {...actionAttributes(`footer.social.${index}.clearSavedDestination`)}
                 >
                   Clear saved destination
                 </Button>
               </div>
             ) : null}
             {selectedType === "custom" ? (
-              <FieldLabel label="Accessible label">
+              <FieldLabel
+                label="Accessible label"
+                id={`footer.social.${index}.label`}
+                path={`social.${index}.label`}
+              >
                 <Input
                   value={item.label ?? resolveFooterSocialLabel(item.type, item.label)}
                   onChange={(event) =>
@@ -1080,6 +1197,7 @@ function SocialLinksEditor({
         variant="outline"
         onClick={addSocial}
         disabled={typeof limit === "number" && visibleItems.length >= limit}
+        {...actionAttributes("footer.social.add")}
       >
         Add social
       </Button>
@@ -1130,6 +1248,8 @@ export function FooterWizardEditor({
             description="Hide social icons without deleting the current platform entries."
             checked={value.socialEnabled !== false}
             onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
+            id="footer.socialEnabled"
+            path="socialEnabled"
           />
           <SocialLinksEditor value={value} onChange={onChange} limit={8} />
         </div>
@@ -1154,23 +1274,28 @@ export function FooterVisualEditor({
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Variant and structure</p>
+      <WidgetEditorSection
+        id="footer.visual.variant-structure"
+        mode="visual"
+        role="setup"
+        title="Variant and structure"
+        description="Choose the daily footer structure without changing existing content."
+      >
         <FooterVariantSelect value={variant} onChange={onVariantChange} />
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           Runtime columns: {visibleCount}. Footer Visual mode owns the variant selector. Minimal
           reuses the first column links as a compact inline row while preserving hidden columns and
           slots.
         </div>
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Columns and links</p>
-        <p className="text-xs text-muted-foreground">
-          Link order is editable here. Column moves are allowed only through the live block patch
-          path so the matching `column-1`, `column-2`, and `column-3` slot payloads move with the
-          visible columns.
-        </p>
+      <WidgetEditorSection
+        id="footer.visual.columns-links"
+        mode="visual"
+        role="content"
+        title="Columns and links"
+        description="Edit footer link groups. Column moves are live-only so matching slot payloads move with the visible columns."
+      >
         {!canMoveColumns ? (
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
             Column reorder is read-only in static previews because slot remapping requires the live
@@ -1197,6 +1322,7 @@ export function FooterVisualEditor({
                       moveFooterColumn(value, variant, columnIndex, columnIndex - 1, onBlockPatch)
                     }
                     disabled={!canMoveColumns || columnIndex === 0}
+                    {...actionAttributes(`footer.columns.${columnIndex}.moveLeft`)}
                   >
                     Move left
                   </Button>
@@ -1208,12 +1334,17 @@ export function FooterVisualEditor({
                       moveFooterColumn(value, variant, columnIndex, columnIndex + 1, onBlockPatch)
                     }
                     disabled={!canMoveColumns || columnIndex === visibleColumns.length - 1}
+                    {...actionAttributes(`footer.columns.${columnIndex}.moveRight`)}
                   >
                     Move right
                   </Button>
                 </div>
               </div>
-              <FieldLabel label="Column title">
+              <FieldLabel
+                label="Column title"
+                id={`footer.columns.${columnIndex}.title`}
+                path={`columns.${columnIndex}.title`}
+              >
                 <Input
                   value={column.title}
                   onChange={(event) =>
@@ -1241,6 +1372,9 @@ export function FooterVisualEditor({
                             moveColumnLink(value, onChange, variant, columnIndex, linkIndex, -1)
                           }
                           disabled={linkIndex === 0}
+                          {...actionAttributes(
+                            `footer.columns.${columnIndex}.links.${linkIndex}.moveUp`
+                          )}
                         >
                           Move up
                         </Button>
@@ -1252,6 +1386,9 @@ export function FooterVisualEditor({
                             moveColumnLink(value, onChange, variant, columnIndex, linkIndex, 1)
                           }
                           disabled={linkIndex === column.links.length - 1}
+                          {...actionAttributes(
+                            `footer.columns.${columnIndex}.links.${linkIndex}.moveDown`
+                          )}
                         >
                           Move down
                         </Button>
@@ -1262,13 +1399,20 @@ export function FooterVisualEditor({
                           onClick={() =>
                             removeColumnLink(value, onChange, variant, columnIndex, linkIndex)
                           }
+                          {...actionAttributes(
+                            `footer.columns.${columnIndex}.links.${linkIndex}.remove`
+                          )}
                         >
                           Remove
                         </Button>
                       </div>
                     </div>
                     <div className="grid gap-3 lg:grid-cols-2">
-                      <FieldLabel label="Link label">
+                      <FieldLabel
+                        label="Link label"
+                        id={`footer.columns.${columnIndex}.links.${linkIndex}.label`}
+                        path={`columns.${columnIndex}.links.${linkIndex}.label`}
+                      >
                         <Input
                           value={link.label}
                           onChange={(event) =>
@@ -1279,18 +1423,25 @@ export function FooterVisualEditor({
                           placeholder="About"
                         />
                       </FieldLabel>
-                      <LinkDestinationField
-                        fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
-                        label="Link destination"
-                        value={link.href}
-                        onChange={(next) =>
-                          updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
-                            href: next,
-                          })
-                        }
-                        emptyLabel="No destination"
-                        helpText="Pick a page for this footer link. Saved custom destinations stay replace-or-clear compatible."
-                      />
+                      <div
+                        {...controlAttributes({
+                          id: `footer.columns.${columnIndex}.links.${linkIndex}.href`,
+                          path: `columns.${columnIndex}.links.${linkIndex}.href`,
+                        })}
+                      >
+                        <LinkDestinationField
+                          fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
+                          label="Link destination"
+                          value={link.href}
+                          onChange={(next) =>
+                            updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
+                              href: next,
+                            })
+                          }
+                          emptyLabel="No destination"
+                          helpText="Pick a page for this footer link. Saved custom destinations stay replace-or-clear compatible."
+                        />
+                      </div>
                     </div>
                     <LabeledSelectField
                       label="Link target"
@@ -1301,6 +1452,8 @@ export function FooterVisualEditor({
                         })
                       }
                       options={linkTargetOptions}
+                      id={`footer.columns.${columnIndex}.links.${linkIndex}.target`}
+                      path={`columns.${columnIndex}.links.${linkIndex}.target`}
                     />
                   </div>
                 ))}
@@ -1309,6 +1462,7 @@ export function FooterVisualEditor({
                   size="sm"
                   variant="outline"
                   onClick={() => addColumnLink(value, onChange, variant, columnIndex)}
+                  {...actionAttributes(`footer.columns.${columnIndex}.links.add`)}
                 >
                   Add link
                 </Button>
@@ -1316,31 +1470,32 @@ export function FooterVisualEditor({
             </div>
           ))}
         </div>
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Brand and legal</p>
-        <p className="text-xs text-muted-foreground">
-          Brand text names the footer landmark when present. Privacy and Terms labels stay
-          configurable for localization.
-        </p>
+      <WidgetEditorSection
+        id="footer.visual.brand-legal"
+        mode="visual"
+        role="content"
+        title="Brand and legal"
+        description="Brand text names the footer landmark when present. Privacy and Terms labels stay configurable for localization."
+      >
         <BrandEditor value={value} onChange={onChange} />
         <LegalEditor value={value} onChange={onChange} showTargets showVisibilityToggle />
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Utility strip</p>
-        <p className="text-xs text-muted-foreground">
-          Newsletter stays composition-only: place the existing Newsletter widget into a footer slot
-          instead of storing submission config in Footer JSON. Address/contact fields below are
-          read-only, and back-to-top stays an anchor-only action.
-        </p>
+      <WidgetEditorSection
+        id="footer.visual.utility-strip"
+        mode="visual"
+        role="content"
+        title="Utility strip"
+        description="Newsletter stays composition-only: place it through slots. Footer only owns bounded contact display and an anchor-only back-to-top action."
+      >
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
           Recommended newsletter placement: `bottom` for a dedicated lower strip, or one of the
           visible column slots when the page needs it inline with footer links.
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
-          <FieldLabel label="Address">
+          <FieldLabel label="Address" id="footer.contact.address" path="contact.address">
             <Input
               value={value.contact?.address ?? ""}
               onChange={(event) =>
@@ -1349,7 +1504,7 @@ export function FooterVisualEditor({
               placeholder="123 Market Street, San Francisco, CA"
             />
           </FieldLabel>
-          <FieldLabel label="Phone">
+          <FieldLabel label="Phone" id="footer.contact.phone" path="contact.phone">
             <Input
               value={value.contact?.phone ?? ""}
               onChange={(event) =>
@@ -1358,7 +1513,7 @@ export function FooterVisualEditor({
               placeholder="+1 415 555 0100"
             />
           </FieldLabel>
-          <FieldLabel label="Email">
+          <FieldLabel label="Email" id="footer.contact.email" path="contact.email">
             <Input
               value={value.contact?.email ?? ""}
               onChange={(event) =>
@@ -1375,8 +1530,10 @@ export function FooterVisualEditor({
           onCheckedChange={(checked) =>
             updateFooterBackToTop(value, onChange, { enabled: checked })
           }
+          id="footer.backToTop.enabled"
+          path="backToTop.enabled"
         />
-        <FieldLabel label="Back-to-top label">
+        <FieldLabel label="Back-to-top label" id="footer.backToTop.label" path="backToTop.label">
           <Input
             value={value.backToTop?.label ?? ""}
             onChange={(event) =>
@@ -1385,21 +1542,33 @@ export function FooterVisualEditor({
             placeholder="Back to top"
           />
         </FieldLabel>
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Social links and icon style</p>
+      <WidgetEditorSection
+        id="footer.visual.social-links"
+        mode="visual"
+        role="content"
+        title="Social links and icon style"
+        description="Manage footer social visibility and profile destinations with platform-aware fields."
+      >
         <SwitchField
           label="Show social links"
           description="Hide social icons without deleting the current platform entries."
           checked={value.socialEnabled !== false}
           onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
+          id="footer.visual.socialEnabled"
+          path="socialEnabled"
         />
         <SocialLinksEditor value={value} onChange={onChange} />
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Colors and borders</p>
+      <WidgetEditorSection
+        id="footer.visual.colors-borders"
+        mode="visual"
+        role="visual"
+        title="Colors and borders"
+        description="Use swatches for normal color authoring. Saved custom tokens can be replaced or cleared."
+      >
         <div className="grid gap-3 lg:grid-cols-2">
           <ColorField
             label="Surface color"
@@ -1408,6 +1577,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "surfaceColor")}
             placeholder="var(--color-bg)"
             pickerFallback="#ffffff"
+            id="footer.style.surfaceColor"
+            path="style.surfaceColor"
           />
           <ColorField
             label="Border color"
@@ -1416,6 +1587,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "borderColor")}
             placeholder="var(--color-border)"
             pickerFallback="#e2e8f0"
+            id="footer.style.borderColor"
+            path="style.borderColor"
           />
           <ColorField
             label="Text color"
@@ -1424,6 +1597,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "textColor")}
             placeholder="var(--color-text)"
             pickerFallback="#111827"
+            id="footer.style.textColor"
+            path="style.textColor"
           />
           <ColorField
             label="Heading color"
@@ -1432,6 +1607,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "headingColor")}
             placeholder="var(--color-text)"
             pickerFallback="#111827"
+            id="footer.style.headingColor"
+            path="style.headingColor"
           />
           <ColorField
             label="Link color"
@@ -1440,6 +1617,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "linkColor")}
             placeholder="var(--color-text)"
             pickerFallback="#2563eb"
+            id="footer.style.linkColor"
+            path="style.linkColor"
           />
           <ColorField
             label="Legal text color"
@@ -1448,6 +1627,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "legalTextColor")}
             placeholder="var(--color-text)"
             pickerFallback="#6b7280"
+            id="footer.style.legalTextColor"
+            path="style.legalTextColor"
           />
           <ColorField
             label="Social icon color"
@@ -1456,6 +1637,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "socialColor")}
             placeholder="var(--color-text)"
             pickerFallback="#111827"
+            id="footer.style.socialColor"
+            path="style.socialColor"
           />
         </div>
         <LabeledSelectField
@@ -1467,15 +1650,18 @@ export function FooterVisualEditor({
             })
           }
           options={borderTopWidthOptions}
+          id="footer.style.borderTopWidth"
+          path="style.borderTopWidth"
         />
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Typography and link styling</p>
-        <p className="text-xs text-muted-foreground">
-          Footer link hover, active, underline, and typography controls live here. Container spacing
-          and alignment stay in Advanced.
-        </p>
+      <WidgetEditorSection
+        id="footer.visual.typography-links"
+        mode="visual"
+        role="visual"
+        title="Typography and link styling"
+        description="Footer link hover, active, underline, and typography controls live here."
+      >
         <div className="grid gap-3 lg:grid-cols-2">
           <LabeledSelectField
             label="Font size"
@@ -1486,6 +1672,8 @@ export function FooterVisualEditor({
               })
             }
             options={fontSizeOptions}
+            id="footer.style.fontSize"
+            path="style.fontSize"
           />
           <LabeledSelectField
             label="Heading transform"
@@ -1496,6 +1684,8 @@ export function FooterVisualEditor({
               })
             }
             options={headingTransformOptions}
+            id="footer.style.headingTransform"
+            path="style.headingTransform"
           />
           <LabeledSelectField
             label="Link font weight"
@@ -1506,6 +1696,8 @@ export function FooterVisualEditor({
               })
             }
             options={linkFontWeightOptions}
+            id="footer.style.linkFontWeight"
+            path="style.linkFontWeight"
           />
           <LabeledSelectField
             label="Link letter spacing"
@@ -1516,6 +1708,8 @@ export function FooterVisualEditor({
               })
             }
             options={linkLetterSpacingOptions}
+            id="footer.style.linkLetterSpacing"
+            path="style.linkLetterSpacing"
           />
           <LabeledSelectField
             label="Link underline"
@@ -1526,6 +1720,8 @@ export function FooterVisualEditor({
               })
             }
             options={linkUnderlineOptions}
+            id="footer.style.linkUnderline"
+            path="style.linkUnderline"
           />
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -1536,6 +1732,8 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "linkHoverColor")}
             placeholder="var(--color-primary)"
             pickerFallback="#2563eb"
+            id="footer.style.linkHoverColor"
+            path="style.linkHoverColor"
           />
           <ColorField
             label="Link active color"
@@ -1544,64 +1742,19 @@ export function FooterVisualEditor({
             onClear={() => clearFooterStyle(value, onChange, "linkActiveColor")}
             placeholder="var(--color-primary)"
             pickerFallback="#1d4ed8"
+            id="footer.style.linkActiveColor"
+            path="style.linkActiveColor"
           />
         </div>
-      </div>
-
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Slots overview and insertion hints</p>
-        <ul className="space-y-1 text-xs text-muted-foreground">
-          <li>
-            `column-1`, `column-2`, and `column-3` render inside the visible footer columns and move
-            with those columns when reorder happens in the live editor.
-          </li>
-          <li>
-            `bottom` renders in the lower legal/actions strip, or below the compact row in Minimal.
-          </li>
-          <li>Compose newsletter widgets through slots; Footer does not own submission routes.</li>
-          <li>Use the Insert dialog on canvas to place widgets into those slots.</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<FooterData>) {
-  return (
-    <div className="space-y-5">
-      <WidgetEditorSection
-        id="footer.advanced.runtime-summary"
-        mode="advanced"
-        role="diagnostics"
-        title="Runtime summary"
-        description="Read-only footer structure and slot ownership overview."
-      >
-        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <div>
-            <dt className="font-medium text-foreground">Columns</dt>
-            <dd>{value.columns?.length ?? 0}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Social links</dt>
-            <dd>{value.social?.length ?? 0}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Legal row</dt>
-            <dd>{value.legal?.enabled === false ? "Hidden" : "Visible"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Back to top</dt>
-            <dd>{value.backToTop?.enabled ? "Enabled" : "Disabled"}</dd>
-          </div>
-        </dl>
       </WidgetEditorSection>
 
-      <div className="space-y-3 rounded-xl border p-4">
-        <p className="text-sm font-semibold">Layout tokens</p>
-        <p className="text-xs text-muted-foreground">
-          Technical layout controls stay in Advanced. Footer keeps one control per line here so
-          every token is labeled explicitly.
-        </p>
+      <WidgetEditorSection
+        id="footer.visual.layout-spacing"
+        mode="visual"
+        role="layout"
+        title="Layout and spacing"
+        description="Daily footer alignment, width, column gap, breakpoint, and padding controls."
+      >
         <div className="space-y-3">
           <LabeledSelectField
             label="Columns alignment"
@@ -1613,10 +1766,12 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={alignOptions}
+            id="footer.layout.align"
+            path="layout.align"
           />
           <LabeledSelectField
             label="Legal row alignment"
-            description="Controls where the lower copyright, legal links, and social actions sit."
+            description="Controls where copyright, legal links, and social actions sit."
             value={value.layout?.legalAlign ?? "right"}
             onValueChange={(next) =>
               updateFooterLayout(value, onChange, {
@@ -1624,6 +1779,8 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={alignOptions}
+            id="footer.layout.legalAlign"
+            path="layout.legalAlign"
           />
           <LabeledSelectField
             label="Max width"
@@ -1634,6 +1791,8 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={maxWidthOptions}
+            id="footer.layout.maxWidth"
+            path="layout.maxWidth"
           />
           <LabeledSelectField
             label="Column gap"
@@ -1644,6 +1803,8 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={columnGapOptions}
+            id="footer.layout.columnGap"
+            path="layout.columnGap"
           />
           <LabeledSelectField
             label="Horizontal padding"
@@ -1654,6 +1815,8 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={paddingXOptions}
+            id="footer.layout.paddingX"
+            path="layout.paddingX"
           />
           <LabeledSelectField
             label="Column breakpoint"
@@ -1665,6 +1828,8 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={columnBreakpointOptions}
+            id="footer.layout.columnBreakpoint"
+            path="layout.columnBreakpoint"
           />
           <LabeledSelectField
             label="Section padding"
@@ -1675,14 +1840,251 @@ export function FooterAdvancedEditor({ value, onChange }: WidgetEditorProps<Foot
               })
             }
             options={sectionPaddingOptions}
+            id="footer.layout.sectionPaddingY"
+            path="layout.sectionPaddingY"
           />
         </div>
-      </div>
+      </WidgetEditorSection>
 
-      <div className="space-y-2 rounded-xl border p-4 text-xs text-muted-foreground">
-        Visibility, container tokens, block-level spacing, and background overrides are controlled
-        in the global Advanced panel above this editor.
-      </div>
+      <WidgetEditorSection
+        id="footer.visual.slots-overview"
+        mode="visual"
+        role="summary"
+        title="Slots overview and insertion hints"
+        description="Read-only placement guidance for footer nested widgets."
+      >
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          <li>
+            `column-1`, `column-2`, and `column-3` render inside the visible footer columns and move
+            with those columns when reorder happens in the live editor.
+          </li>
+          <li>
+            `bottom` renders in the lower legal/actions strip, or below the compact row in Minimal.
+          </li>
+          <li>Compose newsletter widgets through slots; Footer does not own submission routes.</li>
+          <li>Use the Insert dialog on canvas to place widgets into those slots.</li>
+        </ul>
+      </WidgetEditorSection>
+    </div>
+  );
+}
+
+export function FooterAdvancedEditor({ value, variant }: WidgetEditorProps<FooterData>) {
+  return (
+    <div className="space-y-5">
+      <WidgetEditorSection
+        id="footer.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Runtime summary"
+        description="Read-only footer structure and slot ownership overview."
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.variant"
+            label="Variant"
+            path="variant"
+            value={optionLabel(variantOptions, variant)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.columns"
+            label="Columns"
+            path="columns"
+            value={`${value.columns?.length ?? 0} stored columns`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.social"
+            label="Social links"
+            path="social"
+            value={`${value.social?.length ?? 0} links`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.legal"
+            label="Legal row"
+            path="legal"
+            value={value.legal?.enabled === false ? "Hidden" : "Visible"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.backToTop"
+            label="Back to top"
+            path="backToTop"
+            value={value.backToTop?.enabled ? "Enabled" : "Disabled"}
+          />
+        </div>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="footer.advanced.layout-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Layout diagnostics"
+        description="Read-only layout values. Change these in Visual under Layout and spacing."
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.align"
+            label="Columns alignment"
+            path="layout.align"
+            value={optionLabel(alignOptions, value.layout?.align ?? "left")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.legalAlign"
+            label="Legal row alignment"
+            path="layout.legalAlign"
+            value={optionLabel(alignOptions, value.layout?.legalAlign ?? "right")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.maxWidth"
+            label="Max width"
+            path="layout.maxWidth"
+            value={optionLabel(maxWidthOptions, value.layout?.maxWidth ?? "6xl")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.columnGap"
+            label="Column gap"
+            path="layout.columnGap"
+            value={optionLabel(columnGapOptions, value.layout?.columnGap ?? "6")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.paddingX"
+            label="Horizontal padding"
+            path="layout.paddingX"
+            value={optionLabel(paddingXOptions, value.layout?.paddingX ?? "6")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.columnBreakpoint"
+            label="Column breakpoint"
+            path="layout.columnBreakpoint"
+            value={optionLabel(columnBreakpointOptions, value.layout?.columnBreakpoint ?? "md")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.layout.sectionPaddingY"
+            label="Section padding"
+            path="layout.sectionPaddingY"
+            value={optionLabel(sectionPaddingOptions, value.layout?.sectionPaddingY ?? "10")}
+          />
+        </div>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="footer.advanced.style-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Style diagnostics"
+        description="Read-only style values. Change these in Visual under Colors, borders, and Typography."
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.surfaceColor"
+            label="Surface color"
+            path="style.surfaceColor"
+            value={colorDiagnostic(value.style?.surfaceColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.borderColor"
+            label="Border color"
+            path="style.borderColor"
+            value={colorDiagnostic(value.style?.borderColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.textColor"
+            label="Text color"
+            path="style.textColor"
+            value={colorDiagnostic(value.style?.textColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.headingColor"
+            label="Heading color"
+            path="style.headingColor"
+            value={colorDiagnostic(value.style?.headingColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkColor"
+            label="Link color"
+            path="style.linkColor"
+            value={colorDiagnostic(value.style?.linkColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.legalTextColor"
+            label="Legal text color"
+            path="style.legalTextColor"
+            value={colorDiagnostic(value.style?.legalTextColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.socialColor"
+            label="Social icon color"
+            path="style.socialColor"
+            value={colorDiagnostic(value.style?.socialColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.borderTopWidth"
+            label="Top border width"
+            path="style.borderTopWidth"
+            value={optionLabel(borderTopWidthOptions, value.style?.borderTopWidth ?? "1")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.fontSize"
+            label="Font size"
+            path="style.fontSize"
+            value={optionLabel(fontSizeOptions, value.style?.fontSize ?? "sm")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.headingTransform"
+            label="Heading transform"
+            path="style.headingTransform"
+            value={optionLabel(
+              headingTransformOptions,
+              value.style?.headingTransform ?? "uppercase"
+            )}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkUnderline"
+            label="Link underline"
+            path="style.linkUnderline"
+            value={optionLabel(linkUnderlineOptions, value.style?.linkUnderline ?? "hover")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkFontWeight"
+            label="Link font weight"
+            path="style.linkFontWeight"
+            value={optionLabel(linkFontWeightOptions, value.style?.linkFontWeight ?? "normal")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkLetterSpacing"
+            label="Link letter spacing"
+            path="style.linkLetterSpacing"
+            value={optionLabel(
+              linkLetterSpacingOptions,
+              value.style?.linkLetterSpacing ?? "normal"
+            )}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkHoverColor"
+            label="Link hover color"
+            path="style.linkHoverColor"
+            value={colorDiagnostic(value.style?.linkHoverColor)}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="footer.advanced.style.linkActiveColor"
+            label="Link active color"
+            path="style.linkActiveColor"
+            value={colorDiagnostic(value.style?.linkActiveColor)}
+          />
+        </div>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="footer.advanced.support-summary"
+        mode="advanced"
+        role="summary"
+        title="Support summary"
+        description="No Footer-specific support mutation is available here."
+      >
+        <p className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Visibility, container tokens, block-level spacing, and background overrides are handled by
+          shared block controls. Footer-specific content, layout, and style changes stay in Visual.
+        </p>
+      </WidgetEditorSection>
     </div>
   );
 }

@@ -514,6 +514,32 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and only requested doc/test tightening; a fresh helper-agent audit found the
   current metadata drift, stale `source.contentType` path, and stale Wizard
   lifecycle docs, all fixed before final validation.
+- In Progress (2026-05-25): twenty-seventh implementation family returns to
+  Footer to close the remaining Advanced/layout and color-authoring drift.
+  Footer-specific layout controls (`layout.align`, `layout.legalAlign`,
+  `layout.maxWidth`, `layout.columnGap`, `layout.paddingX`,
+  `layout.columnBreakpoint`, and `layout.sectionPaddingY`) now live in Visual
+  `Layout and spacing`, while Advanced renders read-only runtime, layout,
+  style, and support diagnostics only. Footer Visual color fields now use
+  swatch-only controls with clear actions instead of raw CSS/token text inputs;
+  saved legacy custom values remain replace-or-clear compatible, and fresh
+  defaults no longer seed CSS variable surface/border colors. Footer Visual
+  sections now emit explicit `WidgetEditorSection` metadata, and visible
+  controls/actions emit ownership metadata so Playwright no longer relies on
+  an empty-path smoke. The temporary Wizard/Visual duplicate allowances now
+  point at `TASK-336-19` instead of the closed `TASK-336-16`; this records that
+  the overlap is a setup-only compatibility allowance until the shared contract
+  gains first-class setup-only duplicate semantics. Claude and a fresh
+  helper-agent audit both identified writable
+  Advanced layout controls as the high-priority blocker; the current slice
+  accepts that finding and rejects keeping layout in Advanced because it
+  duplicates the Visual daily-editing contract. Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-visual-advanced-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0` after clearing the stale Vite optimized dependency cache and
+  restarting `coderso-dev-core-host`.
 
 ## Files to Change
 

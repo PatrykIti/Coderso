@@ -361,8 +361,6 @@ export const footerDefaults: FooterData = {
     paddingX: "6",
   },
   style: {
-    surfaceColor: "var(--color-bg)",
-    borderColor: "var(--color-border)",
     borderTopWidth: "1",
     fontSize: "sm",
     headingTransform: "uppercase",
@@ -375,33 +373,39 @@ export const footerDefaults: FooterData = {
 const footerWizardVisualDuplicateAllowances = [
   {
     path: "variant",
-    reason: "Wizard seeds the footer layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time footer setup; TASK-336-19 keeps this explicit until setup-only duplicate semantics replace temporary allowances.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "columns",
-    reason: "Wizard seeds starter link groups; Visual remains the daily footer owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time starter link groups; Visual remains the daily footer owner after setup completion.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "brand",
-    reason: "Wizard seeds brand basics; Visual remains the daily footer owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time brand basics; Visual remains the daily footer owner after setup completion.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "legal",
-    reason: "Wizard seeds legal basics; Visual remains the daily footer owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time legal basics; Visual remains the daily footer owner after setup completion.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "socialEnabled",
-    reason: "Wizard seeds social visibility; Visual remains the daily footer owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time social visibility; Visual remains the daily footer owner after setup completion.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "social",
-    reason: "Wizard seeds social links; Visual remains the daily footer owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds one-time social links; Visual remains the daily footer owner after setup completion.",
+    expiresWithTask: "TASK-336-19",
   },
 ] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
 
@@ -418,26 +422,79 @@ export const footerEditorContract: WidgetEditorContract = {
     },
     {
       mode: "visual",
-      id: "footer.visual.content-links",
-      title: "Content and links",
-      role: "content",
-      writablePaths: [
-        "variant",
-        "columns",
-        "brand",
-        "legal",
-        "contact",
-        "backToTop",
-        "socialEnabled",
-        "social",
-      ],
+      id: "footer.visual.variant-structure",
+      title: "Variant and structure",
+      role: "setup",
+      writablePaths: ["variant"],
       allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
-      id: "footer.visual.presentation",
-      title: "Presentation",
+      id: "footer.visual.columns-links",
+      title: "Columns and links",
+      role: "content",
+      writablePaths: ["columns"],
+      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.brand-legal",
+      title: "Brand and legal",
+      role: "content",
+      writablePaths: ["brand", "legal"],
+      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.utility-strip",
+      title: "Utility strip",
+      role: "content",
+      writablePaths: ["contact", "backToTop"],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.social-links",
+      title: "Social links and icon style",
+      role: "content",
+      writablePaths: ["socialEnabled", "social"],
+      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.colors-borders",
+      title: "Colors and borders",
       role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.headingColor",
+        "style.linkColor",
+        "style.legalTextColor",
+        "style.socialColor",
+        "style.borderTopWidth",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.typography-links",
+      title: "Typography and link styling",
+      role: "visual",
+      writablePaths: [
+        "style.fontSize",
+        "style.headingTransform",
+        "style.linkUnderline",
+        "style.linkFontWeight",
+        "style.linkLetterSpacing",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.layout-spacing",
+      title: "Layout and spacing",
+      role: "layout",
       writablePaths: [
         "layout.align",
         "layout.legalAlign",
@@ -446,15 +503,15 @@ export const footerEditorContract: WidgetEditorContract = {
         "layout.columnBreakpoint",
         "layout.sectionPaddingY",
         "layout.paddingX",
-        "style.surfaceColor",
-        "style.borderColor",
-        "style.borderTopWidth",
-        "style.fontSize",
-        "style.headingTransform",
-        "style.linkUnderline",
-        "style.linkFontWeight",
-        "style.linkLetterSpacing",
       ],
+    },
+    {
+      mode: "visual",
+      id: "footer.visual.slots-overview",
+      title: "Slots overview and insertion hints",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["slots"],
     },
     {
       mode: "advanced",
@@ -462,7 +519,55 @@ export const footerEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["variant", "columns", "layout", "style", "slots"],
+      readOnlyPaths: ["variant", "columns", "legal", "social", "backToTop"],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.layout-diagnostics",
+      title: "Layout diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "layout.align",
+        "layout.legalAlign",
+        "layout.maxWidth",
+        "layout.columnGap",
+        "layout.columnBreakpoint",
+        "layout.sectionPaddingY",
+        "layout.paddingX",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.style-diagnostics",
+      title: "Style diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.headingColor",
+        "style.linkColor",
+        "style.legalTextColor",
+        "style.socialColor",
+        "style.borderTopWidth",
+        "style.fontSize",
+        "style.headingTransform",
+        "style.linkUnderline",
+        "style.linkFontWeight",
+        "style.linkLetterSpacing",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "footer.advanced.support-summary",
+      title: "Support summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["slots"],
     },
   ],
 };
@@ -624,13 +729,18 @@ const normalizeFooterImageSrc = (value: unknown) =>
     allowHttp: true,
   });
 
-const normalizeFooterInteractiveColor = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
+const normalizeFooterRenderColor = (value: unknown) => {
+  const trimmed = resolveClearableStyleValue(value);
+  if (!trimmed) return undefined;
   if (/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(trimmed)) return trimmed;
   if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(trimmed)) return trimmed;
+  if (/^(?:rgb|hsl)a?\([\d\s,./%+-]+\)$/i.test(trimmed)) return trimmed;
+  if (/^(?:transparent|currentColor|inherit)$/i.test(trimmed)) return trimmed;
+  if (/^[a-zA-Z]+$/.test(trimmed)) return trimmed;
   return undefined;
 };
+
+const normalizeFooterInteractiveColor = normalizeFooterRenderColor;
 
 const normalizeFooterTarget = (value: unknown): FooterLinkTarget | undefined =>
   value === "_blank" || value === "_self" ? value : undefined;
@@ -1020,37 +1130,41 @@ export function FooterBlock({
   const firstColumnSlotBlocks = slots?.[footerColumnSlotIds[0]] ?? [];
   const showLegalContent =
     legal.enabled && Boolean(legal.copyright || legal.privacy || legal.terms);
-  const footerBorderColor = resolveClearableStyleValue(style.borderColor) ?? "var(--color-border)";
+  const footerTextColor = normalizeFooterRenderColor(style.textColor) ?? "var(--color-text)";
+  const footerBorderColor = normalizeFooterRenderColor(style.borderColor) ?? "var(--color-border)";
   const outerStyle: CSSProperties =
     compactStyle({
       backgroundColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.surfaceColor)
-        : resolveClearableStyleValue(style.surfaceColor),
+        ? normalizeFooterRenderColor(data.style?.surfaceColor)
+        : normalizeFooterRenderColor(style.surfaceColor),
       borderColor: footerBorderColor,
       borderTopWidth: borderWidthValueMap[style.borderTopWidth ?? "1"] ?? "1px",
-      color: style.textColor ?? "var(--color-text)",
+      color: footerTextColor,
     }) ?? {};
   const headingStyle =
     compactStyle({
-      color: style.headingColor ?? style.textColor ?? "var(--color-text)",
+      color: normalizeFooterRenderColor(style.headingColor) ?? footerTextColor,
     }) ?? {};
   const brandMetaStyle =
     compactStyle({
-      color: style.legalTextColor ?? style.textColor ?? "var(--color-text)",
+      color: normalizeFooterRenderColor(style.legalTextColor) ?? footerTextColor,
     }) ?? {};
   const legalStyle =
     compactStyle({
-      color: style.legalTextColor ?? style.textColor ?? "var(--color-text)",
+      color: normalizeFooterRenderColor(style.legalTextColor) ?? footerTextColor,
     }) ?? {};
   const socialStyle =
     compactStyle({
-      color: style.socialColor ?? style.linkColor ?? style.textColor ?? "var(--color-text)",
+      color:
+        normalizeFooterRenderColor(style.socialColor) ??
+        normalizeFooterRenderColor(style.linkColor) ??
+        footerTextColor,
     }) ?? {};
   const hoverColor = normalizeFooterInteractiveColor(style.linkHoverColor);
   const activeColor = normalizeFooterInteractiveColor(style.linkActiveColor);
   const linkStyle =
     compactStyle({
-      color: style.linkColor ?? style.textColor ?? "var(--color-text)",
+      color: normalizeFooterRenderColor(style.linkColor) ?? footerTextColor,
       "--footer-link-hover-color": hoverColor,
       "--footer-link-active-color": activeColor,
     } as FooterCssVars) ?? {};

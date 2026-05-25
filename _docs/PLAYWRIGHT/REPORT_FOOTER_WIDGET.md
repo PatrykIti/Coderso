@@ -1,6 +1,7 @@
 # Footer Widget — Raport UX/UI
 
-> **Status:** Zamkniete po implementacji `TASK-268` i walidacji z 2026-05-18
+> **Status:** Zamkniete po implementacji `TASK-268`; kontrakt trybow
+> doprecyzowany w `TASK-336-19` 2026-05-25
 > **Data pierwotnego audytu:** 2026-05-16
 > **Zakres pierwotnego audytu:** Widget `footer` — analiza statyczna kodu +
 > testy manualne w panelu admina i na froncie
@@ -20,14 +21,19 @@
   grid.
 - Legal/social visibility is non-destructive and empty wrappers are omitted.
 - Footer Visual/Advanced controls are labeled, `sectionPaddingY` has one owner,
-  link reorder is supported, and Footer now uses the landed shared clear/reset
-  + color-picker implementation.
+  link reorder is supported, and Footer now uses swatch-only clear/reset +
+  color-picker implementation for normal color authoring.
 - Footer column reorder now moves visible column data together with the matching
   `column-1/2/3` slot payloads through the live block patch path.
 - Footer newsletter stays composition-only, while address/contact and
   back-to-top are shipped as bounded utility behavior.
 - Footer now exposes bounded layout, typography, hover, underline, and target
-  controls without arbitrary CSS/class injection.
+  controls in Visual without arbitrary CSS/class injection.
+- `TASK-336-19` moved Footer-specific layout editing out of Advanced. Advanced
+  now contains read-only runtime, layout, style, and support summaries only.
+- Footer Visual controls and action buttons now emit ownership metadata, so
+  smoke evidence can distinguish persisted writes from reorder/add/remove
+  actions.
 
 ## 0.1 Closure Matrix
 
@@ -39,14 +45,14 @@
 | 73-80, 192, 429-432 | Legal labels were hardcoded and Footer had no brand/logo/tagline area | `fixed` | `TASK-268-02` | `FooterLegal` now owns `privacyLabel` / `termsLabel`, `FooterBrand` landed, and docs/test coverage moved with it in [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1), [FooterEditors.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/admin/ui/widgets/editors/FooterEditors.tsx:1), [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1), and [FOOTER.md](/Users/pciechanski/Documents/_moje_projekty/Coderso/_docs/_WIDGETS/FOOTER.md:1). |
 | 86, 194-206, 218-219, 317-320, 384-385, 445 | Footer landmark had weak semantics and column titles were not headings | `fixed` | `TASK-268-02` | `<footer>` now uses `aria-labelledby` or `aria-label="Site footer"`, column titles render as `<h3>`, and the tests assert those semantics. |
 | 155-163, 197, 301-305, 411 | `minimal` rendered as one normal column and legal/social strips always showed | `fixed` | `TASK-268-03` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) now renders a compact minimal row, `legal.enabled` / `socialEnabled` landed, and [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1) covers hidden strip behavior. |
-| 112-116, 176-180, 182, 264, 267-270, 332-333, 401-402 | Footer editor labels were inconsistent; `sectionPaddingY` was duplicated; Footer had not adopted shared clear/reset/color-picker patterns | `fixed` | `TASK-268-04`, `TASK-268-05`, `TASK-310-03` | Visual/Advanced fields are labeled, Advanced is one-control-per-line, `sectionPaddingY` exists only in Advanced, and Footer now uses the landed shared clear/reset + color picker implementation. [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1) covers label-driven selectors instead of placeholder-only lookups. |
+| 112-116, 176-180, 182, 264, 267-270, 332-333, 401-402 | Footer editor labels were inconsistent; `sectionPaddingY` was duplicated; Footer had not adopted shared clear/reset/color-picker patterns | `fixed` | `TASK-268-04`, `TASK-268-05`, `TASK-310-03`, `TASK-336-19` | Visual/Advanced fields are labeled, `sectionPaddingY` is now Visual-owned, Advanced is read-only diagnostics, and Footer now uses swatch-only shared clear/reset + color picker implementation. [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1) covers label-driven selectors, swatch-only colors, and no Advanced writable paths. |
 | 129-137, 260-261 | Wizard only exposed the first link without clear disclosure | `fixed` | `TASK-268-04` | Wizard now explains that only the first link is edited there and shows hidden-link counts; covered by [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
 | 134-137 | Link reordering was missing | `fixed` | `TASK-268-04` | Footer Visual now supports deterministic move up/down for links and social items; covered by [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
 | 134-137 | Column reordering was missing | `fixed` | `TASK-308` | Footer Visual now reorders visible columns through the live block patch path and remaps `column-1/2/3` slot payloads atomically with the moved column data. [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1), [FooterEditors.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/admin/ui/widgets/editors/FooterEditors.tsx:1), and [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1) cover that contract. |
 | 139-153, 404, 410, 416-417, 447 | Footer lacked horizontal padding, responsive breakpoint, hover/active/underline, link typography, and bounded link targets | `fixed` | `TASK-268-05` | [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1) now supports `paddingX`, `columnBreakpoint`, hover/active colors, underline mode, font weight, letter spacing, and `_self` / `_blank` link targets; covered by [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1), [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1), and [styleNoneTokens.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/styleNoneTokens.test.tsx:392). |
 | 225-226, 230, 413, 415 | Newsletter/address/contact/back-to-top backlog | `fixed` | `TASK-309-01`, `TASK-309-02`, `TASK-309-03` | Newsletter stays composition-only through existing footer slots and does not add a second submission contract. Address/contact now render as bounded read-only utility fields with safe `mailto:` / `tel:` behavior, and back-to-top ships as an anchor-only `#top` action. Evidence lives in [footer.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/widgets/core/footer.tsx:1), [FooterEditors.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/core/admin/ui/widgets/editors/FooterEditors.tsx:1), [footer.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/widgets/footer.test.tsx:1), and [footer-editor-wave.test.tsx](/Users/pciechanski/Documents/_moje_projekty/Coderso/tests/vitest/ui/footer-editor-wave.test.tsx:1). |
 | 331, 441 | Wizard/Visual/Advanced tabs were hidden before the first Continue action | `not-footer-scope` | `TASK-194-04-02` | This is the existing shared builder transition contract, not a Footer-specific bug. `TASK-268` did not change the first-open page-builder shell behavior. |
-| 182 | `align` / `legalAlign` felt hidden in Advanced | `fixed` | `TASK-268-04` | Ownership stays in Advanced intentionally, but the controls are now explicitly labeled and stacked one per line so the discoverability problem is gone without moving technical tokens into Visual. |
+| 182 | `align` / `legalAlign` felt hidden in Advanced | `fixed` | `TASK-268-04`, `TASK-336-19` | Ownership moved to Visual `Layout and spacing`; Advanced now shows read-only layout diagnostics so there is no duplicate editor surface. |
 | 327-334, 450 | Login 429 / rate-limit behavior seen during multi-agent testing | `not-footer-scope` | n/a | Environment / infrastructure note only. No Footer code or route contract changed here. |
 
 ## 0.2 Related Task Links
@@ -63,6 +69,7 @@
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test bunx vitest run --config vitest.config.ts tests/vitest/widgets/footer.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/renderer.test.tsx tests/vitest/widgets/styleNoneTokens.test.tsx`
+- `bun scripts/playwright-widget-contract-smoke.ts --session t33619-footer --widget footer --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-visual-advanced-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-visual-advanced-2026-05-25.md --strict`
 - `bun test tests/unit/widgets/validator.test.ts`
 - `bun run gates:coderso`
 - `bun run precommit`

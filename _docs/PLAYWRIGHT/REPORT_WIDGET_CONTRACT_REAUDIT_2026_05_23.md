@@ -1224,6 +1224,42 @@ and raw destination authoring drift in Visual.
   found metadata-wrapper drift, the stale `source.contentType` path, and stale
   Wizard lifecycle docs; all were fixed before the final test/Playwright rerun.
 
+## TASK-336-19 Footer Advanced/Layout/Color Evidence (2026-05-25)
+
+The twenty-seventh TASK-336-19 implementation family returns to Footer after
+the earlier destination-authoring cleanup and closes the remaining
+Advanced/layout/color drift.
+
+- Footer Advanced no longer exposes writable layout select controls. It now
+  renders read-only runtime, layout, style, and support diagnostics.
+- Footer Visual owns daily layout editing through the `Layout and spacing`
+  section: column alignment, legal-row alignment, max width, column gap,
+  horizontal padding, responsive breakpoint, and section padding.
+- Footer Visual color fields now use swatch-only controls with clear actions
+  instead of raw CSS/token text inputs. Saved legacy custom color values remain
+  replace-or-clear compatible.
+- Fresh Footer defaults no longer seed CSS variable surface/border colors, so
+  new widgets inherit theme defaults instead of showing false saved-custom
+  state.
+- Footer Visual sections now use `WidgetEditorSection` metadata, and real
+  controls/actions emit explicit ownership metadata so the targeted smoke is no
+  longer an empty-path false positive.
+- Footer runtime color rendering now rejects unsafe raw color strings before
+  applying inline style values while preserving safe legacy color formats.
+- Focused Vitest evidence covers swatch-only color authoring, read-only
+  Advanced, Visual layout ownership, action metadata wrappers, runtime color
+  safety, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-visual-advanced-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude and a fresh helper-agent audit both identified writable Advanced
+  layout controls as the high-priority blocker before implementation. A fresh
+  post-implementation helper-agent audit reported no remaining HIGH findings;
+  its MEDIUM docs/action-metadata/color-helper findings were addressed before
+  final validation.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

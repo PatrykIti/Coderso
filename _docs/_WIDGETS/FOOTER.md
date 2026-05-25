@@ -57,12 +57,18 @@ icon-based social actions.
   - Social links and icon style
   - Colors and borders
   - Typography and link styling
+  - Layout and spacing
   - Slots overview and insertion hints
 - Visual owns content, legal, social, and user-facing link/style controls.
 - Visual destination authoring uses page-first pickers for column and legal
   links, Media Library picking for the brand logo, and platform/profile fields
   for social links. Legacy custom destinations stay replace-or-clear
   compatible instead of editable raw URL fields.
+- Visual color authoring is swatch-only. Saved legacy CSS variables, rgba
+  values, and custom color strings stay compatible as replace-or-clear state
+  instead of editable raw text inputs.
+- Visual owns daily footer layout controls: column/legal alignment, max width,
+  column gap, horizontal padding, responsive breakpoint, and section padding.
 - Link reordering is supported.
 - Column reordering is supported only through the live footer block patch path,
   where the visible column data and matching `column-1/2/3` slot payloads move
@@ -74,17 +80,16 @@ icon-based social actions.
   presentation and an optional anchor-only back-to-top action.
 
 ### Advanced
-- Technical-only scope.
-- Layout tokens:
-  - columns alignment
-  - legal row alignment
-  - max width
-  - column gap
-  - horizontal padding
-  - column breakpoint
-  - section vertical padding
-- Content/style editing is intentionally excluded from Advanced.
-- Footer keeps one labeled control per line in Advanced.
+- Technical-only read-only scope.
+- Sections:
+  - Runtime summary
+  - Layout diagnostics
+  - Style diagnostics
+  - Support summary
+- Advanced does not mutate Footer-specific content, layout, or style fields.
+  Those daily editing controls live in Visual. Advanced reports the saved
+  values with readable labels so support can inspect the payload without
+  creating a second editor.
 
 ## Runtime behavior notes
 
@@ -136,7 +141,7 @@ icon-based social actions.
 
 ## Clear Controls
 
-- Footer color fields now use the landed shared clear/reset + color-picker
+- Footer color fields now use swatch-only clear/reset + color-picker
   implementation.
 - Clearing `style.surfaceColor` removes the forced footer background color from
   runtime output.
@@ -219,5 +224,6 @@ icon-based social actions.
 - Contract target: Wizard seeds footer columns, brand, legal, and social basics;
   Visual owns all daily link/contact/social/content and presentation controls;
   Advanced is read-only runtime diagnostics.
-- Slot ID copy and writable Advanced layout controls are routed to
-  `TASK-336-19`.
+- `TASK-336-19` moves the previously writable Advanced layout controls into
+  Visual, adds explicit section/control ownership metadata, and removes raw
+  color text inputs from normal Footer authoring.

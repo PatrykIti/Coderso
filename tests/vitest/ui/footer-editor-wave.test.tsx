@@ -240,11 +240,32 @@ const hasExactText = (element: Element, text: string) =>
   normalizeText(element.textContent) === normalizeText(text);
 
 const findPanelByTitle = (container: ParentNode, title: string) =>
-  Array.from(container.querySelectorAll("div")).find((panel) =>
-    Array.from(panel.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+  Array.from(container.querySelectorAll("section, div")).find((panel) =>
+    Array.from(panel.querySelectorAll("h3, p, span")).some(
+      (node) => normalizeText(node.textContent) === normalizeText(title)
     )
   );
+
+const writablePathsForMode = (container: ParentNode, mode: "wizard" | "visual" | "advanced") =>
+  Array.from(
+    container.querySelectorAll(
+      `[data-widget-editor-mode="${mode}"] [data-widget-control-path]:not([data-widget-control-readonly="true"])`
+    )
+  )
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => typeof path === "string");
+
+const unwrappedNativeControlsForMode = (
+  container: ParentNode,
+  mode: "wizard" | "visual" | "advanced"
+) =>
+  Array.from(
+    container.querySelectorAll(
+      `[data-widget-editor-mode="${mode}"] input, [data-widget-editor-mode="${mode}"] select, [data-widget-editor-mode="${mode}"] textarea, [data-widget-editor-mode="${mode}"] button`
+    )
+  )
+    .filter((element) => !element.closest("[data-widget-control]"))
+    .map((element) => `${element.tagName.toLowerCase()}:${normalizeText(element.textContent)}`);
 
 const findSectionCard = (container: ParentNode, title: string, index = 0) =>
   Array.from(container.querySelectorAll("div"))
@@ -432,7 +453,7 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
   }
 });
 
-test("FooterVisualEditor keeps link ordering deterministic and exposes labeled clearable color controls", async () => {
+test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-safe visual controls", async () => {
   const { FooterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
@@ -460,7 +481,9 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
       textColor: "#111827",
       linkColor: "#2563eb",
       surfaceColor: "#ffffff",
+      borderColor: "var(--color-border)",
     },
+    layout: {},
   };
 
   const Harness = () => {
@@ -484,7 +507,9 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
     expect(view.container.textContent).toContain(
       "Column reorder is read-only in static previews because slot remapping requires the live footer block patch path."
     );
-    expect(findSelectByLabel(view.container, "Section padding")).toBeUndefined();
+    expect(writablePathsForMode(view.container, "visual")).toContain("layout.sectionPaddingY");
+    expect(writablePathsForMode(view.container, "visual")).toContain("style.linkColor");
+    expect(unwrappedNativeControlsForMode(view.container, "visual")).toEqual([]);
 
     const firstLinkCard = findSectionCard(view.container, "Link 1");
     clickByText(firstLinkCard as ParentNode, "Move down");
@@ -505,7 +530,9 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
     expect(findColorInputByLabel(colorsPanel as ParentNode, "Link color")).toBeInstanceOf(
       HTMLInputElement
     );
-    setInputValue(findColorTextInputByLabel(colorsPanel as ParentNode, "Link color"), "#1d4ed8");
+    expect(findColorTextInputByLabel(colorsPanel as ParentNode, "Link color")).toBeFalsy();
+    expect(colorsPanel?.textContent).toContain("Saved custom color");
+    setInputValue(findColorInputByLabel(colorsPanel as ParentNode, "Link color"), "#1d4ed8");
     clickByText(
       findColorFieldByLabel(colorsPanel as ParentNode, "Text color") as ParentNode,
       "Clear"
@@ -518,10 +545,20 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
       "semibold"
     );
     setSelectValue(findSelectByLabel(typographyPanel as ParentNode, "Link letter spacing"), "wide");
+    expect(
+      findColorTextInputByLabel(typographyPanel as ParentNode, "Link hover color")
+    ).toBeFalsy();
     setInputValue(
-      findColorTextInputByLabel(typographyPanel as ParentNode, "Link hover color"),
-      "#2563eb"
+      findColorInputByLabel(typographyPanel as ParentNode, "Link hover color"),
+      "#2563ec"
     );
+
+    const layoutPanel = findPanelByTitle(view.container, "Layout and spacing");
+    setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Columns alignment"), "center");
+    setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Legal row alignment"), "left");
+    setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Horizontal padding"), "8");
+    setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Column breakpoint"), "lg");
+    setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Section padding"), "12");
 
     const utilityPanel = findPanelByTitle(view.container, "Utility strip");
     expect(utilityPanel?.textContent).toContain("Newsletter stays composition-only");
@@ -553,7 +590,14 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes labeled c
       linkUnderline: "always",
       linkFontWeight: "semibold",
       linkLetterSpacing: "wide",
-      linkHoverColor: "#2563eb",
+      linkHoverColor: "#2563ec",
+    });
+    expect(latestValue.layout).toMatchObject({
+      align: "center",
+      legalAlign: "left",
+      paddingX: "8",
+      columnBreakpoint: "lg",
+      sectionPaddingY: "12",
     });
     expect(latestValue.contact).toMatchObject({
       address: "123 Market Street",
@@ -632,7 +676,7 @@ test("FooterVisualEditor reorders columns through live block patching and keeps 
   }
 });
 
-test("FooterAdvancedEditor keeps layout tokens labeled and owns the only section padding control", async () => {
+test("FooterAdvancedEditor is read-only diagnostics while Visual owns layout tokens", async () => {
   const { FooterAdvancedEditor, FooterVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
 
@@ -670,29 +714,20 @@ test("FooterAdvancedEditor keeps layout tokens labeled and owns the only section
   const view = mount(<Harness />);
 
   try {
-    expect(Array.from(view.container.textContent?.matchAll(/Section padding/g) ?? [])).toHaveLength(
-      1
-    );
+    expect(writablePathsForMode(view.container, "visual")).toContain("layout.sectionPaddingY");
+    expect(writablePathsForMode(view.container, "advanced")).toEqual([]);
 
-    const advancedPanel = findPanelByTitle(view.container, "Layout tokens");
-    expect(findSelectByLabel(advancedPanel as ParentNode, "Columns alignment")).toBeInstanceOf(
-      HTMLSelectElement
-    );
-    expect(findSelectByLabel(advancedPanel as ParentNode, "Legal row alignment")).toBeInstanceOf(
-      HTMLSelectElement
-    );
-    expect(findSelectByLabel(advancedPanel as ParentNode, "Horizontal padding")).toBeInstanceOf(
-      HTMLSelectElement
-    );
-    expect(findSelectByLabel(advancedPanel as ParentNode, "Column breakpoint")).toBeInstanceOf(
-      HTMLSelectElement
-    );
+    const advancedPanel = findPanelByTitle(view.container, "Layout diagnostics");
+    expect(advancedPanel?.querySelector("input, select, textarea, button")).toBeNull();
+    expect(advancedPanel?.textContent).toContain("Columns alignment");
+    expect(advancedPanel?.textContent).toContain("Horizontal padding");
 
-    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Columns alignment"), "center");
-    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Legal row alignment"), "left");
-    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Horizontal padding"), "8");
-    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Column breakpoint"), "lg");
-    setSelectValue(findSelectByLabel(advancedPanel as ParentNode, "Section padding"), "12");
+    const visualPanel = findPanelByTitle(view.container, "Layout and spacing");
+    setSelectValue(findSelectByLabel(visualPanel as ParentNode, "Columns alignment"), "center");
+    setSelectValue(findSelectByLabel(visualPanel as ParentNode, "Legal row alignment"), "left");
+    setSelectValue(findSelectByLabel(visualPanel as ParentNode, "Horizontal padding"), "8");
+    setSelectValue(findSelectByLabel(visualPanel as ParentNode, "Column breakpoint"), "lg");
+    setSelectValue(findSelectByLabel(visualPanel as ParentNode, "Section padding"), "12");
 
     expect(latestValue.layout).toMatchObject({
       align: "center",

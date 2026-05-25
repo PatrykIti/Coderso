@@ -524,10 +524,11 @@ test("footer visual editor renders section-based IA", () => {
   expect(html).toContain("Social links and icon style");
   expect(html).toContain("Colors and borders");
   expect(html).toContain("Typography and link styling");
+  expect(html).toContain("Layout and spacing");
   expect(html).toContain("Slots overview and insertion hints");
 });
 
-test("footer advanced editor keeps technical-only scope", () => {
+test("footer advanced editor keeps technical-only read-only scope", () => {
   const html = renderToString(
     <FooterAdvancedEditor
       value={footerDefaults}
@@ -537,11 +538,44 @@ test("footer advanced editor keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Runtime summary");
+  expect(html).toContain("Layout diagnostics");
+  expect(html).toContain("Style diagnostics");
   expect(html).toContain("Horizontal padding");
   expect(html).toContain("Column breakpoint");
+  expect(html).toContain("Change these in Visual");
+  expect(html).not.toContain("<select");
+  expect(html).not.toContain("<input");
+  expect(html).not.toContain("<button");
   expect(html).not.toContain("Columns and links");
   expect(html).not.toContain("Brand and legal");
+});
+
+test("footer omits unsafe raw style color values before render", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: {
+          ...footerDefaults.style,
+          textColor: "url(javascript:alert(1))",
+          headingColor: "expression(alert(1))",
+          linkColor: "var(--color-primary)",
+          socialColor: "#123456",
+          linkHoverColor: "rgb(37, 99, 235)",
+          linkActiveColor: "url(javascript:alert(1))",
+        },
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).not.toContain("javascript:alert");
+  expect(html).not.toContain("expression(");
+  expect(html).toContain("color:var(--color-primary)");
+  expect(html).toContain("color:#123456");
+  expect(html).toContain("--footer-link-hover-color:rgb(37, 99, 235)");
+  expect(html).not.toContain("--footer-link-active-color:url");
 });
 
 test("footer wizard keeps quick setup scope", () => {
