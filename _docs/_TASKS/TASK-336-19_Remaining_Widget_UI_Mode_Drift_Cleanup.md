@@ -70,7 +70,7 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `product-compare`, `newsletter`, `contact`
 - Site chrome: `navigation`, `footer`
 - Contract residual revisits after completed leaves: `section`, `grid-columns`,
-  `template-section`, `split-layout`, `tabs`, `accordion`, and shared
+  `template-section`, `split-layout`, `tabs`, `accordion`, `spacer`, and shared
   page-builder shell controls when fresh audits find remaining mode drift.
 
 ## Sub-Tasks
@@ -751,6 +751,26 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-accordion-advanced-readonly-2026-05-25.*`
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso` pass for this slice.
+- In Progress (2026-05-25): Spacer residual drift is superseded under this
+  task. Fresh helper-agent read-only review found that Advanced still exposed
+  hidden writable height controls and a raw JSON payload snapshot, while
+  Wizard/Visual metadata under-reported real writable paths. Spacer Advanced is
+  now a read-only runtime/support summary with no raw payload snapshot or
+  hidden mutators. Wizard and Visual controls now expose truthful
+  `WidgetControlRow` ownership metadata, and beginner-facing height controls
+  show friendly rhythm labels or saved-custom compatibility state instead of
+  CSS length examples. Because the shared `TokenOrPixelField` wording changed,
+  the Divider editor wave is included in this slice's regression evidence to
+  prove the shared copy stays generic outside Spacer. Targeted Vitest evidence
+  currently passes
+  `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/divider.test.tsx`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. `bun test tests/unit/playwright-widget-contract-smoke.test.ts`,
+  `git diff --check`, `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.json`,
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and
   `bun run gates:coderso` pass for this slice.
 
 ## Files to Change

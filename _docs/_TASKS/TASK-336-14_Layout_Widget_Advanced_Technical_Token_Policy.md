@@ -165,8 +165,10 @@ Regression-test shape:
 - Visible Visual controls avoid raw CSS/code/token text authoring for
   nontechnical users; legacy compatibility controls are hidden, aria-hidden, and
   removed from the tab order.
-- Advanced tabs keep normalized payload snapshots and technical summaries for
-  debugging without duplicating Visual-owned writable paths.
+- Advanced tabs keep read-only technical summaries for debugging without
+  duplicating Visual-owned writable paths. Earlier normalized payload snapshots
+  are superseded by TASK-336-19 where the affected widget can show a human
+  runtime/support summary instead of raw JSON.
 
 ## Validation Notes
 
@@ -186,3 +188,9 @@ Regression-test shape:
   Grid/Divider harnas reruns can lose block selection on the third mode reload,
   but dedicated Advanced-mode reruns pass with zero admin/public/fixture/metadata
   gaps.
+- Supersession (2026-05-25): Spacer was re-opened under `TASK-336-19` after a
+  fresh agent audit found hidden Advanced mutators, a raw JSON snapshot, and
+  under-reported Wizard/Visual metadata. The TASK-336-19 Spacer slice removes
+  the raw payload snapshot, makes Advanced read-only runtime/support summaries,
+  exposes truthful control metadata, and records strict Playwright evidence in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.*`.

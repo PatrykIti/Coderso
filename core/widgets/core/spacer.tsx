@@ -51,22 +51,100 @@ export const spacerEditorContract: WidgetEditorContract = {
       id: "spacer.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: [],
+      writablePaths: ["variant", "height", "height.desktop", "showGuideInEditor"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Spacer rhythm mode; Visual remains the daily rhythm owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "height",
+          reason:
+            "Wizard seeds one-time Spacer rhythm presets; Visual remains the daily spacing owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "height.desktop",
+          reason:
+            "Wizard seeds one-time desktop rhythm; Visual remains the daily spacing owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "showGuideInEditor",
+          reason:
+            "Wizard seeds one-time guide preference; Visual remains the daily guide owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "spacer.visual.variant",
+      title: "Variant and responsive behavior",
+      role: "visual",
+      writablePaths: ["variant"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Spacer rhythm mode; Visual remains the daily rhythm owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
     },
     {
       mode: "visual",
       id: "spacer.visual.rhythm",
-      title: "Rhythm and guide",
+      title: "Responsive heights",
       role: "layout",
-      writablePaths: ["variant", "height", "showGuideInEditor"],
+      writablePaths: ["height", "height.desktop", "height.tablet", "height.mobile"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "height",
+          reason:
+            "Wizard seeds one-time Spacer rhythm presets; Visual remains the daily spacing owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+        {
+          path: "height.desktop",
+          reason:
+            "Wizard seeds one-time desktop rhythm; Visual remains the daily spacing owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "spacer.visual.guide",
+      title: "Editor guide",
+      role: "visual",
+      writablePaths: ["showGuideInEditor"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "showGuideInEditor",
+          reason:
+            "Wizard seeds one-time guide preference; Visual remains the daily guide owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
     },
     {
       mode: "advanced",
-      id: "spacer.advanced.computed-height",
-      title: "Computed height summary",
+      id: "spacer.advanced.runtime-summary",
+      title: "Runtime spacing summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["height", "showGuideInEditor"],
+    },
+    {
+      mode: "advanced",
+      id: "spacer.advanced.support-summary",
+      title: "Support summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "height"],
     },
   ],
 };
@@ -113,6 +191,24 @@ export const spacerHeightCssValueMap: Record<SpacerHeightToken, string> = {
   "20": "5rem",
   "24": "6rem",
   "32": "8rem",
+};
+
+export const spacerHeightDisplayLabelMap: Record<SpacerHeightToken, string> = {
+  none: "No extra space",
+  "0": "No extra space",
+  "1": "Micro gap",
+  "2": "Tiny gap",
+  "3": "Extra small gap",
+  "4": "Small gap",
+  "5": "Small plus gap",
+  "6": "Compact gap",
+  "8": "Card gap",
+  "10": "Comfortable gap",
+  "12": "Standard gap",
+  "16": "Section gap",
+  "20": "Large section gap",
+  "24": "Hero gap",
+  "32": "Extra large gap",
 };
 
 export const spacerPresetHeightMap = {
@@ -241,6 +337,13 @@ export function deriveSpacerPresetId(
 export const resolveSpacerCssHeight = (value: string): string =>
   isSpacerToken(value) ? spacerHeightCssValueMap[value] : value;
 
+export function describeSpacerHeight(value: string | undefined): string {
+  const normalized = value?.trim();
+  if (!normalized) return "Default spacing";
+  if (isSpacerToken(normalized)) return spacerHeightDisplayLabelMap[normalized];
+  return "Saved custom height";
+}
+
 export function resolveSpacerVariant(variant: string): SpacerVariantId {
   if (variant === "fixed") return variant;
   return "responsive";
@@ -328,7 +431,7 @@ export function SpacerBlock({
     >
       {showGuide ? (
         <div className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 rounded border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/80 px-2 py-1 text-center text-[10px] font-medium uppercase tracking-wider text-[var(--color-text)]/70">
-          Spacer {resolveSpacerCssHeight(previewHeight)}
+          Spacer {describeSpacerHeight(previewHeight)}
         </div>
       ) : null}
     </div>

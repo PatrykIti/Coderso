@@ -378,7 +378,7 @@ Leaf evidence from this turn:
 | Row | Final status | Owner | Evidence |
 |---|---|---|---|
 | UX-01 | `fixed` | `TASK-284-01` | Wizard now shows a fixed-mode note directly under the desktop height control before the guide toggle. |
-| BF-06 | `fixed` | `TASK-284-01` | Desktop, tablet, and mobile height controls now explain the active Tailwind breakpoint range in Visual/Advanced and the desktop breakpoint in Wizard. |
+| BF-06 | `fixed` | `TASK-284-01`; user-facing copy superseded by `TASK-336-19` | Desktop, tablet, and mobile height controls explain the preview context; TASK-336-19 removes framework breakpoint labels from the beginner-facing editor copy. |
 | BF-07 | `fixed` | `TASK-284-01` | Spacer custom-height copy now explicitly says `48` normalizes to `48px`, while keeping `48px` valid. |
 | A2 | `fixed` | `TASK-284-01` | Spacer custom-height inputs now use explicit `aria-label` plus `aria-describedby` helper wiring instead of placeholder-only context. |
 
@@ -452,10 +452,30 @@ Family closure validation from this turn:
 | BF-03 | `fixed-task-284` | `TASK-284-02` | Spacer now accepts safe canonical fluid `clamp(min, preferred, max)` values. |
 | BF-04 | `fixed-task-284` | `TASK-284-03` | Spacer now exposes transient `Card gap`, `Section gap`, and `Hero gap` presets in Wizard and Visual. |
 | BF-05 | `deferred` | `TASK-328` landed; Spacer product scope still deferred | Honest horizontal Spacer support no longer depends on the old full-width child shell, but it still needs a dedicated Spacer-local contract before reopening. |
-| BF-06 | `fixed-task-284` | `TASK-284-01` | Desktop, tablet, and mobile height controls now explain the active Tailwind breakpoint ranges. |
+| BF-06 | `fixed-task-284`; copy superseded by `TASK-336-19` | `TASK-284-01`, `TASK-336-19` | Desktop, tablet, and mobile height controls now explain friendly preview contexts instead of framework breakpoint labels. |
 | BF-07 | `fixed-task-284` | `TASK-284-01` | Spacer copy now explicitly documents bare-number input such as `48` -> `48px`. |
 | A1 | `no-action` | No TASK-284 implementation | Spacer remains a decorative layout primitive under `aria-hidden="true"`, which is the intended accessibility contract. |
 | A2 | `fixed-task-284` | `TASK-284-01` | Spacer custom-height inputs now expose explicit accessible names and helper descriptions. |
 | A3 | `no-action` | No TASK-284 implementation | The guide stays inside the decorative `aria-hidden` Spacer shell, so no separate role or label is exposed to assistive tech. |
 
-*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21; TASK-284-04 refreshed — 2026-05-21; TASK-284-05 refreshed — 2026-05-21.*
+## Status po TASK-336-19 (2026-05-25)
+
+Fresh helper-agent and Claude-oriented contract review re-opened Spacer because
+the earlier TASK-336-14 closure still left Advanced with hidden writable height
+controls, a raw JSON payload snapshot, and incomplete Wizard/Visual ownership
+metadata.
+
+Targeted evidence from this slice:
+- `bun run test:vitest -- tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/widgets/styleNoneTokens.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/divider.test.tsx`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.md`
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-spacer-advanced-readonly-2026-05-25.json`
+
+| Row | Final status | Owner | Evidence |
+|---|---|---|---|
+| Advanced hidden mutators | `fixed-task-336-19` | `TASK-336-19` | Spacer Advanced now renders read-only runtime/support summaries only and exposes zero writable paths in strict Playwright smoke. |
+| Raw payload snapshot | `fixed-task-336-19` | `TASK-336-19` | The visible JSON payload snapshot was removed from Advanced; diagnostics use human spacing/support rows. |
+| Wizard/Visual metadata gap | `fixed-task-336-19` | `TASK-336-19` | Spacer controls now use `WidgetControlRow` metadata; Playwright reports real Visual writable paths and no duplicate writable paths. |
+| Beginner-facing CSS length authoring | `fixed-task-336-19` | `TASK-336-19` | Height controls show friendly rhythm presets and saved-custom compatibility state instead of asking authors to type or inspect CSS lengths. |
+| Beginner-facing breakpoint wording | `fixed-task-336-19` | `TASK-336-19` | Height help and preset cards use desktop/tablet/phone preview language and friendly rhythm labels instead of raw breakpoint or spacing token values. |
+
+*Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16; shared closure refreshed — 2026-05-17; TASK-284-01 refreshed — 2026-05-21; TASK-284-02 refreshed — 2026-05-21; TASK-284-03 refreshed — 2026-05-21; TASK-284-04 refreshed — 2026-05-21; TASK-284-05 refreshed — 2026-05-21; TASK-336-19 refreshed — 2026-05-25.*

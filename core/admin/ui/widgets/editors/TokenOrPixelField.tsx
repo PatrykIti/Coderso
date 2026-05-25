@@ -59,14 +59,15 @@ function normalizeCustomPixelValue(rawValue: string) {
 function buildValidation(
   draft: string | null,
   savedResolvedValue: string,
-  resolveCss: (value: string) => string,
+  formatResolvedValue: (value: string) => string,
   normalizeCustomValue: (rawValue: string) => string | undefined,
-  customValueLabel: string
+  customValueLabel: string,
+  selectedValueLabel: string
 ): TokenFieldValidation {
   if (draft === null) {
     return {
       status: "token",
-      message: `Resolved from token: ${savedResolvedValue}`,
+      message: `Selected ${selectedValueLabel}: ${savedResolvedValue}`,
     };
   }
 
@@ -82,7 +83,7 @@ function buildValidation(
   if (normalized) {
     return {
       status: "custom-valid",
-      message: `Resolved custom value: ${resolveCss(normalized)}`,
+      message: `Resolved custom value: ${formatResolvedValue(normalized)}`,
     };
   }
 
@@ -108,6 +109,9 @@ export function TokenOrPixelField({
   customInputLabel,
   customInputHelp,
   allowCustom = true,
+  formatResolvedValue,
+  selectedValueLabel = "value",
+  replacementOptionLabel = "an available option",
 }: {
   label: string;
   value: string;
@@ -124,6 +128,9 @@ export function TokenOrPixelField({
   customInputLabel?: string;
   customInputHelp?: string;
   allowCustom?: boolean;
+  formatResolvedValue?: (value: string) => string;
+  selectedValueLabel?: string;
+  replacementOptionLabel?: string;
 }) {
   const valueIsToken = isToken(value);
   const fieldId = useId();
@@ -136,13 +143,15 @@ export function TokenOrPixelField({
     setCustomDraft(valueIsToken ? null : value);
   }, [value, valueIsToken]);
 
-  const savedResolvedValue = resolveCss(value);
+  const displayResolvedValue = formatResolvedValue ?? resolveCss;
+  const savedResolvedValue = displayResolvedValue(value);
   const validation = buildValidation(
     customDraft,
     savedResolvedValue,
-    resolveCss,
+    displayResolvedValue,
     normalizeCustomValue,
-    customValueLabel
+    customValueLabel,
+    selectedValueLabel
   );
   const fieldDescriptionId = fieldDescription ? `${fieldId}-description` : undefined;
   const customInputHelpId = customInputHelp ? `${fieldId}-custom-help` : undefined;
@@ -157,8 +166,8 @@ export function TokenOrPixelField({
         : value;
   const tokenOnlyCustomMessage = !allowCustom
     ? valueIsToken
-      ? `Resolved from token: ${savedResolvedValue}`
-      : `Saved custom value resolves to ${savedResolvedValue}. Pick a preset to replace it.`
+      ? `Selected ${selectedValueLabel}: ${savedResolvedValue}`
+      : `Saved custom value is active. Pick ${replacementOptionLabel} to replace it.`
     : null;
 
   return (

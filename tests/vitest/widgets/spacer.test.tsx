@@ -264,7 +264,9 @@ test("spacer shows guide in editor preview without requiring previewDevice", () 
   );
 
   expect(html).toContain('data-spacer-preview-height="16"');
-  expect(html).toContain("4rem");
+  expect(html).toContain("Section gap");
+  expect(html).not.toContain("Spacer 4rem");
+  expect(html).not.toContain("<!-- -->4rem");
 });
 
 test("spacer validator accepts expanded model", () => {
@@ -337,9 +339,10 @@ test("spacer editors render expected sections", () => {
   expect(visualHtml).toContain("Variant and responsive behavior");
   expect(visualHtml).toContain("Responsive heights");
   expect(visualHtml).toContain("Editor guide");
-  expect(visualHtml).toContain('data-widget-editor-section="spacer.visual-responsive-heights"');
+  expect(visualHtml).toContain('data-widget-editor-section="spacer.visual.rhythm"');
   expect(visualHtml).toContain('data-widget-editor-mode="visual"');
   expect(visualHtml).toContain('data-widget-editor-section-role="layout"');
+  expect(visualHtml).toContain('data-widget-control-path="height.desktop"');
 
   const advancedHtml = renderToString(
     <SpacerAdvancedEditor
@@ -349,9 +352,11 @@ test("spacer editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical height tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
-  expect(advancedHtml).toContain('data-widget-editor-section="spacer.advanced-payload-snapshot"');
-  expect(advancedHtml).toContain('data-widget-editor-section-role="diagnostics"');
+  expect(advancedHtml).toContain("Runtime spacing summary");
+  expect(advancedHtml).toContain("Support summary");
+  expect(advancedHtml).toContain('data-widget-editor-section="spacer.advanced.runtime-summary"');
   expect(advancedHtml).toContain('data-widget-control-readonly="true"');
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain("Raw payload");
+  expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
 });

@@ -179,17 +179,10 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findColorInputForPlaceholder = (container: ParentNode, placeholder: string) => {
-  const textInput = findInputByPlaceholder(container, placeholder);
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}"`);
-  }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for "${placeholder}"`);
-  }
-  return colorInput;
-};
+const findInputByAriaLabel = (container: ParentNode, label: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
@@ -322,10 +315,7 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     setSelectValue(thicknessSelect, "2");
     setSelectValue(widthModeSelect, "custom");
     setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "60%");
-    setInputValue(
-      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
-      "#334155"
-    );
+    setInputValue(findInputByAriaLabel(lineSection as ParentNode, "Line color swatch"), "#334155");
 
     const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
     const spacingSelects = Array.from((spacingSection as ParentNode).querySelectorAll("select"));
@@ -367,7 +357,7 @@ test("Divider editors cover visual label input, color picker changes, custom spa
   let latestValue: DividerData = {
     color: "var(--color-border)",
     width: "container",
-    marginTop: "custom-margin",
+    marginTop: "40px",
     marginBottom: "bad",
   };
   let currentVariant = "label-center";
@@ -425,16 +415,16 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     );
 
     const lineSection = findSectionByTitle(view.container, "Line style and width");
-    setInputValue(
-      findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"),
-      "#94a3b8"
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("saved custom color");
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain(
+      "pick a swatch to replace it"
     );
+    setInputValue(findInputByAriaLabel(lineSection as ParentNode, "Line color swatch"), "#94a3b8");
     expect(latestValue.color).toBe("#94a3b8");
-    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("custom token active");
-    setInputValue(
-      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)"),
-      "#94a3b8"
-    );
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("selected color");
+    expect(
+      findInputByPlaceholder(lineSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
     const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, [
       "full",
       "container",
@@ -450,11 +440,17 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
       "custom value unavailable"
     );
+    expect(normalizeText((spacingSection as ParentNode).textContent)).toContain(
+      "saved custom value is active. pick an available option to replace it."
+    );
+    expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
+      "pick a preset"
+    );
     expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
       "enter a custom px value"
     );
     setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "bad-value");
-    expect(latestValue.marginTop).toBe("6");
+    expect(latestValue.marginTop).toBe("40px");
     expect(normalizeText((spacingSection as ParentNode).textContent)).not.toContain(
       "invalid custom px value"
     );

@@ -13,13 +13,14 @@ import { cn } from "@/lib/utils";
 
 import {
   applySpacerPreset,
+  describeSpacerHeight,
   deriveSpacerPresetId,
   normalizeSpacerCustomHeightInput,
   normalizeSpacerData,
   resolveSpacerCssHeight,
   resolveSpacerVariant,
   spacerDefaults,
-  spacerHeightCssValueMap,
+  spacerHeightDisplayLabelMap,
   spacerHeightTokens,
   spacerPresetDefinitions,
   type SpacerData,
@@ -31,7 +32,11 @@ import type {
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
 import { buildVisibleOffTokenOptions, TokenOrPixelField } from "./TokenOrPixelField";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SpacerVariantId;
@@ -53,22 +58,26 @@ const variantOptions: Array<{
 const heightTokenOptions = buildVisibleOffTokenOptions(
   spacerHeightTokens.map((token) => ({
     id: token,
-    label: token === "none" ? "None" : `${token} (${spacerHeightCssValueMap[token]})`,
+    label: spacerHeightDisplayLabelMap[token],
   }))
 );
 
-const spacerCustomHeightPlaceholder = "48, 10vh, or clamp(...)";
+const spacerCustomHeightPlaceholder = "Saved custom height";
 const spacerCustomHeightHelp =
-  "Custom values accept 48 (saved as 48px), 48px, 10vh, 5dvh, 5svh, 12vw, or clamp(2rem, 5vw, 8rem).";
+  "Saved custom heights stay compatible. Pick a preset to replace them.";
 
 const spacerHeightBreakpointHelp = {
-  desktop: "Applies at 1024px and wider (Tailwind lg:).",
-  tablet: "Applies from 768px up until desktop takes over at 1024px (Tailwind md:).",
-  mobile: "Applies below 768px before the tablet breakpoint.",
+  desktop: "Applies to desktop previews and wide screens.",
+  tablet: "Applies to tablet previews before desktop takes over.",
+  mobile: "Applies to phone previews before tablet takes over.",
 } as const;
 
 function normalizeValue(value: SpacerData, variant: string): SpacerData {
   return normalizeSpacerData(value, variant);
+}
+
+function formatSpacerHeightForEditor(value: string | undefined) {
+  return describeSpacerHeight(value);
 }
 
 function updateValue(
@@ -182,14 +191,6 @@ function VariantCards({
   );
 }
 
-function DiagnosticsSnapshot({ value }: { value: SpacerData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function SpacerPresetChooser({
   value,
   variant,
@@ -216,8 +217,8 @@ function SpacerPresetChooser({
         {resolvedVariant === "fixed" ? (
           <p className="text-xs text-muted-foreground">
             Fixed mode preserves the saved tablet and mobile heights. Presets update the desktop
-            height only while fixed is active, so switch to responsive to apply a full preset
-            triplet.
+            height only while fixed is active, so switch to responsive to apply a full preset across
+            phone, tablet, and desktop.
           </p>
         ) : null}
       </div>
@@ -245,8 +246,9 @@ function SpacerPresetChooser({
             </div>
             <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Desktop {preset.height.desktop} / Tablet {preset.height.tablet} / Mobile{" "}
-              {preset.height.mobile}
+              Desktop: {formatSpacerHeightForEditor(preset.height.desktop)} / Tablet:{" "}
+              {formatSpacerHeightForEditor(preset.height.tablet)} / Phone:{" "}
+              {formatSpacerHeightForEditor(preset.height.mobile)}
             </p>
           </button>
         ))}
@@ -256,36 +258,47 @@ function SpacerPresetChooser({
 }
 
 function HeightField({
+  id,
+  path,
   label,
   breakpoint,
   value,
   onChange,
 }: {
+  id: string;
+  path: string;
   label: string;
   breakpoint: keyof typeof spacerHeightBreakpointHelp;
   value: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <TokenOrPixelField
-      label={label}
-      fieldDescription={spacerHeightBreakpointHelp[breakpoint]}
-      value={value}
-      onChange={onChange}
-      tokenOptions={heightTokenOptions}
-      isToken={(candidate) =>
-        spacerHeightTokens.includes(candidate as (typeof spacerHeightTokens)[number])
-      }
-      resolveCss={resolveSpacerCssHeight}
-      selectPlaceholder="Quick token"
-      inputPlaceholder={spacerCustomHeightPlaceholder}
-      customOptionLabel="Custom length"
-      customValueLabel="custom length"
-      normalizeCustomValue={normalizeSpacerCustomHeightInput}
-      customInputLabel={`${label} custom height`}
-      customInputHelp={spacerCustomHeightHelp}
-      allowCustom={false}
-    />
+    <WidgetControlRow id={id} label={label} path={path} hideLabel>
+      {() => (
+        <TokenOrPixelField
+          label={label}
+          fieldDescription={spacerHeightBreakpointHelp[breakpoint]}
+          value={value}
+          onChange={onChange}
+          tokenOptions={heightTokenOptions}
+          isToken={(candidate) =>
+            spacerHeightTokens.includes(candidate as (typeof spacerHeightTokens)[number])
+          }
+          resolveCss={resolveSpacerCssHeight}
+          formatResolvedValue={formatSpacerHeightForEditor}
+          selectPlaceholder="Quick preset"
+          inputPlaceholder={spacerCustomHeightPlaceholder}
+          customOptionLabel="Saved custom height"
+          customValueLabel="saved custom height"
+          selectedValueLabel="preset"
+          replacementOptionLabel="a preset"
+          normalizeCustomValue={normalizeSpacerCustomHeightInput}
+          customInputLabel={`${label} saved custom height`}
+          customInputHelp={spacerCustomHeightHelp}
+          allowCustom={false}
+        />
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -305,6 +318,8 @@ function ResponsiveHeights({
   return (
     <div className="space-y-3">
       <HeightField
+        id="spacer.visual.desktop-height"
+        path="height.desktop"
         label="Desktop height"
         breakpoint="desktop"
         value={height.desktop ?? "16"}
@@ -313,12 +328,16 @@ function ResponsiveHeights({
       {resolvedVariant === "responsive" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <HeightField
+            id="spacer.visual.tablet-height"
+            path="height.tablet"
             label="Tablet height"
             breakpoint="tablet"
             value={height.tablet ?? "12"}
             onChange={(next) => updateHeight(value, variant, onChange, { tablet: next })}
           />
           <HeightField
+            id="spacer.visual.mobile-height"
+            path="height.mobile"
             label="Mobile height"
             breakpoint="mobile"
             value={height.mobile ?? "8"}
@@ -353,36 +372,46 @@ export function SpacerWizardEditor({
         title="Spacer quick start"
         description="Pick a safe rhythm preset. Visual owns ongoing responsive height editing."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacer mode</p>
-          <Select
-            value={resolveSpacerVariant(variant)}
-            onValueChange={(next) => onVariantChange?.(next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="spacer.wizard.variant" label="Spacer mode" path="variant">
+          {(fieldProps) => (
+            <Select
+              value={resolveSpacerVariant(variant)}
+              onValueChange={(next) => onVariantChange?.(next)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-3 rounded-md border p-3">
-          <div>
-            <p className="text-sm font-medium">Rhythm presets</p>
-            <p className="text-xs text-muted-foreground">
-              Apply a named vertical rhythm preset without typing CSS lengths.
-            </p>
-          </div>
-          <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
-        </div>
+        <WidgetControlRow
+          id="spacer.wizard.rhythm-preset"
+          label="Rhythm presets"
+          path="height"
+          help="Apply a named vertical rhythm preset without typing technical lengths."
+        >
+          {() => (
+            <div className="rounded-md border p-3">
+              <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
+            </div>
+          )}
+        </WidgetControlRow>
 
         <HeightField
+          id="spacer.wizard.desktop-height"
+          path="height.desktop"
           label="Desktop height"
           breakpoint="desktop"
           value={height.desktop ?? "16"}
@@ -394,22 +423,31 @@ export function SpacerWizardEditor({
           </p>
         ) : null}
 
-        <div className="rounded-md border p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Show guide in editor</p>
-              <p className="text-xs text-muted-foreground">
-                Displays spacer label overlay in runtime preview only.
-              </p>
+        <WidgetControlRow
+          id="spacer.wizard.editor-guide"
+          label="Show guide in editor"
+          path="showGuideInEditor"
+          hideLabel
+        >
+          {() => (
+            <div className="rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Show guide in editor</p>
+                  <p className="text-xs text-muted-foreground">
+                    Displays a spacer label overlay in editor preview.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(normalized.showGuideInEditor)}
+                  onCheckedChange={(checked) =>
+                    updateMeta(value, variant, onChange, { showGuideInEditor: checked })
+                  }
+                />
+              </div>
             </div>
-            <Switch
-              checked={Boolean(normalized.showGuideInEditor)}
-              onCheckedChange={(checked) =>
-                updateMeta(value, variant, onChange, { showGuideInEditor: checked })
-              }
-            />
-          </div>
-        </div>
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
@@ -426,86 +464,112 @@ export function SpacerVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        id="spacer.visual-variant-behavior"
+        id="spacer.visual.variant"
         mode="visual"
         role="visual"
         title="Variant and responsive behavior"
         description="Choose fixed or responsive spacer mode."
       >
-        <VariantCards value={resolveSpacerVariant(variant)} onChange={onVariantChange} />
+        <WidgetControlRow id="spacer.visual.variant" label="Spacer mode" path="variant" hideLabel>
+          {() => <VariantCards value={resolveSpacerVariant(variant)} onChange={onVariantChange} />}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
-        id="spacer.visual-responsive-heights"
+        id="spacer.visual.rhythm"
         mode="visual"
         role="layout"
         title="Responsive heights"
-        description="Control spacer height per breakpoint with safe rhythm tokens."
+        description="Control spacer height per breakpoint with friendly rhythm presets."
       >
         <div className="space-y-4">
-          <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
+          <WidgetControlRow
+            id="spacer.visual.rhythm-preset"
+            label="Rhythm presets"
+            path="height"
+            help="Apply a named vertical rhythm preset without typing technical lengths."
+          >
+            {() => <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />}
+          </WidgetControlRow>
           <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
         </div>
       </EditorSection>
 
       <EditorSection
-        id="spacer.visual-editor-guide"
+        id="spacer.visual.guide"
         mode="visual"
         role="visual"
         title="Editor guide"
         description="Optional helper label visible in preview environments."
       >
-        <div className="rounded-md border p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Show guide in editor</p>
-              <p className="text-xs text-muted-foreground">
-                Helps identify spacer size while composing templates.
-              </p>
+        <WidgetControlRow
+          id="spacer.visual.editor-guide"
+          label="Show guide in editor"
+          path="showGuideInEditor"
+          hideLabel
+        >
+          {() => (
+            <div className="rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Show guide in editor</p>
+                  <p className="text-xs text-muted-foreground">
+                    Helps identify spacer size while composing templates.
+                  </p>
+                </div>
+                <Switch
+                  checked={Boolean(normalized.showGuideInEditor)}
+                  onCheckedChange={(checked) =>
+                    updateMeta(value, variant, onChange, { showGuideInEditor: checked })
+                  }
+                />
+              </div>
             </div>
-            <Switch
-              checked={Boolean(normalized.showGuideInEditor)}
-              onCheckedChange={(checked) =>
-                updateMeta(value, variant, onChange, { showGuideInEditor: checked })
-              }
-            />
-          </div>
-        </div>
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
 }
 
-export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<SpacerData>) {
-  const normalized = normalizeValue(value, variant);
+export function SpacerAdvancedEditor({ value, variant }: WidgetEditorProps<SpacerData>) {
+  const resolvedVariant = resolveSpacerVariant(variant);
+  const normalized = normalizeValue(value, resolvedVariant);
   const height = normalized.height ?? spacerDefaults.height!;
+  const desktop = height.desktop ?? "16";
+  const tablet = resolvedVariant === "fixed" ? desktop : (height.tablet ?? "12");
+  const mobile = resolvedVariant === "fixed" ? desktop : (height.mobile ?? "8");
+  const hasSavedResponsiveFallback =
+    resolvedVariant === "fixed" &&
+    ((Boolean(height.tablet) && height.tablet !== desktop) ||
+      (Boolean(height.mobile) && height.mobile !== desktop));
 
   return (
     <div className="space-y-4">
       <EditorSection
-        id="spacer.advanced.computed-height"
+        id="spacer.advanced.runtime-summary"
         mode="advanced"
         role="diagnostics"
-        title="Technical height tokens"
-        description="Visual owns height editing. Advanced shows resolved spacing for diagnostics."
+        title="Runtime spacing summary"
+        description="Visual owns spacing edits. Advanced shows the saved runtime behavior."
       >
         <ReadonlyWidgetSummaryRow
           id="spacer.advanced.desktop-height"
           label="Desktop height"
           path="height.desktop"
-          value={`${height.desktop ?? "16"} resolves to ${resolveSpacerCssHeight(height.desktop ?? "16")}`}
+          value={formatSpacerHeightForEditor(desktop)}
         />
         <ReadonlyWidgetSummaryRow
           id="spacer.advanced.tablet-height"
           label="Tablet height"
           path="height.tablet"
-          value={`${height.tablet ?? "12"} resolves to ${resolveSpacerCssHeight(height.tablet ?? "12")}`}
+          value={formatSpacerHeightForEditor(tablet)}
         />
         <ReadonlyWidgetSummaryRow
           id="spacer.advanced.mobile-height"
           label="Mobile height"
           path="height.mobile"
-          value={`${height.mobile ?? "8"} resolves to ${resolveSpacerCssHeight(height.mobile ?? "8")}`}
+          value={formatSpacerHeightForEditor(mobile)}
         />
         <ReadonlyWidgetSummaryRow
           id="spacer.advanced.guide"
@@ -515,21 +579,29 @@ export function SpacerAdvancedEditor({ value, onChange, variant }: WidgetEditorP
             normalized.showGuideInEditor ? "Shown in editor previews" : "Hidden in editor previews"
           }
         />
-        <div hidden className="hidden" aria-hidden="true">
-          <ResponsiveHeights value={value} variant={variant} onChange={onChange} />
-        </div>
       </EditorSection>
       <EditorSection
-        id="spacer.advanced-payload-snapshot"
+        id="spacer.advanced.support-summary"
         mode="advanced"
-        role="diagnostics"
-        title="Raw payload snapshot"
-        description="Normalized read-only payload for debugging migrations and saved data."
+        role="summary"
+        title="Support summary"
+        description="Read-only compatibility notes for saved Spacer data."
       >
         <ReadonlyWidgetSummaryRow
-          id="spacer.advanced.normalized-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          id="spacer.advanced.mode"
+          label="Spacer mode"
+          path="variant"
+          value={resolvedVariant === "fixed" ? "Fixed rhythm" : "Responsive rhythm"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="spacer.advanced.saved-responsive-fallback"
+          label="Saved responsive fallback"
+          path="height"
+          value={
+            hasSavedResponsiveFallback
+              ? "Tablet or mobile fallback values are preserved for responsive mode."
+              : "No separate responsive fallback values are saved."
+          }
         />
       </EditorSection>
     </div>
