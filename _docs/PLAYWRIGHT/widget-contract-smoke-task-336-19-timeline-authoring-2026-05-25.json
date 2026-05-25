@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-05-25T00:51:27.503Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session=widget-contract-smoke-task-336-19-timeline-authoring --widget=timeline --output-json=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-timeline-authoring-2026-05-25.json --output-md=_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-timeline-authoring-2026-05-25.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["timeline"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "timeline",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 6,
+            "visibleSectionCount": 6,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "261d5209-9323-4237-ad8e-20eb3f0e9d60",
+        "adminPath": "http://localhost:5173/admin/pages/261d5209-9323-4237-ad8e-20eb3f0e9d60",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "timeline",
+        "publicPath": "/ctr-timeline-2305",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

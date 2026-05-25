@@ -168,6 +168,27 @@ vi.mock("@/components/ui/textarea", () => ({
   ),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "timeline-cta-page",
+      title: "Timeline CTA",
+      slug: "timeline-cta",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "timeline-link-page",
+      title: "Timeline Link",
+      slug: "timeline-link",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
@@ -221,11 +242,10 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setCheckboxValue = (element: Element | null | undefined, checked: boolean) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  if (element.checked === checked) return;
-  React.act(() => {
-    element.click();
+const flushAsyncEffects = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
@@ -298,13 +318,16 @@ const findSelectsByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
+  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const findSectionByTitle = (container: ParentNode, title: string) =>
   Array.from(container.querySelectorAll("section")).find((section) =>
-    Array.from(section.querySelectorAll("p")).some(
-      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    Array.from(section.querySelectorAll("h3,p,span")).some(
+      (element) => normalizeText(element.textContent) === normalizeText(title)
     )
   );
 
@@ -313,12 +336,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Timeline wizard editor covers full step authoring, status, accent, remove flow, and hidden-title warning", async () => {
+test("Timeline wizard editor seeds starter copy and keeps daily presentation controls out", async () => {
   const { TimelineWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
   const onChangeSpy = vi.fn();
   let latestValue: TimelineData = {
+    header: {
+      title: "Existing roadmap",
+      description: "Existing context",
+    },
     steps: [
       { id: "", title: " " },
       { id: "custom-step", title: "Kickoff" },
@@ -352,28 +379,36 @@ test("Timeline wizard editor covers full step authoring, status, accent, remove 
   };
 
   const view = mount(<Harness />);
+  await flushAsyncEffects();
 
   try {
-    expect(view.container.textContent).toContain("Step titles are hidden right now");
+    expect(view.container.textContent).toContain("Wizard seeds the initial timeline story");
+    expect(view.container.textContent).toContain("Visual owns daily step details");
+    expect(view.container.textContent).not.toContain("Show guide lines");
+    expect(view.container.textContent).not.toContain("Step titles are hidden right now");
+    expect(findInputByPlaceholder(view.container, "Icon text or emoji")).toBeUndefined();
+    expect(findInputsByPlaceholder(view.container, "#1d4ed8")).toHaveLength(0);
 
     const variantSelect = findSelectByOptions(view.container, ["milestones", "cards", "compact"]);
     setSelectValue(variantSelect, "cards");
     expect(currentVariant).toBe("cards");
+
+    setInputValue(findInputByPlaceholder(view.container, "Timeline heading"), "Launch roadmap");
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "Optional context above the timeline"),
+      "A practical rollout path"
+    );
 
     const stepCountSelect = findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"]);
     setSelectValue(stepCountSelect, "5");
     expect(latestValue.steps).toHaveLength(5);
     expect(findInputByPlaceholder(view.container, "Step 5")).toBeTruthy();
 
-    const statusSelects = findSelectsByOptions(view.container, [
-      "__none__",
-      "upcoming",
-      "current",
-      "complete",
-    ]);
-    setSelectValue(statusSelects[0], "current");
-    setInputValue(findInputsByPlaceholder(view.container, "Icon text or emoji")[0], "compass");
-    setInputValue(findInputsByPlaceholder(view.container, "#1d4ed8")[0], "#00aaee");
+    setInputValue(findInputByPlaceholder(view.container, "Step 1"), "Discovery starter");
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "Step description"),
+      "Confirm the first milestone."
+    );
 
     clickButtonByText(view.container, "Remove", 4);
     expect(view.container.textContent).toContain("Remove Step 5?");
@@ -384,10 +419,14 @@ test("Timeline wizard editor covers full step authoring, status, accent, remove 
     expect(latestValue.steps[0]).toEqual(
       expect.objectContaining({
         id: "step-1",
-        title: "Discovery",
-        status: "current",
-        icon: "compass",
-        accent: "#00aaee",
+        title: "Discovery starter",
+        description: "Confirm the first milestone.",
+      })
+    );
+    expect(latestValue.header).toEqual(
+      expect.objectContaining({
+        title: "Launch roadmap",
+        description: "A practical rollout path",
       })
     );
   } finally {
@@ -444,6 +483,7 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
   };
 
   const view = mount(<Harness />);
+  await flushAsyncEffects();
 
   try {
     clickButtonByText(view.container, "Alternating");
@@ -473,19 +513,26 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
 
     setInputValue(findInputByPlaceholder(getStepCard(0), "Step CTA label"), "Read details");
     await Promise.resolve();
-    setInputValue(findInputsByPlaceholder(getStepCard(0), "/timeline-step")[0], "/cta-step");
+    setSelectValue(
+      findLinkDestinationSelect(getStepCard(0), "timeline-step-1-cta-destination"),
+      "timeline-cta-page"
+    );
     await Promise.resolve();
     setInputValue(
       findInputByPlaceholder(getStepCard(0), "Whole-step link label"),
       "Open discovery"
     );
     await Promise.resolve();
-    const refreshedHrefInputs = findInputsByPlaceholder(getStepCard(0), "/timeline-step");
-    setInputValue(refreshedHrefInputs[refreshedHrefInputs.length - 1], "/whole-step");
+    setSelectValue(
+      findLinkDestinationSelect(getStepCard(0), "timeline-step-1-link-destination"),
+      "timeline-link-page"
+    );
     await Promise.resolve();
     expect(view.container.textContent).toContain(
       "Whole-step links are disabled when a CTA link is configured"
     );
+    expect(findInputsByPlaceholder(getStepCard(0), "/timeline-step")).toHaveLength(0);
+    expect(view.container.textContent).not.toContain("Use a relative path, hash, or full URL");
 
     const dragHandle = view.container.querySelector('[aria-label="Drag step 1"]');
     const stepCards = getStepCards();
@@ -508,6 +555,11 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
       findInputByPlaceholder(typographySection as ParentNode, "Timeline heading"),
       "Roadmap"
     );
+    setSelectValue(
+      findSelectByOptions(typographySection as ParentNode, ["none", "sm", "base", "lg", "xl"]),
+      "none"
+    );
+    expect(typographySection?.textContent).toContain("Step titles are currently hidden");
     setSelectValue(
       findSelectByOptions(typographySection as ParentNode, [
         "normal",
@@ -544,10 +596,10 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
     expect(latestValue.layout).toEqual(expect.objectContaining({ spacing: "xl", maxWidth: "7xl" }));
     expect(latestValue.header).toEqual(expect.objectContaining({ title: "Roadmap" }));
     expect(latestValue.steps.find((step) => step.id === "alpha")?.cta).toEqual(
-      expect.objectContaining({ label: "Read details", href: "/cta-step" })
+      expect.objectContaining({ label: "Read details", href: "/timeline-cta" })
     );
     expect(latestValue.steps.find((step) => step.id === "alpha")?.link).toEqual(
-      expect.objectContaining({ href: "/whole-step", label: "Open discovery" })
+      expect.objectContaining({ href: "/timeline-link", label: "Open discovery" })
     );
   } finally {
     view.cleanup();
@@ -590,7 +642,7 @@ test("Timeline visual warns when configured marker and text colors collapse into
   }
 });
 
-test("Timeline advanced editor covers layout-only controls and payload normalization guard rails", async () => {
+test("Timeline advanced editor keeps diagnostics read-only and confirm-gates normalization", async () => {
   const { TimelineAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
@@ -616,16 +668,32 @@ test("Timeline advanced editor covers layout-only controls and payload normaliza
     const [value, setValue] = useState<TimelineData>(latestValue);
 
     return (
-      <TimelineAdvancedEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          onChangeSpy(next);
-          setValue(next);
-        }}
-        variant="milestones"
-        onVariantChange={() => undefined}
-      />
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            latestValue = {
+              ...latestValue,
+              header: {
+                title: "External update",
+              },
+            };
+            setValue(latestValue);
+          }}
+        >
+          External update
+        </button>
+        <TimelineAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="milestones"
+          onVariantChange={() => undefined}
+        />
+      </>
     );
   };
 
@@ -634,28 +702,28 @@ test("Timeline advanced editor covers layout-only controls and payload normaliza
   try {
     expect(view.container.textContent).toContain("Current steps: 8.");
     expect(findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"])).toBeUndefined();
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Layout diagnostics");
+    expect(view.container.textContent).toContain("Read-only layout, guide, and style state");
+    expect(view.container.textContent).toContain("Inherited / transparent");
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
 
-    const layoutSection = findSectionByTitle(view.container, "Layout tokens");
-    setSelectValue(
-      findSelectByOptions(layoutSection as ParentNode, ["horizontal", "vertical"]),
-      "vertical"
-    );
-    setSelectValue(findSelectByOptions(layoutSection as ParentNode, ["top", "bottom"]), "bottom");
-    setSelectValue(
-      findSelectByOptions(layoutSection as ParentNode, ["start", "center", "end"]),
-      "start"
-    );
-
-    clickButtonByText(view.container, "Normalize timeline payload");
+    clickButtonByText(view.container, "Review normalization");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");
+    clickButtonByText(view.container, "External update");
+    clickButtonByText(view.container, "Review normalization");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    clickButtonByText(view.container, "Confirm normalization");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.mode).toBe("axis");
     expect(latestValue.steps).toHaveLength(8);
     expect(latestValue.layout).toEqual({
-      orientation: "vertical",
-      align: "start",
+      orientation: "horizontal",
+      align: "center",
       spacing: "md",
-      labelPosition: "bottom",
+      labelPosition: "top",
       padding: "md",
       sectionSpacing: "none",
       maxWidth: "6xl",

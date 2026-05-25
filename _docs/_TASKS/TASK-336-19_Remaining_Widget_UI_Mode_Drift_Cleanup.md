@@ -302,6 +302,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Claude read-only review was attempted for this slice, but
   it returned no actionable output.
+- In Progress (2026-05-25): fourteenth implementation family targets Timeline
+  Wizard ownership, Visual destination authoring, and Advanced writable-layout
+  drift. Wizard now seeds only the starter story (`variant`, header title,
+  header description, starter step count, and starter step title/description)
+  and no longer exposes timeline mode, layout, guides, status, icons, marker
+  accents, dates, or destinations. Visual step CTA and whole-step destinations
+  now use the shared page-first `LinkDestinationField` while saved
+  custom/hash/external destinations stay replace-or-clear compatible. Advanced
+  now renders read-only runtime/layout/style diagnostics plus a two-step
+  confirmed normalization support action instead of editable layout controls.
+  Claude follow-up polish moved the title-hidden warning into Visual
+  Typography, made Advanced summaries use human-readable labels, displays
+  transparent background diagnostics as inherited/transparent, and makes the
+  normalization review state auto-expire when the payload changes before
+  confirmation.
+  Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/widgets/timeline.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-timeline-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude returned `NO BLOCKERS` after the first review,
+  then `NO REMAINING ACTIONS` after the low suggestions were addressed.
 
 ## Files to Change
 

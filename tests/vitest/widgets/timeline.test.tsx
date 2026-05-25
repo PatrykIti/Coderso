@@ -232,7 +232,7 @@ test("timeline visual editor renders section-based IA", () => {
   expect(html).toContain("Typography and spacing");
 });
 
-test("timeline advanced editor keeps technical-only scope", () => {
+test("timeline advanced editor keeps read-only diagnostics scope", () => {
   const html = renderToString(
     <TimelineAdvancedEditor
       value={timelineDefaults}
@@ -242,8 +242,12 @@ test("timeline advanced editor keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Runtime summary");
+  expect(html).toContain("Layout diagnostics");
   expect(html).toContain("Data normalization");
+  expect(html).toContain("Review normalization");
+  expect(html).toContain('data-widget-control-ownership="readonly"');
+  expect(html).toContain('data-widget-control-ownership="action"');
   expect(html).not.toContain("Steps content and order");
   expect(html).not.toContain("Colors and background");
 });

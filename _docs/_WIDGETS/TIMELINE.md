@@ -25,11 +25,16 @@ Legacy variants remain supported, but current behavior is driven by
 ## Editor Modes (current after TASK-291)
 
 ### Wizard
-- full `3-8` step authoring
-- variant, mode, orientation, and guide baseline
-- per-step title, status, icon, and accent editing
+- one-time starter story setup
+- starter variant selection
+- header title and description
+- `3-8` starter step count
+- per-step starter title and description
 - explicit remove confirmation with min-step guard
-- warning when `style.titleSize = "none"` hides step titles
+
+Wizard intentionally does not expose timeline mode, layout, guides, status,
+icons, marker accents, dates, or link destinations. Visual owns those daily
+editing controls after setup.
 
 ### Visual
 Primary day-to-day editing mode with section-based IA:
@@ -52,17 +57,23 @@ Each step can now own:
 - optional CTA (`label`, `href`)
 - optional whole-step link (`link.href`, `link.label`)
 
+CTA and whole-step destinations are authored through the shared page-first
+destination picker. Saved custom/hash/external destinations remain
+backward-compatible as replace-or-clear state instead of raw URL text inputs.
+
 Visual also owns:
 - mode preview cards and mode-to-variant guidance
 - date-format feedback for `YYYY-MM-DD`
 - grouped marker/accent controls
 - drag reorder with button fallback preserved
 - section header, title weight, padding, outer spacing, and max-width controls
+- title-hidden warning inside Typography when `style.titleSize = "none"`
 
 ### Advanced
-Technical-only scope:
-- layout tokens (orientation, alignment, global label position)
-- normalization/reset utilities
+Read-only diagnostics plus explicit support actions:
+- runtime summary for variant, mode, and configured step count
+- read-only layout, guide, style, and background summaries
+- two-step confirmed payload normalization support action
 
 Advanced intentionally excludes duplicated day-to-day content or style editing.
 

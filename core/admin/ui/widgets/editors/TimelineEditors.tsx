@@ -42,7 +42,6 @@ import {
   type TimelineTitleWeight,
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
-import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import {
   ClearableFieldHeader,
@@ -50,7 +49,12 @@ import {
   type ColorContrastAdvisory,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { LinkDestinationField } from "./LinkDestinationField";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -95,13 +99,6 @@ const modeOptions: Array<{ id: TimelineMode; label: string; description: string;
     description: "Narrative story flow that alternates left and right.",
     icon: "4",
   },
-];
-
-const wizardStatusOptions: Array<{ id: string; label: string }> = [
-  { id: "__none__", label: "Not set" },
-  { id: "upcoming", label: "Upcoming" },
-  { id: "current", label: "Current" },
-  { id: "complete", label: "Complete" },
 ];
 
 const visualStatusOptions: Array<{ id: string; label: string }> = [
@@ -243,14 +240,6 @@ const preferredVariantForMode = (mode: TimelineMode): TimelineVariantId => {
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
-
-const isValidTimelineHref = (value: string | undefined) =>
-  !value ||
-  normalizeWidgetSafeHref(value, {
-    allowRelative: true,
-    allowHash: true,
-    allowHttp: true,
-  }) !== undefined;
 
 const getTimelineModeCopy = (mode: TimelineMode) => {
   const preferredVariant = preferredVariantForMode(mode);
@@ -676,6 +665,58 @@ function normalizeTimelinePayload(value: TimelineData, variant: string) {
   return normalizeTimelineData(value, variant);
 }
 
+function findOptionLabel(
+  options: Array<{ id: string; label: string }>,
+  value: string | undefined,
+  fallback: string
+) {
+  return options.find((option) => option.id === value)?.label ?? fallback;
+}
+
+function formatTimelineLayoutSummary(layout: TimelineData["layout"]) {
+  const normalized = {
+    orientation: layout?.orientation ?? "horizontal",
+    align: layout?.align ?? "center",
+    spacing: layout?.spacing ?? "md",
+    labelPosition: layout?.labelPosition ?? "top",
+    padding: layout?.padding ?? "md",
+    sectionSpacing: layout?.sectionSpacing ?? "none",
+    maxWidth: layout?.maxWidth ?? "6xl",
+  };
+
+  return [
+    `Orientation: ${findOptionLabel(orientationOptions, normalized.orientation, "Horizontal")}`,
+    `Alignment: ${findOptionLabel(alignOptions, normalized.align, "Center")}`,
+    `Spacing: ${findOptionLabel(spacingOptions, normalized.spacing, "Default")}`,
+    `Padding: ${findOptionLabel(paddingOptions, normalized.padding, "Default")}`,
+    `Width: ${findOptionLabel(maxWidthOptions, normalized.maxWidth, "6XL")}`,
+    `Labels: ${findOptionLabel(labelPositionOptions, normalized.labelPosition, "Top")}`,
+  ].join("; ");
+}
+
+function formatTimelineGuidesSummary(guides: TimelineData["guides"]) {
+  const enabled = guides?.enabled ?? true;
+  const style = guides?.style ?? "dashed";
+  return enabled
+    ? `Enabled, ${findOptionLabel(guideStyleOptions, style, "Dashed")} style.`
+    : "Disabled.";
+}
+
+function formatTimelineStyleSummary(style: TimelineData["style"]) {
+  return [
+    `Line: ${findOptionLabel(lineStyleOptions, style?.lineStyle, "Solid")}`,
+    `Thickness: ${findOptionLabel(thicknessOptions, style?.thickness, "2px")}`,
+    `Marker: ${findOptionLabel(markerDisplayOptions, style?.markerDisplay, "Dot")} / ${findOptionLabel(markerSizeOptions, style?.markerSize, "Medium")}`,
+    `Title: ${findOptionLabel(titleSizeOptions, style?.titleSize, "Base")} ${findOptionLabel(titleWeightOptions, style?.titleWeight, "Semibold")}`,
+  ].join("; ");
+}
+
+function formatTimelineBackgroundSummary(background: TimelineData["background"]) {
+  const color = background?.color?.trim();
+  if (!color || color === "transparent") return "Inherited / transparent";
+  return color;
+}
+
 function TimelineStructureFields({
   value,
   onChange,
@@ -1099,6 +1140,13 @@ function TimelineTypographyFields({
 }) {
   return (
     <div className="space-y-4">
+      {value.style?.titleSize === "none" ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          Step titles are currently hidden. Choose a visible title size here when authors should see
+          step titles on the page.
+        </div>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2">
           <p className="text-sm font-medium">Header title</p>
@@ -1294,10 +1342,8 @@ export function TimelineWizardEditor({
   onChange,
   variant,
   onVariantChange,
-  onBlockPatch,
 }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
-  const mode = resolveTimelineMode(value.mode, variant);
   const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
   const pendingRemoveStep =
     typeof pendingRemoveIndex === "number" ? steps[pendingRemoveIndex] : undefined;
@@ -1306,25 +1352,32 @@ export function TimelineWizardEditor({
     <div className="space-y-4">
       <TimelineVariantSelect value={variant} onChange={onVariantChange} />
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Timeline mode</p>
-        <Select
-          value={mode}
-          onValueChange={(next) =>
-            updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {modeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+        Wizard seeds the initial timeline story. Visual owns daily status, marker accents, guides,
+        layout, and destination changes after setup.
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Header title</p>
+          <Input
+            value={value.header?.title ?? ""}
+            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+            placeholder="Timeline heading"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Header description</p>
+          <Textarea
+            value={value.header?.description ?? ""}
+            onChange={(event) =>
+              updateHeader(value, onChange, {
+                description: event.target.value,
+              })
+            }
+            placeholder="Optional context above the timeline"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -1344,49 +1397,10 @@ export function TimelineWizardEditor({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Orientation</p>
-          <Select
-            value={value.layout?.orientation ?? "horizontal"}
-            onValueChange={(next) =>
-              updateLayout(value, onChange, {
-                orientation: next as TimelineLayout["orientation"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Orientation" />
-            </SelectTrigger>
-            <SelectContent>
-              {orientationOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Show guide lines</p>
-            <p className="text-xs text-muted-foreground">Enable helper connectors.</p>
-          </div>
-          <Switch
-            checked={value.guides?.enabled ?? true}
-            onCheckedChange={(checked) => updateGuides(value, onChange, { enabled: checked })}
-          />
+        <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Visual owns daily step details such as status, icons, accents, dates, and destinations.
         </div>
       </div>
-
-      {value.style?.titleSize === "none" ? (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-          Step titles are hidden right now because Title size is set to None. Update Typography and
-          spacing if you want titles visible again.
-        </div>
-      ) : null}
 
       <div className="space-y-3">
         {steps.map((step, index) => (
@@ -1437,52 +1451,14 @@ export function TimelineWizardEditor({
               }
               placeholder={`Step ${index + 1}`}
             />
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Status</p>
-                <Select
-                  value={step.status ?? "__none__"}
-                  onValueChange={(next) =>
-                    updateStep(value, onChange, index, {
-                      status: next === "__none__" ? undefined : (next as TimelineStatus),
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {wizardStatusOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Icon</p>
-                <Input
-                  value={step.icon ?? ""}
-                  onChange={(event) =>
-                    updateStep(value, onChange, index, { icon: event.target.value })
-                  }
-                  placeholder="Icon text or emoji"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Plain text or emoji only. Decorative output stays hidden from assistive tech.
-                </p>
-              </div>
-            </div>
-
-            <ColorField
-              label={`Step ${index + 1} accent`}
-              value={step.accent}
-              onChange={(next) => updateStep(value, onChange, index, { accent: next })}
-              placeholder="#1d4ed8"
-              pickerFallback="#1d4ed8"
-              helperText="Optional accent for this step. Leave empty to inherit the global marker color."
+            <Textarea
+              value={step.description ?? ""}
+              onChange={(event) =>
+                updateStep(value, onChange, index, {
+                  description: event.target.value,
+                })
+              }
+              placeholder="Step description"
             />
           </div>
         ))}
@@ -1714,20 +1690,14 @@ export function TimelineVisualEditor({
                     }
                     placeholder="Step CTA label"
                   />
-                  <div className="space-y-1">
-                    <Input
-                      value={step.cta?.href ?? ""}
-                      onChange={(event) =>
-                        updateStepCta(value, onChange, index, { href: event.target.value })
-                      }
-                      placeholder="/timeline-step"
-                    />
-                    {!isValidTimelineHref(step.cta?.href) ? (
-                      <p className="text-xs text-destructive">
-                        Use a relative path, hash, or full URL.
-                      </p>
-                    ) : null}
-                  </div>
+                  <LinkDestinationField
+                    fieldId={`timeline-step-${index + 1}-cta-destination`}
+                    label="Step CTA destination"
+                    value={step.cta?.href}
+                    onChange={(next) => updateStepCta(value, onChange, index, { href: next })}
+                    emptyLabel="No CTA destination"
+                    helpText="Choose an existing site page for this step CTA. Saved custom destinations stay replace-or-clear only."
+                  />
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
                   <Input
@@ -1737,29 +1707,19 @@ export function TimelineVisualEditor({
                     }
                     placeholder="Whole-step link label"
                   />
-                  <div className="space-y-1">
-                    <Input
-                      value={step.link?.href ?? ""}
-                      onChange={(event) =>
-                        updateStepLink(value, onChange, index, { href: event.target.value })
-                      }
-                      placeholder="/timeline-step"
-                    />
-                    {!isValidTimelineHref(step.link?.href) ? (
-                      <p className="text-xs text-destructive">
-                        Use a relative path, hash, or full URL.
-                      </p>
-                    ) : hasCta ? (
-                      <p className="text-xs text-muted-foreground">
-                        Whole-step links are disabled when a CTA link is configured to avoid nested
-                        anchors.
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Use this only when the whole step should open one destination.
-                      </p>
-                    )}
-                  </div>
+                  <LinkDestinationField
+                    fieldId={`timeline-step-${index + 1}-link-destination`}
+                    label="Whole-step destination"
+                    value={step.link?.href}
+                    onChange={(next) => updateStepLink(value, onChange, index, { href: next })}
+                    emptyLabel="No whole-step destination"
+                    helpText="Use this only when the whole step should open one selected site page."
+                    feedback={
+                      hasCta
+                        ? "Whole-step links are disabled when a CTA link is configured to avoid nested anchors."
+                        : null
+                    }
+                  />
                 </div>
               </div>
             );
@@ -1808,38 +1768,116 @@ export function TimelineAdvancedEditor({
   variant,
 }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
+  const normalized = normalizeTimelinePayload(value, variant);
+  const normalizationSignature = JSON.stringify(value);
+  const [normalizationReviewSignature, setNormalizationReviewSignature] = useState<string | null>(
+    null
+  );
+  const [normalizationMessage, setNormalizationMessage] = useState<string | null>(null);
+  const normalizationArmed = normalizationReviewSignature === normalizationSignature;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        id="timeline.layout-tokens"
-        title="Layout tokens"
-        description="Technical controls for orientation, alignment, and axis labels."
+        id="timeline.runtime-summary"
+        title="Runtime summary"
+        description="Read-only summary of the saved renderer contract. Visual owns normal editing."
       >
-        <TimelineStructureFields
-          value={value}
-          onChange={onChange}
-          includeStepCount={false}
-          variant={variant}
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-variant"
+          label="Variant"
+          path="variant"
+          value={variant}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-mode"
+          label="Mode"
+          path="mode"
+          value={resolveTimelineMode(value.mode, variant)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-steps"
+          label="Steps"
+          path="steps"
+          value={`${steps.length} configured steps.`}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="timeline.layout-diagnostics"
+        title="Layout diagnostics"
+        description="Read-only layout, guide, and style state. Change these in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-layout"
+          label="Layout"
+          path="layout"
+          value={formatTimelineLayoutSummary(normalized.layout)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-guides"
+          label="Guides"
+          path="guides"
+          value={formatTimelineGuidesSummary(normalized.guides)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-style"
+          label="Style"
+          path="style"
+          value={formatTimelineStyleSummary(normalized.style)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-background"
+          label="Background"
+          path="background"
+          value={formatTimelineBackgroundSummary(normalized.background)}
         />
       </EditorSection>
 
       <EditorSection
         id="timeline.data-normalization"
         title="Data normalization"
-        description="Normalize step IDs and enforce safe step-count bounds."
+        description="Confirmed support action for deterministic payload cleanup."
       >
         <p className="text-xs text-muted-foreground">
           Current steps: {steps.length}. Normalization keeps payload compatible with runtime rules
           (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onChange(normalizeTimelinePayload(value, variant))}
+        <WidgetControlRow
+          id="timeline-advanced-normalize-action"
+          label="Normalize payload"
+          ownership="action"
+          help="This support action rewrites fallback values after explicit confirmation."
         >
-          Normalize timeline payload
-        </Button>
+          {() => (
+            <Button
+              type="button"
+              variant={normalizationArmed ? "default" : "outline"}
+              onClick={() => {
+                if (!normalizationArmed) {
+                  setNormalizationReviewSignature(normalizationSignature);
+                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
+                  return;
+                }
+
+                const before = JSON.stringify(value);
+                const after = JSON.stringify(normalized);
+                onChange(normalized);
+                setNormalizationReviewSignature(null);
+                setNormalizationMessage(
+                  before === after ? "Already normalized." : "Payload normalized."
+                );
+              }}
+            >
+              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
+            </Button>
+          )}
+        </WidgetControlRow>
+        {normalizationMessage ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {normalizationMessage}
+          </p>
+        ) : null}
       </EditorSection>
     </div>
   );

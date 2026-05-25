@@ -891,6 +891,36 @@ and segment destination authoring drift.
 - Claude read-only review was attempted for this Compare Timeline slice, but it
   returned no actionable output.
 
+## TASK-336-19 Timeline Mode/Destination Evidence (2026-05-25)
+
+The fourteenth TASK-336-19 implementation family targets Timeline Wizard,
+Visual destination, and Advanced diagnostics drift.
+
+- Timeline Wizard now seeds only the starter story: variant, header title,
+  header description, starter step count, and starter step title/description.
+  Layout, guides, status, icons, marker accents, dates, and destinations are
+  no longer exposed in Wizard.
+- Timeline Visual no longer exposes raw safe-link/path text inputs for step CTA
+  or whole-step destinations. Both use the shared page-first
+  `LinkDestinationField` while preserving saved custom/hash/external
+  destinations as replace-or-clear compatibility state.
+- Timeline Advanced no longer exposes editable layout controls. It renders
+  read-only runtime/layout/style diagnostics plus a two-step confirmed payload
+  normalization support action.
+- Claude follow-up polish is included: title-hidden guidance lives in Visual
+  Typography, Advanced summaries use human-readable labels, transparent
+  background diagnostics display as inherited/transparent, and normalization
+  review state expires when the payload changes before confirmation.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/widgets/timeline.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-timeline-authoring-2026-05-25.*`.
+  Timeline reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  and `metadataGaps=0`.
+- Claude read-only review returned `NO BLOCKERS`, then `NO REMAINING ACTIONS`
+  after the medium/low suggestions were addressed.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
