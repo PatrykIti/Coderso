@@ -685,6 +685,12 @@ shell instead of per widget.
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-lifecycle-2026-05-24.*`
   and verifies hidden Wizard peer tab, visible setup summary, daily Visual,
   Advanced diagnostics, explicit setup rerun, and return to Visual.
+- 2026-05-25 follow-up: persisted legacy blocks without `editor` state now
+  normalize as setup-complete `Visual` in page/detail-template editors and in
+  page mutation payloads. Targeted FAQ evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-legacy-faq-wizard-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## TASK-336-19 Newsletter Visual Authoring Evidence (2026-05-24)
 

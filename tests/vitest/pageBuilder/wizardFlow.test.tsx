@@ -5,6 +5,7 @@ import {
   applyWizardSelection,
   createBlock,
   reopenWidgetSetup,
+  resolveLoadedWidgetEditorState,
   resolveWidgetEditorState,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
 
@@ -39,6 +40,23 @@ test("resolveWidgetEditorState keeps Wizard one-time and daily modes explicit", 
       editor: { mode: "wizard", wizardCompleted: true },
     })
   ).toEqual({ mode: "visual", wizardCompleted: true });
+});
+
+test("resolveLoadedWidgetEditorState treats legacy persisted blocks as setup-complete", () => {
+  expect(resolveLoadedWidgetEditorState(undefined)).toEqual({
+    mode: "visual",
+    wizardCompleted: true,
+  });
+
+  expect(resolveLoadedWidgetEditorState({ mode: "wizard", wizardCompleted: false })).toEqual({
+    mode: "wizard",
+    wizardCompleted: false,
+  });
+
+  expect(resolveLoadedWidgetEditorState({ mode: "wizard", wizardCompleted: true })).toEqual({
+    mode: "visual",
+    wizardCompleted: true,
+  });
 });
 
 test("reopenWidgetSetup preserves widget data and re-enters the one-time setup path", () => {

@@ -63,6 +63,7 @@ import {
   getFirstBlockId,
   moveBlockIntoSlot,
   reorderBlocksAtPath,
+  resolveLoadedWidgetEditorState,
   shouldWarnOnNavigate,
   updateBlockById,
   type BlockPath,
@@ -287,7 +288,7 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
         children,
         layout: normalized.layout ?? base.layout,
         visibility: normalized.visibility ?? base.visibility,
-        editor: normalized.editor ?? base.editor,
+        editor: resolveLoadedWidgetEditorState(normalized.editor),
       };
     };
 
@@ -373,6 +374,14 @@ const applyPageSettings = (
       layout: settingsValue.layout,
       revisionRetention: settingsValue.revisionRetention,
     },
+  };
+};
+
+const normalizePageData = (data?: Record<string, unknown> | null): Record<string, unknown> => {
+  const source = isRecord(data) ? data : {};
+  return {
+    ...source,
+    blocks: normalizeBlocks(source),
   };
 };
 
@@ -516,11 +525,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     [initialPage, pageId]
   );
   const initialPageDetail = initialPage ?? initialCachedPage;
-  const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
-  const [pageData, setPageData] = useState<Record<string, unknown>>(
-    initialPageDetail?.currentData ?? { blocks: defaultBlocks }
+  const initialPageData = useMemo(
+    () => normalizePageData(initialPageDetail?.currentData as Record<string, unknown> | null),
+    [initialPageDetail]
   );
-  const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPageDetail?.currentData));
+  const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
+  const [pageData, setPageData] = useState<Record<string, unknown>>(initialPageData);
+  const [blocks, setBlocks] = useState<Block[]>(initialPageData.blocks as Block[]);
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
@@ -700,9 +711,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
 
   const applyPage = useCallback((result: PageDetail, options?: { preserveSelection?: boolean }) => {
     setPage(result);
-    const nextData = result.currentData ?? { blocks: defaultBlocks };
-    setPageData(nextData as Record<string, unknown>);
-    const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
+    const nextData = normalizePageData(result.currentData as Record<string, unknown> | null);
+    setPageData(nextData);
+    const nextBlocks = nextData.blocks as Block[];
     blocksRef.current = nextBlocks;
     setBlocks(nextBlocks);
     setSelectedId((current) => {
@@ -1215,8 +1226,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setIsUpdatingMeta(true);
     try {
       const persistedData = isRecord(page?.currentData)
-        ? (page.currentData as Record<string, unknown>)
-        : { blocks: defaultBlocks };
+        ? normalizePageData(page.currentData as Record<string, unknown>)
+        : normalizePageData(null);
       const nextPersistedData = applyPageSettings(persistedData, payload.settings);
       const updated = await updatePage(pageId, {
         title: payload.title,
@@ -1251,8 +1262,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setIsAutosavingSettings(true);
     try {
       const persistedData = isRecord(page?.currentData)
-        ? (page.currentData as Record<string, unknown>)
-        : { blocks: defaultBlocks };
+        ? normalizePageData(page.currentData as Record<string, unknown>)
+        : normalizePageData(null);
       const nextPersistedData = applyPageSettings(persistedData, payload.settings);
       await autosavePage(pageId, {
         title: payload.title,

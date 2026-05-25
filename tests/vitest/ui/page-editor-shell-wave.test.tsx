@@ -509,6 +509,7 @@ vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
     { type: "compare-timeline" },
     { type: "template-section" },
     { type: "form-embed" },
+    { type: "faq-accordion" },
   ],
 }));
 
@@ -791,6 +792,84 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
     await flush();
 
     expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor normalizes legacy loaded block editor state before mutations", async () => {
+  pageEditorState.reset();
+  const legacyPage = createPage({
+    currentData: {
+      settings: {
+        template: "landing",
+      },
+      blocks: [
+        {
+          id: "legacy-faq",
+          type: "faq-accordion",
+          data: {},
+        },
+      ],
+    },
+  });
+  pageEditorState.cachedPage = legacyPage;
+  pageEditorState.currentPage = clonePage(legacyPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={legacyPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("settings-block:faq-accordion");
+    clickButton(view.container, "add-widget");
+    await flush();
+
+    clickButton(view.container, "Preview");
+    await flush();
+
+    const previewSyncPayload = pageEditorState.updatePage.mock.calls[0]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(previewSyncPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-save");
+    await flush();
+
+    const settingsPayload = pageEditorState.updatePage.mock.calls[1]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(settingsPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const draftPayload = pageEditorState.updatePage.mock.calls[2]?.[1] as {
+      data: { blocks: Array<{ editor?: unknown }> };
+    };
+    expect(draftPayload.data.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    const publishPayload = pageEditorState.publishPage.mock.calls[0]?.[1] as {
+      blocks: Array<{ editor?: unknown }>;
+    };
+    expect(publishPayload.blocks[0]?.editor).toEqual({
+      mode: "visual",
+      wizardCompleted: true,
+    });
   } finally {
     view.cleanup();
   }

@@ -125,6 +125,9 @@ Zasady:
   `Setup complete`, codzienne zakladki `Visual` i `Advanced`, oraz akcje
   `Run setup again`. `Wizard` nie jest stalym peer tabem po completion, a
   ponowne uruchomienie setupu nie resetuje danych widgetu.
+- Persisted legacy blocks without `editor` state are normalized as setup
+  complete and open in daily `Visual`; only newly inserted widgets or explicit
+  `wizardCompleted=false` blocks enter `Wizard`.
 - Layout widgets (`section`, `grid-columns`, `split-layout`, `stack`, `spacer`,
   `divider`) stosuja po TASK-336-14 zaostrzona polityke: `Wizard` jest
   setup-only, `Visual` wlada codziennymi layout/style controls przez presety,

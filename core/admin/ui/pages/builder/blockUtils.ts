@@ -491,6 +491,13 @@ export function resolveWidgetEditorState(block: Pick<Block, "editor"> | null | u
   } satisfies WidgetEditorState;
 }
 
+export function resolveLoadedWidgetEditorState(
+  editor: WidgetEditorState | null | undefined
+): WidgetEditorState {
+  if (!editor) return { ...completedDefaultEditor };
+  return resolveWidgetEditorState({ editor });
+}
+
 export function reopenWidgetSetup(block: Block): Block {
   return {
     ...block,

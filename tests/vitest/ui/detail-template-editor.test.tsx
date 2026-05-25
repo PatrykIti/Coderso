@@ -11,6 +11,10 @@ import type {
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
 import type { EntrySummary } from "../../../core/admin/services/entriesClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import {
+  normalizeDetailTemplateBlocks,
+  normalizeDetailTemplateDocument,
+} from "../../../core/admin/ui/content-types/detailTemplateEditorModel";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
 
 type CacheEvent = {
@@ -610,6 +614,45 @@ const changeSelect = (container: HTMLElement, optionValue: string) => {
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
 };
+
+test("detail template normalization treats legacy blocks without editor state as setup-complete", () => {
+  const [legacyBlock] = normalizeDetailTemplateBlocks([
+    {
+      id: "block-faq",
+      type: "faq-accordion",
+      data: {},
+    },
+  ]);
+  const [incompleteBlock] = normalizeDetailTemplateBlocks([
+    {
+      id: "block-new-faq",
+      type: "faq-accordion",
+      data: {},
+      editor: { mode: "wizard", wizardCompleted: false },
+    },
+  ]);
+
+  expect(legacyBlock?.editor).toEqual({ mode: "visual", wizardCompleted: true });
+  expect(incompleteBlock?.editor).toEqual({ mode: "wizard", wizardCompleted: false });
+});
+
+test("detail template document normalization keeps legacy FAQ out of daily Wizard tabs", () => {
+  const document = normalizeDetailTemplateDocument(
+    createRecord({
+      currentDocument: createDocument({
+        blocks: [
+          {
+            id: "block-faq",
+            type: "faq-accordion",
+            data: {},
+          },
+        ],
+      }),
+    })
+  );
+
+  expect(document.blocks[0]?.editor).toEqual({ mode: "visual", wizardCompleted: true });
+});
 
 test("detail template editor hydrates cached detail page and bounded sample entries", async () => {
   const view = mount(

@@ -7,7 +7,7 @@ import type {
   DetailPageStatus,
 } from "../../../services/content/detailPageTypes";
 import { normalizeWidgetBlock } from "../../../widgets/validator";
-import { createBlock } from "@/ui/pages/builder/blockUtils";
+import { createBlock, resolveLoadedWidgetEditorState } from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
 import type { DetailPageRecord } from "@/services/detailPagesClient";
 
@@ -119,7 +119,7 @@ export const normalizeDetailTemplateBlocks = (value: unknown): Block[] => {
         children,
         layout: normalized.layout ?? base.layout,
         visibility: normalized.visibility ?? base.visibility,
-        editor: normalized.editor ?? base.editor,
+        editor: resolveLoadedWidgetEditorState(normalized.editor),
       };
     };
 

@@ -202,6 +202,11 @@ Regression-test shape:
 - `resolveWidgetEditorState` treats completed legacy `mode: "wizard"` blocks as
   daily `Visual`, while `reopenWidgetSetup` explicitly re-enters the existing
   `wizardCompleted=false` setup path without clearing widget data.
+- Follow-up 2026-05-25: persisted page/detail-template blocks that predate the
+  `editor` state are normalized as setup-complete `Visual` on load, and the
+  normalized state is included in settings save, draft save, preview sync, and
+  publish payloads so legacy pages do not reopen Wizard or fail editor-state
+  validation.
 - `BlockSettings` now shows `Setup complete`, `Visual`, `Advanced`, and
   `Run setup again` after setup completion; `Wizard` is no longer a permanent
   daily peer tab.
@@ -219,6 +224,10 @@ Regression-test shape:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-hero-2026-05-24.*`
   and
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-one-time-wizard-lifecycle-2026-05-24.*`.
+- Follow-up FAQ legacy smoke:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-16-legacy-faq-wizard-2026-05-25.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Acceptance Criteria
 
