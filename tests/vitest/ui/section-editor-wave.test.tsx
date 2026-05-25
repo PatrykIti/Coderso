@@ -309,23 +309,36 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
 const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
   findInputsByPlaceholder(container, placeholder)[0];
 
+const findInputsByAriaLabel = (container: ParentNode, label: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
+
+const findInputByAriaLabel = (container: ParentNode, label: string) =>
+  findInputsByAriaLabel(container, label)[0];
+
+const findColorInputByLabel = (container: ParentNode, label: string, index = 0) => {
+  const colorInput = findInputsByAriaLabel(container, `${label} swatch`)[index];
+  if (!(colorInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for "${label}" (${index})`);
+  }
+  return colorInput;
+};
+
+const findWidgetControl = (container: ParentNode, id: string) => {
+  const control = container.querySelector(`[data-widget-control="${id}"]`);
+  if (!(control instanceof HTMLElement)) {
+    throw new Error(`Missing widget control: ${id}`);
+  }
+  return control;
+};
+
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
       element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
   );
-
-const findColorInputForPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
-  const textInput = findInputsByPlaceholder(container, placeholder)[index];
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
-  }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
-  }
-  return colorInput;
-};
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
@@ -500,7 +513,7 @@ const mockSectionContract = async ({
   });
 };
 
-test("Section editors normalize malformed defaults, preserve token strings, and ignore variant changes without a handler", async () => {
+test("Section editors normalize malformed defaults, summarize saved custom colors, and ignore variant changes without a handler", async () => {
   const view = await renderEditors({
     initialValue: {
       semantics: {
@@ -527,7 +540,8 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     if (!(wizardSection instanceof HTMLElement)) {
       throw new Error("Missing section setup");
     }
-    expect(wizardSection.textContent).toContain("Quick preset");
+    expect(wizardSection.textContent).not.toContain("Quick preset");
+    expect(wizardSection.textContent).not.toContain("Hero band");
     const wizardVariantControl = wizardSection.querySelector(
       '[data-widget-control="section.wizard.variant"]'
     );
@@ -539,22 +553,19 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
 
-    expect(findInputsByPlaceholder(view.container, "transparent")[0]?.value).toBe("brand-token");
-    expect(findColorInputForPlaceholder(view.container, "transparent", 0).value).toBe("#ffffff");
-
-    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
-    if (!(semanticsSection instanceof HTMLElement)) {
-      throw new Error("Missing semantics section");
+    const linkSection = findSectionByTitle(view.container, "Section link and accessibility");
+    if (!(linkSection instanceof HTMLElement)) {
+      throw new Error("Missing link and accessibility section");
     }
     const spacingSection = findSectionByTitle(view.container, "Width and spacing");
     if (!(spacingSection instanceof HTMLElement)) {
       throw new Error("Missing width and spacing section");
     }
-    expect(semanticsSection.getAttribute("data-widget-editor-section")).toBe(
-      "section.semantics-anchor"
+    expect(linkSection.getAttribute("data-widget-editor-section")).toBe(
+      "section.visual.link-accessibility"
     );
     expect(
-      semanticsSection.querySelector('[data-widget-control="section.semantics.anchorId"]')
+      linkSection.querySelector('[data-widget-control="section.semantics.anchorId"]')
     ).not.toBeNull();
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {
@@ -565,19 +576,15 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
     );
     expect(spacingSection.getAttribute("data-widget-editor-section")).toBe("section.width-spacing");
 
-    expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
-    expect(findInputByPlaceholder(surfaceSection, "#ffffff")?.value).toBe("surface-start-token");
-    expect(findColorInputForPlaceholder(surfaceSection, "#ffffff").value).toBe("#ffffff");
-    expect(findInputByPlaceholder(surfaceSection, "#f1f5f9")?.value).toBe("surface-end-token");
-    expect(findColorInputForPlaceholder(surfaceSection, "#f1f5f9").value).toBe("#f1f5f9");
-    expect(findInputByPlaceholder(surfaceSection, "var(--color-border)")?.value).toBe(
-      "border-token"
-    );
-    expect(findColorInputForPlaceholder(surfaceSection, "var(--color-border)").value).toBe(
-      "#e2e8f0"
-    );
-    expect(findInputByPlaceholder(surfaceSection, "#000000")?.value).toBe("overlay-token");
-    expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
+    expect(findSelectByOptions(linkSection, ["section", "div"]).value).toBe("section");
+    expect(findColorInputByLabel(surfaceSection, "Background color").value).toBe("#ffffff");
+    expect(findColorInputByLabel(surfaceSection, "Gradient start").value).toBe("#ffffff");
+    expect(findColorInputByLabel(surfaceSection, "Gradient end").value).toBe("#f1f5f9");
+    expect(findColorInputByLabel(surfaceSection, "Border color").value).toBe("#e2e8f0");
+    expect(findColorInputByLabel(surfaceSection, "Overlay color").value).toBe("#000000");
+    expect(surfaceSection.textContent).toContain("Saved custom color");
+    expect(findInputsByPlaceholder(surfaceSection, "var(--color-border)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(surfaceSection, "#ffffff")).toHaveLength(0);
 
     expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("0");
     expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("none");
@@ -603,7 +610,7 @@ test("Section editors normalize malformed defaults, preserve token strings, and 
   }
 });
 
-test("Section editors cover variant changes, semantics, surface tokens, and advanced snapshot updates", async () => {
+test("Section editors cover variant changes, friendly link fields, swatch colors, and advanced summaries", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
@@ -643,20 +650,22 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       findTextareaByPlaceholder(view.container, "Short context for the section"),
       "Reusable wrapper for grouped content."
     );
-    const wizardBackgroundInput = findInputByPlaceholder(wizardSection, "transparent");
-    setInputValue(wizardBackgroundInput, "#f8fafc");
-
     expect(view.getLatestValue().heading).toMatchObject({
       label: "Platform label",
       title: "Platform section",
       description: "Reusable wrapper for grouped content.",
     });
-    expect(view.getLatestValue().style?.backgroundColor).toBe("#f8fafc");
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
       throw new Error("Missing variant and structure section");
     }
+    expect(
+      variantSection.querySelector('[data-widget-control-path="layout.containerWidth"]')
+    ).not.toBeNull();
+    expect(
+      variantSection.querySelector('[data-widget-control-path="style.radius"]')
+    ).not.toBeNull();
     clickByText(variantSection, "Bleed");
     expect(view.getLatestVariant()).toBe("bleed");
 
@@ -666,7 +675,7 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       "Supporting copy from visual editor."
     );
     setInputValue(findInputByPlaceholder(view.container, "Section label"), "Overview");
-    setInputValue(findInputByPlaceholder(view.container, "pricing-section"), "overview");
+    setInputValue(findInputByPlaceholder(view.container, "Pricing area"), "overview");
     setInputValue(findInputByPlaceholder(view.container, "Pricing section"), "Overview section");
 
     const headingSection = findSectionByTitle(view.container, "Heading and intro");
@@ -679,16 +688,15 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
     setSelectValue(findSelectByOptions(headingSection, ["xs", "sm", "md"]), "md");
     setSelectValue(findSelectByOptions(headingSection, ["xl", "2xl", "3xl"]), "3xl");
     setSelectValue(findSelectByOptions(headingSection, ["sm", "base", "lg"]), "lg");
-    const headingColorInputs = findInputsByPlaceholder(headingSection, "var(--color-text)");
-    setInputValue(headingColorInputs[0], "#475569");
-    setInputValue(headingColorInputs[1], "var(--color-primary)");
-    setInputValue(headingColorInputs[2], "#334155");
+    setInputValue(findColorInputByLabel(headingSection, "Label color"), "#475569");
+    setInputValue(findColorInputByLabel(headingSection, "Title color"), "#111827");
+    setInputValue(findColorInputByLabel(headingSection, "Description color"), "#334155");
 
-    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
-    if (!(semanticsSection instanceof HTMLElement)) {
-      throw new Error("Missing semantics section");
+    const linkSection = findSectionByTitle(view.container, "Section link and accessibility");
+    if (!(linkSection instanceof HTMLElement)) {
+      throw new Error("Missing link and accessibility section");
     }
-    const elementSelect = findSelectByOptions(semanticsSection, ["section", "div"]);
+    const elementSelect = findSelectByOptions(linkSection, ["section", "div"]);
     setSelectValue(elementSelect, "div");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
@@ -758,16 +766,16 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       findSelectByOptions(spacingSection, ["__match_variant__", "none", "sm", "md", "lg", "xl"]),
       "xl"
     );
-    setInputValue(findColorInputForPlaceholder(surfaceSection, "transparent"), "#ecfeff");
-    setInputValue(findInputByPlaceholder(surfaceSection, "#ffffff"), "#1d4ed8");
-    setInputValue(findInputByPlaceholder(surfaceSection, "#f1f5f9"), "#222222");
-    setInputValue(findInputByPlaceholder(surfaceSection, "var(--color-border)"), "#0f172a");
+    setInputValue(findColorInputByLabel(surfaceSection, "Background color"), "#ecfeff");
+    setInputValue(findColorInputByLabel(surfaceSection, "Gradient start"), "#1d4ed8");
+    setInputValue(findColorInputByLabel(surfaceSection, "Gradient end"), "#222222");
+    setInputValue(findColorInputByLabel(surfaceSection, "Border color"), "#0f172a");
     setSelectValue(borderWidthSelect, "2");
     setSelectValue(radiusSelect, "xl");
     setSelectValue(shadowSelect, "lg");
     setSelectValue(motionSelect, "slide-up");
 
-    setInputValue(findInputByPlaceholder(surfaceSection, "#000000"), "#333333");
+    setInputValue(findColorInputByLabel(surfaceSection, "Overlay color"), "#333333");
     const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
     setInputValue(angleInput, "270");
     setInputValue(opacityInput, "35");
@@ -782,8 +790,6 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       labelSize: "md",
       titleSize: "3xl",
       descriptionSize: "lg",
-      labelColor: "#475569",
-      titleColor: "var(--color-primary)",
       descriptionColor: "#334155",
     });
     expect(view.getLatestValue().layout).toMatchObject({
@@ -828,11 +834,11 @@ test("Section editors cover variant changes, semantics, surface tokens, and adva
       surfaceSection.querySelector('[data-section-surface-preview-overlay="true"]')
     ).not.toBeNull();
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"level": "h4"');
-    expect(snapshot?.textContent).toContain('"anchorId": "overview"');
-    expect(snapshot?.textContent).toContain('"gradientAngle": 270');
-    expect(snapshot?.textContent).toContain('"overlayOpacity": 35');
+    const advancedSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(advancedSection?.textContent).toContain("h4 heading");
+    expect(view.container.textContent).toContain("link name overview");
+    expect(advancedSection?.textContent).toContain("Gradient angle 270 degrees");
+    expect(advancedSection?.textContent).toContain("overlay 35%");
   } finally {
     view.cleanup();
   }
@@ -855,15 +861,11 @@ test("Section presets and variant cards use atomic block patches when available"
     if (!(wizardSection instanceof HTMLElement)) {
       throw new Error("Missing section setup");
     }
-    clickByText(wizardSection, "Hero band");
+    clickByText(wizardSection, "Bleed");
     expect(view.onBlockPatchSpy).toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
     expect(view.getLatestVariant()).toBe("bleed");
-    expect(view.getLatestValue().layout).toMatchObject({
-      containerWidth: "full",
-      maxWidth: "none",
-      minHeight: "hero",
-    });
+    expect(view.getLatestValue().layout).toBeUndefined();
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
@@ -936,23 +938,16 @@ test("Section editor presets preserve heading copy and expose friendly width and
     if (!(wizardSection instanceof HTMLElement)) {
       throw new Error("Missing section setup");
     }
-    expect(wizardSection.textContent).toContain("Quick preset");
-    clickByText(wizardSection, "Hero band");
+    expect(wizardSection.textContent).not.toContain("Quick preset");
+    expect(wizardSection.textContent).not.toContain("Two-column region group");
+    clickByText(wizardSection, "Bleed");
     expect(view.getLatestVariant()).toBe("bleed");
     expect(view.getLatestValue().heading).toMatchObject({
       label: "Overview",
       title: "Pricing plans",
       description: "Supportive copy stays intact.",
-      align: "center",
     });
-    expect(view.getLatestValue().layout).toMatchObject({
-      containerWidth: "full",
-      maxWidth: "none",
-      minHeight: "hero",
-      paddingBlock: "xl",
-      paddingInline: "lg",
-      headingGap: "xl",
-    });
+    expect(view.getLatestValue().layout).toBeUndefined();
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
@@ -1148,7 +1143,6 @@ test("Section visual editor resolves decorative background image assets and boun
     }
 
     setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "image");
-    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
     clickByText(backgroundSection, "pick-image-asset");
     await flush();
 
@@ -1179,11 +1173,20 @@ test("Section visual editor resolves decorative background image assets and boun
       layerOrder: "overlay-under-media",
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"backgroundMedia"');
-    expect(snapshot?.textContent).toContain('"assetId": "asset-image"');
-    expect(snapshot?.textContent).toContain('"blendMode": "overlay"');
-    expect(snapshot?.textContent).toContain('"layerOrder": "overlay-under-media"');
+    const mediaControl = findWidgetControl(
+      backgroundSection,
+      "section.style.backgroundMedia.assetId"
+    );
+    expect(mediaControl.getAttribute("data-widget-control-path")).toBe("style.backgroundMedia");
+    expect(
+      backgroundSection.querySelector('[data-widget-control-path="style.backgroundMedia.source"]')
+    ).not.toBeNull();
+    expect(
+      backgroundSection.querySelector('[data-widget-control-path="style.backgroundMedia.src"]')
+    ).not.toBeNull();
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("image from Media Library");
+    expect(diagnosticsSection?.textContent).toContain("45% opacity");
   } finally {
     view.cleanup();
   }
@@ -1202,7 +1205,6 @@ test("Section visual editor resolves decorative background video and poster asse
     }
 
     setSelectValue(findSelectByOptions(backgroundSection, ["none", "image", "video"]), "video");
-    setSelectValue(findSelectByOptions(backgroundSection, ["library", "external"]), "library");
     clickByText(backgroundSection, "pick-video-asset");
     await flush();
 
@@ -1214,17 +1216,6 @@ test("Section visual editor resolves decorative background video and poster asse
       findTextareaByPlaceholder(backgroundSection, "Optional notes for this decorative video"),
       "Muted decorative video loop."
     );
-    const backgroundSourceSelects = findSelectsByOptions(backgroundSection, [
-      "library",
-      "external",
-    ]);
-    const posterSourceSelect = backgroundSourceSelects[1];
-    if (!(posterSourceSelect instanceof HTMLSelectElement)) {
-      throw new Error("Missing poster source select");
-    }
-    setSelectValue(posterSourceSelect, "library");
-    await flush();
-
     const posterPicker = Array.from(backgroundSection.querySelectorAll("[data-media-picker]")).find(
       (node) => node.getAttribute("data-media-picker") === "image/*"
     );
@@ -1248,16 +1239,30 @@ test("Section visual editor resolves decorative background video and poster asse
       opacity: 55,
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"assetId": "asset-video"');
-    expect(snapshot?.textContent).toContain('"posterAssetId": "asset-poster"');
-    expect(snapshot?.textContent).toContain('"title": "Ambient loop"');
+    const posterControl = findWidgetControl(
+      backgroundSection,
+      "section.style.backgroundMedia.posterAssetId"
+    );
+    expect(posterControl.getAttribute("data-widget-control-path")).toBe("style.backgroundMedia");
+    expect(
+      backgroundSection.querySelector(
+        '[data-widget-control-path="style.backgroundMedia.posterSource"]'
+      )
+    ).not.toBeNull();
+    expect(
+      backgroundSection.querySelector(
+        '[data-widget-control-path="style.backgroundMedia.posterSrc"]'
+      )
+    ).not.toBeNull();
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("video from Media Library");
+    expect(diagnosticsSection?.textContent).toContain("55% opacity");
   } finally {
     view.cleanup();
   }
 });
 
-test("Section advanced editor keeps semantics fields while surface controls own angle and opacity normalization", async () => {
+test("Section visual link fields own semantics while Advanced stays read-only", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
@@ -1274,15 +1279,16 @@ test("Section advanced editor keeps semantics fields while surface controls own 
     }
 
     expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
+    expect(technicalTokensSection.querySelectorAll("input, select, textarea, button")).toHaveLength(
+      0
+    );
 
-    setInputValue(
-      findInputByPlaceholder(technicalTokensSection, "section-anchor"),
-      "team-overview"
-    );
-    setInputValue(
-      findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
-      "Team overview section"
-    );
+    const linkSection = findSectionByTitle(view.container, "Section link and accessibility");
+    if (!(linkSection instanceof HTMLElement)) {
+      throw new Error("Missing link and accessibility section");
+    }
+    setInputValue(findInputByPlaceholder(linkSection, "Pricing area"), "team-overview");
+    setInputValue(findInputByPlaceholder(linkSection, "Pricing section"), "Team overview section");
 
     const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
     if (!(surfaceSection instanceof HTMLElement)) {
@@ -1304,23 +1310,26 @@ test("Section advanced editor keeps semantics fields while surface controls own 
       overlayOpacity: 100,
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"anchorId": "team-overview"');
-    expect(snapshot?.textContent).toContain('"ariaLabel": "Team overview section"');
-    expect(snapshot?.textContent).toContain('"gradientAngle": 0');
-    expect(snapshot?.textContent).toContain('"overlayOpacity": 100');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(technicalTokensSection.textContent).toContain("link name team-overview");
+    expect(technicalTokensSection.textContent).toContain(
+      "accessibility name Team overview section"
+    );
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("Gradient angle 0 degrees");
+    expect(diagnosticsSection?.textContent).toContain("overlay 100%");
   } finally {
     view.cleanup();
   }
 });
 
-test("Section surface token inputs preserve raw tokens, fall back safely, and resync after valid picker updates", async () => {
+test("Section surface color controls replace saved custom values through swatches without raw inputs", async () => {
   const view = await renderEditors({
     initialValue: {
       style: {
-        backgroundColor: "#0ea5e9",
-        gradientFrom: "#38bdf8",
-        borderColor: "#0f172a",
+        backgroundColor: "var(--section-surface)",
+        gradientFrom: "surface-start-token",
+        borderColor: "border-strong-token",
       },
     },
   });
@@ -1331,32 +1340,17 @@ test("Section surface token inputs preserve raw tokens, fall back safely, and re
       throw new Error("Missing surface section");
     }
 
-    const backgroundTextInput = findInputByPlaceholder(surfaceSection, "transparent");
-    const backgroundColorInput = findColorInputForPlaceholder(surfaceSection, "transparent");
-    const gradientStartTextInput = findInputByPlaceholder(surfaceSection, "#ffffff");
-    const gradientStartColorInput = findColorInputForPlaceholder(surfaceSection, "#ffffff");
-    const borderTextInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
-    const borderColorInput = findColorInputForPlaceholder(surfaceSection, "var(--color-border)");
+    expect(findInputsByPlaceholder(surfaceSection, "transparent")).toHaveLength(0);
+    expect(findInputsByPlaceholder(surfaceSection, "#ffffff")).toHaveLength(0);
+    expect(findInputsByPlaceholder(surfaceSection, "var(--color-border)")).toHaveLength(0);
+    expect(surfaceSection.textContent).toContain("Saved custom color");
 
-    setInputValue(backgroundTextInput, "var(--section-surface)");
-    setInputValue(gradientStartTextInput, "surface-start-token");
-    setInputValue(borderTextInput, "border-strong-token");
-
-    expect(view.getLatestValue().style).toMatchObject({
-      backgroundColor: "var(--section-surface)",
-      gradientFrom: "surface-start-token",
-      borderColor: "border-strong-token",
-    });
-    expect(backgroundTextInput?.value).toBe("var(--section-surface)");
+    const backgroundColorInput = findColorInputByLabel(surfaceSection, "Background color");
+    const gradientStartColorInput = findColorInputByLabel(surfaceSection, "Gradient start");
+    const borderColorInput = findColorInputByLabel(surfaceSection, "Border color");
     expect(backgroundColorInput.value).toBe("#ffffff");
-    expect(gradientStartTextInput?.value).toBe("surface-start-token");
     expect(gradientStartColorInput.value).toBe("#ffffff");
-    expect(borderTextInput?.value).toBe("border-strong-token");
     expect(borderColorInput.value).toBe("#e2e8f0");
-
-    setInputValue(backgroundTextInput, "#102030");
-    setInputValue(gradientStartTextInput, "#111111");
-    setInputValue(borderTextInput, "#222222");
 
     setInputValue(backgroundColorInput, "#112233");
     setInputValue(gradientStartColorInput, "#abcdef");
@@ -1367,20 +1361,14 @@ test("Section surface token inputs preserve raw tokens, fall back safely, and re
       gradientFrom: "#abcdef",
       borderColor: "#334455",
     });
-    expect(backgroundTextInput?.value).toBe("#112233");
-    expect(gradientStartTextInput?.value).toBe("#abcdef");
-    expect(borderTextInput?.value).toBe("#334455");
 
-    setInputValue(backgroundTextInput, "");
+    clickByText(findWidgetControl(surfaceSection, "section.style.backgroundColor"), "Clear");
 
     expect(view.getLatestValue().style?.backgroundColor).toBeUndefined();
-    expect(backgroundTextInput?.value).toBe("");
     expect(backgroundColorInput.value).toBe("#ffffff");
-
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).not.toContain('"backgroundColor"');
-    expect(snapshot?.textContent).toContain('"gradientFrom": "#abcdef"');
-    expect(snapshot?.textContent).toContain('"borderColor": "#334455"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("No decorative background media.");
   } finally {
     view.cleanup();
   }
@@ -1418,15 +1406,16 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
 
     expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"gradientAngle": 180');
-    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
+    expect(view.container.querySelector("pre")).toBeNull();
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("Gradient angle 180 degrees");
+    expect(diagnosticsSection?.textContent).toContain("overlay 0%");
   } finally {
     view.cleanup();
   }
 });
 
-test("Section surface slider and exact controls round decimals, clamp boundaries, and stay visible in the advanced snapshot", async () => {
+test("Section surface slider and exact controls round decimals, clamp boundaries, and stay visible in Advanced summaries", async () => {
   const view = await renderEditors({
     initialValue: {
       semantics: {
@@ -1441,17 +1430,13 @@ test("Section surface slider and exact controls round decimals, clamp boundaries
   });
 
   try {
-    const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
-    if (!(technicalTokensSection instanceof HTMLElement)) {
-      throw new Error("Missing technical tokens section");
+    const linkSection = findSectionByTitle(view.container, "Section link and accessibility");
+    if (!(linkSection instanceof HTMLElement)) {
+      throw new Error("Missing link and accessibility section");
     }
 
-    expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
-    setInputValue(findInputByPlaceholder(technicalTokensSection, "section-anchor"), "wave-layout");
-    setInputValue(
-      findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
-      "Wave layout section"
-    );
+    setInputValue(findInputByPlaceholder(linkSection, "Pricing area"), "wave-layout");
+    setInputValue(findInputByPlaceholder(linkSection, "Pricing section"), "Wave layout section");
 
     expect(view.getLatestValue().semantics).toMatchObject({
       anchorId: "wave-layout",
@@ -1501,11 +1486,12 @@ test("Section surface slider and exact controls round decimals, clamp boundaries
     expect(findSectionRangeValue(surfaceSection, "gradient-angle")?.textContent).toBe("360°");
     expect(findSectionRangeValue(surfaceSection, "overlay-opacity")?.textContent).toBe("0%");
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"anchorId": "wave-layout"');
-    expect(snapshot?.textContent).toContain('"ariaLabel": "Wave layout section"');
-    expect(snapshot?.textContent).toContain('"gradientAngle": 360');
-    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
+    const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
+    expect(technicalTokensSection?.textContent).toContain("link name wave-layout");
+    expect(technicalTokensSection?.textContent).toContain("accessibility name Wave layout section");
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("Gradient angle 360 degrees");
+    expect(diagnosticsSection?.textContent).toContain("overlay 0%");
   } finally {
     view.cleanup();
   }
@@ -1561,12 +1547,12 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(findTextareaByPlaceholder(view.container, "Short context for the section")?.value).toBe(
       ""
     );
-    expect(findInputsByPlaceholder(view.container, "transparent")[0]?.value).toBe("");
-    expect(findColorInputForPlaceholder(view.container, "transparent", 0).value).toBe("#ffffff");
+    expect(findInputsByPlaceholder(view.container, "transparent")).toHaveLength(0);
+    expect(findColorInputByLabel(view.container, "Background color").value).toBe("#ffffff");
 
-    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
-    if (!(semanticsSection instanceof HTMLElement)) {
-      throw new Error("Missing semantics section");
+    const linkSection = findSectionByTitle(view.container, "Section link and accessibility");
+    if (!(linkSection instanceof HTMLElement)) {
+      throw new Error("Missing link and accessibility section");
     }
     const spacingSection = findSectionByTitle(view.container, "Width and spacing");
     if (!(spacingSection instanceof HTMLElement)) {
@@ -1579,9 +1565,9 @@ test("Section editors fall back to sparse normalized token fields and contract d
     expect(
       findTextareaByPlaceholder(view.container, "Supportive copy for this section")?.value
     ).toBe("");
-    expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("div");
-    expect(findInputByPlaceholder(semanticsSection, "pricing-section")?.value).toBe("");
-    expect(findInputByPlaceholder(semanticsSection, "Pricing section")?.value).toBe("");
+    expect(findSelectByOptions(linkSection, ["section", "div"]).value).toBe("div");
+    expect(findInputByPlaceholder(linkSection, "Pricing area")?.value).toBe("");
+    expect(findInputByPlaceholder(linkSection, "Pricing section")?.value).toBe("");
     expect(findSelectByOptions(spacingSection, ["none", "compact", "hero", "screen"]).value).toBe(
       "none"
     );
@@ -1629,33 +1615,31 @@ test("Section editors fall back to sparse normalized token fields and contract d
       throw new Error("Missing surface section");
     }
 
-    expect(findInputByPlaceholder(surfaceSection, "#ffffff")?.value).toBe("");
-    expect(findColorInputForPlaceholder(surfaceSection, "#ffffff").value).toBe("#ffffff");
-    expect(findInputByPlaceholder(surfaceSection, "#f1f5f9")?.value).toBe("");
-    expect(findColorInputForPlaceholder(surfaceSection, "#f1f5f9").value).toBe("#f1f5f9");
-    expect(findInputByPlaceholder(surfaceSection, "var(--color-border)")?.value).toBe("");
-    expect(findColorInputForPlaceholder(surfaceSection, "var(--color-border)").value).toBe(
-      "#e2e8f0"
-    );
+    expect(findInputsByPlaceholder(surfaceSection, "#ffffff")).toHaveLength(0);
+    expect(findColorInputByLabel(surfaceSection, "Gradient start").value).toBe("#ffffff");
+    expect(findInputsByPlaceholder(surfaceSection, "#f1f5f9")).toHaveLength(0);
+    expect(findColorInputByLabel(surfaceSection, "Gradient end").value).toBe("#f1f5f9");
+    expect(findInputsByPlaceholder(surfaceSection, "var(--color-border)")).toHaveLength(0);
+    expect(findColorInputByLabel(surfaceSection, "Border color").value).toBe("#e2e8f0");
     expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("3");
     expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("lg");
-    expect(findInputByPlaceholder(surfaceSection, "#000000")?.value).toBe("");
-    expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
+    expect(findInputsByPlaceholder(surfaceSection, "#000000")).toHaveLength(0);
+    expect(findColorInputByLabel(surfaceSection, "Overlay color").value).toBe("#000000");
 
     const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
     if (!(technicalTokensSection instanceof HTMLElement)) {
       throw new Error("Missing technical tokens section");
     }
 
-    expect(findInputByPlaceholder(technicalTokensSection, "section-anchor")?.value).toBe("");
-    expect(findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value).toBe(
-      ""
-    );
     expect(findNumberInputs(technicalTokensSection)).toHaveLength(0);
+    expect(technicalTokensSection.querySelectorAll("input, select, textarea, button")).toHaveLength(
+      0
+    );
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"gradientAngle": 180');
-    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
+    expect(view.container.querySelector("pre")).toBeNull();
+    const diagnosticsSection = findSectionByTitle(view.container, "Support diagnostics");
+    expect(diagnosticsSection?.textContent).toContain("Gradient angle 180 degrees");
+    expect(diagnosticsSection?.textContent).toContain("overlay 0%");
   } finally {
     view?.cleanup();
     vi.doUnmock("../../../core/widgets/core/section");
@@ -1670,9 +1654,9 @@ test("Section editors sanitize invalid anchor characters before persisting", asy
   });
 
   try {
-    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
+    const semanticsSection = findSectionByTitle(view.container, "Section link and accessibility");
     setInputValue(
-      findInputByPlaceholder(semanticsSection ?? view.container, "pricing-section"),
+      findInputByPlaceholder(semanticsSection ?? view.container, "Pricing area"),
       " team overview / 2026 "
     );
 
@@ -1721,9 +1705,9 @@ test("Section editors use hardcoded select fallbacks when sparse defaults omit s
       withVariantChange: false,
     });
 
-    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
+    const semanticsSection = findSectionByTitle(view.container, "Section link and accessibility");
     if (!(semanticsSection instanceof HTMLElement)) {
-      throw new Error("Missing semantics section");
+      throw new Error("Missing link and accessibility section");
     }
     expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
 

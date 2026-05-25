@@ -113,6 +113,65 @@ export type SectionData = {
   };
 };
 
+const sectionWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason:
+      "Wizard seeds the one-time Section shape; Visual remains the daily Section owner after setup.",
+    expiresWithTask: "TASK-336",
+  },
+  {
+    path: "heading.label",
+    reason:
+      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
+    expiresWithTask: "TASK-336",
+  },
+  {
+    path: "heading.title",
+    reason:
+      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
+    expiresWithTask: "TASK-336",
+  },
+  {
+    path: "heading.description",
+    reason:
+      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
+    expiresWithTask: "TASK-336",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+const sectionVisualPresetDuplicateAllowances = [
+  "heading.align",
+  "layout.containerWidth",
+  "layout.maxWidth",
+  "layout.paddingBlock",
+  "layout.paddingInline",
+  "layout.minHeight",
+  "layout.regionFlow",
+  "layout.regionColumns",
+  "layout.headingGap",
+  "layout.regionGap",
+  "style.borderWidth",
+  "style.radius",
+].map((path) => ({
+  path,
+  reason:
+    "Visual quick presets batch-apply Section-owned fields; individual Visual controls remain the daily fine-tuning owners.",
+  expiresWithTask: "TASK-336",
+})) satisfies NonNullable<
+  WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
+>;
+
+const sectionHeadingAlignPresetAllowance = sectionVisualPresetDuplicateAllowances.filter(
+  (allowance) => allowance.path === "heading.align"
+);
+const sectionLayoutPresetAllowances = sectionVisualPresetDuplicateAllowances.filter((allowance) =>
+  allowance.path.startsWith("layout.")
+);
+const sectionSurfacePresetAllowances = sectionVisualPresetDuplicateAllowances.filter((allowance) =>
+  allowance.path.startsWith("style.")
+);
+
 export const sectionEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -121,14 +180,33 @@ export const sectionEditorContract: WidgetEditorContract = {
       id: "section.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: [],
+      writablePaths: ["variant", "heading.label", "heading.title", "heading.description"],
+      allowedDuplicateWritablePaths: sectionWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
       id: "section.visual.variant-structure",
       title: "Variant and structure",
       role: "layout",
-      writablePaths: ["variant"],
+      writablePaths: [
+        "variant",
+        "heading.align",
+        "layout.containerWidth",
+        "layout.maxWidth",
+        "layout.paddingBlock",
+        "layout.paddingInline",
+        "layout.minHeight",
+        "layout.regionFlow",
+        "layout.regionColumns",
+        "layout.headingGap",
+        "layout.regionGap",
+        "style.borderWidth",
+        "style.radius",
+      ],
+      allowedDuplicateWritablePaths: [
+        sectionWizardVisualDuplicateAllowances[0],
+        ...sectionVisualPresetDuplicateAllowances,
+      ],
     },
     {
       mode: "visual",
@@ -147,6 +225,10 @@ export const sectionEditorContract: WidgetEditorContract = {
         "heading.labelColor",
         "heading.titleColor",
         "heading.descriptionColor",
+      ],
+      allowedDuplicateWritablePaths: [
+        ...sectionWizardVisualDuplicateAllowances.slice(1),
+        ...sectionHeadingAlignPresetAllowance,
       ],
     },
     {
@@ -169,18 +251,19 @@ export const sectionEditorContract: WidgetEditorContract = {
         "layout.headingGap",
         "layout.regionGap",
       ],
+      allowedDuplicateWritablePaths: sectionLayoutPresetAllowances,
     },
     {
       mode: "visual",
-      id: "section.semantics-anchor",
-      title: "Semantics and anchor",
-      role: "technical",
+      id: "section.visual.link-accessibility",
+      title: "Section link and accessibility",
+      role: "content",
       writablePaths: ["semantics.element", "semantics.anchorId", "semantics.ariaLabel"],
     },
     {
       mode: "visual",
-      id: "section.surface-media",
-      title: "Surface and media",
+      id: "section.surface-borders",
+      title: "Surface and borders",
       role: "visual",
       writablePaths: [
         "style.backgroundColor",
@@ -194,7 +277,30 @@ export const sectionEditorContract: WidgetEditorContract = {
         "style.motion",
         "style.overlayColor",
         "style.overlayOpacity",
+      ],
+      allowedDuplicateWritablePaths: sectionSurfacePresetAllowances,
+    },
+    {
+      mode: "visual",
+      id: "section.background-media-layers",
+      title: "Background media and layers",
+      role: "visual",
+      writablePaths: [
         "style.backgroundMedia",
+        "style.backgroundMedia.type",
+        "style.backgroundMedia.source",
+        "style.backgroundMedia.assetId",
+        "style.backgroundMedia.src",
+        "style.backgroundMedia.posterSource",
+        "style.backgroundMedia.posterAssetId",
+        "style.backgroundMedia.posterSrc",
+        "style.backgroundMedia.title",
+        "style.backgroundMedia.description",
+        "style.backgroundMedia.fit",
+        "style.backgroundMedia.position",
+        "style.backgroundMedia.opacity",
+        "style.backgroundMedia.blendMode",
+        "style.backgroundMedia.layerOrder",
       ],
     },
     {
@@ -203,7 +309,15 @@ export const sectionEditorContract: WidgetEditorContract = {
       title: "Resolved layout summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["layout", "style", "heading", "semantics"],
+      readOnlyPaths: ["layout", "style", "semantics"],
+    },
+    {
+      mode: "advanced",
+      id: "section.advanced.support-diagnostics",
+      title: "Support diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["heading", "style", "style.backgroundMedia"],
     },
   ],
 };
@@ -347,7 +461,6 @@ export const sectionDefaults: SectionData = {
     gradientFrom: "",
     gradientTo: "",
     gradientAngle: 180,
-    borderColor: "var(--color-border)",
     borderWidth: "0",
     radius: "none",
     motion: "none",
@@ -355,7 +468,7 @@ export const sectionDefaults: SectionData = {
     overlayOpacity: 0,
     backgroundMedia: {
       type: "none",
-      source: "external",
+      source: "library",
       fit: "cover",
       position: "center",
       opacity: 100,
@@ -715,7 +828,7 @@ const resolveSectionBackgroundMediaType = (
 
 const resolveSectionBackgroundMediaSource = (
   value: string | undefined
-): SectionBackgroundMediaSource => (value === "library" ? "library" : "external");
+): SectionBackgroundMediaSource => (value === "external" ? "external" : "library");
 
 const resolveSectionBackgroundMediaFit = (value: string | undefined): SectionBackgroundMediaFit =>
   value === "contain" ? "contain" : "cover";
@@ -939,7 +1052,6 @@ export function normalizeSectionData(data: SectionData): SectionData {
     gradientFrom: "",
     gradientTo: "",
     gradientAngle: 180,
-    borderColor: "var(--color-border)",
     borderWidth: "0",
     radius: "none",
     motion: "none" as const,
@@ -1064,7 +1176,7 @@ export function SectionBlock({
   const backgroundMedia = style.backgroundMedia ??
     sectionDefaults.style?.backgroundMedia ?? {
       type: "none",
-      source: "external",
+      source: "library",
       fit: "cover",
       position: "center",
       opacity: 100,

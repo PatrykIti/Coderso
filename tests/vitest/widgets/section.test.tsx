@@ -320,6 +320,21 @@ test("section normalization falls back to declared border and radius defaults fo
   });
 });
 
+test("section background media defaults sparse media payloads to the Media Library source", () => {
+  const normalized = normalizeSectionData({
+    style: {
+      backgroundMedia: {
+        type: "image",
+      },
+    },
+  });
+
+  expect(normalized.style?.backgroundMedia).toMatchObject({
+    type: "image",
+    source: "library",
+  });
+});
+
 test("section grid columns clamp only when grid flow is active", () => {
   const gridNormalized = normalizeSectionData({
     layout: {
@@ -778,12 +793,13 @@ test("section editors render expected sections", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Quick preset");
+  expect(wizardHtml).not.toContain("Quick preset");
   expect(wizardHtml).toContain("Section layout");
   expect(wizardHtml).toContain("Section title");
   expect(wizardHtml).toContain("Section setup");
-  expect(wizardHtml).toContain('data-widget-control="section.wizard.preset"');
+  expect(wizardHtml).not.toContain('data-widget-control="section.wizard.preset"');
   expect(wizardHtml).toContain('data-widget-control="section.wizard.variant"');
+  expect(wizardHtml).not.toContain('tabindex="-1"');
 
   const visualHtml = renderToString(
     <SectionVisualEditor
@@ -795,14 +811,14 @@ test("section editors render expected sections", () => {
   );
   expect(visualHtml).toContain("Variant and structure");
   expect(visualHtml).toContain("Quick presets");
-  expect(visualHtml).toContain("Semantics and anchor");
+  expect(visualHtml).toContain("Section link and accessibility");
   expect(visualHtml).toContain("Width and spacing");
   expect(visualHtml).toContain("Surface and borders");
   expect(visualHtml).toContain("Mobile vertical padding");
   expect(visualHtml).toContain("Desktop side padding");
   expect(visualHtml).toContain("Surface preview");
   expect(visualHtml).toContain('data-section-surface-preview="true"');
-  expect(visualHtml).toContain('data-widget-editor-section="section.semantics-anchor"');
+  expect(visualHtml).toContain('data-widget-editor-section="section.visual.link-accessibility"');
   expect(visualHtml).toContain('data-widget-editor-section="section.width-spacing"');
 
   const advancedHtml = renderToString(
@@ -814,7 +830,9 @@ test("section editors render expected sections", () => {
     />
   );
   expect(advancedHtml).toContain("Technical tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
-  expect(advancedHtml).not.toContain("Gradient angle");
-  expect(advancedHtml).not.toContain("Overlay opacity");
+  expect(advancedHtml).toContain("Support diagnostics");
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain('tabindex="-1"');
+  expect(advancedHtml).toContain("Gradient angle 180 degrees");
+  expect(advancedHtml).toContain("overlay 0%");
 });

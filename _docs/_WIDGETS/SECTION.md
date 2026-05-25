@@ -21,18 +21,21 @@ repeatable internal regions.
 - `region` (repeatable): region instances are stored as `region:<id>` in
   block `slots` map (`region:1`, `region:2`, ...).
 
-## Editor Modes (current after TASK-283 and TASK-326 follow-ups)
+## Editor Modes (current after TASK-336-19 follow-up)
 
 ### Wizard
-- quick preset cards and matching variant cards
+- one-time variant cards that seed the Section shape only
 - label/title/description onboarding
 - no visible surface, CSS, or token text entry; surface authoring starts in Visual
+- Wizard writes only `variant`, `heading.label`, `heading.title`, and
+  `heading.description`; the overlap with Visual is explicitly temporary under
+  the shared one-time setup lifecycle (`TASK-336`)
 
 ### Visual
 Sections:
 1. Variant and structure
 2. Heading and intro
-3. Semantics and anchor
+3. Section link and accessibility
 4. Width and spacing
 5. Surface and borders
 6. Regions
@@ -58,6 +61,9 @@ Notes:
 - Responsive padding overrides now use the same bounded padding tokens with
   `Match base` fallbacks; mobile-only overrides automatically restore the base
   token from `md` upward.
+- Section link and accessibility uses beginner-facing copy (`Section link name`
+  and `Accessibility name`) while still persisting the normalized
+  `semantics.anchorId` / `semantics.ariaLabel` contract.
 - Visual guidance explains that two gradient stops become the visible surface
   while background color remains the fallback after the gradient is cleared.
 - Heading controls now include bounded `h1`-`h6`, left/center/right alignment,
@@ -69,15 +75,19 @@ Notes:
 - Gradient angle and overlay opacity now use slider + stepper controls on the
   single-owner Visual surface while keeping exact numeric inputs for precise
   bounded values.
-- Background media is decorative only: Visual exposes bounded image/video source,
-  fit, position, blend, opacity, and layer-order controls plus video poster
-  metadata without widening Section into interactive media.
+- Background media is decorative only: Visual uses Media Library pickers for
+  image/video and poster assets, exposes bounded fit, position, blend, opacity,
+  and layer-order controls, and keeps older external media URLs as read-only
+  replace-or-clear compatibility state.
 
 ### Advanced
 - read-only layout, surface, and semantics summaries
-- raw payload snapshot for diagnostics
+- read-only support diagnostics for heading, background media, and visual
+  effects
+- no raw JSON payload snapshot and no hidden writable inputs
 - no duplicated surface numeric controls; `gradientAngle` and `overlayOpacity` stay in Visual
-- semantics/anchor editing is Visual-owned so Advanced stays diagnostic
+- section link and accessibility editing is Visual-owned so Advanced stays
+  diagnostic
 
 ## Local Presets
 
@@ -177,7 +187,6 @@ Notes:
     "gradientFrom": "",
     "gradientTo": "",
     "gradientAngle": 180,
-    "borderColor": "var(--color-border)",
     "borderWidth": "0",
     "radius": "none",
     "shadow": "none",
@@ -186,7 +195,7 @@ Notes:
     "overlayOpacity": 0,
     "backgroundMedia": {
       "type": "none",
-      "source": "external",
+      "source": "library",
       "fit": "cover",
       "position": "center",
       "opacity": 100,
@@ -208,7 +217,8 @@ or desktop deviation from the base padding tokens.
 - `heading.titleSize`: `xl`, `2xl`, `3xl`
 - `heading.descriptionSize`: `sm`, `base`, `lg`
 - `heading.labelColor`, `heading.titleColor`, `heading.descriptionColor`: optional
-  clearable text colors that reuse the shared token-aware clearable field contract
+  clearable text colors authored through swatches; saved custom CSS/token values
+  remain replace-or-clear compatible but are not editable as raw text
 
 ## Layout Tokens
 
@@ -250,8 +260,11 @@ or desktop deviation from the base padding tokens.
 ## Background Media Tokens
 
 - `style.backgroundMedia.type`: `none`, `image`, `video`
-- `style.backgroundMedia.source`: `library`, `external`; library selections
-  persist `assetId` plus the resolved `src` from `listMediaCached({ force: true })`
+- `style.backgroundMedia.source`: `library`, `external`; normal Visual
+  authoring uses `library` via Media Library pickers and persists `assetId` plus
+  the resolved `src` from `listMediaCached({ force: true })`. Existing
+  `external` values remain runtime-compatible but appear only as read-only
+  replace-or-clear compatibility notices.
 - `style.backgroundMedia.fit`: `cover`, `contain`
 - `style.backgroundMedia.position`: `center`, `top`, `bottom`, `left`, `right`
 - `style.backgroundMedia.blendMode`: `normal`, `multiply`, `screen`, `overlay`

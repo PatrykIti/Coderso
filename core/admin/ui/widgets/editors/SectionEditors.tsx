@@ -19,7 +19,6 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
   isCompatibleSectionMediaUrl,
-  isValidSectionMediaUrl,
   sanitizeSectionAnchorId,
   type SectionBackgroundMediaBlendMode,
   type SectionBackgroundMediaFit,
@@ -52,7 +51,11 @@ import {
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { hasClearableFieldValue, resolveColorSwatchValue } from "./ClearableFields";
+import {
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorSwatchValue,
+} from "./ClearableFields";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow as BaseWidgetControlRow,
@@ -84,8 +87,8 @@ const variantOptions: Array<{
 ];
 
 const elementOptions: Array<{ id: SectionElement; label: string }> = [
-  { id: "section", label: "Section" },
-  { id: "div", label: "Div" },
+  { id: "section", label: "Page section" },
+  { id: "div", label: "Neutral wrapper" },
 ];
 
 const borderWidthOptions: Array<{ id: SectionBorderWidth; label: string }> = [
@@ -230,14 +233,6 @@ const backgroundMediaTypeOptions: Array<{
   { id: "video", label: "Video" },
 ];
 
-const backgroundMediaSourceOptions: Array<{
-  id: SectionBackgroundMediaSource;
-  label: string;
-}> = [
-  { id: "library", label: "Media library" },
-  { id: "external", label: "External URL" },
-];
-
 const backgroundMediaFitOptions: Array<{
   id: SectionBackgroundMediaFit;
   label: string;
@@ -340,10 +335,20 @@ type SectionPresetOption = {
   };
 };
 
+const sectionControlPathById: Record<string, string | undefined> = {
+  "section.wizard.variant": "variant",
+  "section.wizard.label": "heading.label",
+  "section.wizard.title": "heading.title",
+  "section.wizard.description": "heading.description",
+};
+
 function WidgetControlRow({ id, path, ownership, ...props }: WidgetControlRowProps) {
-  const isWizardSetupControl = id.startsWith("section.wizard.");
-  const resolvedPath = path ?? (isWizardSetupControl ? undefined : id.replace(/^section\./, ""));
-  const resolvedOwnership = ownership ?? (isWizardSetupControl ? "action" : undefined);
+  const resolvedPath =
+    path ??
+    (ownership === "action" || ownership === "preview"
+      ? undefined
+      : (sectionControlPathById[id] ?? id.replace(/^section\./, "")));
+  const resolvedOwnership = ownership;
 
   return (
     <BaseWidgetControlRow id={id} path={resolvedPath} ownership={resolvedOwnership} {...props} />
@@ -363,7 +368,7 @@ const sectionHeadingDefaults: HeadingData = {
 
 const sectionBackgroundMediaDefaults: BackgroundMediaData = {
   type: "none",
-  source: "external",
+  source: "library",
   fit: "cover",
   position: "center",
   opacity: 100,
@@ -753,7 +758,7 @@ function ColorField({
   label,
   value,
   onChange,
-  placeholder,
+  fallbackLabel,
   pickerFallback,
   onClear,
 }: {
@@ -761,23 +766,20 @@ function ColorField({
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
+  fallbackLabel: string;
   pickerFallback: string;
   onClear?: () => void;
 }) {
+  const hasValue = hasClearableFieldValue(value);
+  const hasSavedCustomColor = hasValue && !isPickerRepresentableColorValue(value);
+
   return (
     <WidgetControlRow
       id={id}
       label={label}
       actions={
         onClear ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            disabled={!hasClearableFieldValue(value)}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
             Clear
           </Button>
         ) : null
@@ -787,6 +789,7 @@ function ColorField({
         <div className="grid grid-cols-[2.5rem_1fr] gap-2">
           <Input
             id={fieldProps.id}
+            aria-label={`${label} swatch`}
             type="color"
             value={resolveColorSwatchValue(value, pickerFallback)}
             onChange={(event) => onChange(event.target.value)}
@@ -794,19 +797,12 @@ function ColorField({
             aria-labelledby={fieldProps["aria-labelledby"]}
             aria-describedby={fieldProps["aria-describedby"]}
           />
-          <Input
-            hidden
-            aria-hidden="true"
-            tabIndex={-1}
-            value={value ?? ""}
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder}
-            className="hidden"
-          />
           <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
-            {value
-              ? "Custom token active. Use the swatch to replace it, or Clear to inherit."
-              : `Inherited color. Swatch uses ${placeholder} as the expected fallback.`}
+            {hasSavedCustomColor
+              ? "Saved custom color. Use the swatch to replace it, or Clear to inherit."
+              : hasValue
+                ? "Selected color. Use the swatch to change it."
+                : `Theme default. Swatch preview uses ${fallbackLabel}.`}
           </p>
         </div>
       )}
@@ -973,7 +969,7 @@ const resolveBackgroundMediaTypeTransition = (
   if (nextType === "none") {
     return {
       type: "none",
-      source: current.source ?? "external",
+      source: current.source ?? "library",
       assetId: undefined,
       src: undefined,
       posterSource: undefined,
@@ -989,10 +985,10 @@ const resolveBackgroundMediaTypeTransition = (
     };
   }
 
-  const source = current.source ?? "external";
-  const keepLibrarySelection = current.type === nextType && source === "library";
   const keepExternalSelection =
-    source === "external" && isCompatibleSectionMediaUrl(current.src, nextType);
+    current.source === "external" && isCompatibleSectionMediaUrl(current.src, nextType);
+  const source: SectionBackgroundMediaSource = keepExternalSelection ? "external" : "library";
+  const keepLibrarySelection = current.type === nextType && source === "library";
   const keepVideoMetadata = nextType === "video" && current.type === "video";
 
   return {
@@ -1024,18 +1020,9 @@ function SectionBackgroundMediaSourceFields({
 }) {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
-  const source: SectionBackgroundMediaSource = media.source ?? "external";
+  const source: SectionBackgroundMediaSource = media.source ?? "library";
   const accept = mediaType === "image" ? ["image/*"] : ["video/*"];
-
-  const handleSourceChange = (next: SectionBackgroundMediaSource) => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    if (next === "library") {
-      onChange({ source: next, assetId: undefined, src: undefined });
-    } else {
-      onChange({ source: next, assetId: undefined, src: "" });
-    }
-  };
+  const hasSavedExternalMedia = source === "external" && Boolean(media.src);
 
   const handleAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
@@ -1072,52 +1059,69 @@ function SectionBackgroundMediaSourceFields({
 
   return (
     <div className="space-y-3 rounded-md border border-border/70 p-3">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Background media source</p>
-        <Select
-          value={source}
-          onValueChange={(next) => handleSourceChange(next as SectionBackgroundMediaSource)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {backgroundMediaSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
+      <WidgetControlRow
+        id="section.style.backgroundMedia.assetId"
+        label={mediaType === "image" ? "Background image" : "Background video"}
+        path="style.backgroundMedia"
+      >
+        {() => (
+          <div className="space-y-2">
+            {["source", "assetId", "src"].map((field) => (
+              <span
+                key={field}
+                className="sr-only"
+                data-widget-control-path={`style.backgroundMedia.${field}`}
+              />
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <MediaPicker
+              value={media.assetId ?? null}
+              onChange={(value) => void handleAssetChange(value)}
+              multiple={false}
+              accept={accept}
+            />
+            {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+          </div>
+        )}
+      </WidgetControlRow>
 
-      {source === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={media.assetId ?? null}
-            onChange={(value) => void handleAssetChange(value)}
-            multiple={false}
-            accept={accept}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Background media URL</p>
-          <Input
-            value={media.src ?? ""}
-            onChange={(event) => onChange({ src: event.target.value })}
-            placeholder={
-              mediaType === "image"
-                ? "https://example.com/background.jpg"
-                : "https://example.com/background.mp4"
-            }
-          />
-          {!isValidSectionMediaUrl(media.src) ? (
-            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-          ) : null}
-        </div>
-      )}
+      {hasSavedExternalMedia ? (
+        <WidgetControlRow
+          id="section.style.backgroundMedia.savedExternal"
+          label="Saved external media"
+          ownership="action"
+        >
+          {() => (
+            <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p>
+                This Section has an older external media source saved. Pick an item from the Media
+                Library to replace it, or clear the saved media.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    onChange({ source: "library", assetId: undefined, src: undefined })
+                  }
+                >
+                  Use Media Library
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    onChange({ source: "library", assetId: undefined, src: undefined })
+                  }
+                >
+                  Clear saved media
+                </Button>
+              </div>
+            </div>
+          )}
+        </WidgetControlRow>
+      ) : null}
     </div>
   );
 }
@@ -1135,16 +1139,7 @@ function SectionBackgroundPosterFields({
   const requestIdRef = useRef(0);
   const posterSource: SectionBackgroundMediaSource =
     media.posterSource ?? media.source ?? "library";
-
-  const handlePosterSourceChange = (next: SectionBackgroundMediaSource) => {
-    requestIdRef.current += 1;
-    setLookupError(null);
-    if (next === "library") {
-      onChange({ posterSource: next, posterAssetId: undefined, posterSrc: undefined });
-    } else {
-      onChange({ posterSource: next, posterAssetId: undefined, posterSrc: "" });
-    }
-  };
+  const hasSavedExternalPoster = posterSource === "external" && Boolean(media.posterSrc);
 
   const handlePosterAssetChange = async (value: unknown) => {
     const assetId = typeof value === "string" ? value : null;
@@ -1186,57 +1181,67 @@ function SectionBackgroundPosterFields({
           Clear
         </Button>
       </div>
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Poster source</p>
-        <Select
-          value={posterSource}
-          onValueChange={(next) => handlePosterSourceChange(next as SectionBackgroundMediaSource)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {backgroundMediaSourceOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
+      <WidgetControlRow
+        id="section.style.backgroundMedia.posterAssetId"
+        label="Poster image"
+        path="style.backgroundMedia"
+      >
+        {() => (
+          <div className="space-y-2">
+            {["posterSource", "posterAssetId", "posterSrc"].map((field) => (
+              <span
+                key={field}
+                className="sr-only"
+                data-widget-control-path={`style.backgroundMedia.${field}`}
+              />
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <MediaPicker
+              value={media.posterAssetId ?? null}
+              onChange={(value) => void handlePosterAssetChange(value)}
+              multiple={false}
+              accept={["image/*"]}
+            />
+            {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+          </div>
+        )}
+      </WidgetControlRow>
 
-      {posterSource === "library" ? (
-        <div className="space-y-2">
-          <MediaPicker
-            value={media.posterAssetId ?? null}
-            onChange={(value) => void handlePosterAssetChange(value)}
-            multiple={false}
-            accept={["image/*"]}
-          />
-          {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Poster image URL</p>
-          <Input
-            value={media.posterSrc ?? ""}
-            onChange={(event) => onChange({ posterSrc: event.target.value })}
-            placeholder="https://example.com/poster.jpg"
-          />
-          {!isValidSectionMediaUrl(media.posterSrc) ? (
-            <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-          ) : null}
-        </div>
-      )}
+      {hasSavedExternalPoster ? (
+        <WidgetControlRow
+          id="section.style.backgroundMedia.savedExternalPoster"
+          label="Saved external poster"
+          ownership="action"
+        >
+          {() => (
+            <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p>
+                This video has an older external poster image saved. Pick an image from the Media
+                Library to replace it, or clear the poster.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    onChange({
+                      posterSource: "library",
+                      posterAssetId: undefined,
+                      posterSrc: undefined,
+                    })
+                  }
+                >
+                  Use Media Library
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+                  Clear poster
+                </Button>
+              </div>
+            </div>
+          )}
+        </WidgetControlRow>
+      ) : null}
     </div>
-  );
-}
-
-function DiagnosticsSnapshot({ value }: { value: SectionData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
   );
 }
 
@@ -1249,14 +1254,6 @@ export function SectionWizardEditor({
 }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
   const heading = normalized.heading ?? sectionHeadingDefaults;
-  const applyPreset = (preset: SectionPresetOption) =>
-    applySectionPreset(
-      preset.variant,
-      buildSectionPresetData(value, preset),
-      onChange,
-      onVariantChange,
-      onBlockPatch
-    );
   const handleVariantChange = (next: string) =>
     applySectionVariantPatch(next as SectionVariantId, onVariantChange, onBlockPatch);
 
@@ -1267,12 +1264,8 @@ export function SectionWizardEditor({
         mode="wizard"
         role="setup"
         title="Section setup"
-        description="Pick a safe preset, section wrapper, and heading for this section."
+        description="Pick the starter section wrapper and heading for this section."
       >
-        <WidgetControlRow id="section.wizard.preset" label="Quick preset">
-          {() => <SectionPresetCards onApply={applyPreset} />}
-        </WidgetControlRow>
-
         <WidgetControlRow id="section.wizard.variant" label="Section layout">
           {() => (
             <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
@@ -1324,24 +1317,6 @@ export function SectionWizardEditor({
           Surface colors and spacing are configured in Visual so the guided setup stays safe and
           one-time only.
         </p>
-        <div hidden className="hidden" aria-hidden="true">
-          <Input
-            tabIndex={-1}
-            value={normalized.style?.backgroundColor ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { backgroundColor: event.target.value })
-            }
-            placeholder="transparent"
-          />
-          <Input
-            tabIndex={-1}
-            type="color"
-            value={resolveColorSwatchValue(normalized.style?.backgroundColor, "#ffffff")}
-            onChange={(event) =>
-              updateStyle(value, onChange, { backgroundColor: event.target.value })
-            }
-          />
-        </div>
       </WidgetEditorSection>
     </div>
   );
@@ -1398,14 +1373,38 @@ export function SectionVisualEditor({
         role="layout"
       >
         <div className="space-y-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Quick presets</p>
-            <SectionPresetCards onApply={applyPreset} />
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Section layout</p>
-            <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
-          </div>
+          <WidgetControlRow id="section.visual.preset" label="Quick presets" path="variant">
+            {() => (
+              <>
+                <SectionPresetCards onApply={applyPreset} />
+                {[
+                  "heading.align",
+                  "layout.containerWidth",
+                  "layout.maxWidth",
+                  "layout.paddingBlock",
+                  "layout.paddingInline",
+                  "layout.minHeight",
+                  "layout.regionFlow",
+                  "layout.regionColumns",
+                  "layout.headingGap",
+                  "layout.regionGap",
+                  "style.borderWidth",
+                  "style.radius",
+                ].map((presetPath) => (
+                  <span
+                    key={presetPath}
+                    className="sr-only"
+                    data-widget-control-path={presetPath}
+                  />
+                ))}
+              </>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="section.visual.variant" label="Section layout" path="variant">
+            {() => (
+              <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
+            )}
+          </WidgetControlRow>
         </div>
       </WidgetEditorSection>
 
@@ -1593,7 +1592,7 @@ export function SectionVisualEditor({
           value={heading.labelColor}
           onChange={(next) => updateHeading(value, onChange, { labelColor: next })}
           onClear={() => updateHeading(value, onChange, { labelColor: undefined })}
-          placeholder="var(--color-text)"
+          fallbackLabel="theme text"
           pickerFallback="#475569"
         />
 
@@ -1603,7 +1602,7 @@ export function SectionVisualEditor({
           value={heading.titleColor}
           onChange={(next) => updateHeading(value, onChange, { titleColor: next })}
           onClear={() => updateHeading(value, onChange, { titleColor: undefined })}
-          placeholder="var(--color-text)"
+          fallbackLabel="theme text"
           pickerFallback="#111827"
         />
 
@@ -1613,7 +1612,7 @@ export function SectionVisualEditor({
           value={heading.descriptionColor}
           onChange={(next) => updateHeading(value, onChange, { descriptionColor: next })}
           onClear={() => updateHeading(value, onChange, { descriptionColor: undefined })}
-          placeholder="var(--color-text)"
+          fallbackLabel="theme text"
           pickerFallback="#475569"
         />
 
@@ -1624,13 +1623,13 @@ export function SectionVisualEditor({
       </WidgetEditorSection>
 
       <WidgetEditorSection
-        title="Semantics and anchor"
-        description="Define section element type, anchor id, and accessibility label."
-        id="section.semantics-anchor"
+        title="Section link and accessibility"
+        description="Add an optional in-page link name and accessibility name without editing raw HTML ids."
+        id="section.visual.link-accessibility"
         mode="visual"
-        role="technical"
+        role="content"
       >
-        <WidgetControlRow id="section.semantics.element" label="Element">
+        <WidgetControlRow id="section.semantics.element" label="Section type">
           {(fieldProps) => (
             <Select
               value={
@@ -1645,7 +1644,7 @@ export function SectionVisualEditor({
                 aria-labelledby={fieldProps["aria-labelledby"]}
                 aria-describedby={fieldProps["aria-describedby"]}
               >
-                <SelectValue placeholder="Select element" />
+                <SelectValue placeholder="Select section type" />
               </SelectTrigger>
               <SelectContent>
                 {elementOptions.map((option) => (
@@ -1658,7 +1657,11 @@ export function SectionVisualEditor({
           )}
         </WidgetControlRow>
 
-        <WidgetControlRow id="section.semantics.anchorId" label="Anchor ID">
+        <WidgetControlRow
+          id="section.semantics.anchorId"
+          label="Section link name"
+          help="Optional. Spaces and punctuation are converted to a safe in-page link automatically."
+        >
           {(fieldProps) => (
             <Input
               id={fieldProps.id}
@@ -1668,14 +1671,18 @@ export function SectionVisualEditor({
                   anchorId: sanitizeSectionAnchorId(event.target.value),
                 })
               }
-              placeholder="pricing-section"
+              placeholder="Pricing area"
               aria-labelledby={fieldProps["aria-labelledby"]}
               aria-describedby={fieldProps["aria-describedby"]}
             />
           )}
         </WidgetControlRow>
 
-        <WidgetControlRow id="section.semantics.ariaLabel" label="Aria label">
+        <WidgetControlRow
+          id="section.semantics.ariaLabel"
+          label="Accessibility name"
+          help="Optional. Use this when the visible heading is missing or not descriptive enough."
+        >
           {(fieldProps) => (
             <Input
               id={fieldProps.id}
@@ -2110,7 +2117,7 @@ export function SectionVisualEditor({
           value={normalized.style?.backgroundColor}
           onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
           onClear={() => clearStyleField(value, onChange, "backgroundColor")}
-          placeholder="transparent"
+          fallbackLabel="transparent"
           pickerFallback="#ffffff"
         />
 
@@ -2120,7 +2127,7 @@ export function SectionVisualEditor({
           value={normalized.style?.gradientFrom}
           onChange={(next) => updateStyle(value, onChange, { gradientFrom: next })}
           onClear={() => clearStyleField(value, onChange, "gradientFrom")}
-          placeholder="#ffffff"
+          fallbackLabel="white"
           pickerFallback="#ffffff"
         />
 
@@ -2130,7 +2137,7 @@ export function SectionVisualEditor({
           value={normalized.style?.gradientTo}
           onChange={(next) => updateStyle(value, onChange, { gradientTo: next })}
           onClear={() => clearStyleField(value, onChange, "gradientTo")}
-          placeholder="#f1f5f9"
+          fallbackLabel="soft slate"
           pickerFallback="#f1f5f9"
         />
 
@@ -2167,7 +2174,8 @@ export function SectionVisualEditor({
           label="Border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          placeholder="var(--color-border)"
+          onClear={() => clearStyleField(value, onChange, "borderColor")}
+          fallbackLabel="theme border"
           pickerFallback="#e2e8f0"
         />
 
@@ -2263,7 +2271,7 @@ export function SectionVisualEditor({
           label="Overlay color"
           value={normalized.style?.overlayColor}
           onChange={(next) => updateStyle(value, onChange, { overlayColor: next })}
-          placeholder="#000000"
+          fallbackLabel="black"
           pickerFallback="#000000"
         />
 
@@ -2560,8 +2568,15 @@ export function SectionVisualEditor({
   );
 }
 
-export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<SectionData>) {
+export function SectionAdvancedEditor({ value }: WidgetEditorProps<SectionData>) {
   const normalized = normalizeValue(value);
+  const backgroundMedia = resolveBackgroundMedia(normalized.style);
+  const backgroundMediaSummary =
+    backgroundMedia.type === "none"
+      ? "No decorative background media."
+      : `${backgroundMedia.type} from ${
+          backgroundMedia.source === "library" ? "Media Library" : "saved external source"
+        }, ${backgroundMedia.fit ?? "cover"} fit, ${clampMediaOpacity(backgroundMedia.opacity)}% opacity.`;
 
   return (
     <div className="space-y-4">
@@ -2588,40 +2603,33 @@ export function SectionAdvancedEditor({ value, onChange }: WidgetEditorProps<Sec
           id="section.advanced.semantics-summary"
           label="Semantics"
           path="semantics"
-          value={`${normalized.semantics?.element ?? "section"} element, anchor ${normalized.semantics?.anchorId || "not set"}, aria label ${normalized.semantics?.ariaLabel || "not set"}.`}
+          value={`${normalized.semantics?.element ?? "section"} type, link name ${normalized.semantics?.anchorId || "not set"}, accessibility name ${normalized.semantics?.ariaLabel || "not set"}.`}
         />
-        <div hidden className="hidden" aria-hidden="true">
-          <Input
-            tabIndex={-1}
-            value={normalized.semantics?.anchorId ?? ""}
-            onChange={(event) =>
-              updateSemantics(value, onChange, {
-                anchorId: sanitizeSectionAnchorId(event.target.value),
-              })
-            }
-            placeholder="section-anchor"
-          />
-          <Input
-            tabIndex={-1}
-            value={normalized.semantics?.ariaLabel ?? ""}
-            onChange={(event) =>
-              updateSemantics(value, onChange, { ariaLabel: event.target.value })
-            }
-            placeholder="Descriptive section label"
-          />
-        </div>
       </WidgetEditorSection>
       <WidgetEditorSection
-        title="Raw payload snapshot"
-        description="Normalized read-only payload for debugging migrations and saved data."
-        id="section.advanced.payload-snapshot"
+        title="Support diagnostics"
+        description="Read-only normalized state for support conversations without exposing raw payload editing."
+        id="section.advanced.support-diagnostics"
         mode="advanced"
         role="diagnostics"
       >
         <ReadonlyWidgetSummaryRow
-          id="section.advanced.normalized-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          id="section.advanced.heading-summary"
+          label="Heading"
+          path="heading"
+          value={`${normalized.heading?.level ?? "h2"} heading, ${normalized.heading?.align ?? "left"} aligned, title ${normalized.heading?.title ? "set" : "not set"}.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.media-summary"
+          label="Background media"
+          path="style.backgroundMedia"
+          value={backgroundMediaSummary}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.visual-summary"
+          label="Visual effects"
+          path="style"
+          value={`Gradient angle ${clampAngle(normalized.style?.gradientAngle)} degrees, overlay ${clampOpacity(normalized.style?.overlayOpacity)}%, motion ${normalized.style?.motion ?? "none"}.`}
         />
       </WidgetEditorSection>
     </div>

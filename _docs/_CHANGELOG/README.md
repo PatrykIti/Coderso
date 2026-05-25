@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 948 | 2026-05-25 | Section editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 947 | 2026-05-25 | Testimonials editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 946 | 2026-05-25 | Entry Teaser editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 945 | 2026-05-24 | One-time widget Wizard lifecycle | CMS Widgets/Admin UI/Builder/Playwright/QA/Docs |

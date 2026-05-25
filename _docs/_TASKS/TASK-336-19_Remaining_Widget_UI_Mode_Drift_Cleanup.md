@@ -624,6 +624,35 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `bun --cwd core lint:types` pass after the final ownership correction.
   `bun run gates:coderso` passes with functional, UX, performance, security,
   and reliability gates green.
+- In Progress (2026-05-25): next family targets `section` editor-mode drift.
+  Wizard is now one-time setup only for starter variant and heading copy, with
+  surface and spacing deferred to Visual. Visual color authoring is swatch-only
+  and preserves saved custom CSS/token colors as replace-or-clear state instead
+  of raw text input. Background image/video and poster authoring now use Media
+  Library pickers; saved external media remains runtime-compatible as
+  read-only replace-or-clear compatibility state. Visual `Section link and
+  accessibility` replaces raw "Anchor ID" wording with beginner-facing link
+  and accessibility labels while still sanitizing the stored anchor. Advanced
+  no longer receives `onChange`, hidden inputs, buttons, or raw JSON snapshots
+  and now renders read-only layout, surface, semantics, heading, media, and
+  visual-effect summaries. Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/section.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  `bun --cwd core lint` and `bun --cwd core lint:types` pass. Claude
+  post-implementation review returned PASS. A fresh helper-agent audit found
+  Visual preset contract, media affected-path metadata, sparse media source,
+  docs/changelog, and Wizard preset-copy follow-ups; those findings were fixed
+  before final Playwright rerun. Completed fixture smoke intentionally validates
+  only `Visual` and `Advanced` because `TASK-336-16` hides Wizard from daily
+  tabs after setup completion; the Section Wizard remains covered by the
+  exported editor contract and one-time lifecycle tests. Targeted Playwright
+  mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-section-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. `bun test tests/unit/playwright-widget-contract-smoke.test.ts`
+  and `bun run gates:coderso` pass. A final fresh helper-agent audit found no
+  high findings; the remaining medium findings around Wizard preset truthfulness,
+  Wizard preset metadata, stale report evidence, validation notes, and Wizard
+  setup copy were fixed.
 
 ## Files to Change
 

@@ -15,6 +15,7 @@
       "adminFixtureSlug": "/ctr-section-2305",
       "publicPath": "/section-widget-test",
       "publicFixtureStatus": "published",
+      "notes": "Completed daily fixture; Wizard is one-time setup covered by TASK-336-16 lifecycle tests.",
       "requiredModes": ["visual", "advanced"],
       "cssChecks": ["body-overflow"]
     },

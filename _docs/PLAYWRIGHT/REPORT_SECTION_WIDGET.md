@@ -2,6 +2,7 @@
 
 > **Status:** Zakończony
 > **Data:** 2026-05-16
+> **Aktualizacja:** 2026-05-25, TASK-336-19 Section editor contract cleanup
 > **Sesja:** Playwright #3 (Section Widget)
 > **Środowisko:** http://localhost:5173/admin | http://localhost:3000
 
@@ -33,9 +34,9 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 ### 2.2 Tryby edytora
 
-- **Wizard** — szybki start: quick presets, ten sam card UI wariantów co Visual, label, tytuł, opis, kolor tła
-- **Visual** — pełna kontrola: quick presets, wariant (karty), heading copy/level/alignment/size/color, semantics, szerokość/padding, surface/borders, shadow/motion, i derived surface preview
-- **Advanced** — tokeny techniczne: `anchorId`, `ariaLabel`, oraz raw JSON snapshot do diagnostyki; `gradientAngle` i `overlayOpacity` należą już wyłącznie do Visual po domknięciu `TASK-326`
+- **Wizard** — jednorazowy szybki start: variant cards seedują tylko kształt wariantu, a pola label/title/description seedują podstawowy nagłówek. Wizard nie edytuje już surface/style/layout ani nie pokazuje layoutowych presetów.
+- **Visual** — pełna codzienna kontrola: quick presets, wariant (karty), heading copy/level/alignment/size/color, przyjazne link/accessibility fields, szerokość/padding, surface/borders, shadow/motion, Media Library background layers i derived surface preview.
+- **Advanced** — wyłącznie read-only diagnostics: layout/surface/link/accessibility/heading/media/effects summaries, bez hidden writerów i bez raw JSON payload snapshot.
 
 ### 2.3 Renderowanie
 
@@ -82,8 +83,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | B1 | Zamknięte (2026-05-22, TASK-326): `resolveSectionBorderWidth` dla wartości niestandardowej wraca teraz do rzeczywistego defaultu `"0"` zamiast mylącego `"1"` | `section.tsx:683` |
 | B2 | Zamknięte (2026-05-22, TASK-326): `resolveSectionRadius` dla wartości niestandardowej wraca teraz do rzeczywistego defaultu `"none"` zamiast `"2xl"` | `section.tsx:688` |
 | B3 | Zamknięte (2026-05-22, TASK-326): szerokość jest teraz opisana truthfully jako `Wide alias (same wrapper)`, a guidance wskazuje `Max width` lub `Full-width wrapper` dla widocznego poszerzenia | `SectionEditors.tsx:115,1931-1933` |
-| B4 | Zamknięte (2026-05-22, TASK-326): `gradientAngle` i `overlayOpacity` należą już tylko do Visual, a Advanced zostaje panelem semantyki + snapshotu | `SectionEditors.tsx:1982,2111,2404-2435` |
-| B5 | Zamknięte (2026-05-23, TASK-327): shared color swatch zachowuje CSS-variable/custom token text, dopóki autor nie zastąpi go jawnie przez text input lub explicit picker override | `ClearableFields.tsx`, `SectionEditors.tsx:1493` |
+| B4 | Zamknięte (2026-05-25, TASK-336-19): `gradientAngle` i `overlayOpacity` należą tylko do Visual, a Advanced jest read-only summary bez snapshotu i hidden inputs | `SectionEditors.tsx` |
+| B5 | Zamknięte (2026-05-25, TASK-336-19): Section color authoring jest swatch-only; zapisane custom CSS/token values są replace-or-clear compatibility state, nie raw text input | `SectionEditors.tsx`, `section.tsx` |
 
 ### 3.4 Ulepszenia UX edytora
 
@@ -94,8 +95,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | U3 | Zamknięte (2026-05-21, TASK-283-04): `maxWidth` pokazuje przyjaźniejsze etykiety (`4XL (56rem / 896px)` ... `7XL (80rem / 1280px)`) bez zmiany zapisanych tokenów | Edytor |
 | U4 | Zamknięte (2026-05-21, TASK-283-04): Visual wyjaśnia, że dwa gradient stop-y stają się widoczną powierzchnią, a kolor tła pozostaje fallbackiem po wyczyszczeniu gradientu | Edytor |
 | U5 | Zamknięte (2026-05-21, TASK-283-05-01): Visual ma teraz derived `Surface preview`, który pokazuje gradient, overlay, border, radius, i effective shadow bez dodatkowego persisted state | Edytor |
-| U6 | Zamknięte (2026-05-21, TASK-283-04): Wizard i Visual używają już tego samego card UI dla wariantów, a Wizard dodatkowo pokazuje quick presets | Spójność |
-| U7 | No standalone TASK-283 leaf: media URL validation została domknięta przez `TASK-283-02`, freeform color/token text pozostaje intencjonalne, a shared swatch overwrite drift został domknięty przez `TASK-327` | Walidacja |
+| U6 | Zamknięte (2026-05-25, TASK-336-19): Wizard i Visual używają tego samego card UI dla wariantów, ale layoutowe quick presets zostały ograniczone do Visual, gdzie ich wielopolowe patche są prawdziwe | Spójność |
+| U7 | Zamknięte (2026-05-25, TASK-336-19): normalny Background media flow używa Media Library pickerów; starsze external URL-e są read-only replace/clear compatibility state | Walidacja |
 | U8 | Zamknięte (2026-05-17, TASK-256-03 + TASK-256-05-01): placeholder „Empty region.” jest już ograniczony do editor/admin preview i nie jest aktywnym frontend defectem | Frontend UX |
 
 ---
@@ -117,11 +118,11 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Quick presets (`Standard content`, `Framed panel`, `Edge-to-edge`, `Hero band`, `Two-column region group`) | ✅ Działa | Zachowują heading copy i region slot content, a preset `Hero band` oraz `Two-column region group` potwierdzają wielopolowe patche Section-owned tokenów |
-| Wariant — karty (Default / Contained / Bleed) | ✅ Działa | Wizard i Visual używają już tego samego card UI |
+| Quick presets | Nie dotyczy po TASK-336-19 | Layoutowe presety zostały usunięte z Wizard, bo jednorazowy setup zapisuje tylko starter `variant` |
+| Wariant — karty (Default / Contained / Bleed) | ✅ Działa | Wizard i Visual używają tego samego card UI dla wariantu |
 | Pole „Section title" | ✅ Działa | W sesji 2026-05-16 renderowało się jako `<h3>`; bieżący baseline po TASK-256-05-01 używa bezpiecznego `<h2>` |
 | Pole „Description" | ✅ Działa | Renderuje jako `<p class="text-sm">` |
-| Pole „Background color" (+ Clear) | ✅ Działa | Clear poprawnie kasuje wartość |
+| Pole „Background color" (+ Clear) | Przeniesione do Visual | Wizard nie edytuje już surface/style pól |
 | Pole „Label" | ✅ Działa | Zamknięte przez TASK-283-03; Wizard jest kompletny względem heading copy |
 | Przycisk „Continue to layout and styling" | ✅ Działa | Przełącza na zakładkę Visual |
 
@@ -130,7 +131,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Test | Wynik | Uwagi |
 |------|-------|-------|
 | Variant cards (Default / Contained / Bleed) | ✅ Działa | Natychmiastowy efekt w canvas; ten sam card UI co w Wizard |
-| Quick presets | ✅ Działa | Te same preset cards co w Wizard; preset `Two-column region group` ustawia grid 2-col, a `Hero band` centruje heading bez utraty copy |
+| Quick presets | ✅ Działa | Visual-only preset cards; preset `Two-column region group` ustawia grid 2-col, a `Hero band` centruje heading bez utraty copy |
 | Label / Title / Description | ✅ Działa | W aktualnym baseline renderuje jako p/h2/p; sesja 2026-05-16 miała jeszcze historyczne p/h3/p przed TASK-256-05-01 |
 | Element (section / div) | ✅ Działa | Zmienia outer HTML element |
 | Anchor ID | Historyczne | W sesji 2026-05-16 brakowało walidacji; bieżący baseline po TASK-256-05-01 sanitizuje `anchorId` przed persistence/render |
@@ -142,7 +143,7 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 | Background color (+ Clear) | ✅ Działa | |
 | Gradient start / end | ✅ Działa | Pola mają Clear; guidance wyjaśnia, że aktywny gradient staje się widoczną powierzchnią nad background color |
 | Gradient angle (slider + exact input) | ✅ Działa | Visual łączy slider, stepper nudges, i exact-value input; zapis nadal clampuje do `0..360` z domyślnym `180deg` |
-| Border color | ⚠️ Problem | Color picker nadpisuje CSS zmienną `var(--color-border)` hexem `#e2e8f0` |
+| Border color | ✅ Działa | Swatch-only authoring; zapisane custom tokeny są tylko replace-or-clear compatibility state |
 | Border width (0/1/2/3px) | ✅ Działa | Poprawnie aplikowane |
 | Corner radius | ✅ Działa | |
 | Surface shadow | ✅ Działa | `Match variant` zachowuje legacy `contained -> shadow-sm`, a explicit override obsługuje `none/sm/md/lg/xl` |
@@ -158,10 +159,8 @@ Section widget jest bazowym kontenerem układu strony. Odpowiada za: semantyczny
 
 | Test | Wynik | Uwagi |
 |------|-------|-------|
-| Anchor ID | ✅ Działa | Pole zsynchronizowane z Visual |
-| Aria label | ✅ Działa | |
-| Semantics-only panel | ✅ Działa | Advanced trzyma teraz tylko `anchorId`, `ariaLabel`, i normalized snapshot; `gradientAngle` / `overlayOpacity` pozostały wyłącznie w Visual po TASK-326 |
-| Raw payload snapshot | ✅ Działa | JSON poprawnie odzwierciedla aktualny stan |
+| Link/accessibility summary | ✅ Działa | Advanced pokazuje read-only `element`, link name i accessibility name; edycja jest Visual-owned |
+| Support diagnostics | ✅ Działa | Read-only heading/background-media/effects summaries; brak raw JSON snapshot i brak hidden writable inputs |
 | Layout (Container, Padding top/bottom, Margin top/bottom) | ✅ Działa | Globalny system layoutu strony — oddzielny od Section's własnego layoutu |
 | Visibility (Desktop/Tablet/Mobile toggle) | ✅ Działa | Globalne przełączniki widoczności — nie ma w `SectionData` |
 
@@ -344,7 +343,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 | Priorytet | Problem | Nakład | Wpływ |
 |-----------|---------|--------|-------|
-| **P1** | Zamknięte (2026-05-23, TASK-327) — `SharedColorFieldInputs` zachowuje CSS-variable/custom token text przy zmianie swatcha, a deliberate replacement wymaga text input lub explicit picker override | Średni | Shared editor truthfulness |
+| **P1** | Zamknięte (2026-05-25, TASK-336-19) — Section nie pokazuje już raw color/token text inputów; saved custom colors są tylko replace-or-clear state | Średni | Shared editor truthfulness |
 
 ## 8. Podsumowanie sesji testowej
 
@@ -357,10 +356,10 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 - Gradient, overlay, border, radius — renderowanie i DOM zgodne z konfiguracją
 - Surface shadow / motion / preview są zamknięte przez `TASK-283-05-01`: contained zachowuje legacy `shadow-sm`, autor może wybrać bounded `none/sm/md/lg/xl`, a motion pozostaje CSS-only (`none` / `fade` / `slide-up`)
 - Angle/opacity UX jest zamknięte przez `TASK-283-05-02`: Visual ma teraz slider + stepper nudges oraz exact-value inputs dla `gradientAngle` i `overlayOpacity` bez powrotu duplikacji w Advanced
-- Raw JSON snapshot w Advanced pokazuje poprawny, znormalizowany stan
-- Element section/div — poprawna zmiana semantyki
+- Advanced pokazuje tylko read-only summaries; raw JSON snapshot został usunięty z normalnego panelu
+- Section type / link name / accessibility name — poprawna zmiana bez proszenia autora o raw HTML id lub aria terminology
 - Padding block / inline / max-width — poprawnie aplikowane jako klasy Tailwind
-- Quick presets i spójne Wizard/Visual variant cards są zamknięte przez TASK-283-04; preset workflows zachowują heading copy i region slot content
+- Wizard pokazuje tylko variant cards; pełne presety layoutu pozostają w Visual
 - Friendly max-width labels oraz gradient/background guidance są obecne w bieżącym edytorze po TASK-283-04
 - Background media: dekoracyjne image/video tła, poster dla video, bounded blend/layer ordering, i fail-closed dla nieobsługiwanych źródeł są zamknięte przez TASK-283-02
 - Heading controls: Wizard `Label`, bounded `h1`–`h6`, alignment, size tokens, i clearable heading colors są zamknięte przez TASK-283-03
@@ -378,7 +377,7 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
 
 ---
 
-## Status po shared baseline i kolejnych leafach (audit 2026-05-22)
+## Status po shared baseline i kolejnych leafach
 
 - `TASK-256-03` + `TASK-256-05-01`: public runtime no longer renders the
   editor-only `Empty region.` placeholder. Builder affordances are now gated by
@@ -409,6 +408,18 @@ Zmieniono wariant na `contained`, opublikowano i sprawdzono frontend:
   stable region instance ids, so Visual rename controls, canvas slot headers,
   and insert-target selectors can show author labels without changing public
   runtime output.
+- `TASK-336-19`: Section now follows the shared one-time Wizard contract. Wizard
+  keeps only starter variant plus label/title/description setup fields; daily
+  layout, surface, background media, section link, and accessibility authoring
+  live in Visual with beginner-safe controls. Advanced is read-only diagnostics,
+  and completed fixture smoke validates the daily `Visual`/`Advanced` tabs
+  because `TASK-336-16` hides Wizard after setup completion.
+- Targeted evidence for the 2026-05-25 TASK-336-19 cleanup:
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-section-advanced-readonly-2026-05-25.*`
+    reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+    `metadataGaps=0`.
+  - `bun run test:vitest -- tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/section.test.tsx tests/vitest/widgets/editorContract.test.ts` passed.
+  - `bun test tests/unit/playwright-widget-contract-smoke.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run gates:coderso` passed.
 - Targeted evidence for the current 2026-05-22 audit:
   - `bunx vitest run --config vitest.config.ts tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx` passed on the finalized TASK-283 worktree state after the U2 slider/stepper closure.
   - `bun test tests/unit/widgets/validator.test.ts`, `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run lint` passed on the finalized TASK-283 worktree state.
