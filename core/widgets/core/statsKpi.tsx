@@ -293,19 +293,13 @@ export const statsKpiDefaults: StatsKpiData = {
   style: {
     alignment: "center",
     spacing: "md",
-    valueColor: "var(--color-text)",
-    labelColor: "var(--color-text)",
-    descriptionColor: "var(--color-text)",
     valueSize: "md",
     divider: true,
     dividerIntensity: "default",
     maxWidth: "lg",
     padding: "md",
     minHeight: "none",
-    cardBackground: "var(--color-bg)",
-    cardBorderColor: "var(--color-border)",
     iconSize: "md",
-    iconBorderColor: "var(--color-border)",
   },
 };
 
@@ -689,9 +683,6 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
   const styleDefaults = statsKpiDefaults.style ?? {
     alignment: "center",
     spacing: "md",
-    valueColor: "var(--color-text)",
-    labelColor: "var(--color-text)",
-    descriptionColor: "var(--color-text)",
     valueSize: "md",
     divider: true,
     dividerIntensity: "default",
@@ -727,18 +718,11 @@ export function normalizeStatsKpiData(data: StatsKpiData): StatsKpiData {
     style: {
       alignment: resolveStatsKpiAlignment(data.style?.alignment),
       spacing: resolveStatsKpiSpacing(data.style?.spacing),
-      valueColor: resolveString(
-        data.style?.valueColor,
-        styleDefaults.valueColor ?? "var(--color-text)"
-      ),
-      labelColor: resolveString(
-        data.style?.labelColor,
-        styleDefaults.labelColor ?? "var(--color-text)"
-      ),
-      descriptionColor: resolveString(
-        data.style?.descriptionColor,
-        styleDefaults.descriptionColor ?? "var(--color-text)"
-      ),
+      ...(compactObject({
+        valueColor: resolveOptionalString(data.style?.valueColor),
+        labelColor: resolveOptionalString(data.style?.labelColor),
+        descriptionColor: resolveOptionalString(data.style?.descriptionColor),
+      }) ?? {}),
       valueSize: resolveStatsKpiValueSize(data.style?.valueSize),
       divider:
         typeof data.style?.divider === "boolean"

@@ -89,11 +89,19 @@ Daily presentation ownership stays in Visual.
 ## Clear Controls
 
 - Header copy can be cleared from Wizard and Visual.
-- `style.sectionBackground`, `style.cardBackground`, `style.cardBorderColor`,
-  `style.iconSurface`, and `style.iconBorderColor` are clearable.
+- `items[].accentColor`, `style.valueColor`, `style.labelColor`,
+  `style.descriptionColor`, `style.sectionBackground`,
+  `style.cardBackground`, `style.cardBorderColor`, `style.iconSurface`, and
+  `style.iconBorderColor` are clearable.
 - Cleared surface values are omitted from normalized output and do not force
   empty inline styles.
-- Text-token inputs continue to accept design tokens and CSS variables.
+- Visual color authoring uses swatch-only controls and clear actions instead of
+  raw CSS token text inputs. Existing design tokens and CSS variables remain
+  compatible as saved custom color state that can be replaced with a swatch or
+  cleared where the field is clearable.
+- New widget defaults leave color values un-authored; runtime theme colors are
+  applied at render time so a fresh editor starts from `Theme default` instead
+  of misleading saved-custom state.
 
 ## Data Model (summary)
 
@@ -111,7 +119,6 @@ Daily presentation ownership stays in Visual.
       "label": "Projects launched",
       "description": "Production pages delivered in the last 12 months.",
       "icon": "🚀",
-      "accentColor": "var(--color-accent)",
       "trend": {
         "label": "+18% YoY",
         "direction": "up"
@@ -126,21 +133,13 @@ Daily presentation ownership stays in Visual.
   "style": {
     "alignment": "center",
     "spacing": "md",
-    "valueColor": "var(--color-text)",
-    "labelColor": "var(--color-text)",
-    "descriptionColor": "var(--color-text)",
     "valueSize": "md",
     "divider": true,
     "dividerIntensity": "default",
-    "sectionBackground": "var(--color-bg-subtle)",
     "maxWidth": "lg",
     "padding": "md",
     "minHeight": "none",
-    "cardBackground": "var(--color-bg)",
-    "cardBorderColor": "var(--color-border)",
-    "iconSize": "md",
-    "iconSurface": "var(--color-bg-muted)",
-    "iconBorderColor": "var(--color-border)"
+    "iconSize": "md"
   }
 }
 ```

@@ -36,6 +36,21 @@
 - Stats KPI now exposes v2 editor-contract metadata and `data-widget-control-path` ownership rows, so Playwright smoke can enforce real writable paths.
 - Targeted evidence: `_docs/PLAYWRIGHT/widget-contract-smoke-stats-kpi-2026-05-24.md` with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`.
 
+### 0.3 Addendum TASK-336-19 — 2026-05-25
+
+- U2 color-authoring drift is now closed. Visual color controls no longer expose
+  raw CSS variable/token text inputs to nontechnical authors.
+- Existing CSS variables, design tokens, and custom color strings remain
+  backward-compatible as saved custom color state that can be replaced with a
+  swatch, or cleared where the field is clearable.
+- New Stats KPI defaults leave color values un-authored and use runtime theme
+  fallbacks, so a fresh widget starts from `Theme default` instead of saved
+  custom color state.
+- Targeted evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stats-kpi-color-authoring-2026-05-25.*`
+  with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+
 
 ## 1. Przegląd widgetu
 
@@ -112,7 +127,7 @@ Stats KPI widget służy do prezentacji kluczowych wskaźników wydajności (KPI
 | # | Problem | Obszar |
 |---|---------|--------|
 | U1 | **Wizard używa `<Select>` dla wariantu zamiast visual cards** — Visual editor ma ładne karty z opisami; Wizard ma zwykły dropdown — brak spójności, gorszy onboarding | Edytor Wizard |
-| U2 | **ColorField (valueColor, labelColor) — color picker akceptuje tylko hex (#rrggbb), CSS variables jak `var(--color-text)` powodują fallback do `#0f172a`** — użytkownik wpisuje CSS var, kolor pickera nie odzwierciedla rzeczywistej wartości; brak tooltipa o tym ograniczeniu | Edytor |
+| U2 | **Naprawione w TASK-336-19:** Visual color authoring nie pokazuje już raw CSS variable/token inputów; legacy CSS variables są widoczne jako saved custom color z akcją replace/clear tam, gdzie pole jest clearable | Edytor |
 | U3 | **`divider` switch nie ma kontekstu wariantu** — przełącznik jest widoczny zawsze, ale działa tylko w `inline`. Opis mówi „Used mainly by inline variant" ale nie blokuje/ukrywa przełącznika w innych wariantach | Edytor |
 | U4 | **Brak opcji wyczyszczenia pola `header`** — aby usunąć header, użytkownik musi ręcznie skasować oba pola title i description; brak przycisku „Clear header" | Edytor |
 | U5 | **Pole `icon` bez podpowiedzi co wpisać** — placeholder „🚀" sugeruje emoji, ale brak info czy akceptowane są też inne formaty (np. SVG, klasa ikony). Brak walidacji. | Edytor |
@@ -208,13 +223,16 @@ Screenshot: `stats-kpi-08-split-highlight-6-items.png`
 
 `<section>` bez `aria-label`, `<article>` per metrykę bez `aria-label`, ikony emoji bez `aria-hidden="true"`.
 
-### 4.6 Potwierdzony bug U2: ColorField — fallback hex dla CSS variables
+### 4.6 Historyczny bug U2: ColorField — fallback hex dla CSS variables
 
 ```json
 { "colorPickerValue": "#0f172a", "textInputValue": "var(--color-text)" }
 ```
 
-Kolor picker pokazuje `#0f172a` (hardcoded fallback), choć wartość to CSS variable. Brak tooltipa.
+Stan bazowy z 2026-05-16 pokazywał `#0f172a` jako fallback pickera, choć
+zapisaną wartością było CSS variable. TASK-336-19 zamyka ten drift: Visual nie
+pokazuje raw token inputu, legacy wartości są oznaczone jako saved custom color,
+a świeże defaulty startują jako `Theme default`.
 
 ### 4.7 Advanced editor — obserwacje
 
@@ -289,7 +307,7 @@ Identyczne jak admin preview — `null` dla wszystkich atrybutów ARIA. Błędy 
 | 🟠 WYSOKI | R1, R2, R3 | **Brak ARIA na section, article i emoji** | Niedostępność dla screen readerów |
 | 🟠 WYSOKI | W1 | **Brak kontroli rozmiaru wartości** | Kluczowa typografia KPI niemodyfikowalna |
 | 🟠 WYSOKI | W8 | **Brak per-metrykowego koloru akcentu** | Niemożność wizualnego wyróżnienia kluczowego KPI |
-| 🟡 ŚREDNI | U2 | **ColorField + CSS variables — fallback kolor pickera** | Mylące UX przy CSS variables |
+| 🟡 ŚREDNI | U2 | **Naprawione w TASK-336-19: ColorField + CSS variables — fallback kolor pickera** | Visual używa saved-custom state, swatch replace i clear tam, gdzie pole jest clearable |
 | 🟡 ŚREDNI | U3 | **divider switch bez kontekstu wariantu** | Dezorientacja użytkownika |
 | 🟡 ŚREDNI | W4, W5, W6 | **Brak sectionBackground, maxWidth, padding** | Ograniczony layout |
 | 🟡 ŚREDNI | W9 | **Brak CTA per metryka** | Brak możliwości linkowania metryk |

@@ -120,6 +120,12 @@ test("stats kpi normalization keeps deterministic ids, count bounds, and nested 
     padding: "md",
     iconSize: "md",
   });
+  expect(normalized.style?.valueColor).toBeUndefined();
+  expect(normalized.style?.labelColor).toBeUndefined();
+  expect(normalized.style?.descriptionColor).toBeUndefined();
+  expect(normalized.style?.cardBackground).toBeUndefined();
+  expect(normalized.style?.cardBorderColor).toBeUndefined();
+  expect(normalized.style?.iconBorderColor).toBeUndefined();
 });
 
 test("stats kpi validator accepts expanded model", () => {
@@ -322,6 +328,14 @@ test("stats kpi visual renders grouped IA", () => {
   expect(html).toContain("Section layout and spacing");
   expect(html).toContain('data-widget-editor-mode="visual"');
   expect(html).toContain('data-widget-control-path="style.alignment"');
+  expect(html).toContain("Theme default");
+  expect(html).not.toContain("Saved custom color");
+  expect(html).not.toContain('placeholder="var(--color-accent)"');
+  expect(html).not.toContain('placeholder="var(--color-text)"');
+  expect(html).not.toContain('placeholder="var(--color-bg)"');
+  expect(html).not.toContain('placeholder="var(--color-border)"');
+  expect(html).not.toContain('placeholder="var(--color-bg-muted)"');
+  expect(html).not.toContain('placeholder="var(--color-bg-subtle)"');
 });
 
 test("stats kpi advanced keeps technical-only scope", () => {

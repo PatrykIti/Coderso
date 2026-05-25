@@ -259,16 +259,11 @@ const getInputByPlaceholder = (container: ParentNode, placeholder: string) => {
   return input;
 };
 
-const getInputsByPlaceholder = (container: ParentNode, placeholder: string) => {
-  const inputs = Array.from(container.querySelectorAll("input")).filter(
+const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
-  if (inputs.length === 0) {
-    throw new Error(`Missing inputs with placeholder "${placeholder}"`);
-  }
-  return inputs;
-};
 
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).find(
@@ -311,6 +306,22 @@ const getColorInputs = (container: ParentNode) =>
   Array.from(container.querySelectorAll("input[type='color']")).filter(
     (element): element is HTMLInputElement => element instanceof HTMLInputElement
   );
+
+const findColorInputByControl = (container: ParentNode, controlId: string) => {
+  const input = container.querySelector(`[data-widget-control="${controlId}"] input[type="color"]`);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for control "${controlId}"`);
+  }
+  return input;
+};
+
+const getControlById = (container: ParentNode, controlId: string) => {
+  const control = container.querySelector(`[data-widget-control="${controlId}"]`);
+  if (!(control instanceof HTMLElement)) {
+    throw new Error(`Missing control "${controlId}"`);
+  }
+  return control;
+};
 
 const getWritableControlPaths = (container: ParentNode) =>
   Array.from(container.querySelectorAll("[data-widget-control-path]"))
@@ -464,7 +475,10 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
       setInputValue(findInputByPlaceholder(view.container, "Projects launched"), "Launches");
       setInputValue(findInputByPlaceholder(view.container, "$"), "$");
       setInputValue(findInputByPlaceholder(view.container, "%"), "+");
-      setInputValue(findInputByPlaceholder(view.container, "var(--color-accent)"), "#aa5500");
+      setInputValue(
+        findColorInputByControl(view.container, "stats-kpi.items.0.accentColor"),
+        "#aa5500"
+      );
       setInputValue(findInputByPlaceholder(view.container, "+12% MoM"), "+30% QoQ");
       setInputValue(findInputByPlaceholder(view.container, "/work"), "/case-studies");
       setInputValue(
@@ -473,11 +487,20 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
       );
     });
 
-    const textTokenInputs = getInputsByPlaceholder(view.container, "var(--color-text)");
+    expect(findInputsByPlaceholder(view.container, "var(--color-text)")).toHaveLength(0);
     React.act(() => {
-      setInputValue(textTokenInputs[0], "#123456");
-      setInputValue(textTokenInputs[1], "#654321");
-      setInputValue(textTokenInputs[2], "#334455");
+      setInputValue(
+        findColorInputByControl(view.container, "stats-kpi.style.valueColor"),
+        "#123456"
+      );
+      setInputValue(
+        findColorInputByControl(view.container, "stats-kpi.style.labelColor"),
+        "#654321"
+      );
+      setInputValue(
+        findColorInputByControl(view.container, "stats-kpi.style.descriptionColor"),
+        "#334455"
+      );
       setSelectValue(findSelectsByOptions(view.container, ["start", "center", "end"])[0], "end");
       const densitySelects = findSelectsByOptions(view.container, ["none", "sm", "md", "lg"]);
       setSelectValue(densitySelects[0], "lg");
@@ -549,7 +572,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   }
 });
 
-test("StatsKpi visual and advanced editors cover isolated variant-card, direct item value, color picker, and token updates", async () => {
+test("StatsKpi visual and advanced editors cover isolated variant-card, direct item value, swatch, and saved custom color updates", async () => {
   const { StatsKpiAdvancedEditor, StatsKpiVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
 
@@ -590,6 +613,17 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
 
     expect(colorInputValues).toContain("#445566");
     expect(colorInputValues.filter((value) => value === "#0f172a").length).toBeGreaterThan(0);
+    expect(visualHarness.container.textContent).toContain("Saved custom color");
+    expect(findInputsByPlaceholder(visualHarness.container, "var(--metric-value)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(visualHarness.container, "var(--color-text)")).toHaveLength(0);
+
+    clickButton(
+      getButtonsByText(
+        getControlById(visualHarness.container, "stats-kpi.style.valueColor"),
+        "Clear"
+      )[0]
+    );
+    expect(visualHarness.getLatestValue().style?.valueColor).toBeUndefined();
 
     clickByText(visualHarness.container, "Inline");
     expect(visualHarness.getLatestVariant()).toBe("inline");
@@ -597,7 +631,7 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
 
     setInputValue(getInputByPlaceholder(visualHarness.container, "120"), "300%");
     setInputValue(
-      getInputsByPlaceholder(visualHarness.container, "var(--color-text)")[0],
+      findColorInputByControl(visualHarness.container, "stats-kpi.style.valueColor"),
       "#112233"
     );
     setSelectValue(
@@ -747,12 +781,12 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
       getTextareaByPlaceholder(visualView.container, "Optional supporting context.").value
     ).toBe("");
     expect(getInputByPlaceholder(visualView.container, "🚀").value).toBe("");
-    expect(
-      getInputsByPlaceholder(visualView.container, "var(--color-text)").map((input) => input.value)
-    ).toEqual(["", "", ""]);
-    expect(getColorInputs(visualView.container)).toHaveLength(5);
-    expect(getColorInputs(visualView.container).every((input) => input.value === "#0f172a")).toBe(
-      true
+    expect(findInputsByPlaceholder(visualView.container, "var(--color-text)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(visualView.container, "var(--color-bg)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(visualView.container, "var(--color-border)")).toHaveLength(0);
+    expect(getColorInputs(visualView.container)).toHaveLength(10);
+    expect(getColorInputs(visualView.container).map((input) => input.value)).toEqual(
+      expect.arrayContaining(["#1d4ed8", "#0f172a", "#ffffff", "#e2e8f0", "#f8fafc"])
     );
     expect(getSelectByOptions(visualView.container, ["start", "center", "end"]).value).toBe(
       "center"

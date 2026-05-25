@@ -1106,7 +1106,30 @@ color/CSS token authoring and writable Advanced style-token drift.
   `metadataGaps=0`.
 - Helper-agent triage ranked CTA Banner as the next high-priority slice. Claude
   independently ranked `stats-kpi` color authoring as the next color slice;
-  that remains queued after CTA.
+  the next section closes that slice.
+
+## TASK-336-19 Stats KPI Color Authoring Evidence (2026-05-25)
+
+The twenty-third TASK-336-19 implementation family targets Stats KPI raw
+color/CSS token authoring drift in Visual.
+
+- Stats KPI Visual no longer exposes raw CSS/token text inputs for metric
+  accents, typography colors, card/icon surfaces, or section background.
+- Color authoring now uses swatch-only controls plus explicit clear actions on
+  clearable fields, while preserving existing theme tokens, CSS variables, and
+  custom color strings as saved custom color state.
+- New Stats KPI defaults leave colors un-authored and rely on runtime theme
+  fallbacks, so a fresh editor starts from `Theme default` instead of saved
+  custom color state.
+- Stats KPI Advanced remains read-only diagnostics with no writable paths.
+- Focused Vitest evidence covers raw-token input absence, saved-custom replace
+  behavior, fresh-default `Theme default` state, SSR editor metadata, and strict
+  editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx tests/vitest/widgets/statsKpi.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stats-kpi-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Claude and Helper Agent Review Summary
 

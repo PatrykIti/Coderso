@@ -45,7 +45,11 @@ import {
   WidgetEditorSection,
   type WidgetControlRowProps,
 } from "./WidgetEditorControls";
-import { hasClearableFieldValue, SharedColorFieldInputs } from "./ClearableFields";
+import {
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorPickerValue,
+} from "./ClearableFields";
 
 const variantOptions: Array<{
   id: StatsKpiVariantId;
@@ -236,7 +240,6 @@ function StatsKpiColorField({
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback = "#0f172a",
   onClear,
 }: {
@@ -244,10 +247,13 @@ function StatsKpiColorField({
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback?: string;
   onClear?: () => void;
 }) {
+  const hasValue = hasClearableFieldValue(value);
+  const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
+  const pickerValue = resolveColorPickerValue(value, pickerFallback);
+
   return (
     <WidgetControlRow
       id={id}
@@ -255,52 +261,63 @@ function StatsKpiColorField({
       actions={<ClearActionButton value={value} onClear={onClear} />}
     >
       {(fieldProps) => (
-        <SharedColorFieldInputs
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          pickerFallback={pickerFallback}
-          inputId={fieldProps.id}
-          ariaLabelledby={fieldProps["aria-labelledby"]}
-          ariaDescribedby={fieldProps["aria-describedby"]}
-        />
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={pickerValue}
+              onChange={(event) => onChange(event.target.value)}
+              className="h-9 w-10 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-9 flex-wrap items-center gap-2">
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {hasCustomValue
+                  ? "Saved custom color"
+                  : hasValue
+                    ? "Selected color"
+                    : "Theme default"}
+              </span>
+            </div>
+          </div>
+          {hasCustomValue ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+              A saved custom color is configured. Pick a swatch to replace it
+              {onClear ? ", or clear the field" : ""}.
+            </p>
+          ) : null}
+        </div>
       )}
     </WidgetControlRow>
   );
 }
 
-function StatsKpiTokenField({
+function StatsKpiSurfaceColorField({
   id,
   label,
   value,
   onChange,
   onClear,
-  placeholder,
+  pickerFallback,
 }: {
   id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   onClear?: () => void;
-  placeholder: string;
+  pickerFallback: string;
 }) {
   return (
-    <WidgetControlRow
+    <StatsKpiColorField
       id={id}
       label={label}
-      actions={<ClearActionButton value={value} onClear={onClear} />}
-    >
-      {(fieldProps) => (
-        <Input
-          id={fieldProps.id}
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          aria-labelledby={fieldProps["aria-labelledby"]}
-          aria-describedby={fieldProps["aria-describedby"]}
-        />
-      )}
-    </WidgetControlRow>
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      pickerFallback={pickerFallback}
+    />
   );
 }
 
@@ -1136,7 +1153,8 @@ export function StatsKpiVisualEditor({
                   label="Metric accent color"
                   value={item.accentColor}
                   onChange={(next) => updateItem(value, onChange, index, { accentColor: next })}
-                  placeholder="var(--color-accent)"
+                  onClear={() => updateItem(value, onChange, index, { accentColor: undefined })}
+                  pickerFallback="#1d4ed8"
                 />
                 <WidgetControlRow
                   id={`stats-kpi.items.${index}.trend.label`}
@@ -1263,7 +1281,7 @@ export function StatsKpiVisualEditor({
         mode="visual"
         role="visual"
         title="Typography"
-        description="Tune the KPI typography tokens without mixing in surfaces or layout."
+        description="Tune KPI typography and colors without mixing in surfaces or layout."
       >
         <WidgetControlRow id="stats-kpi.style.valueSize" label="Value size">
           {(fieldProps) => (
@@ -1295,21 +1313,21 @@ export function StatsKpiVisualEditor({
           label="Value color"
           value={normalized.style?.valueColor}
           onChange={(next) => updateStyle(value, onChange, { valueColor: next })}
-          placeholder="var(--color-text)"
+          onClear={() => clearStyle(value, onChange, "valueColor")}
         />
         <StatsKpiColorField
           id="stats-kpi.style.labelColor"
           label="Label color"
           value={normalized.style?.labelColor}
           onChange={(next) => updateStyle(value, onChange, { labelColor: next })}
-          placeholder="var(--color-text)"
+          onClear={() => clearStyle(value, onChange, "labelColor")}
         />
         <StatsKpiColorField
           id="stats-kpi.style.descriptionColor"
           label="Description color"
           value={normalized.style?.descriptionColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
-          placeholder="var(--color-text)"
+          onClear={() => clearStyle(value, onChange, "descriptionColor")}
         />
       </EditorSection>
 
@@ -1318,23 +1336,23 @@ export function StatsKpiVisualEditor({
         mode="visual"
         role="visual"
         title="Card and icon surfaces"
-        description="Keep per-card surfaces separate from section layout and text tokens."
+        description="Keep per-card surfaces separate from section layout and metric text colors."
       >
-        <StatsKpiTokenField
+        <StatsKpiSurfaceColorField
           id="stats-kpi.style.cardBackground"
           label="Card background"
           value={normalized.style?.cardBackground}
           onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
           onClear={() => clearStyle(value, onChange, "cardBackground")}
-          placeholder="var(--color-bg)"
+          pickerFallback="#ffffff"
         />
-        <StatsKpiTokenField
+        <StatsKpiSurfaceColorField
           id="stats-kpi.style.cardBorderColor"
           label="Card border"
           value={normalized.style?.cardBorderColor}
           onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
           onClear={() => clearStyle(value, onChange, "cardBorderColor")}
-          placeholder="var(--color-border)"
+          pickerFallback="#e2e8f0"
         />
         <WidgetControlRow id="stats-kpi.style.iconSize" label="Icon size">
           {(fieldProps) => (
@@ -1361,21 +1379,21 @@ export function StatsKpiVisualEditor({
             </Select>
           )}
         </WidgetControlRow>
-        <StatsKpiTokenField
+        <StatsKpiSurfaceColorField
           id="stats-kpi.style.iconSurface"
           label="Icon surface"
           value={normalized.style?.iconSurface}
           onChange={(next) => updateStyle(value, onChange, { iconSurface: next })}
           onClear={() => clearStyle(value, onChange, "iconSurface")}
-          placeholder="var(--color-bg-muted)"
+          pickerFallback="#f1f5f9"
         />
-        <StatsKpiTokenField
+        <StatsKpiSurfaceColorField
           id="stats-kpi.style.iconBorderColor"
           label="Icon border"
           value={normalized.style?.iconBorderColor}
           onChange={(next) => updateStyle(value, onChange, { iconBorderColor: next })}
           onClear={() => clearStyle(value, onChange, "iconBorderColor")}
-          placeholder="var(--color-border)"
+          pickerFallback="#e2e8f0"
         />
       </EditorSection>
 
@@ -1386,13 +1404,13 @@ export function StatsKpiVisualEditor({
         title="Section layout and spacing"
         description="Adjust section surfaces, width, density, and inline divider behavior."
       >
-        <StatsKpiTokenField
+        <StatsKpiSurfaceColorField
           id="stats-kpi.style.sectionBackground"
           label="Section background"
           value={normalized.style?.sectionBackground}
           onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
           onClear={() => clearStyle(value, onChange, "sectionBackground")}
-          placeholder="var(--color-bg-subtle)"
+          pickerFallback="#f8fafc"
         />
         <WidgetControlRow id="stats-kpi.style.maxWidth" label="Section max width">
           {(fieldProps) => (

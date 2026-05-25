@@ -437,7 +437,24 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Helper-agent triage ranked this as the next high-priority
   slice; Claude independently ranked `stats-kpi` color authoring as the next
-  color slice, which remains queued after CTA.
+  color slice, which the next implementation family closes.
+- In Progress (2026-05-25): twenty-third implementation family targets Stats
+  KPI color authoring drift. Stats KPI Visual metric accents, typography
+  colors, card/icon surfaces, and section background now use swatch-only
+  controls, with clear actions on clearable fields, instead of raw CSS/token
+  text inputs. Existing theme tokens, CSS variables, and custom color strings
+  remain compatible as saved custom color state that can be replaced with a
+  swatch or cleared where the field is clearable. New defaults now leave color
+  values un-authored and apply theme colors at render time, so fresh widgets do
+  not start as misleading saved-custom colors. Advanced remains read-only
+  diagnostics. Focused Vitest evidence covers raw-token input absence,
+  saved-custom replace behavior, fresh-default `Theme default` state, SSR
+  editor metadata, and strict editor contracts; it currently passes
+  `bun run test:vitest -- tests/vitest/ui/stats-kpi-editor-wave.test.tsx tests/vitest/widgets/statsKpi.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stats-kpi-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Files to Change
 
