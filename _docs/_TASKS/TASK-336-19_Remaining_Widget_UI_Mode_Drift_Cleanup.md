@@ -67,7 +67,7 @@ read-only diagnostics. It added these concrete cleanup requirements:
 - Marketing/trust/media: `feature-grid`, `testimonials`, `pricing-plans`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`
 - Dynamic/commerce/source: `entry-teaser`, `product-gallery`,
-  `product-compare`, `product-table`, `newsletter`, `contact`
+  `product-compare`, `product-table`, `newsletter`, `form-embed`, `contact`
 - Site chrome: `navigation`, `footer`
 - Contract residual revisits after completed leaves: `section`, `grid-columns`,
   `template-section`, `split-layout`, `tabs`, `accordion`, `spacer`, and shared
@@ -907,6 +907,26 @@ read-only diagnostics. It added these concrete cleanup requirements:
   opens Wizard via `Run setup again`, reports `wizardPassed=true`, missing
   metadata `0`, raw technical inputs `0`, and all source writable paths
   present.
+- In Progress (2026-05-25): Form Embed residual drift is superseded under this
+  task after helper-agent and Claude audits flagged Visual raw CSS/token color
+  inputs, Advanced normalized payload JSON, technical diagnostics copy, stale
+  tests that blessed the drift, and missing TASK-336-19 Playwright evidence.
+  Form Embed now keeps Wizard as one-time form selection and setup summary,
+  Visual as daily copy/layout/field/navigation/submit authoring with swatch-only
+  color controls and an author-facing `Form preview` summary, and Advanced as
+  read-only runtime, submission-security, authoring, and contract summaries
+  without normalized JSON, raw endpoints, raw form IDs, nonce values, public
+  site keys, API-scope copy, or raw CSS/token inputs. Targeted Vitest evidence
+  passes `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 41/41 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-focused-2026-05-25.*`
+  inspects Visual, Advanced, and `Run setup again` Wizard, reporting
+  `passed=true`, Visual style raw inputs `0`, Advanced writable paths `0`,
+  Advanced raw technical controls `0`, and Wizard writable paths limited to
+  `formId`.
 
 ## Files to Change
 

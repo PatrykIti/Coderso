@@ -173,6 +173,11 @@ Zasady:
   metadata na prawdziwych kontrolkach Wizard/Visual, Wizard preview jest
   osobna sekcja kontraktu, a Advanced pokazuje human runtime/source summaries
   zamiast raw query JSON lub payload dumpow.
+- `form-embed` po TASK-336-19 zachowuje Wizard-only form selection, ale Visual
+  pokazuje form preview jako summary, kolory sa swatch-only bez raw CSS/token
+  inputow, a Advanced zastapil normalized payload snapshot human runtime,
+  security, authoring i contract summaries bez raw endpointow/form ID/API
+  scope copy.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

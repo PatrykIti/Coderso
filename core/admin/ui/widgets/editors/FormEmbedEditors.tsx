@@ -1,7 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 
 import {
   normalizeFormEmbedData,
@@ -27,9 +25,9 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import { hasClearableFieldValue, SharedColorFieldInputs } from "./ClearableFields";
 import { getFormDetailCached, type FormDetail, type FormRecord } from "@/services/formsClient";
 import { useForms } from "@/ui/forms/hooks/useForms";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -259,6 +257,15 @@ function clearStyleField(
   });
 }
 
+function resolveAuthoredStyleField(
+  value: FormEmbedData,
+  normalized: FormEmbedData,
+  key: keyof FormEmbedStyle
+) {
+  if (!value.style || value.style[key] === undefined) return undefined;
+  return normalized.style?.[key];
+}
+
 function updateFields(
   value: FormEmbedData,
   onChange: (next: FormEmbedData) => void,
@@ -304,6 +311,53 @@ function updateSubmitBehavior(
 function normalizeFieldTypes(detail: FormDetail | null, resolved?: FormEmbedResolvedData) {
   const fields = detail?.fields ?? resolved?.fields ?? [];
   return Array.from(new Set(fields.map((field) => field.type).filter(Boolean))).sort();
+}
+
+const formFieldTypeLabelMap: Record<string, string> = {
+  checkbox: "Checkbox",
+  date: "Date",
+  email: "Email",
+  hidden: "Hidden field",
+  number: "Number",
+  phone: "Phone",
+  radio: "Choice",
+  range: "Slider",
+  rating: "Rating",
+  select: "Dropdown",
+  text: "Text",
+  textarea: "Long text",
+  time: "Time",
+};
+
+function formatFieldTypeList(fieldTypes: string[]) {
+  if (fieldTypes.length === 0) return "";
+  return fieldTypes
+    .map((type) => formFieldTypeLabelMap[type] ?? type.replaceAll("_", " "))
+    .join(", ");
+}
+
+function describeFormStatus(status: string | null | undefined) {
+  if (status === "published") return "Published";
+  if (status === "draft") return "Draft";
+  if (status === "archived") return "Archived";
+  if (!status) return "";
+  return status.replaceAll("_", " ");
+}
+
+function describeRuntimeWarning(error: string | null | undefined) {
+  if (!error) return "None";
+  const normalized = error.trim();
+  if (!normalized) return "None";
+  const knownWarnings: Record<string, string> = {
+    form_not_found: "Selected form is no longer available.",
+    form_unpublished: "Selected form is not published yet.",
+    no_fields: "Selected form has no public fields yet.",
+    public_submission_disabled: "Public submissions are not enabled for this form.",
+  };
+  return (
+    knownWarnings[normalized] ??
+    "Form preview is unavailable. Check the saved form before publishing."
+  );
 }
 
 function useSelectedFormDetail(formId: string | undefined) {
@@ -385,10 +439,12 @@ function FormDiagnostics({
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-medium text-foreground">
-          {selectedForm?.name ?? resolved?.formName ?? normalizedFormId}
+          {selectedForm?.name ?? resolved?.formName ?? "Saved form unavailable"}
         </p>
         {status ? (
-          <Badge variant={status === "published" ? "default" : "outline"}>{status}</Badge>
+          <Badge variant={status === "published" ? "default" : "outline"}>
+            {describeFormStatus(status)}
+          </Badge>
         ) : null}
         {submissionAccess === "internal" ? <Badge variant="outline">Internal</Badge> : null}
         {layoutMode === "multi_step" ? <Badge variant="outline">Multi-step</Badge> : null}
@@ -403,21 +459,20 @@ function FormDiagnostics({
 
       {submissionAccess === "internal" ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Internal submissions require an authenticated admin session or an API key with the
-          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on
-          public pages.
+          Internal submissions require a signed-in admin or approved internal integration. Avoid
+          embedding this form on public pages.
         </div>
       ) : null}
 
       {resolvedError ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-          Runtime resolver reports: {resolvedError}
+          Runtime warning: {describeRuntimeWarning(resolvedError)}
         </div>
       ) : null}
 
       {isMissingSelected ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Saved `formId` no longer resolves in the current admin list.
+          The saved form is no longer available in the current form list.
         </div>
       ) : null}
 
@@ -433,35 +488,12 @@ function FormDiagnostics({
         <p>
           Field types:{" "}
           {fieldTypes.length > 0
-            ? fieldTypes.join(", ")
+            ? formatFieldTypeList(fieldTypes)
             : detailStatus === "loading"
               ? "Loading..."
               : "None"}
         </p>
       </div>
-    </div>
-  );
-}
-
-function NormalizationHints({ value }: { value: FormEmbedData }) {
-  const rawSubmitLabel = typeof value.submitLabel === "string" ? value.submitLabel : undefined;
-  const rawSuccessMessage =
-    typeof value.successMessage === "string" ? value.successMessage : undefined;
-  const normalized = normalizeValue(value);
-
-  return (
-    <div className="space-y-1 text-xs text-muted-foreground">
-      {rawSubmitLabel !== undefined && rawSubmitLabel.trim().length === 0 ? (
-        <p>Empty submit label falls back to: {normalized.submitLabel}</p>
-      ) : null}
-      {rawSuccessMessage !== undefined && rawSuccessMessage.trim().length === 0 ? (
-        <p>
-          Empty success message falls back to:{" "}
-          {normalized.successMessage?.trim().length
-            ? normalized.successMessage
-            : "no inline success copy"}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -472,7 +504,6 @@ function ColorField({
   path,
   value,
   onChange,
-  placeholder,
   pickerFallback,
   onClear,
 }: {
@@ -481,57 +512,20 @@ function ColorField({
   path: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
 }) {
-  const handleClear = () => {
-    if (!onClear) return;
-    const previousValue = typeof value === "string" && value.trim().length > 0 ? value : undefined;
-    onClear();
-    if (previousValue) {
-      toast.info(`${label} cleared.`, {
-        action: {
-          label: "Undo",
-          onClick: () => onChange(previousValue),
-        },
-      });
-      return;
-    }
-    toast.info(`${label} cleared.`);
-  };
-
   return (
-    <WidgetControlRow
-      id={id}
+    <SharedColorControl
+      controlId={id}
+      controlPath={path}
       label={label}
-      path={path}
-      actions={
-        onClear ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            disabled={!hasClearableFieldValue(value)}
-          >
-            Clear
-          </Button>
-        ) : undefined
-      }
-    >
-      {(fieldProps) => (
-        <SharedColorFieldInputs
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          pickerFallback={pickerFallback}
-          inputId={fieldProps.id}
-          ariaLabelledby={fieldProps["aria-labelledby"]}
-          ariaDescribedby={fieldProps["aria-describedby"]}
-        />
-      )}
-    </WidgetControlRow>
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      pickerFallback={pickerFallback}
+      showValueInput={false}
+    />
   );
 }
 
@@ -586,7 +580,7 @@ function FormSelection({
                   <div className="flex items-center gap-2">
                     <span>{form.name}</span>
                     <Badge variant={form.status === "published" ? "default" : "outline"}>
-                      {form.status}
+                      {describeFormStatus(form.status)}
                     </Badge>
                     {form.submissionAccess === "internal" ? (
                       <Badge variant="outline">Internal</Badge>
@@ -600,9 +594,8 @@ function FormSelection({
       </WidgetControlRow>
       {isInternal ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-          Internal submissions require an authenticated admin session or an API key with the
-          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on
-          public pages.
+          Internal submissions require a signed-in admin or approved internal integration. Avoid
+          embedding this form on public pages.
         </div>
       ) : null}
     </EditorSection>
@@ -690,7 +683,6 @@ function ContentSection({
           />
         )}
       </WidgetControlRow>
-      <NormalizationHints value={value} />
     </EditorSection>
   );
 }
@@ -963,30 +955,27 @@ function StyleSection({
         id="form-embed.style-background"
         label="Background"
         path="style.background"
-        value={normalized.style?.background}
+        value={resolveAuthoredStyleField(value, normalized, "background")}
         onChange={(background) => updateStyle(value, onChange, { background })}
         onClear={() => clearStyleField(value, onChange, "background")}
-        placeholder="transparent"
         pickerFallback="#ffffff"
       />
       <ColorField
         id="form-embed.style-surface"
         label="Surface"
         path="style.surface"
-        value={normalized.style?.surface}
+        value={resolveAuthoredStyleField(value, normalized, "surface")}
         onChange={(surface) => updateStyle(value, onChange, { surface })}
         onClear={() => clearStyleField(value, onChange, "surface")}
-        placeholder="var(--color-bg)"
         pickerFallback="#ffffff"
       />
       <ColorField
         id="form-embed.style-border-color"
         label="Border color"
         path="style.borderColor"
-        value={normalized.style?.borderColor}
+        value={resolveAuthoredStyleField(value, normalized, "borderColor")}
         onChange={(borderColor) => updateStyle(value, onChange, { borderColor })}
         onClear={() => clearStyleField(value, onChange, "borderColor")}
-        placeholder="var(--color-border)"
         pickerFallback="#e2e8f0"
       />
       <WidgetControlRow
@@ -1063,10 +1052,9 @@ function StyleSection({
         id="form-embed.style-title-color"
         label="Title color"
         path="style.titleColor"
-        value={normalized.style?.titleColor}
+        value={resolveAuthoredStyleField(value, normalized, "titleColor")}
         onChange={(titleColor) => updateStyle(value, onChange, { titleColor })}
         onClear={() => clearStyleField(value, onChange, "titleColor")}
-        placeholder="var(--color-text)"
         pickerFallback="#0f172a"
       />
       <WidgetControlRow id="form-embed.style-title-size" label="Title size" path="style.titleSize">
@@ -1121,40 +1109,36 @@ function StyleSection({
         id="form-embed.style-label-color"
         label="Label color"
         path="style.labelColor"
-        value={normalized.style?.labelColor}
+        value={resolveAuthoredStyleField(value, normalized, "labelColor")}
         onChange={(labelColor) => updateStyle(value, onChange, { labelColor })}
         onClear={() => clearStyleField(value, onChange, "labelColor")}
-        placeholder="var(--color-text)"
         pickerFallback="#0f172a"
       />
       <ColorField
         id="form-embed.style-helper-color"
         label="Helper color"
         path="style.helperColor"
-        value={normalized.style?.helperColor}
+        value={resolveAuthoredStyleField(value, normalized, "helperColor")}
         onChange={(helperColor) => updateStyle(value, onChange, { helperColor })}
         onClear={() => clearStyleField(value, onChange, "helperColor")}
-        placeholder="var(--color-text)"
         pickerFallback="#64748b"
       />
       <ColorField
         id="form-embed.style-submit-background"
         label="Submit background"
         path="style.submitBackground"
-        value={normalized.style?.submitBackground}
+        value={resolveAuthoredStyleField(value, normalized, "submitBackground")}
         onChange={(submitBackground) => updateStyle(value, onChange, { submitBackground })}
         onClear={() => clearStyleField(value, onChange, "submitBackground")}
-        placeholder="var(--color-primary)"
         pickerFallback="#2563eb"
       />
       <ColorField
         id="form-embed.style-submit-text-color"
         label="Submit text color"
         path="style.submitTextColor"
-        value={normalized.style?.submitTextColor}
+        value={resolveAuthoredStyleField(value, normalized, "submitTextColor")}
         onChange={(submitTextColor) => updateStyle(value, onChange, { submitTextColor })}
         onClear={() => clearStyleField(value, onChange, "submitTextColor")}
-        placeholder="var(--color-bg)"
         pickerFallback="#ffffff"
       />
       <WidgetControlRow
@@ -1335,35 +1319,122 @@ function SubmitBehaviorSection({
   );
 }
 
-function redactDiagnosticsPayload(value: FormEmbedData): FormEmbedData {
-  const normalized = normalizeValue(value);
-  const resolved = normalized.resolved
-    ? {
-        ...normalized.resolved,
-        submissionNonce: normalized.resolved.submissionNonce ? "[redacted]" : undefined,
-        botProtection: normalized.resolved.botProtection
-          ? {
-              ...normalized.resolved.botProtection,
-              siteKey: normalized.resolved.botProtection.siteKey
-                ? "[public site key configured]"
-                : undefined,
-            }
-          : undefined,
-      }
-    : undefined;
-
-  return {
-    ...normalized,
-    ...(resolved ? { resolved } : {}),
-  };
+function findOptionLabel(
+  options: ReadonlyArray<{ id: string; label: string }>,
+  value: string | undefined,
+  fallback: string
+) {
+  return options.find((option) => option.id === value)?.label ?? fallback;
 }
 
-function DiagnosticsSnapshot({ value }: { value: FormEmbedData }) {
-  const redacted = redactDiagnosticsPayload(value);
+function describeDetailStatus(status: "idle" | "loading" | "loaded" | "error") {
+  if (status === "loading") return "Loading form details";
+  if (status === "loaded") return "Loaded";
+  if (status === "error") return "Unavailable";
+  return "Not selected";
+}
+
+function describeLayoutMode(value: string | undefined) {
+  return value === "multi_step" ? "Multi-step" : "Single page";
+}
+
+function describeSubmissionAccess(value: string | undefined) {
+  if (value === "internal") return "Internal only";
+  if (value === "public") return "Public submissions";
+  return "Not available";
+}
+
+function describeSuccessBehavior(value: string | undefined) {
+  return findOptionLabel(successBehaviorOptions, value, "Hide form");
+}
+
+function describeFormStyleOverrides(style: FormEmbedData["style"]) {
+  const colorKeys: Array<keyof FormEmbedStyle> = [
+    "background",
+    "surface",
+    "borderColor",
+    "titleColor",
+    "labelColor",
+    "helperColor",
+    "submitBackground",
+    "submitTextColor",
+  ];
+  const overrideCount = colorKeys.filter((key) => {
+    const current = style?.[key];
+    return typeof current === "string" && current.trim().length > 0;
+  }).length;
+
+  if (overrideCount === 0) return "Theme defaults";
+  return `${overrideCount} saved color override${overrideCount === 1 ? "" : "s"}`;
+}
+
+function AuthoringSummarySection({ value }: { value: FormEmbedData }) {
+  const normalized = normalizeValue(value);
+  const copySummary = [
+    normalized.title ? "Custom title" : "Form title",
+    normalized.description ? "custom description" : "form description",
+    normalized.successMessage ? "success message configured" : "default success message",
+  ].join(" · ");
+
   return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(redacted, null, 2)}
-    </pre>
+    <EditorSection
+      id="form-embed.advanced.authoring-summary"
+      mode="advanced"
+      role="summary"
+      title="Authoring summary"
+      description="Read-only summary of the public form presentation."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.copy-summary"
+        label="Copy"
+        path="title"
+        value={copySummary}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.layout-summary"
+        label="Layout"
+        path="layout"
+        value={`${findOptionLabel(widthOptions, normalized.layout?.width, "Medium")} width · ${findOptionLabel(
+          alignmentOptions,
+          normalized.layout?.alignment,
+          "Start"
+        )} alignment · ${findOptionLabel(spacingOptions, normalized.layout?.spacing, "Default")} spacing`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.field-display-summary"
+        label="Field display"
+        path="fields"
+        value={`${normalized.fields?.showLabels ? "Labels visible" : "Labels hidden"} · ${
+          normalized.fields?.showRequiredIndicator
+            ? "Required marks visible"
+            : "Required marks hidden"
+        }`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.style-summary"
+        label="Style"
+        path="style"
+        value={`${describeFormStyleOverrides(value.style)} · ${findOptionLabel(
+          radiusOptions,
+          normalized.style?.radius,
+          "Medium"
+        )} corners · ${findOptionLabel(inputSizeOptions, normalized.style?.inputSize, "Medium")} inputs`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.navigation-summary"
+        label="Multi-step behavior"
+        path="navigation"
+        value={`${normalized.navigation?.showProgress ? "Progress visible" : "Progress hidden"} · saved for ${
+          normalized.navigation?.savedProgressTtlDays ?? 7
+        } days`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="form-embed.advanced.submit-summary"
+        label="After submit"
+        path="submitBehavior.successBehavior"
+        value={describeSuccessBehavior(normalized.submitBehavior?.successBehavior)}
+      />
+    </EditorSection>
   );
 }
 
@@ -1406,9 +1477,9 @@ function VisualFormStatusSection({
     <EditorSection
       id="form-embed.visual.form-status"
       mode="visual"
-      role="diagnostics"
-      title="Selected form"
-      description="Read-only runtime status for the form selected in Wizard."
+      role="summary"
+      title="Form preview"
+      description="Read-only reminder of the saved form selected in Wizard."
     >
       <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={detailStatus} />
     </EditorSection>
@@ -1471,19 +1542,23 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
         mode="advanced"
         role="diagnostics"
         title="Runtime diagnostics"
-        description="Read-only runtime and selection state for QA and implementation checks."
+        description="Read-only status for the selected form."
       >
         <FormDiagnostics value={value} forms={forms} detail={detail} detailStatus={status} />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.form-id"
-          label="Selected form id"
+          label="Selected form"
           path="formId"
-          value={normalized.formId?.trim() || "none"}
+          value={
+            selectedForm?.name ??
+            normalized.resolved?.formName ??
+            (normalized.formId?.trim() ? "Saved form unavailable" : "None")
+          }
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.detail-cache-status"
-          label="Detail cache status"
-          value={status}
+          label="Form detail status"
+          value={describeDetailStatus(status)}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.field-count"
@@ -1495,25 +1570,25 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
           id="form-embed.advanced.field-types"
           label="Field types"
           path="resolved.fields"
-          value={fieldTypes.length > 0 ? fieldTypes.join(", ") : "None"}
+          value={fieldTypes.length > 0 ? formatFieldTypeList(fieldTypes) : "None"}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.layout-mode"
           label="Layout mode"
           path="resolved.settings.layoutMode"
-          value={layoutMode}
+          value={describeLayoutMode(layoutMode)}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.save-progress"
           label="Save progress"
           path="resolved.settings.saveProgress"
-          value={saveProgress ? "enabled" : "disabled"}
+          value={saveProgress ? "Enabled" : "Disabled"}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.resolver-error"
-          label="Resolver error"
+          label="Runtime warning"
           path="resolved.error"
-          value={normalized.resolved?.error ?? "none"}
+          value={describeRuntimeWarning(normalized.resolved?.error)}
         />
       </EditorSection>
       <EditorSection
@@ -1525,18 +1600,16 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
       >
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.submission-endpoint"
-          label="Submission endpoint"
+          label="Submission routing"
           value={
-            normalized.formId?.trim()
-              ? `/forms/${normalized.formId.trim()}/submissions`
-              : "Not configured"
+            normalized.formId?.trim() ? "Connected to the selected saved form" : "Not configured"
           }
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.submission-access"
           label="Submission access"
           path="resolved.submissionAccess"
-          value={submissionAccess}
+          value={describeSubmissionAccess(submissionAccess)}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.nonce-policy"
@@ -1544,36 +1617,24 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
           path="resolved.submissionNonce"
           value={
             normalized.resolved?.submissionNonce
-              ? "public runtime nonce projected; raw value redacted"
-              : "not projected"
+              ? "Enabled for public submissions"
+              : "Waiting for runtime projection"
           }
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.captcha-policy"
           label="Bot protection"
           path="resolved.botProtection"
-          value={
-            normalized.resolved?.botProtection
-              ? `${normalized.resolved.botProtection.provider} configured; public key redacted`
-              : "not configured"
-          }
+          value={normalized.resolved?.botProtection ? "Enabled" : "Not configured"}
         />
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.success-behavior"
           label="Success behavior"
           path="submitBehavior.successBehavior"
-          value={normalized.submitBehavior?.successBehavior ?? "show-message-hide-form"}
+          value={describeSuccessBehavior(normalized.submitBehavior?.successBehavior)}
         />
       </EditorSection>
-      <EditorSection
-        id="form-embed.advanced.payload-snapshot"
-        mode="advanced"
-        role="technical"
-        title="Normalized payload snapshot"
-        description="Read-only normalized payload with raw nonce and public key values redacted."
-      >
-        <DiagnosticsSnapshot value={normalized} />
-      </EditorSection>
+      <AuthoringSummarySection value={normalized} />
       <EditorSection
         id="form-embed.advanced.contract-summary"
         mode="advanced"
@@ -1594,7 +1655,7 @@ function FormEmbedAdvancedEditorBody({ value }: WidgetEditorProps<FormEmbedData>
         <ReadonlyWidgetSummaryRow
           id="form-embed.advanced.contract-advanced"
           label="Advanced owns"
-          value="Read-only runtime, security, payload, and contract diagnostics."
+          value="Read-only runtime, security, authoring, and contract summaries."
         />
       </EditorSection>
     </div>

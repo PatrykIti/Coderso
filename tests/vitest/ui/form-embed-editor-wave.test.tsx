@@ -273,17 +273,6 @@ const getSectionByTitle = (container: ParentNode, title: string) => {
   return section;
 };
 
-const getInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
-  const input = Array.from(container.querySelectorAll("input")).filter(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  )[index];
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`Missing input "${placeholder}" (${index})`);
-  }
-  return input;
-};
-
 const getTextareaByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
   const textarea = Array.from(container.querySelectorAll("textarea")).filter(
     (element) =>
@@ -491,9 +480,15 @@ test("FormEmbed visual owns public copy and presentation without changing select
 
   try {
     expect(() => getSectionByTitle(view.container, "Form selection")).toThrow();
-    expect(view.container.textContent).toContain("Selected form");
+    expect(view.container.textContent).toContain("Form preview");
+    expect(
+      getSectionByTitle(view.container, "Form preview").getAttribute(
+        "data-widget-editor-section-role"
+      )
+    ).toBe("summary");
     expect(view.container.textContent).toContain("Internal submissions require");
-    expect(view.container.textContent).toContain("forms.submit");
+    expect(view.container.textContent).toContain("approved internal integration");
+    expect(view.container.textContent).not.toContain("forms.submit");
 
     const writablePaths = Array.from(
       view.container.querySelectorAll('[data-widget-control-ownership="writable"]')
@@ -555,24 +550,26 @@ test("FormEmbed visual owns public copy and presentation without changing select
 
     const styleSection = getSectionByTitle(view.container, "Style");
     const colorInputs = getColorInputs(styleSection);
-    const backgroundTextInput = getInputByPlaceholder(styleSection, "transparent");
-    const surfaceTextInput = getInputByPlaceholder(styleSection, "var(--color-bg)");
-    const borderTextInput = getInputByPlaceholder(styleSection, "var(--color-border)");
+    const nonColorStyleInputs = Array.from(styleSection.querySelectorAll("input")).filter(
+      (element): element is HTMLInputElement =>
+        element instanceof HTMLInputElement && element.type !== "color"
+    );
     const styleSelects = getSelects(styleSection);
 
     expect(colorInputs[0]?.value).toBe("#ffffff");
     expect(colorInputs[1]?.value).toBe("#ffffff");
     expect(colorInputs[2]?.value).toBe("#112233");
-    expect(backgroundTextInput.value).toBe("not-a-color");
-    expect(surfaceTextInput.value).toBe("");
-    expect(borderTextInput.value).toBe("#112233");
-    expect(styleSection.textContent).toContain("Custom token active");
+    expect(nonColorStyleInputs).toHaveLength(0);
+    expect(styleSection.textContent).toContain("Saved custom color");
+    expect(styleSection.textContent).not.toContain("Custom token active");
+    expect(styleSection.textContent).not.toContain("var(--color-bg)");
+    expect(styleSection.textContent).not.toContain("var(--color-border)");
     expect(Array.from(styleSelects[1]!.options).map((option) => option.value)).toContain("none");
     expect(Array.from(styleSelects[2]!.options).map((option) => option.value)).toContain("none");
 
-    setInputValue(backgroundTextInput, "#abcdef");
-    setInputValue(surfaceTextInput, "var(--surface-card)");
-    setInputValue(borderTextInput, "#445566");
+    setInputValue(colorInputs[0], "#abcdef");
+    setInputValue(colorInputs[1], "#ddeeff");
+    setInputValue(colorInputs[2], "#445566");
     setSelectValue(styleSelects[0], "2");
     setSelectValue(styleSelects[1], "lg");
     setSelectValue(styleSelects[2], "sm");
@@ -612,7 +609,7 @@ test("FormEmbed visual owns public copy and presentation without changing select
       },
       style: {
         background: "#abcdef",
-        surface: "var(--surface-card)",
+        surface: "#ddeeff",
         borderColor: "#445566",
         borderWidth: "2",
         radius: "lg",
@@ -667,18 +664,23 @@ test("FormEmbed advanced is read-only and redacts runtime security values", asyn
   try {
     expect(view.container.textContent).toContain("Runtime diagnostics");
     expect(view.container.textContent).toContain("Submission security");
-    expect(view.container.textContent).toContain("Normalized payload snapshot");
+    expect(view.container.textContent).toContain("Authoring summary");
     expect(view.container.textContent).toContain("Contract summary");
     expect(() => getSectionByTitle(view.container, "Form selection")).toThrow();
     expect(view.container.querySelector('[data-widget-control-ownership="writable"]')).toBeNull();
     expect(getSelects(view.container)).toHaveLength(0);
-    expect(view.container.querySelectorAll("input,textarea,button")).toHaveLength(0);
-    expect(view.container.textContent).toContain(
-      "public runtime nonce projected; raw value redacted"
-    );
-    expect(view.container.textContent).toContain("recaptcha_v3 configured; public key redacted");
-    expect(view.container.textContent).toContain("[redacted]");
-    expect(view.container.textContent).toContain("[public site key configured]");
+    expect(view.container.querySelectorAll("input,select,textarea,button,pre")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Enabled for public submissions");
+    expect(view.container.textContent).toContain("Bot protection");
+    expect(view.container.textContent).toContain("Enabled");
+    expect(view.container.textContent).toContain("Copy");
+    expect(view.container.textContent).toContain("After submit");
+    expect(view.container.textContent).not.toContain("Normalized payload snapshot");
+    expect(view.container.textContent).not.toContain("raw value redacted");
+    expect(view.container.textContent).not.toContain("public key redacted");
+    expect(view.container.textContent).not.toContain("[redacted]");
+    expect(view.container.textContent).not.toContain("[public site key configured]");
+    expect(view.container.textContent).not.toContain("recaptcha_v3");
     expect(view.container.textContent).not.toContain("raw-nonce-secret");
     expect(view.container.textContent).not.toContain("site-key-1");
     expect(view.onChangeSpy).not.toHaveBeenCalled();
@@ -749,10 +751,13 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
 
   try {
     expect(wizard.container.textContent).toContain("Field count: 2");
-    expect(wizard.container.textContent).toContain("text, textarea");
+    expect(wizard.container.textContent).toContain("Text, Long text");
     expect(wizard.container.textContent).toContain("Multi-step");
     expect(wizard.container.textContent).toContain("Save progress");
-    expect(wizard.container.textContent).toContain("Runtime resolver reports: form_unpublished");
+    expect(wizard.container.textContent).toContain(
+      "Runtime warning: Selected form is not published yet."
+    );
+    expect(wizard.container.textContent).not.toContain("form_unpublished");
     expect(wizard.container.textContent).toContain("Setup diagnostics");
     expect(wizard.container.textContent).not.toContain("Content");
     expect(wizard.container.textContent).not.toContain("Style");
@@ -768,7 +773,7 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
   });
 
   try {
-    expect(visual.container.textContent).toContain("Selected form");
+    expect(visual.container.textContent).toContain("Form preview");
     expect(visual.container.textContent).toContain("Content");
     expect(visual.container.textContent).toContain("Style");
     expect(visual.container.textContent).toContain("Submit behavior");
@@ -796,14 +801,17 @@ test("FormEmbed modes split diagnostics and multi-step metadata using fetched fo
   try {
     expect(advanced.container.textContent).toContain("Runtime diagnostics");
     expect(advanced.container.textContent).toContain("Submission security");
-    expect(advanced.container.textContent).toContain("Normalized payload snapshot");
-    expect(advanced.container.textContent).toContain("Selected form id");
-    expect(advanced.container.textContent).toContain("form-public");
-    expect(advanced.container.textContent).toContain("Detail cache status");
-    expect(advanced.container.textContent).toContain("loaded");
-    expect(advanced.container.textContent).toContain(
-      "recaptcha_v3 configured; public key redacted"
-    );
+    expect(advanced.container.textContent).toContain("Authoring summary");
+    expect(advanced.container.textContent).toContain("Selected form");
+    expect(advanced.container.textContent).toContain("Lead intake");
+    expect(advanced.container.textContent).toContain("Form detail status");
+    expect(advanced.container.textContent).toContain("Loaded");
+    expect(advanced.container.textContent).toContain("Bot protection");
+    expect(advanced.container.textContent).toContain("Enabled");
+    expect(advanced.container.textContent).not.toContain("Normalized payload snapshot");
+    expect(advanced.container.textContent).not.toContain("form-public");
+    expect(advanced.container.textContent).not.toContain("Detail cache status");
+    expect(advanced.container.textContent).not.toContain("recaptcha_v3");
     expect(advanced.container.textContent).not.toContain("site-key-1");
   } finally {
     advanced.cleanup();

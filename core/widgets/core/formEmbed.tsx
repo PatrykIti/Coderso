@@ -1225,8 +1225,8 @@ export const formEmbedEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "form-embed.visual.form-status",
-      title: "Selected form",
-      role: "diagnostics",
+      title: "Form preview",
+      role: "summary",
       writablePaths: [],
       readOnlyPaths: [
         "formId",
@@ -1338,11 +1338,11 @@ export const formEmbedEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "form-embed.advanced.payload-snapshot",
-      title: "Normalized payload snapshot",
-      role: "technical",
+      id: "form-embed.advanced.authoring-summary",
+      title: "Authoring summary",
+      role: "summary",
       writablePaths: [],
-      readOnlyPaths: ["resolved"],
+      readOnlyPaths: ["title", "layout", "fields", "style", "navigation", "submitBehavior"],
     },
     {
       mode: "advanced",

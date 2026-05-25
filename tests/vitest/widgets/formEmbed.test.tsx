@@ -558,7 +558,7 @@ test("form embed editors render core sections", () => {
     />
   );
 
-  expect(html).toContain("Selected form");
+  expect(html).toContain("Form preview");
   expect(html).toContain("Content");
   expect(html).toContain("Layout");
   expect(html).toContain("Field labels");
@@ -598,8 +598,10 @@ test("form embed advanced editor renders diagnostics sections", () => {
   expect(html).not.toContain('data-widget-editor-section="form-embed.wizard.form-selection"');
   expect(html).toContain("Runtime diagnostics");
   expect(html).toContain("Submission security");
-  expect(html).toContain("Normalized payload snapshot");
+  expect(html).toContain("Authoring summary");
   expect(html).toContain("Contract summary");
+  expect(html).not.toContain("Normalized payload snapshot");
+  expect(html).not.toContain("<pre");
 });
 
 test("form embed editor contract validates mode ownership", () => {
@@ -630,6 +632,15 @@ test("form embed editor contract validates mode ownership", () => {
         id: "form-embed.advanced.submission-security",
         writablePaths: [],
       }),
+      expect.objectContaining({
+        mode: "advanced",
+        id: "form-embed.advanced.authoring-summary",
+        role: "summary",
+        writablePaths: [],
+      }),
     ])
+  );
+  expect(formEmbedEditorContract.sections).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ role: "technical" })])
   );
 });

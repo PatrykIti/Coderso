@@ -7,6 +7,26 @@
 
 ---
 
+## Status po TASK-336-19
+
+2026-05-25 targeted cleanup keeps the existing Wizard / Visual / Advanced split
+but removes the residual UI drift:
+
+- Visual color controls are swatch-only with clear/replace behavior; raw
+  CSS/token text inputs are no longer rendered for authors.
+- Visual selected-form status is an author-facing `summary` section (`Form
+  preview`) rather than diagnostics-only copy.
+- Advanced no longer renders the normalized payload snapshot, raw endpoints,
+  raw form IDs, public site keys, nonce strings, or API-scope copy.
+- Advanced now uses human read-only rows for runtime status, submission
+  safeguards, authoring summary, and contract summary.
+- TASK-336-19 evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-2026-05-25.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-form-embed-focused-2026-05-25.*`.
+
+---
+
 ## 1. Zakres zamknięcia
 
 Raport został zamknięty po wdrożeniu zmian w:

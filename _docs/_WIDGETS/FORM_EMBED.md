@@ -34,23 +34,26 @@ routine edits.
 
 ### Visual
 
-- read-only selected-form diagnostics with field count/type summary
+- read-only form preview summary with field count/type summary
 - title, description, submit label, and success-message copy
 - layout controls, including spacing, padding, field gap, and button alignment
 - field label toggles
-- surface, border, title, helper, and submit-button styling
+- surface, border, title, helper, and submit-button styling through swatches
+  and clear controls, without raw CSS/token text inputs
 - multi-step navigation labels and submit behavior controls
 
 ### Advanced
 
-- read-only runtime diagnostics and compatibility notes
-- read-only submission endpoint/access, nonce policy, bot-protection presence,
+- read-only runtime status and compatibility notes
+- read-only submission routing/access, nonce policy, bot-protection presence,
   and submit success behavior
-- read-only normalized payload snapshot with raw nonce values and public key
-  values redacted
+- read-only human authoring summary for copy, layout, field display, style,
+  navigation, and submit behavior
 - read-only editor contract summary
 
 Advanced must not render the form picker or any wrapper visual/copy controls.
+It must not render normalized JSON payload snapshots, raw endpoints, raw form
+IDs, nonce values, public site keys, or API-scope copy.
 
 ## Supported Field Types
 
@@ -120,7 +123,9 @@ No new public write endpoint is introduced by the widget.
 ## Clear Controls
 
 The current editor exposes clear behavior for the Form Embed-owned color/surface
-fields it controls through the landed shared color-field helper seam.
+fields it controls through the shared swatch-only color helper. Saved custom
+color values can be replaced through the picker or cleared, but nontechnical
+authors are not asked to type CSS variables, token names, or color code strings.
 
 ## Data Model (summary)
 
