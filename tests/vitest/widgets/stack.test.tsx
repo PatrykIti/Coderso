@@ -340,9 +340,13 @@ test("stack editors render updated sections, copy, and miniatures", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Gap on all breakpoints");
-  expect(wizardHtml).toContain("Align on all breakpoints");
-  expect(wizardHtml).toContain("Justify on all breakpoints");
+  expect(wizardHtml).toContain("Stack preset");
+  expect(wizardHtml).toContain(
+    "Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup."
+  );
+  expect(wizardHtml).not.toContain("Gap on all breakpoints");
+  expect(wizardHtml).not.toContain("Align on all breakpoints");
+  expect(wizardHtml).not.toContain("Justify on all breakpoints");
   expect(wizardHtml).toContain("content");
 
   const visualHtml = renderToString(
@@ -369,6 +373,10 @@ test("stack editors render updated sections, copy, and miniatures", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Technical flow tokens");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("Runtime stack summary");
+  expect(advancedHtml).toContain("Support summary");
+  expect(advancedHtml).toContain("Stack vertically");
+  expect(advancedHtml).not.toContain("Technical flow tokens");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("<pre");
 });

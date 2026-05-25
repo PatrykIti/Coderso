@@ -39,6 +39,29 @@ export type StackData = {
   wrap?: StackResponsiveValue<boolean>;
 };
 
+const stackVariantDuplicateAllowance = {
+  path: "variant",
+  reason:
+    "Wizard seeds the one-time Stack preset; Visual remains the daily responsive-flow owner after setup.",
+  expiresWithTask: "TASK-336",
+} satisfies NonNullable<
+  WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
+>[number];
+
+const stackPresetDirectionDuplicateAllowances = stackBreakpoints.map((breakpoint) => ({
+  path: `direction.${breakpoint}`,
+  reason:
+    "Stack preset selection seeds a starting flow direction; Visual remains the daily per-breakpoint flow owner after setup.",
+  expiresWithTask: "TASK-336",
+})) satisfies NonNullable<
+  WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
+>;
+
+const stackPresetDuplicateAllowances = [
+  stackVariantDuplicateAllowance,
+  ...stackPresetDirectionDuplicateAllowances,
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
 export const stackEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -47,20 +70,69 @@ export const stackEditorContract: WidgetEditorContract = {
       id: "stack.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: [],
+      writablePaths: ["variant", "direction.desktop", "direction.tablet", "direction.mobile"],
+      allowedDuplicateWritablePaths: stackPresetDuplicateAllowances,
     },
     {
       mode: "visual",
-      id: "stack.visual.responsive-flow",
-      title: "Responsive flow",
+      id: "stack.visual.variant-flow",
+      title: "Variant and flow",
       role: "layout",
-      writablePaths: ["variant", "direction", "gap", "align", "justify", "wrap"],
+      writablePaths: ["variant", "direction.desktop", "direction.tablet", "direction.mobile"],
+      allowedDuplicateWritablePaths: stackPresetDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "stack.visual.responsive-direction",
+      title: "Responsive direction",
+      role: "layout",
+      writablePaths: [
+        "direction.desktop",
+        "direction.tablet",
+        "direction.mobile",
+        "gap.desktop",
+        "gap.tablet",
+        "gap.mobile",
+      ],
+      allowedDuplicateWritablePaths: stackPresetDirectionDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "stack.visual.responsive-axis-wrap",
+      title: "Responsive alignment and wrap",
+      role: "layout",
+      writablePaths: [
+        "align.desktop",
+        "align.tablet",
+        "align.mobile",
+        "justify.desktop",
+        "justify.tablet",
+        "justify.mobile",
+        "wrap.desktop",
+        "wrap.tablet",
+        "wrap.mobile",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "stack.visual.slot-guidance",
+      title: "Slot guidance",
+      role: "summary",
+      writablePaths: [],
     },
     {
       mode: "advanced",
       id: "stack.advanced.responsive-summary",
-      title: "Responsive summary",
+      title: "Runtime stack summary",
       role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["direction", "gap", "align", "justify", "wrap"],
+    },
+    {
+      mode: "advanced",
+      id: "stack.advanced.support-summary",
+      title: "Support summary",
+      role: "summary",
       writablePaths: [],
       readOnlyPaths: ["direction", "gap", "align", "justify", "wrap"],
     },
@@ -417,17 +489,17 @@ export function createStackWidget(editors: {
       {
         id: "vertical",
         label: "Vertical",
-        description: "Preset: column flow on every breakpoint.",
+        description: "Items start stacked vertically on every screen size.",
       },
       {
         id: "horizontal",
         label: "Horizontal",
-        description: "Preset: row flow on every breakpoint.",
+        description: "Items start side by side on every screen size.",
       },
       {
         id: "responsive",
         label: "Responsive",
-        description: "Preset: column on mobile, row on tablet and desktop.",
+        description: "Items stack on small screens and sit side by side on larger screens.",
       },
     ],
     schema: stackSchema,

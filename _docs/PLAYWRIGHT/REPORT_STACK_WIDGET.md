@@ -3,7 +3,8 @@
 **Widget:** `stack`
 **Original audit date:** 2026-05-16
 **Closure refresh:** 2026-05-22
-**Status:** Closed for TASK-286; audit refresh 2026-05-23 aligned the remaining gap-control and mode-ownership notes with current code
+**Status:** TASK-286 closed; TASK-336-19 refresh on 2026-05-25 removed residual
+Wizard/Advanced mode drift and raw Advanced diagnostics
 **Files:** `core/widgets/core/stack.tsx`, `core/admin/ui/widgets/editors/StackEditors.tsx`
 
 ---
@@ -39,10 +40,10 @@ Advanced).
 | `BUG-01` variant selection does not synchronize `data.direction.*` | `TASK-256-05-02` owned, fixed on 2026-05-17 | Shared atomic variant/data patch landed in `TASK-256-05-02`; Stack now applies variant changes through `buildVariantSyncedStackData()` in `core/admin/ui/widgets/editors/StackEditors.tsx`; regression coverage: `tests/vitest/ui/stack-editor-wave.test.tsx`, `tests/vitest/widgets/stack.test.tsx`. |
 | `BUG-02` duplicate `None` / `Gap 0` semantics | Fixed in audit refresh 2026-05-23 | Legacy payload `"0"` remains accepted at runtime for backward compatibility, but visible Stack gap controls now expose one canonical zero-gap option (`none`) instead of two competing labels. |
 | `ISSUE-01` Wizard mobile direction drift after variant changes | `TASK-256-05-02` owned, fixed on 2026-05-17 | Variant changes now patch direction data atomically; Wizard regression coverage lives in `tests/vitest/ui/stack-editor-wave.test.tsx`. |
-| `ISSUE-02` Advanced editor lacks variant control | Closed by current mode-ownership contract | Advanced intentionally stays token/diagnostics-only while Visual owns variant selection; this matches the shared editor-mode ownership contract instead of being an active Stack bug. |
-| `ISSUE-03` `align` is not responsive | Fixed by `TASK-286-02` | `core/widgets/core/stack.tsx` now accepts scalar-or-breakpoint `align`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint controls in Visual and Advanced. |
-| `ISSUE-04` `wrap` is not responsive | Fixed by `TASK-286-02` | `core/widgets/core/stack.tsx` now accepts scalar-or-breakpoint `wrap`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint wrap toggles. |
-| `ISSUE-05` Wizard exposes too little layout control | Fixed by `TASK-286-03` | Wizard now exposes all-breakpoint `gap`, `align`, and `justify` controls with explicit copy in `core/admin/ui/widgets/editors/StackEditors.tsx`; regression coverage: `tests/vitest/ui/stack-editor-wave.test.tsx`. |
+| `ISSUE-02` Advanced editor lacks variant control | Closed by current mode-ownership contract | Advanced intentionally stays read-only while Visual owns variant selection; this matches the shared editor-mode ownership contract instead of being an active Stack bug. |
+| `ISSUE-03` `align` is not responsive | Fixed by `TASK-286-02`; mode ownership refreshed by `TASK-336-19` | `core/widgets/core/stack.tsx` accepts scalar-or-breakpoint `align`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint controls in Visual only. |
+| `ISSUE-04` `wrap` is not responsive | Fixed by `TASK-286-02`; mode ownership refreshed by `TASK-336-19` | `core/widgets/core/stack.tsx` accepts scalar-or-breakpoint `wrap`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint wrap toggles in Visual only. |
+| `ISSUE-05` Wizard exposes too little layout control | Superseded by `TASK-336-19` one-time Wizard contract | Wizard now keeps setup to a starter preset and slot guidance; Visual owns breakpoint spacing, alignment, distribution, and wrapping. |
 | `ISSUE-06` missing `justify-around` / `justify-evenly` | Fixed by `TASK-286-01` | `core/widgets/core/stack.tsx` now allowlists `around` and `evenly`; editor options and SSR coverage were added in `tests/vitest/widgets/stack.test.tsx` and `tests/vitest/ui/stack-editor-wave.test.tsx`. |
 | `ISSUE-07` missing `align-items: baseline` | Fixed by `TASK-286-01` | `core/widgets/core/stack.tsx` now allowlists `baseline`; editor/runtime coverage added in Stack Vitests. |
 | `ISSUE-08` gap labels lack scale context | Fixed by `TASK-286-03` | Gap option labels now communicate scale context in `core/admin/ui/widgets/editors/StackEditors.tsx` while keeping the existing serialized token set. |
@@ -64,10 +65,12 @@ Advanced).
 
 ### Editor UX
 
-- Wizard now communicates when controls write all breakpoints and can set common
-  `gap`, `align`, and `justify` values without forcing authors into Visual.
-- Visual and Advanced now expose per-breakpoint alignment, distribution, and
-  wrap controls.
+- Wizard now stays one-time: it chooses a starter preset and explains that
+  Visual owns responsive layout editing after setup.
+- Visual owns daily breakpoint flow, spacing, item alignment, distribution, and
+  wrapping controls with friendly option labels and control-path metadata.
+- Advanced is read-only runtime/support summary only; raw payload snapshots and
+  hidden editable direction/gap/alignment/wrap controls were removed.
 - Visual variant cards now include miniatures, and editor-side slot guidance is
   explicit without leaking admin-only CTA behavior into public runtime.
 
@@ -75,11 +78,12 @@ Advanced).
 
 - Variants are documented as presets rather than immutable behavior locks.
 - Legacy payload compatibility for zero-gap tokens is preserved, while visible
-  controls now collapse onto one canonical `none` option and Advanced remains
-  intentionally token/diagnostics-only.
+  controls now collapse onto one canonical no-spacing option and Advanced
+  remains support-only, without raw payload output.
 
 ---
 
 ## 4. Remaining shared follow-ups
 
-No active Stack-specific or shared follow-up remains from the original TASK-286 audit after the 2026-05-23 truthfulness refresh.
+TASK-336-19 verification stores fresh Stack Playwright evidence under
+`_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-advanced-readonly-2026-05-25.*`.

@@ -36,7 +36,11 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: StackVariantId;
@@ -46,37 +50,37 @@ const variantOptions: Array<{
   {
     id: "vertical",
     label: "Vertical",
-    description: "Preset for column-first flow across every breakpoint.",
+    description: "Items start stacked vertically on every screen size.",
   },
   {
     id: "horizontal",
     label: "Horizontal",
-    description: "Preset for row-first flow across every breakpoint.",
+    description: "Items start side by side on every screen size.",
   },
   {
     id: "responsive",
     label: "Responsive",
-    description: "Preset for stacked mobile flow that expands into rows from tablet upward.",
+    description: "Items stack on small screens and sit side by side on larger screens.",
   },
 ];
 
 const directionOptions: Array<{ id: StackDirection; label: string }> = [
-  { id: "column", label: "Column" },
-  { id: "row", label: "Row" },
+  { id: "column", label: "Stack vertically" },
+  { id: "row", label: "Place side by side" },
 ];
 
 const gapScaleLabels: Record<StackGap, string> = {
-  none: "No gap",
-  "0": "Gap 0 - zero spacing",
-  "1": "Gap 1 - extra tight",
-  "2": "Gap 2 - tight",
-  "3": "Gap 3 - compact",
-  "4": "Gap 4 - default mobile",
-  "5": "Gap 5 - comfortable",
-  "6": "Gap 6 - default desktop",
-  "8": "Gap 8 - roomy",
-  "10": "Gap 10 - spacious",
-  "12": "Gap 12 - extra spacious",
+  none: "No spacing",
+  "0": "No spacing",
+  "1": "Extra tight spacing",
+  "2": "Tight spacing",
+  "3": "Compact spacing",
+  "4": "Balanced mobile spacing",
+  "5": "Comfortable spacing",
+  "6": "Balanced desktop spacing",
+  "8": "Roomy spacing",
+  "10": "Spacious spacing",
+  "12": "Extra spacious spacing",
 };
 
 const gapOptions = stackGapTokens
@@ -87,20 +91,20 @@ const gapOptions = stackGapTokens
   }));
 
 const alignOptions: Array<{ id: StackAlign; label: string }> = [
-  { id: "start", label: "Start" },
-  { id: "center", label: "Center" },
-  { id: "end", label: "End" },
-  { id: "stretch", label: "Stretch" },
-  { id: "baseline", label: "Baseline" },
+  { id: "start", label: "Align to the start edge" },
+  { id: "center", label: "Center items" },
+  { id: "end", label: "Align to the end edge" },
+  { id: "stretch", label: "Stretch items to fill" },
+  { id: "baseline", label: "Align text across items" },
 ];
 
 const justifyOptions: Array<{ id: StackJustify; label: string }> = [
-  { id: "start", label: "Start" },
-  { id: "center", label: "Center" },
-  { id: "end", label: "End" },
-  { id: "between", label: "Space between" },
-  { id: "around", label: "Space around" },
-  { id: "evenly", label: "Space evenly" },
+  { id: "start", label: "Pack at the start" },
+  { id: "center", label: "Pack in the center" },
+  { id: "end", label: "Pack at the end" },
+  { id: "between", label: "Spread with space between" },
+  { id: "around", label: "Spread with side breathing room" },
+  { id: "evenly", label: "Spread evenly" },
 ];
 
 const breakpointLabels: Record<StackBreakpoint, string> = {
@@ -108,6 +112,37 @@ const breakpointLabels: Record<StackBreakpoint, string> = {
   tablet: "Tablet",
   mobile: "Mobile",
 };
+
+const wrapLabels: Record<"true" | "false", string> = {
+  true: "wraps to a new line when needed",
+  false: "stays on one line",
+};
+
+function optionLabel<T extends string>(options: Array<{ id: T; label: string }>, value: T): string {
+  return options.find((option) => option.id === value)?.label ?? value;
+}
+
+function describeStackBreakpointSummary({
+  direction,
+  gap,
+  align,
+  justify,
+  wrap,
+}: {
+  direction: StackDirection;
+  gap: StackGap;
+  align: StackAlign;
+  justify: StackJustify;
+  wrap: boolean;
+}) {
+  return [
+    optionLabel(directionOptions, direction),
+    gapScaleLabels[gap],
+    optionLabel(alignOptions, align),
+    optionLabel(justifyOptions, justify),
+    wrapLabels[String(wrap) as "true" | "false"],
+  ].join(", ");
+}
 
 const isStackDirection = (candidate: unknown): candidate is StackDirection =>
   candidate === "row" || candidate === "column";
@@ -258,20 +293,6 @@ function updateResponsiveMetaField<K extends ResponsiveMetaField>(
   });
 }
 
-function writeResponsiveMetaAllBreakpoints<K extends "align" | "justify">(
-  value: StackData,
-  variant: string,
-  onChange: (next: StackData) => void,
-  field: K,
-  next: ResponsiveMetaValueMap[K]
-) {
-  updateResponsiveMetaField(value, variant, onChange, field, {
-    desktop: next,
-    tablet: next,
-    mobile: next,
-  });
-}
-
 function buildVariantSyncedStackData(value: StackData, nextVariant: StackVariantId): StackData {
   const current = normalizeValue(value, nextVariant);
   return normalizeValue(
@@ -416,14 +437,6 @@ function VariantCards({
   );
 }
 
-function DiagnosticsSnapshot({ value }: { value: StackData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function SlotGuidanceCard() {
   return (
     <div
@@ -458,51 +471,61 @@ function DirectionAndGapGrid({
             {breakpointLabels[breakpoint]}
           </p>
 
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Direction</p>
-            <Select
-              value={direction[breakpoint]}
-              onValueChange={(next) =>
-                updateDirection(value, variant, onChange, {
-                  [breakpoint]: next as StackDirection,
-                } as Partial<DirectionData>)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Direction" />
-              </SelectTrigger>
-              <SelectContent>
-                {directionOptions.map((option) => (
-                  <SelectItem key={`${breakpoint}-dir-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id={`stack.visual.direction.${breakpoint}`}
+            label={`${breakpointLabels[breakpoint]} flow`}
+            path={`direction.${breakpoint}`}
+          >
+            {() => (
+              <Select
+                value={direction[breakpoint]}
+                onValueChange={(next) =>
+                  updateDirection(value, variant, onChange, {
+                    [breakpoint]: next as StackDirection,
+                  } as Partial<DirectionData>)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`${breakpointLabels[breakpoint]} flow`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {directionOptions.map((option) => (
+                    <SelectItem key={`${breakpoint}-dir-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Gap</p>
-            <Select
-              value={gap[breakpoint]}
-              onValueChange={(next) =>
-                updateGap(value, variant, onChange, {
-                  [breakpoint]: next as StackGap,
-                } as Partial<GapData>)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`${breakpoint}-gap-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id={`stack.visual.gap.${breakpoint}`}
+            label={`${breakpointLabels[breakpoint]} spacing`}
+            path={`gap.${breakpoint}`}
+          >
+            {() => (
+              <Select
+                value={gap[breakpoint]}
+                onValueChange={(next) =>
+                  updateGap(value, variant, onChange, {
+                    [breakpoint]: next as StackGap,
+                  } as Partial<GapData>)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`${breakpointLabels[breakpoint]} spacing`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {gapOptions.map((option) => (
+                    <SelectItem key={`${breakpoint}-gap-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       ))}
     </div>
@@ -532,70 +555,86 @@ function ResponsiveAxisAndWrapGrid({
             {breakpointLabels[breakpoint]}
           </p>
 
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Align</p>
-            <Select
-              value={align[breakpoint]}
-              onValueChange={(next) =>
-                updateResponsiveMetaField(value, variant, onChange, "align", {
-                  [breakpoint]: next as StackAlign,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Align" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignOptions.map((option) => (
-                  <SelectItem key={`${breakpoint}-align-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Justify</p>
-            <Select
-              value={justify[breakpoint]}
-              onValueChange={(next) =>
-                updateResponsiveMetaField(value, variant, onChange, "justify", {
-                  [breakpoint]: next as StackJustify,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Justify" />
-              </SelectTrigger>
-              <SelectContent>
-                {justifyOptions.map((option) => (
-                  <SelectItem key={`${breakpoint}-justify-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="rounded-md border p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">Wrap items</p>
-                <p className="text-xs text-muted-foreground">
-                  Allow row layouts to wrap at this breakpoint.
-                </p>
-              </div>
-              <Switch
-                checked={wrap[breakpoint]}
-                onCheckedChange={(checked) =>
-                  updateResponsiveMetaField(value, variant, onChange, "wrap", {
-                    [breakpoint]: checked,
+          <WidgetControlRow
+            id={`stack.visual.align.${breakpoint}`}
+            label={`${breakpointLabels[breakpoint]} item alignment`}
+            path={`align.${breakpoint}`}
+          >
+            {() => (
+              <Select
+                value={align[breakpoint]}
+                onValueChange={(next) =>
+                  updateResponsiveMetaField(value, variant, onChange, "align", {
+                    [breakpoint]: next as StackAlign,
                   })
                 }
-              />
-            </div>
-          </div>
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`${breakpointLabels[breakpoint]} alignment`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {alignOptions.map((option) => (
+                    <SelectItem key={`${breakpoint}-align-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow
+            id={`stack.visual.justify.${breakpoint}`}
+            label={`${breakpointLabels[breakpoint]} distribution`}
+            path={`justify.${breakpoint}`}
+          >
+            {() => (
+              <Select
+                value={justify[breakpoint]}
+                onValueChange={(next) =>
+                  updateResponsiveMetaField(value, variant, onChange, "justify", {
+                    [breakpoint]: next as StackJustify,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`${breakpointLabels[breakpoint]} distribution`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {justifyOptions.map((option) => (
+                    <SelectItem key={`${breakpoint}-justify-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow
+            id={`stack.visual.wrap.${breakpoint}`}
+            label={`${breakpointLabels[breakpoint]} wrapping`}
+            path={`wrap.${breakpoint}`}
+            help="Allow side-by-side layouts to continue on a new line when items need more room."
+          >
+            {() => (
+              <div className="rounded-md border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    {wrap[breakpoint] ? "Items can wrap." : "Items stay on one line."}
+                  </p>
+                  <Switch
+                    checked={wrap[breakpoint]}
+                    onCheckedChange={(checked) =>
+                      updateResponsiveMetaField(value, variant, onChange, "wrap", {
+                        [breakpoint]: checked,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+          </WidgetControlRow>
         </div>
       ))}
     </div>
@@ -609,8 +648,6 @@ export function StackWizardEditor({
   onVariantChange,
   onBlockPatch,
 }: WidgetEditorProps<StackData>) {
-  const { direction, gap, align, justify } = resolveEditorState(value, variant);
-
   return (
     <div className="space-y-4">
       <EditorSection
@@ -620,144 +657,42 @@ export function StackWizardEditor({
         title="Stack quick start"
         description="Pick a safe starting flow. Visual owns ongoing responsive layout editing."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Stack style</p>
-          <Select
-            value={resolveStackVariant(variant)}
-            onValueChange={(next) =>
-              applyVariantDataPatch(
-                next as StackVariantId,
-                buildVariantSyncedStackData(value, next as StackVariantId),
-                onChange,
-                onVariantChange,
-                onBlockPatch
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="stack.wizard.variant"
+          label="Stack preset"
+          path="variant"
+          help="Picking a preset sets the starting desktop, tablet, and mobile flow directions. Visual can fine-tune them after setup."
+        >
+          {() => (
+            <Select
+              value={resolveStackVariant(variant)}
+              onValueChange={(next) =>
+                applyVariantDataPatch(
+                  next as StackVariantId,
+                  buildVariantSyncedStackData(value, next as StackVariantId),
+                  onChange,
+                  onVariantChange,
+                  onBlockPatch
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select stack preset" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Mobile direction</p>
-          <Select
-            value={direction.mobile}
-            onValueChange={(next) =>
-              updateDirection(value, variant, onChange, { mobile: next as StackDirection })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Mobile direction" />
-            </SelectTrigger>
-            <SelectContent>
-              {directionOptions.map((option) => (
-                <SelectItem key={`wizard-mobile-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap on all breakpoints</p>
-          <p className="text-xs text-muted-foreground">
-            Writes desktop, tablet, and mobile spacing together. Use Visual for per-breakpoint gaps.
-          </p>
-          <Select
-            value={gap.mobile}
-            onValueChange={(next) => {
-              const resolvedGap = next as StackGap;
-              updateGap(value, variant, onChange, {
-                desktop: resolvedGap,
-                tablet: resolvedGap,
-                mobile: resolvedGap,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Gap on all breakpoints" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={`wizard-gap-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Align on all breakpoints</p>
-          <p className="text-xs text-muted-foreground">
-            Writes desktop, tablet, and mobile alignment together. Use Visual for per-breakpoint
-            axis control.
-          </p>
-          <Select
-            value={align.mobile}
-            onValueChange={(next) =>
-              writeResponsiveMetaAllBreakpoints(
-                value,
-                variant,
-                onChange,
-                "align",
-                next as StackAlign
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Align on all breakpoints" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignOptions.map((option) => (
-                <SelectItem key={`wizard-align-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Justify on all breakpoints</p>
-          <p className="text-xs text-muted-foreground">
-            Writes desktop, tablet, and mobile distribution together. Use Visual for per-breakpoint
-            distribution and wrap.
-          </p>
-          <Select
-            value={justify.mobile}
-            onValueChange={(next) =>
-              writeResponsiveMetaAllBreakpoints(
-                value,
-                variant,
-                onChange,
-                "justify",
-                next as StackJustify
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Justify on all breakpoints" />
-            </SelectTrigger>
-            <SelectContent>
-              {justifyOptions.map((option) => (
-                <SelectItem key={`wizard-justify-${option.id}`} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup.
+        </p>
 
         <SlotGuidanceCard />
       </EditorSection>
@@ -781,18 +716,27 @@ export function StackVisualEditor({
         title="Variant and flow"
         description="Choose the starting preset and inspect the resulting flow miniature."
       >
-        <VariantCards
-          value={resolveStackVariant(variant)}
-          onChange={(next) =>
-            applyVariantDataPatch(
-              next as StackVariantId,
-              buildVariantSyncedStackData(value, next as StackVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
-        />
+        <WidgetControlRow
+          id="stack.visual.variant"
+          label="Stack preset"
+          path="variant"
+          help="Picking a preset updates the saved desktop, tablet, and mobile flow directions. Fine-tune each screen size below."
+        >
+          {() => (
+            <VariantCards
+              value={resolveStackVariant(variant)}
+              onChange={(next) =>
+                applyVariantDataPatch(
+                  next as StackVariantId,
+                  buildVariantSyncedStackData(value, next as StackVariantId),
+                  onChange,
+                  onVariantChange,
+                  onBlockPatch
+                )
+              }
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
@@ -828,8 +772,12 @@ export function StackVisualEditor({
   );
 }
 
-export function StackAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<StackData>) {
-  const { normalized, direction, gap, align, justify, wrap } = resolveEditorState(value, variant);
+export function StackAdvancedEditor({ value, variant }: WidgetEditorProps<StackData>) {
+  const { direction, gap, align, justify, wrap } = resolveEditorState(value, variant);
+  const hasLegacyScalarAxis =
+    typeof value.align === "string" ||
+    typeof value.justify === "string" ||
+    typeof value.wrap === "boolean";
 
   return (
     <div className="space-y-4">
@@ -837,34 +785,46 @@ export function StackAdvancedEditor({ value, onChange, variant }: WidgetEditorPr
         id="stack.advanced.responsive-summary"
         mode="advanced"
         role="diagnostics"
-        title="Technical flow tokens"
-        description="Visual owns responsive flow editing. Advanced shows the resolved breakpoint contract."
+        title="Runtime stack summary"
+        description="Visual owns responsive flow editing. Advanced shows the saved runtime result."
       >
         {stackBreakpoints.map((breakpoint) => (
           <ReadonlyWidgetSummaryRow
             key={breakpoint}
             id={`stack.advanced.${breakpoint}`}
             label={breakpointLabels[breakpoint]}
-            path="direction"
-            value={`${direction[breakpoint]} flow, ${gapScaleLabels[gap[breakpoint]]}, align ${align[breakpoint]}, justify ${justify[breakpoint]}, wrap ${wrap[breakpoint] ? "on" : "off"}.`}
+            path={`direction.${breakpoint}`}
+            value={describeStackBreakpointSummary({
+              direction: direction[breakpoint],
+              gap: gap[breakpoint],
+              align: align[breakpoint],
+              justify: justify[breakpoint],
+              wrap: wrap[breakpoint],
+            })}
           />
         ))}
-        <div hidden className="hidden" aria-hidden="true">
-          <DirectionAndGapGrid value={value} variant={variant} onChange={onChange} />
-          <ResponsiveAxisAndWrapGrid value={value} variant={variant} onChange={onChange} />
-        </div>
       </EditorSection>
       <EditorSection
-        id="stack.advanced.payload-snapshot"
+        id="stack.advanced.support-summary"
         mode="advanced"
-        role="diagnostics"
-        title="Raw payload snapshot"
-        description="Normalized read-only payload for debugging migrations and saved data."
+        role="summary"
+        title="Support summary"
+        description="Support-only compatibility notes for saved responsive data."
       >
         <ReadonlyWidgetSummaryRow
-          id="stack.advanced.normalized-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          id="stack.advanced.normalization"
+          label="Saved compatibility"
+          path="direction"
+          value={
+            hasLegacyScalarAxis
+              ? "Legacy single-value axis settings normalize for desktop, tablet, and mobile."
+              : "Saved responsive values normalize for desktop, tablet, and mobile."
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stack.advanced.visual-owner"
+          label="Editing owner"
+          value="Use Visual to adjust flow, spacing, alignment, distribution, and wrapping. Advanced is read-only."
         />
       </EditorSection>
     </div>

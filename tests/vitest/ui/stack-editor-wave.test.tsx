@@ -167,7 +167,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("StackWizardEditor writes variant, gap, align, and justify across breakpoints", async () => {
+test("StackWizardEditor keeps setup to the preset and slot guidance", async () => {
   const { StackWizardEditor } = await import("../../../core/admin/ui/widgets/editors/StackEditors");
 
   const onChangeSpy = vi.fn();
@@ -213,46 +213,44 @@ test("StackWizardEditor writes variant, gap, align, and justify across breakpoin
 
   try {
     expect(view.container.textContent).toContain(
-      "Writes desktop, tablet, and mobile spacing together."
-    );
-    expect(view.container.textContent).toContain(
-      "Writes desktop, tablet, and mobile alignment together."
+      "Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup."
     );
     expect(view.container.textContent).toContain("`content` slot");
+    expect(view.container.textContent).not.toContain("Gap on all breakpoints");
+    expect(view.container.textContent).not.toContain("Align on all breakpoints");
+    expect(view.container.textContent).not.toContain("Justify on all breakpoints");
+    expect(view.container.querySelector('[data-widget-control-path="variant"]')).toBeTruthy();
 
     const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects).toHaveLength(1);
     expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-    const gapOptionValues = Array.from((selects[2] as HTMLSelectElement).options).map(
-      (option) => option.value
-    );
-    expect(gapOptionValues).toContain("none");
-    expect(gapOptionValues).not.toContain("0");
 
     setSelectValue(selects[0], "responsive");
     expect(currentVariant).toBe("responsive");
-
-    setSelectValue(selects[1], "row");
-    setSelectValue(selects[2], "8");
-    setSelectValue(selects[3], "baseline");
-    setSelectValue(selects[4], "around");
-
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.direction?.mobile).toBe("row");
+    expect(latestValue.direction).toMatchObject({
+      desktop: "row",
+      tablet: "row",
+      mobile: "column",
+    });
     expect(latestValue.gap).toMatchObject({
-      desktop: "8",
-      tablet: "8",
-      mobile: "8",
+      desktop: "6",
+      tablet: "6",
+      mobile: "4",
     });
     expect(latestValue.align).toEqual({
-      desktop: "baseline",
-      tablet: "baseline",
-      mobile: "baseline",
+      desktop: "stretch",
+      tablet: "stretch",
+      mobile: "stretch",
     });
     expect(latestValue.justify).toEqual({
-      desktop: "around",
-      tablet: "around",
-      mobile: "around",
+      desktop: "start",
+      tablet: "start",
+      mobile: "start",
     });
+    expect(view.container.textContent).toContain(
+      "Picking a preset sets the starting desktop, tablet, and mobile flow directions."
+    );
   } finally {
     view.cleanup();
   }
@@ -296,6 +294,9 @@ test("StackVisualEditor renders miniatures and writes responsive direction, axis
     expect(
       findByDataAttr(view.container, "data-stack-variant-miniature", "responsive")
     ).toBeTruthy();
+    expect(view.container.textContent).toContain(
+      "Picking a preset updates the saved desktop, tablet, and mobile flow directions."
+    );
 
     clickByText(view.container, "Horizontal");
     expect(currentVariant).toBe("horizontal");
@@ -356,11 +357,12 @@ test("StackVisualEditor renders miniatures and writes responsive direction, axis
   }
 });
 
-test("StackAdvancedEditor upgrades legacy scalar axis values and updates the snapshot", async () => {
+test("StackAdvancedEditor shows read-only summaries without hidden mutators or raw payload", async () => {
   const { StackAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/StackEditors");
 
-  let latestValue: StackData = {
+  const onChangeSpy = vi.fn();
+  const value: StackData = {
     direction: {
       desktop: "column",
       tablet: "column",
@@ -377,81 +379,31 @@ test("StackAdvancedEditor upgrades legacy scalar axis values and updates the sna
   };
 
   const Harness = () => {
-    const [value, setValue] = useState<StackData>(latestValue);
-
-    return (
-      <StackAdvancedEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          setValue(next);
-        }}
-        variant="responsive"
-      />
-    );
+    return <StackAdvancedEditor value={value} onChange={onChangeSpy} variant="responsive" />;
   };
 
   const view = mount(<Harness />);
 
   try {
-    const desktopDirectionCard = findByDataAttr(
-      view.container,
-      "data-stack-direction-card",
-      "desktop"
+    expect(view.container.textContent).toContain("Runtime stack summary");
+    expect(view.container.textContent).toContain("Support summary");
+    expect(view.container.textContent).toContain("Stack vertically");
+    expect(view.container.textContent).toContain("Balanced desktop spacing");
+    expect(view.container.textContent).toContain(
+      "Legacy single-value axis settings normalize for desktop, tablet, and mobile."
     );
-    const desktopDirectionSelects = Array.from(
-      (desktopDirectionCard as ParentNode).querySelectorAll("select")
+    expect(view.container.textContent).toContain(
+      "Use Visual to adjust flow, spacing, alignment, distribution, and wrapping."
     );
-    setSelectValue(desktopDirectionSelects[0], "row");
-    setSelectValue(desktopDirectionSelects[1], "10");
-
-    const desktopAxisCard = findByDataAttr(view.container, "data-stack-axis-card", "desktop");
-    const desktopAxisSelects = Array.from(
-      (desktopAxisCard as ParentNode).querySelectorAll("select")
-    );
-    const desktopWrapToggle = (desktopAxisCard as ParentNode).querySelector(
-      'input[type="checkbox"]'
-    );
-    setSelectValue(desktopAxisSelects[0], "baseline");
-    setSelectValue(desktopAxisSelects[1], "evenly");
-    setCheckboxValue(desktopWrapToggle, true);
-
-    const mobileAxisCard = findByDataAttr(view.container, "data-stack-axis-card", "mobile");
-    const mobileAxisSelects = Array.from((mobileAxisCard as ParentNode).querySelectorAll("select"));
-    setSelectValue(mobileAxisSelects[0], "stretch");
-    setSelectValue(mobileAxisSelects[1], "start");
-
-    expect(latestValue.direction).toMatchObject({
-      desktop: "row",
-      tablet: "column",
-      mobile: "column",
-    });
-    expect(latestValue.gap).toMatchObject({
-      desktop: "10",
-      tablet: "6",
-      mobile: "4",
-    });
-    expect(latestValue.align).toEqual({
-      desktop: "baseline",
-      tablet: "center",
-      mobile: "stretch",
-    });
-    expect(latestValue.justify).toEqual({
-      desktop: "evenly",
-      tablet: "between",
-      mobile: "start",
-    });
-    expect(latestValue.wrap).toEqual({
-      desktop: true,
-      tablet: false,
-      mobile: false,
-    });
-
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"align": {');
-    expect(snapshot?.textContent).toContain('"desktop": "baseline"');
-    expect(snapshot?.textContent).toContain('"justify": {');
-    expect(snapshot?.textContent).toContain('"wrap": {');
+    expect(view.container.textContent).not.toContain("Technical flow tokens");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(findByDataAttr(view.container, "data-stack-direction-card", "desktop")).toBeNull();
+    expect(findByDataAttr(view.container, "data-stack-axis-card", "desktop")).toBeNull();
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -497,11 +449,8 @@ test("Stack editors fall back to safe defaults when normalization is partial and
     expect(() => setSelectValue(wizardPreset, "responsive")).not.toThrow();
     expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
 
-    const wizardSelects = Array.from(view.container.querySelectorAll("select"));
-    expect((wizardSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("column");
-    expect((wizardSelects[2] as HTMLSelectElement | null | undefined)?.value).toBe("4");
-    expect((wizardSelects[3] as HTMLSelectElement | null | undefined)?.value).toBe("stretch");
-    expect((wizardSelects[4] as HTMLSelectElement | null | undefined)?.value).toBe("start");
+    const wizardSection = findSectionByTitle(view.container, "Stack quick start");
+    expect(wizardSection?.querySelectorAll("select")).toHaveLength(1);
 
     expect(findByDataAttr(view.container, "data-stack-variant-miniature", "vertical")).toBeTruthy();
     expect(
@@ -529,22 +478,13 @@ test("Stack editors fall back to safe defaults when normalization is partial and
     expect((desktopAxisSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("start");
     expect((desktopWrapToggle as HTMLInputElement | null | undefined)?.checked).toBe(false);
 
-    const advancedSection = findSectionByTitle(view.container, "Technical flow tokens");
-    const advancedDirectionCard = findByDataAttr(
-      advancedSection as ParentNode,
-      "data-stack-direction-card",
-      "desktop"
-    );
-    const advancedDirectionSelects = Array.from(
-      (advancedDirectionCard as ParentNode).querySelectorAll("select")
-    );
-    expect((advancedDirectionSelects[0] as HTMLSelectElement | null | undefined)?.value).toBe(
-      "column"
-    );
-    expect((advancedDirectionSelects[1] as HTMLSelectElement | null | undefined)?.value).toBe("6");
-
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent?.trim()).toBe("{}");
+    const advancedSection = findSectionByTitle(view.container, "Runtime stack summary");
+    expect(advancedSection?.textContent).toContain("Stack vertically");
+    expect(advancedSection?.querySelectorAll("select")).toHaveLength(0);
+    expect(
+      findByDataAttr(advancedSection as ParentNode, "data-stack-direction-card", "desktop")
+    ).toBeNull();
+    expect(view.container.querySelector("pre")).toBeNull();
     expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();

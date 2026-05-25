@@ -27,12 +27,10 @@ source of truth for that breakpoint.
 ## Editor Modes
 
 ### Wizard
-- stack style preset
-- mobile direction
-- gap on all breakpoints
-- align on all breakpoints
-- justify on all breakpoints
+- one-time stack preset
 - admin-safe `content` slot guidance
+- note that Visual owns breakpoint spacing, alignment, distribution, and
+  wrapping after setup
 
 ### Visual
 Sections:
@@ -47,9 +45,10 @@ Notes:
   `responsive`.
 
 ### Advanced
-- read-only responsive flow summaries for direction, gap, align, justify, and wrap
-- raw payload snapshot
-- no duplicate editable direction/gap/alignment controls; Visual owns daily flow editing
+- read-only runtime stack summaries for desktop, tablet, and mobile flow
+- read-only support summary for legacy scalar compatibility and Visual ownership
+- no raw payload snapshot
+- no hidden editable direction/gap/alignment/wrap controls; Visual owns daily flow editing
 
 ## Runtime Behavior Notes
 

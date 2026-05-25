@@ -791,6 +791,33 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-divider-advanced-readonly-2026-05-25.json`,
   `bun --cwd core lint`, `bun --cwd core lint:types`, and
   `bun run gates:coderso` pass for this slice.
+- In Progress (2026-05-25): Stack residual drift is superseded under this
+  task. Fresh helper-agent and Claude read-only UX reviews found that Wizard
+  still exposed daily responsive layout controls, Advanced still rendered
+  hidden writable direction/gap/axis controls plus a raw JSON payload snapshot,
+  and the editor contract did not match real Visual sections. Stack Wizard is
+  now narrowed to one-time preset setup plus slot guidance, Visual owns daily
+  responsive flow, spacing, alignment, distribution, and wrapping controls with
+  truthful `WidgetControlRow` metadata, and Advanced renders read-only runtime
+  stack/support summaries without raw payload snapshots or hidden mutators.
+  Beginner-facing labels replace raw gap/token and row/column authoring copy in
+  normal editor controls. Targeted Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/stack-editor-wave.test.tsx tests/vitest/widgets/stack.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0` after restarting `coderso-dev-core-host` twice to refresh
+  the admin bundle. Because existing Stack fixtures are post-setup and the
+  standard smoke only covers Visual/Advanced, a focused Playwright `Run setup
+  again` Wizard probe is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-wizard-2026-05-25.*`
+  and reports one visible Wizard root, one writable preset control, no metadata
+  gaps, preset side-effect copy present, and no raw payload output.
+  `bun test tests/unit/playwright-widget-contract-smoke.test.ts`,
+  `git diff --check`,
+  `jq empty _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stack-advanced-readonly-2026-05-25.json`,
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and
+  `bun run gates:coderso` pass for this slice.
 
 ## Files to Change
 

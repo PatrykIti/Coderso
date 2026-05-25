@@ -1,0 +1,23 @@
+{
+  "generated": "2026-05-25T19:29:30.000Z",
+  "session": "task-336-19-stack-wizard-probe",
+  "admin": "http://localhost:5173/admin",
+  "widget": "stack",
+  "probe": "run-setup-again-wizard",
+  "result": {
+    "status": "passed",
+    "adminPath": "http://localhost:5173/admin/pages/7b23083d-f7cd-481e-8417-fc2278e54466",
+    "mode": {
+      "mode": "wizard",
+      "rootCount": 1,
+      "sectionCount": 1,
+      "visibleSectionCount": 1,
+      "controlCount": 1,
+      "writablePaths": ["variant"],
+      "controlsWithoutPath": 0,
+      "hasPresetSideEffectCopy": true,
+      "hasVisualOwnershipCopy": true,
+      "hasRawPayload": false
+    }
+  }
+}

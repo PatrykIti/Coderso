@@ -200,3 +200,9 @@ Regression-test shape:
   TASK-336-19 Divider slice narrows Wizard to one-time style/label setup,
   moves daily line/width/color/spacing ownership to Visual, and makes Advanced
   read-only runtime/support summaries without raw payload snapshots.
+- Supersession (2026-05-25): Stack was re-opened under `TASK-336-19` after
+  fresh agent and Claude audits found daily layout controls in Wizard, hidden
+  Advanced mutators, raw JSON diagnostics, and a contract/UI section mismatch.
+  The TASK-336-19 Stack slice narrows Wizard to one-time preset setup, moves
+  daily responsive flow ownership to Visual with control metadata, and makes
+  Advanced read-only runtime/support summaries without raw payload snapshots.

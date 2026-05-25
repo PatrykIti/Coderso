@@ -211,7 +211,7 @@ Zasady:
 | `section` | variant, heading, semantics/anchor, width, spacing, surface, borders, background media | read-only layout/surface/semantics summaries and normalized payload |
 | `grid-columns` | variant, column structure/labels/spans, gaps, cardized surface, per-column behavior | read-only span totals, slot drift, cardized state, override summary, normalized payload |
 | `split-layout` | starter layout, pane ratio, phone layout, spacing, alignment, slot guidance | read-only human split/phone/spacing/alignment diagnostics and saved layout summary without developer-facing implementation labels |
-| `stack` | responsive direction, gap, align, justify, wrap | read-only breakpoint flow summaries and normalized payload |
+| `stack` | one-time preset in Wizard; responsive direction, spacing, alignment, distribution, and wrapping in Visual | read-only runtime stack and support summaries without raw payload snapshots |
 | `spacer` | height presets and editor guide | read-only runtime spacing and support summaries without raw payload snapshots |
 | `divider` | variant/label, line, width presets, color swatch, spacing presets | read-only runtime divider and support summaries without raw payload snapshots |
 
