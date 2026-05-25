@@ -25,17 +25,16 @@ guidance.
 
 ### Wizard
 
-- split preset selection
-- mobile collapse mode
-- base gap
-- builder guidance for adding widgets to the left and right panes
+- one-time starter split selection
+- builder guidance for moving to Visual and adding widgets to the left/right
+  panes
 
 ### Visual
 
 Sections:
-1. Variant and pane ratio
-2. Mobile collapse behavior
-3. Spacing and vertical alignment
+1. Pane layout
+2. Phone behavior
+3. Spacing and alignment
 4. Pane content
 
 Notes:
@@ -43,21 +42,22 @@ Notes:
 - Visual owns variant selection (`visualOwnsVariantSelection = true`).
 - Selecting a preset re-syncs the current desktop/tablet/mobile ratios through
   the landed shared atomic block-patch path.
-- Variant cards include bounded graphical miniatures plus a ratio summary that
-  states the effective desktop/tablet/mobile ratios and whether a preset
-  override is active.
+- Variant cards include bounded graphical miniatures plus a beginner-facing
+  device-layout summary that states the effective desktop/tablet/phone split.
 - Desktop and tablet ratios remain directly editable.
 - Mobile ratio appears only when `collapseMobile = "keep"`; otherwise Visual
-  shows explicit stack-mode copy instead of an inactive control.
-- Gap controls expose scale labels in rem/px and canonicalize legacy `"0"`
-  payloads to the `none` control state while keeping backward compatibility.
+  shows explicit stacked-phone copy instead of an inactive control.
+- Gap controls expose friendly labels and canonicalize legacy `"0"` payloads
+  to the `none` control state while keeping backward compatibility.
 
 ### Advanced
 
-- read-only responsive diagnostics for preset, desktop, tablet, mobile, gap,
-  and vertical alignment
-- raw payload snapshot
+- read-only responsive diagnostics for starter layout, desktop, tablet, phone,
+  pane spacing, and content-height alignment
+- read-only saved layout summary
 - no duplicate editable ratio/gap/align controls
+- no visible developer-facing saved-data snapshots, implementation labels, or
+  webdeveloper-specific diagnostics
 
 ## Runtime Behavior
 
@@ -121,6 +121,8 @@ Notes:
   arbitrary classes or user-supplied text.
 - Arbitrary ratios, arbitrary class strings, raw HTML, and public admin-only
   placeholder copy remain out of scope.
+- Advanced summaries are human-readable and do not expose saved-data snapshots
+  or runtime implementation labels.
 
 ## Explicit Non-Scope
 

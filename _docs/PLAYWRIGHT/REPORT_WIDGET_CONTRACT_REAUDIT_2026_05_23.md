@@ -1297,6 +1297,29 @@ color authoring drift.
   metadata plus docs/contract-section alignment drift; the final diff fixes
   those before validation.
 
+## TASK-336-19 Split Layout Wizard/Advanced Evidence (2026-05-25)
+
+The Split Layout cleanup supersedes the older developer-facing Advanced
+diagnostics and empty/false Wizard metadata findings for `split-layout`.
+
+- Wizard is now one-time starter split setup only. It no longer owns phone
+  behavior or pane spacing.
+- Visual emits persisted control-path metadata for the real daily controls, so
+  Playwright no longer passes through empty-path evidence for visible controls.
+- Advanced is read-only and shows human device-layout, phone-order, spacing,
+  and alignment summaries without developer-facing implementation details.
+- Focused Vitest evidence covers one-time Wizard ownership, Visual path
+  metadata, read-only Advanced output, zero-gap legacy copy, and strict editor
+  contracts:
+  `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-split-layout-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Fresh helper-agent audits identified the false Wizard contract, missing
+  control-path metadata, developer-facing Advanced output, and stale docs as
+  blockers before implementation. These findings are addressed in this slice.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
@@ -1310,6 +1333,10 @@ color authoring drift.
   local code/test/Playwright validation.
 
 ## Validation Not Performed
+
+The following limitations apply to the original 2026-05-23 report-only audit.
+Later TASK-336-19 sections above record their own implementation validation
+evidence.
 
 - Full admin dynamic traversal for all 38 widgets was not completed. Changing
   editor tabs mutates editor state and triggered unsaved-change dialogs in the

@@ -10,41 +10,53 @@
 
 ---
 
-## 1. Sekcje per zakładka (źródło: parser kodu rekursywny — main funkcja + helpery)
+## 1. Sekcje per zakładka
 
 ### Wizard
-_(brak sekcji top-level — Wizard pusty: redaktor widzi tylko nagłówek widgetu + przycisk „Continue to layout and styling)_
+
+Status po TASK-336-19: Wizard ma jedna sekcje `Choose a starter split` i
+zapisuje tylko one-time starter `variant`.
 
 ### Visual
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
-| 1 | `Variant and pane ratio` | Variant and structure |
-| 2 | `Mobile collapse behavior` | Responsive overrides |
-| 3 | `Spacing and vertical alignment` | Layout (width, padding, alignment) |
-| 4 | `Pane content` | Items and order (Slot subsection) |
+| 1 | `Pane layout` | Accepted current |
+| 2 | `Phone behavior` | Accepted current |
+| 3 | `Spacing and alignment` | Accepted current |
+| 4 | `Pane content` | Accepted current |
 
 ### Advanced
 | # | Tytuł (obecny) | Proponowany kanon |
 |---|----------------|--------------------|
-| 1 | `Responsive diagnostics` | Runtime payload |
-| 2 | `Raw payload snapshot` | Raw payload snapshot |
+| 1 | `How this layout renders` | Accepted current |
+| 2 | `Saved layout summary` | Accepted current |
 
 ## 2. Live DOM scan — Visual mode (Playwright snapshot)
 
-_5 sekcji znalezionych w DOM po `[data-widget-editor-section]`._
+Status po TASK-336-19: strict smoke ma 5 widocznych sekcji Visual i 2
+widoczne sekcje Advanced, bez metadata gaps.
 
 | `data-widget-editor-section` | Title | Kontrolki |
 |------------------------------|-------|-----------|
-| `variant-and-pane-ratio` | `Variant and pane ratio` | 0 |
-| `mobile-collapse-behavior` | `Mobile collapse behavior` | 0 |
-| `spacing-and-vertical-alignment` | `Spacing and vertical alignment` | 0 |
-| `pane-content` | `Pane content` | 0 |
+| `split-layout.visual.variant-ratio` | `Pane layout` | metadata-backed |
+| `split-layout.visual.mobile-behavior` | `Phone behavior` | metadata-backed |
+| `split-layout.visual.spacing-alignment` | `Spacing and alignment` | metadata-backed |
+| `split-layout.visual.pane-guidance` | `Pane content` | guidance summary |
 | `split-layout.structure` | `Structure` | 2 |
 
 ## 5. Rekomendacje per widget
 
-1. Wizard top-level jest pusty — albo dorobić sekcje `Step 1: …`, `Step 2: …`, … albo wycofać zakładkę Wizard dla tego widgetu (CONTRACT-15).
-2. Przemianować `Variant and pane ratio` → `Variant and structure` (CONTRACT-01).
+Status 2026-05-25: zalecenia z tego snapshotu sa superseded przez
+`TASK-336-19` Split Layout cleanup. Wizard ma teraz widoczna sekcje
+`Choose a starter split`, Visual uzywa sekcji `Pane layout`, `Phone behavior`,
+`Spacing and alignment`, `Pane content`, a Advanced pokazuje tylko read-only
+human summaries bez developer-facing implementation details.
+
+Evidence:
+
+- `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-split-layout-advanced-readonly-2026-05-25.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ---
 

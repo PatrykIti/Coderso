@@ -101,7 +101,7 @@ test("split layout preserves legacy zero gap while exposing none in controls", (
   expect(getSplitLayoutGapControlValue(normalized.gap)).toBe("none");
   expect(disclosure.mobile).toBe("60-40");
   expect(diagnostics.gap.controlValue).toBe("none");
-  expect(diagnostics.gap.description).toContain("Legacy `Gap 0` values resolve here.");
+  expect(diagnostics.gap.description).toContain("Older saved zero-gap layouts are shown here.");
 });
 
 test("split layout validator accepts expanded model with mobile ratio", () => {
@@ -251,8 +251,9 @@ test("split layout editors render updated sections and diagnostics", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Split preset");
-  expect(wizardHtml).toContain("Mobile behavior");
+  expect(wizardHtml).toContain("Starter layout");
+  expect(wizardHtml).not.toContain("Mobile behavior");
+  expect(wizardHtml).not.toContain("Base gap");
 
   const visualHtml = renderToString(
     <SplitLayoutVisualEditor
@@ -262,11 +263,11 @@ test("split layout editors render updated sections and diagnostics", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(visualHtml).toContain("Variant and pane ratio");
-  expect(visualHtml).toContain("Mobile collapse behavior");
+  expect(visualHtml).toContain("Pane layout");
+  expect(visualHtml).toContain("Phone behavior");
   expect(visualHtml).toContain("Pane content");
   expect(visualHtml).not.toContain("Pane slots");
-  expect(visualHtml).toContain("Current ratios");
+  expect(visualHtml).toContain("Current layout on devices");
 
   const advancedHtml = renderToString(
     <SplitLayoutAdvancedEditor
@@ -276,7 +277,15 @@ test("split layout editors render updated sections and diagnostics", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Responsive diagnostics");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("How this layout renders");
+  expect(advancedHtml).toContain("Saved layout summary");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
+  expect(advancedHtml).not.toContain("<pre");
+  expect(advancedHtml).not.toContain("raw JSON");
+  expect(advancedHtml).not.toContain("CSS class");
+  expect(advancedHtml).not.toContain("token");
+  expect(advancedHtml).not.toContain("payload");
+  expect(advancedHtml).not.toContain("using gap-");
+  expect(advancedHtml).not.toContain("using items-");
   expect(advancedHtml).not.toContain("Technical split tokens");
 });

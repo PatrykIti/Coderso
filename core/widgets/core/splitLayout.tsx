@@ -54,14 +54,59 @@ export const splitLayoutEditorContract: WidgetEditorContract = {
       id: "split-layout.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: [],
+      writablePaths: ["variant"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Split Layout starter preset; Visual remains the daily layout owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
     },
     {
       mode: "visual",
-      id: "split-layout.visual.ratio-behavior",
-      title: "Ratio and behavior",
+      id: "split-layout.visual.variant-ratio",
+      title: "Layout preset and pane ratio",
       role: "layout",
-      writablePaths: [
+      writablePaths: ["variant", "ratio.desktop", "ratio.tablet"],
+      allowedDuplicateWritablePaths: [
+        {
+          path: "variant",
+          reason:
+            "Wizard seeds the one-time Split Layout starter preset; Visual remains the daily layout owner after setup.",
+          expiresWithTask: "TASK-336",
+        },
+      ],
+    },
+    {
+      mode: "visual",
+      id: "split-layout.visual.mobile-behavior",
+      title: "Phone behavior",
+      role: "layout",
+      writablePaths: ["collapseMobile", "ratio.mobile", "reverseOnMobile"],
+    },
+    {
+      mode: "visual",
+      id: "split-layout.visual.spacing-alignment",
+      title: "Spacing and alignment",
+      role: "layout",
+      writablePaths: ["gap", "verticalAlign"],
+    },
+    {
+      mode: "visual",
+      id: "split-layout.visual.pane-guidance",
+      title: "Pane content",
+      role: "summary",
+      writablePaths: [],
+    },
+    {
+      mode: "advanced",
+      id: "split-layout.advanced.responsive-diagnostics",
+      title: "Responsive diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
         "variant",
         "ratio.desktop",
         "ratio.tablet",
@@ -74,8 +119,8 @@ export const splitLayoutEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "split-layout.advanced.responsive-diagnostics",
-      title: "Responsive diagnostics",
+      id: "split-layout.advanced.saved-layout-summary",
+      title: "Saved layout summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [
@@ -130,12 +175,10 @@ export type SplitLayoutDiagnostics = {
     controlValue: SplitLayoutGapControlValue;
     label: string;
     description: string;
-    className: string;
   };
   verticalAlign: {
     value: SplitLayoutVerticalAlign;
     label: string;
-    className: string;
   };
 };
 
@@ -232,52 +275,52 @@ const gapClassMap: Record<SplitLayoutGap, string> = {
 const gapOptionMap: Record<SplitLayoutGapControlValue, SplitLayoutGapOption> = {
   none: {
     value: "none",
-    label: "None (0px)",
+    label: "No gap",
     description: "No space between the left and right panes.",
   },
   "1": {
     value: "1",
-    label: "Gap 1 (0.25rem / 4px)",
+    label: "Very tight",
     description: "Tight space between the left and right panes.",
   },
   "2": {
     value: "2",
-    label: "Gap 2 (0.5rem / 8px)",
+    label: "Tight",
     description: "Compact space between the left and right panes.",
   },
   "3": {
     value: "3",
-    label: "Gap 3 (0.75rem / 12px)",
+    label: "Small",
     description: "Small separation between the left and right panes.",
   },
   "4": {
     value: "4",
-    label: "Gap 4 (1rem / 16px)",
+    label: "Balanced",
     description: "Balanced space between the left and right panes.",
   },
   "5": {
     value: "5",
-    label: "Gap 5 (1.25rem / 20px)",
+    label: "Roomy",
     description: "Roomier spacing between the left and right panes.",
   },
   "6": {
     value: "6",
-    label: "Gap 6 (1.5rem / 24px)",
+    label: "Default",
     description: "Default spacing between the left and right panes.",
   },
   "8": {
     value: "8",
-    label: "Gap 8 (2rem / 32px)",
+    label: "Large",
     description: "Large space between the left and right panes.",
   },
   "10": {
     value: "10",
-    label: "Gap 10 (2.5rem / 40px)",
+    label: "Extra large",
     description: "Extra-large space between the left and right panes.",
   },
   "12": {
     value: "12",
-    label: "Gap 12 (3rem / 48px)",
+    label: "Maximum",
     description: "Maximum preset space between the left and right panes.",
   },
 };
@@ -290,10 +333,10 @@ const alignClassMap: Record<SplitLayoutVerticalAlign, string> = {
 };
 
 const verticalAlignLabelMap: Record<SplitLayoutVerticalAlign, string> = {
-  start: "Start",
-  center: "Center",
-  end: "End",
-  stretch: "Stretch",
+  start: "Top",
+  center: "Middle",
+  end: "Bottom",
+  stretch: "Equal height",
 };
 
 const resolveSplitLayoutRatio = (
@@ -461,14 +504,12 @@ export function getSplitLayoutDiagnostics(
       label: gapOption.label,
       description:
         gapValue === "0"
-          ? `${gapOption.description} Legacy \`Gap 0\` values resolve here.`
+          ? `${gapOption.description} Older saved zero-gap layouts are shown here.`
           : gapOption.description,
-      className: gapClassMap[gapValue],
     },
     verticalAlign: {
       value: verticalAlign,
       label: verticalAlignLabelMap[verticalAlign],
-      className: alignClassMap[verticalAlign],
     },
   };
 }

@@ -694,6 +694,22 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-template-section-advanced-readonly-2026-05-25.*`
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
+- In Progress (2026-05-25): next family targets `split-layout`
+  Wizard/Visual/Advanced drift. Wizard is now one-time starter split setup
+  only and no longer edits phone behavior or pane spacing. Visual emits
+  explicit ownership metadata for the real daily controls: base layout,
+  desktop/tablet ratios, phone layout, phone split when visible, phone order,
+  pane spacing, and content-height alignment. Advanced no longer renders raw
+  developer-facing saved-data snapshots, implementation labels, or developer
+  copy; it shows read-only human summaries for device layout, phone order,
+  spacing, and alignment. Fresh helper-agent audits found the false Wizard
+  contract, missing control-path metadata, developer-facing Advanced output,
+  and stale docs; those findings are fixed. Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-split-layout-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Files to Change
 

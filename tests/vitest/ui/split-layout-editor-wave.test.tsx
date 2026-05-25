@@ -229,7 +229,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("SplitLayout wizard preset syncs desktop, tablet, and mobile ratios", async () => {
+test("SplitLayout wizard only seeds the starter split", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: {
@@ -248,26 +248,15 @@ test("SplitLayout wizard preset syncs desktop, tablet, and mobile ratios", async
 
   try {
     const presetSelect = findSelectsByOptions(view.container, ["50-50", "40-60", "60-40"])[0];
-    const collapseSelect = findSelectsByOptions(view.container, ["stack", "keep"])[0];
-    const gapSelect = findSelectsByOptions(view.container, [
-      "none",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "8",
-      "10",
-      "12",
-    ])[0];
 
     expect((presetSelect as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
-    expect((collapseSelect as HTMLSelectElement | null | undefined)?.value).toBe("stack");
-    expect((gapSelect as HTMLSelectElement | null | undefined)?.value).toBe("6");
+    expect(findSelectsByOptions(view.container, ["stack", "keep"])).toHaveLength(0);
+    expect(
+      findSelectsByOptions(view.container, ["none", "1", "2", "3", "4", "5", "6", "8", "10", "12"])
+    ).toHaveLength(0);
+    expect(view.container.textContent).not.toContain("Mobile behavior");
+    expect(view.container.textContent).not.toContain("Base gap");
 
-    setSelectValue(collapseSelect, "keep");
-    setSelectValue(gapSelect, "10");
     setSelectValue(presetSelect, "60-40");
 
     expect(view.onVariantChangeSpy).toHaveBeenCalledWith("60-40");
@@ -278,9 +267,9 @@ test("SplitLayout wizard preset syncs desktop, tablet, and mobile ratios", async
         tablet: "60-40",
         mobile: "60-40",
       },
-      collapseMobile: "keep",
+      collapseMobile: "stack",
       reverseOnMobile: false,
-      gap: "10",
+      gap: "6",
       verticalAlign: "stretch",
     });
   } finally {
@@ -305,10 +294,7 @@ test("SplitLayout visual editor exposes keep-specific mobile ratio and truthful 
   });
 
   try {
-    const mobileSection = findSectionByTitle(
-      view.container,
-      "Mobile collapse behavior"
-    ) as ParentNode;
+    const mobileSection = findSectionByTitle(view.container, "Phone behavior") as ParentNode;
     const mobileSelects = Array.from(mobileSection.querySelectorAll("select"));
     const collapseSelect = mobileSelects[0];
     const mobileRatioSelect = mobileSelects[1];
@@ -320,20 +306,20 @@ test("SplitLayout visual editor exposes keep-specific mobile ratio and truthful 
     ).toBeTruthy();
     expect((collapseSelect as HTMLSelectElement | null | undefined)?.value).toBe("keep");
     expect((mobileRatioSelect as HTMLSelectElement | null | undefined)?.value).toBe("50-50");
-    expect(reverseCopy?.textContent).toContain("keeping the split ratio");
+    expect(reverseCopy?.textContent).toContain("visually show the right pane first");
 
     setSelectValue(mobileRatioSelect, "40-60");
     expect(view.getLatestValue().ratio?.mobile).toBe("40-60");
 
     setCheckboxValue(reverseToggle, true);
-    expect(reverseCopy?.textContent).toContain("right pane currently appears first");
+    expect(reverseCopy?.textContent).toContain("right pane is shown first");
 
     setSelectValue(collapseSelect, "stack");
     expect(view.container.querySelector('[data-split-mobile-ratio-control="visible"]')).toBeFalsy();
     expect(
       view.container.querySelector('[data-split-mobile-ratio-control="stack-note"]')
     ).toBeTruthy();
-    expect(reverseCopy?.textContent).toContain("stacks above the left pane");
+    expect(reverseCopy?.textContent).toContain("right pane is shown above the left pane");
   } finally {
     view.cleanup();
   }
@@ -360,11 +346,11 @@ test("SplitLayout visual editor shows ratio disclosure, miniatures, and legacy z
     const ratioSummary = view.container.querySelector("[data-split-ratio-summary]");
     expect(ratioSummary?.getAttribute("data-split-ratio-override")).toBe("true");
     expect(ratioSummary?.textContent).toContain("Desktop 40 / 60, tablet 60 / 40, mobile 60 / 40.");
-    expect(ratioSummary?.textContent).toContain("Preset override active");
+    expect(ratioSummary?.textContent).toContain("Custom device layout");
 
     const spacingSection = findSectionByTitle(
       view.container,
-      "Spacing and vertical alignment"
+      "Spacing and alignment"
     ) as ParentNode;
     const gapSelect = Array.from(spacingSection.querySelectorAll("select"))[0] as HTMLSelectElement;
     const gapCopy = spacingSection.querySelector("[data-split-gap-copy]");
@@ -372,7 +358,7 @@ test("SplitLayout visual editor shows ratio disclosure, miniatures, and legacy z
 
     expect(optionValues).not.toContain("0");
     expect(gapSelect.value).toBe("none");
-    expect(gapCopy?.textContent).toContain("Legacy `Gap 0` values resolve here.");
+    expect(gapCopy?.textContent).toContain("Older saved zero-gap layouts are shown here.");
   } finally {
     view.cleanup();
   }
@@ -458,7 +444,7 @@ test("SplitLayout visual variant cards use the atomic onBlockPatch path", async 
   }
 });
 
-test("SplitLayout advanced editor is read-only diagnostics with normalized snapshot", async () => {
+test("SplitLayout advanced editor is read-only diagnostics without raw payload", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialValue: {
@@ -478,20 +464,25 @@ test("SplitLayout advanced editor is read-only diagnostics with normalized snaps
   try {
     const diagnosticsSection = findSectionByTitle(
       view.container,
-      "Responsive diagnostics"
+      "How this layout renders"
     ) as ParentNode;
     expect(diagnosticsSection.querySelectorAll("select")).toHaveLength(0);
-    expect(diagnosticsSection.textContent).toContain("Preset");
+    expect(diagnosticsSection.textContent).toContain("Starter layout");
     expect(diagnosticsSection.textContent).toContain("Desktop");
     expect(diagnosticsSection.textContent).toContain("Tablet");
-    expect(diagnosticsSection.textContent).toContain("Mobile");
-    expect(diagnosticsSection.textContent).toContain("Gap 4 (1rem / 16px)");
-    expect(diagnosticsSection.textContent).toContain("reversed");
+    expect(diagnosticsSection.textContent).toContain("Phone");
+    expect(diagnosticsSection.textContent).toContain("Balanced");
+    expect(diagnosticsSection.textContent).toContain("right pane first");
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"mobile": "60-40"');
-    expect(snapshot?.textContent).toContain('"collapseMobile": "keep"');
-    expect(snapshot?.textContent).toContain('"verticalAlign": "center"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).not.toContain('"mobile"');
+    expect(view.container.textContent).not.toContain("raw JSON");
+    expect(view.container.textContent).not.toContain("CSS class");
+    expect(view.container.textContent).not.toContain("token");
+    expect(view.container.textContent).not.toContain("payload");
+    expect(view.container.textContent).not.toContain("gap-4");
+    expect(view.container.textContent).not.toContain("items-center");
+    expect(view.container.textContent).toContain("Saved layout summary");
   } finally {
     view.cleanup();
   }

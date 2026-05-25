@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 import {
   formatSplitLayoutRatioLabel,
   getSplitLayoutDiagnostics,
-  getSplitLayoutGapControlValue,
   getSplitLayoutGapOptions,
   getSplitLayoutRatioDisclosure,
   getSplitLayoutRatioSpans,
@@ -33,7 +32,12 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  type WidgetControlFieldProps,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: SplitLayoutVariantId;
@@ -63,8 +67,8 @@ const ratioOptions = variantOptions.map((option) => ({
 }));
 
 const collapseOptions: Array<{ id: SplitLayoutCollapseMobile; label: string }> = [
-  { id: "stack", label: "Stack" },
-  { id: "keep", label: "Keep split" },
+  { id: "stack", label: "Stack panes on phones" },
+  { id: "keep", label: "Keep two columns on phones" },
 ];
 
 const gapOptions = getSplitLayoutGapOptions();
@@ -73,10 +77,10 @@ const verticalAlignOptions: Array<{
   id: SplitLayoutVerticalAlign;
   label: string;
 }> = [
-  { id: "start", label: "Start" },
-  { id: "center", label: "Center" },
-  { id: "end", label: "End" },
-  { id: "stretch", label: "Stretch" },
+  { id: "start", label: "Top" },
+  { id: "center", label: "Middle" },
+  { id: "end", label: "Bottom" },
+  { id: "stretch", label: "Equal height" },
 ];
 
 function normalizeValue(value: SplitLayoutData, variant: string): SplitLayoutData {
@@ -219,20 +223,29 @@ function SplitRatioMiniature({ ratio }: { ratio: SplitLayoutRatio }) {
 function VariantCards({
   value,
   disclosure,
+  fieldProps,
   onChange,
 }: {
   value: SplitLayoutVariantId;
   disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>;
+  fieldProps?: WidgetControlFieldProps;
   onChange?: (next: string) => void;
 }) {
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
+      <div
+        id={fieldProps?.id}
+        aria-labelledby={fieldProps?.["aria-labelledby"]}
+        aria-describedby={fieldProps?.["aria-describedby"]}
+        className="space-y-2"
+        role="radiogroup"
+      >
         {variantOptions.map((option) => (
           <button
             key={option.id}
             type="button"
             onClick={() => onChange?.(option.id)}
+            aria-pressed={value === option.id}
             className={cn(
               "w-full rounded-lg border p-3 text-left transition",
               value === option.id
@@ -247,7 +260,7 @@ function VariantCards({
                 <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
               </div>
               <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
-                {value === option.id ? "Selected" : "Pick"}
+                {value === option.id ? "Base preset" : "Choose"}
               </Badge>
             </div>
             <div className="mt-3">
@@ -263,9 +276,9 @@ function VariantCards({
         data-split-ratio-override={disclosure.hasOverride ? "true" : "false"}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium">Current ratios</p>
+          <p className="text-sm font-medium">Current layout on devices</p>
           <Badge variant={disclosure.hasOverride ? "outline" : "default"}>
-            {disclosure.hasOverride ? "Preset override active" : "Preset aligned"}
+            {disclosure.hasOverride ? "Custom device layout" : "Matches starter layout"}
           </Badge>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -275,19 +288,11 @@ function VariantCards({
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {disclosure.hasExplicitMobile
-            ? "Mobile ratio is set explicitly for Keep split mode."
-            : "Mobile ratio currently follows the tablet ratio until you add a mobile override."}
+            ? "Phone layout has its own saved split."
+            : "Phone layout follows the tablet layout until you choose a phone-specific split."}
         </p>
       </div>
     </div>
-  );
-}
-
-function DiagnosticsSnapshot({ value }: { value: SplitLayoutData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
   );
 }
 
@@ -296,10 +301,10 @@ function getCollapseModeCopy(
   mobileRatio: SplitLayoutRatio
 ): string {
   if (collapseMobile === "keep") {
-    return `Keep split preserves a ${formatSplitLayoutRatioLabel(mobileRatio)} mobile ratio on phones.`;
+    return `Phones keep two columns using a ${formatSplitLayoutRatioLabel(mobileRatio)} split. This can feel tight on small screens.`;
   }
 
-  return "Stack makes both panes full width on phones and ignores the mobile ratio override.";
+  return "Phones show one pane per row, which is the safest layout for narrow screens.";
 }
 
 function getReverseCopy(
@@ -308,13 +313,23 @@ function getReverseCopy(
 ): string {
   if (collapseMobile === "keep") {
     return reverseOnMobile
-      ? "The split stays side by side on phones and the right pane currently appears first. Tablet and desktop keep the normal left/right order."
-      : "Enable this to swap the left/right pane order on phones while keeping the split ratio. Tablet and desktop keep the normal order.";
+      ? "The right pane is shown first on phones. Screen readers and keyboard navigation still follow the saved pane order."
+      : "Enable this to visually show the right pane first on phones. Screen readers and keyboard navigation still follow the saved pane order.";
   }
 
   return reverseOnMobile
-    ? "The right pane currently stacks above the left pane on phones. Tablet and desktop keep the normal left/right order."
-    : "Enable this to place the right pane above the left pane when the layout stacks on phones.";
+    ? "The right pane is shown above the left pane on phones. Screen readers and keyboard navigation still follow the saved pane order."
+    : "Enable this to visually place the right pane above the left pane on phones.";
+}
+
+function describePaneSplit(leftSpan: number, rightSpan: number): string {
+  if (leftSpan === rightSpan) {
+    return "left and right panes share the row evenly.";
+  }
+  if (leftSpan > rightSpan) {
+    return "the left pane is wider than the right pane.";
+  }
+  return "the right pane is wider than the left pane.";
 }
 
 export function SplitLayoutWizardEditor({
@@ -324,91 +339,61 @@ export function SplitLayoutWizardEditor({
   onVariantChange,
   onBlockPatch,
 }: WidgetEditorProps<SplitLayoutData>) {
-  const normalized = normalizeValue(value, variant);
-
   return (
     <div className="space-y-4">
       <EditorSection
         id="split-layout.wizard.quick-start"
         mode="wizard"
         role="setup"
-        title="Split quick start"
-        description="Choose a safe starting split. Visual owns ongoing ratio and behavior editing."
+        title="Choose a starter split"
+        description="Use this once to seed the pane layout. Visual owns day-to-day device behavior and spacing."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Split preset</p>
-          <Select
-            value={resolveSplitLayoutVariant(variant)}
-            onValueChange={(next) =>
-              applyVariantDataPatch(
-                next as SplitLayoutVariantId,
-                buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
-                onChange,
-                onVariantChange,
-                onBlockPatch
-              )
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select split preset" />
-            </SelectTrigger>
-            <SelectContent>
-              {ratioOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="split-layout.wizard.starter-layout"
+          label="Starter layout"
+          path="variant"
+        >
+          {(fieldProps) => (
+            <Select
+              value={resolveSplitLayoutVariant(variant)}
+              onValueChange={(next) =>
+                applyVariantDataPatch(
+                  next as SplitLayoutVariantId,
+                  buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+                  onChange,
+                  onVariantChange,
+                  onBlockPatch
+                )
+              }
+            >
+              <SelectTrigger {...fieldProps}>
+                <SelectValue placeholder="Select starter layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {ratioOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Mobile behavior</p>
-          <Select
-            value={normalized.collapseMobile ?? "stack"}
-            onValueChange={(next) =>
-              updateMeta(value, variant, onChange, {
-                collapseMobile: next as SplitLayoutCollapseMobile,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Mobile behavior" />
-            </SelectTrigger>
-            <SelectContent>
-              {collapseOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div
+          className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
+          data-widget-control="split-layout.wizard.next-step"
+          data-widget-control-ownership="preview"
+        >
+          After choosing the starter layout, use Visual to tune phone layout, spacing, and pane
+          alignment.
         </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Base gap</p>
-          <Select
-            value={getSplitLayoutGapControlValue(normalized.gap)}
-            onValueChange={(next) =>
-              updateMeta(value, variant, onChange, { gap: next as SplitLayoutGapControlValue })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          After choosing the split, add widgets to the left and right panes from Structure or the
-          insert controls.
+        <div
+          className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
+          data-widget-control="split-layout.wizard.structure-guidance"
+          data-widget-control-ownership="preview"
+        >
+          Add widgets to the left and right panes from Structure or the insert controls.
         </div>
       </EditorSection>
     </div>
@@ -434,69 +419,84 @@ export function SplitLayoutVisualEditor({
         id="split-layout.visual.variant-ratio"
         mode="visual"
         role="layout"
-        title="Variant and pane ratio"
-        description="Pick the split preset, then confirm the effective ratios across breakpoints."
+        title="Pane layout"
+        description="Choose the base pane shape and tune the desktop and tablet layout."
       >
-        <VariantCards
-          value={resolvedVariant}
-          disclosure={disclosure}
-          onChange={(next) =>
-            applyVariantDataPatch(
-              next as SplitLayoutVariantId,
-              buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
-        />
+        <WidgetControlRow id="split-layout.visual.base-preset" label="Base layout" path="variant">
+          {(fieldProps) => (
+            <VariantCards
+              value={resolvedVariant}
+              disclosure={disclosure}
+              fieldProps={fieldProps}
+              onChange={(next) =>
+                applyVariantDataPatch(
+                  next as SplitLayoutVariantId,
+                  buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+                  onChange,
+                  onVariantChange,
+                  onBlockPatch
+                )
+              }
+            />
+          )}
+        </WidgetControlRow>
 
         <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Desktop ratio</p>
-            <Select
-              value={normalized.ratio?.desktop ?? resolvedVariant}
-              onValueChange={(next) =>
-                updateRatio(value, variant, onChange, {
-                  desktop: next as SplitLayoutRatio,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Desktop ratio" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratioOptions.map((option) => (
-                  <SelectItem key={`desktop-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id="split-layout.visual.desktop-ratio"
+            label="Desktop layout"
+            path="ratio.desktop"
+          >
+            {(fieldProps) => (
+              <Select
+                value={normalized.ratio?.desktop ?? resolvedVariant}
+                onValueChange={(next) =>
+                  updateRatio(value, variant, onChange, {
+                    desktop: next as SplitLayoutRatio,
+                  })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Desktop layout" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ratioOptions.map((option) => (
+                    <SelectItem key={`desktop-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Tablet ratio</p>
-            <Select
-              value={normalized.ratio?.tablet ?? splitLayoutDefaults.ratio?.tablet ?? "50-50"}
-              onValueChange={(next) =>
-                updateRatio(value, variant, onChange, {
-                  tablet: next as SplitLayoutRatio,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tablet ratio" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratioOptions.map((option) => (
-                  <SelectItem key={`tablet-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id="split-layout.visual.tablet-ratio"
+            label="Tablet layout"
+            path="ratio.tablet"
+          >
+            {(fieldProps) => (
+              <Select
+                value={normalized.ratio?.tablet ?? splitLayoutDefaults.ratio?.tablet ?? "50-50"}
+                onValueChange={(next) =>
+                  updateRatio(value, variant, onChange, {
+                    tablet: next as SplitLayoutRatio,
+                  })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Tablet layout" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ratioOptions.map((option) => (
+                    <SelectItem key={`tablet-${option.id}`} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
 
@@ -504,146 +504,200 @@ export function SplitLayoutVisualEditor({
         id="split-layout.visual.mobile-behavior"
         mode="visual"
         role="layout"
-        title="Mobile collapse behavior"
-        description="Define how the split behaves on phones and how reverse ordering applies."
+        title="Phone behavior"
+        description="Choose whether phone visitors see one stacked column or a preserved two-pane layout."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Collapse mode</p>
-          <Select
-            value={normalized.collapseMobile ?? "stack"}
-            onValueChange={(next) =>
-              updateMeta(value, variant, onChange, {
-                collapseMobile: next as SplitLayoutCollapseMobile,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Collapse mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {collapseOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {getCollapseModeCopy(normalized.collapseMobile ?? "stack", disclosure.mobile)}
-          </p>
-        </div>
-
-        {mobileKeep ? (
-          <div className="space-y-2" data-split-mobile-ratio-control="visible">
-            <p className="text-sm font-medium">Mobile ratio</p>
+        <WidgetControlRow
+          id="split-layout.visual.phone-layout"
+          label="Phone layout"
+          path="collapseMobile"
+        >
+          {(fieldProps) => (
             <Select
-              value={normalized.ratio?.mobile ?? normalized.ratio?.tablet ?? resolvedVariant}
-              onValueChange={(next) =>
-                updateRatio(value, variant, onChange, {
-                  mobile: next as SplitLayoutRatio,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Mobile ratio" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratioOptions.map((option) => (
-                  <SelectItem key={`mobile-${option.id}`} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Use this only when phones should keep a different split than tablets.
-            </p>
-          </div>
-        ) : (
-          <div
-            className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
-            data-split-mobile-ratio-control="stack-note"
-          >
-            Stack mode always uses a single-column mobile layout, so the mobile ratio stays
-            informational only.
-          </div>
-        )}
-
-        <div className="rounded-md border p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Reverse on mobile</p>
-              <p className="text-xs text-muted-foreground" data-split-reverse-copy>
-                {getReverseCopy(
-                  normalized.collapseMobile ?? "stack",
-                  Boolean(normalized.reverseOnMobile)
-                )}
-              </p>
-            </div>
-            <Switch
-              checked={Boolean(normalized.reverseOnMobile)}
-              onCheckedChange={(checked) =>
-                updateMeta(value, variant, onChange, { reverseOnMobile: checked })
-              }
-            />
-          </div>
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        id="split-layout.visual.spacing-alignment"
-        mode="visual"
-        role="layout"
-        title="Spacing and vertical alignment"
-        description="Control the space between panes and how their content aligns in the row."
-      >
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap</p>
-            <Select
-              value={diagnostics.gap.controlValue}
-              onValueChange={(next) =>
-                updateMeta(value, variant, onChange, { gap: next as SplitLayoutGapControlValue })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={`gap-${option.value}`} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground" data-split-gap-copy>
-              {diagnostics.gap.description}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Vertical align</p>
-            <Select
-              value={normalized.verticalAlign ?? "stretch"}
+              value={normalized.collapseMobile ?? "stack"}
               onValueChange={(next) =>
                 updateMeta(value, variant, onChange, {
-                  verticalAlign: next as SplitLayoutVerticalAlign,
+                  collapseMobile: next as SplitLayoutCollapseMobile,
                 })
               }
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Vertical align" />
+              <SelectTrigger {...fieldProps}>
+                <SelectValue placeholder="Phone layout" />
               </SelectTrigger>
               <SelectContent>
-                {verticalAlignOptions.map((option) => (
+                {collapseOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          )}
+        </WidgetControlRow>
+        <div
+          className="text-xs text-muted-foreground"
+          data-widget-control="split-layout.visual.phone-layout-preview"
+          data-widget-control-ownership="preview"
+        >
+          <p className="text-xs text-muted-foreground">
+            {getCollapseModeCopy(normalized.collapseMobile ?? "stack", disclosure.mobile)}
+          </p>
+        </div>
+
+        {mobileKeep ? (
+          <WidgetControlRow
+            id="split-layout.visual.phone-ratio"
+            label="Phone split"
+            path="ratio.mobile"
+            className="space-y-2"
+          >
+            {(fieldProps) => (
+              <div data-split-mobile-ratio-control="visible">
+                <Select
+                  value={normalized.ratio?.mobile ?? normalized.ratio?.tablet ?? resolvedVariant}
+                  onValueChange={(next) =>
+                    updateRatio(value, variant, onChange, {
+                      mobile: next as SplitLayoutRatio,
+                    })
+                  }
+                >
+                  <SelectTrigger {...fieldProps}>
+                    <SelectValue placeholder="Phone split" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ratioOptions.map((option) => (
+                      <SelectItem key={`mobile-${option.id}`} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </WidgetControlRow>
+        ) : (
+          <div
+            className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
+            data-widget-control="split-layout.visual.phone-ratio-preview"
+            data-widget-control-ownership="preview"
+            data-split-mobile-ratio-control="stack-note"
+          >
+            Stacked phone layout does not need a phone split. Each pane gets the full screen width.
           </div>
+        )}
+        {mobileKeep ? (
+          <div
+            className="text-xs text-muted-foreground"
+            data-widget-control="split-layout.visual.phone-ratio-preview"
+            data-widget-control-ownership="preview"
+          >
+            <p className="text-xs text-muted-foreground">
+              Use this only when phones should keep a different two-column split than tablets.
+            </p>
+          </div>
+        ) : null}
+
+        <WidgetControlRow
+          id="split-layout.visual.reverse-phone-order"
+          label="Show right pane first on phones"
+          path="reverseOnMobile"
+        >
+          {(fieldProps) => (
+            <div className="rounded-md border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground" data-split-reverse-copy>
+                    {getReverseCopy(
+                      normalized.collapseMobile ?? "stack",
+                      Boolean(normalized.reverseOnMobile)
+                    )}
+                  </p>
+                </div>
+                <Switch
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                  checked={Boolean(normalized.reverseOnMobile)}
+                  onCheckedChange={(checked) =>
+                    updateMeta(value, variant, onChange, { reverseOnMobile: checked })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </WidgetControlRow>
+      </EditorSection>
+
+      <EditorSection
+        id="split-layout.visual.spacing-alignment"
+        mode="visual"
+        role="layout"
+        title="Spacing and alignment"
+        description="Control the space between panes and how their content lines up."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <WidgetControlRow
+            id="split-layout.visual.pane-spacing"
+            label="Space between panes"
+            path="gap"
+          >
+            {(fieldProps) => (
+              <Select
+                value={diagnostics.gap.controlValue}
+                onValueChange={(next) =>
+                  updateMeta(value, variant, onChange, { gap: next as SplitLayoutGapControlValue })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Space between panes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gapOptions.map((option) => (
+                    <SelectItem key={`gap-${option.value}`} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <div
+            className="text-xs text-muted-foreground"
+            data-widget-control="split-layout.visual.pane-spacing-preview"
+            data-widget-control-ownership="preview"
+          >
+            <p className="text-xs text-muted-foreground" data-split-gap-copy>
+              {diagnostics.gap.description}
+            </p>
+          </div>
+
+          <WidgetControlRow
+            id="split-layout.visual.content-height-alignment"
+            label="Content height alignment"
+            path="verticalAlign"
+          >
+            {(fieldProps) => (
+              <Select
+                value={normalized.verticalAlign ?? "stretch"}
+                onValueChange={(next) =>
+                  updateMeta(value, variant, onChange, {
+                    verticalAlign: next as SplitLayoutVerticalAlign,
+                  })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Content height alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {verticalAlignOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
 
@@ -656,7 +710,7 @@ export function SplitLayoutVisualEditor({
       >
         <p className="text-xs text-muted-foreground">
           Target the left or right pane from Structure to add or move nested widgets without
-          guessing slot ids.
+          guessing internal placement names.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
           Empty-pane guidance appears only in admin preview surfaces, never in the public runtime.
@@ -667,12 +721,11 @@ export function SplitLayoutVisualEditor({
 }
 
 export function SplitLayoutAdvancedEditor({ value, variant }: WidgetEditorProps<SplitLayoutData>) {
-  const normalized = normalizeValue(value, variant);
   const diagnostics = getSplitLayoutDiagnostics(value, variant);
   const mobileSummary =
     diagnostics.mobile.mode === "stack"
-      ? `${diagnostics.mobile.reversed ? "Reversed stack" : "Normal stack"} with one column per pane.`
-      : `${formatSplitLayoutRatioLabel(diagnostics.mobile.ratio ?? diagnostics.ratios.mobile)} split on phones with ${diagnostics.mobile.reversed ? "reversed" : "normal"} pane order.`;
+      ? `${diagnostics.mobile.reversed ? "Right pane first" : "Left pane first"} with one pane per row on phones.`
+      : `${formatSplitLayoutRatioLabel(diagnostics.mobile.ratio ?? diagnostics.ratios.mobile)} split on phones with ${diagnostics.mobile.reversed ? "right pane first" : "left pane first"}.`;
 
   return (
     <div className="space-y-4">
@@ -680,66 +733,77 @@ export function SplitLayoutAdvancedEditor({ value, variant }: WidgetEditorProps<
         id="split-layout.advanced.responsive-diagnostics"
         mode="advanced"
         role="diagnostics"
-        title="Responsive diagnostics"
-        description="Visual owns editing. Advanced stays read-only and explains the resolved breakpoint contract."
+        title="How this layout renders"
+        description="Visual owns editing. Advanced only explains the saved layout in read-only form."
       >
         <div className="space-y-2" data-split-advanced-diagnostics>
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.preset"
-            label="Preset"
+            label="Starter layout"
             path="variant"
             value={
               diagnostics.ratios.desktop === diagnostics.variant &&
               diagnostics.ratios.tablet === diagnostics.variant &&
               diagnostics.ratios.mobile === diagnostics.variant
-                ? `${formatSplitLayoutRatioLabel(diagnostics.variant)} preset aligned across all breakpoints.`
-                : `${formatSplitLayoutRatioLabel(diagnostics.variant)} preset with breakpoint overrides.`
+                ? `${formatSplitLayoutRatioLabel(diagnostics.variant)} starter layout is still used on every device size.`
+                : `${formatSplitLayoutRatioLabel(diagnostics.variant)} starter layout has device-specific changes.`
             }
           />
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.desktop"
             label="Desktop"
             path="ratio.desktop"
-            value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.desktop)} (${diagnostics.desktop.leftSpan}/${diagnostics.desktop.rightSpan} columns)`}
+            value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.desktop)}: ${describePaneSplit(diagnostics.desktop.leftSpan, diagnostics.desktop.rightSpan)}`}
           />
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.tablet"
             label="Tablet"
             path="ratio.tablet"
-            value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.tablet)} (${diagnostics.tablet.leftSpan}/${diagnostics.tablet.rightSpan} columns)`}
+            value={`${formatSplitLayoutRatioLabel(diagnostics.ratios.tablet)}: ${describePaneSplit(diagnostics.tablet.leftSpan, diagnostics.tablet.rightSpan)}`}
           />
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.mobile"
-            label="Mobile"
+            label="Phone"
             path="ratio.mobile"
             value={mobileSummary}
           />
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.gap"
-            label="Gap"
+            label="Space between panes"
             path="gap"
-            value={`${diagnostics.gap.label} using ${diagnostics.gap.className}. ${diagnostics.gap.description}`}
+            value={`${diagnostics.gap.label}. ${diagnostics.gap.description}`}
           />
           <ReadonlyWidgetSummaryRow
             id="split-layout.advanced.vertical-align"
-            label="Vertical align"
+            label="Content height alignment"
             path="verticalAlign"
-            value={`${diagnostics.verticalAlign.label} using ${diagnostics.verticalAlign.className}.`}
+            value={diagnostics.verticalAlign.label}
           />
         </div>
       </EditorSection>
 
       <EditorSection
-        id="split-layout.advanced.payload"
+        id="split-layout.advanced.saved-layout-summary"
         mode="advanced"
         role="diagnostics"
-        title="Raw payload snapshot"
-        description="Runtime-oriented JSON view of normalized Split Layout data."
+        title="Saved layout summary"
+        description="Read-only support summary for saved device layout and phone order."
       >
         <ReadonlyWidgetSummaryRow
-          id="split-layout.advanced.normalized-payload"
-          label="Normalized payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          id="split-layout.advanced.saved-device-layouts"
+          label="Device layouts"
+          path="ratio.desktop"
+          value={`Desktop ${formatSplitLayoutRatioLabel(diagnostics.ratios.desktop)}, tablet ${formatSplitLayoutRatioLabel(diagnostics.ratios.tablet)}, phone ${diagnostics.mobile.mode === "stack" ? "stacked" : formatSplitLayoutRatioLabel(diagnostics.ratios.mobile)}.`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="split-layout.advanced.saved-phone-order"
+          label="Phone order"
+          path="reverseOnMobile"
+          value={
+            diagnostics.mobile.reversed
+              ? "Right pane is shown first on phones."
+              : "Left pane is shown first on phones."
+          }
         />
       </EditorSection>
     </div>

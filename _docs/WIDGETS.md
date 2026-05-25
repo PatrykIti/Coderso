@@ -132,7 +132,9 @@ Zasady:
   `divider`) stosuja po TASK-336-14 zaostrzona polityke: `Wizard` jest
   setup-only, `Visual` wlada codziennymi layout/style controls przez presety,
   swatche, selecty i slidery, a `Advanced` pokazuje read-only summaries oraz
-  `Raw payload snapshot`. Dopuszczalne legacy compatibility hooks musza byc
+  bezpieczne support summaries. Po TASK-336-19 `split-layout` nie pokazuje juz
+  widocznych developer-facing saved-data snapshots ani runtime implementation
+  labels w `Advanced`. Dopuszczalne legacy compatibility hooks musza byc
   `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
   UX.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
@@ -191,7 +193,7 @@ Zasady:
 |---|---|---|
 | `section` | variant, heading, semantics/anchor, width, spacing, surface, borders, background media | read-only layout/surface/semantics summaries and normalized payload |
 | `grid-columns` | variant, column structure/labels/spans, gaps, cardized surface, per-column behavior | read-only span totals, slot drift, cardized state, override summary, normalized payload |
-| `split-layout` | pane ratio, mobile collapse, gap, alignment, slot guidance | read-only split/collapse/gap/alignment diagnostics and normalized payload |
+| `split-layout` | starter layout, pane ratio, phone layout, spacing, alignment, slot guidance | read-only human split/phone/spacing/alignment diagnostics and saved layout summary without developer-facing implementation labels |
 | `stack` | responsive direction, gap, align, justify, wrap | read-only breakpoint flow summaries and normalized payload |
 | `spacer` | height presets/tokens and editor guide | read-only computed desktop/tablet/mobile heights and normalized payload |
 | `divider` | variant/label, line, width presets, color swatch, spacing tokens | read-only line/width/spacing/label summaries, normalization note, normalized payload |

@@ -48,7 +48,8 @@
       "publicPath": "/test-split-layout-0516",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "cssChecks": ["body-overflow", "empty-fixture"]
+      "cssChecks": ["body-overflow", "empty-fixture"],
+      "notes": "Completed daily fixture validates Visual and Advanced; one-time Wizard is covered by TASK-336-16 lifecycle smoke and split-layout focused Vitest."
     },
     {
       "widgetType": "tabs",

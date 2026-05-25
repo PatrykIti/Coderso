@@ -11,7 +11,8 @@
   Stack, Spacer, and Divider.
 - Standardized the layout widget ownership model: Wizard remains setup-only,
   Visual owns daily layout/style authoring, and Advanced is read-only
-  diagnostics plus normalized payload snapshots.
+  diagnostics plus normalized payload snapshots where still allowed by the
+  widget-specific contract.
 - Preserved Section/Grid Columns truthfulness fixes while removing unallowlisted
   writable Advanced duplicates.
 
@@ -20,8 +21,10 @@
   flows with bounded presets, selects, swatches, sliders, and diagnostic copy.
 - Kept legacy compatibility hooks hidden, `aria-hidden`, and out of the tab
   order so nontechnical users are not asked for webdeveloper-specific values.
-- Added raw payload snapshots and technical summaries for support/debugging
-  without making Advanced a second daily editing surface.
+- Added support/debugging summaries without making Advanced a second daily
+  editing surface. Split Layout's visible raw payload snapshot was later
+  superseded by TASK-336-19 because its stricter beginner-safe contract forbids
+  visible raw JSON/CSS class names.
 
 ### QA and documentation
 - Added focused editor-contract, widget render, and UI wave coverage for the

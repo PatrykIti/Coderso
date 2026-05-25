@@ -41,8 +41,8 @@ Pierwotny audit wykrył trzy klasy problemów:
 | BUG-04 | `Reverse on mobile` lacks truthful context in `stack` versus `keep` | `fixed` | TASK-285-01 | Visual now renders mode-aware helper copy in `[data-split-reverse-copy]` and ties the explanation to the selected collapse mode; covered in `split-layout-editor-wave.test.tsx` |
 | ISSUE-01 | Variant cards and ratio dropdowns can contradict each other | `fixed` | TASK-256-05-02 + TASK-285-02 | Variant cards now reapply the current preset atomically, render breakpoint disclosure in `[data-split-ratio-summary]`, and show explicit preset-override state |
 | ISSUE-02 | `Pane slots` section is redundant and not actionable | `fixed` | TASK-285-03 | Visual now uses a single `Pane content` section with Structure/insert guidance instead of duplicate static slot copy |
-| ISSUE-03 | Advanced duplicates Visual instead of owning a clear role | `fixed` | TASK-285-04 | Advanced is now read-only `Responsive diagnostics` plus a normalized payload snapshot, with no duplicate editable ratio/gap/align controls |
-| ISSUE-04 | Gap labels do not show px/rem context | `fixed` | TASK-285-05 | Gap options now include explicit scale labels such as `Gap 6 (1.5rem / 24px)` and helper copy explains the pane spacing effect |
+| ISSUE-03 | Advanced duplicates Visual instead of owning a clear role | `fixed`, tightened by TASK-336-19 | TASK-285-04 + TASK-336-19 | Advanced is read-only; TASK-336-19 replaced the previous implementation snapshot with human support summaries and kept no duplicate editable ratio/gap/align controls |
+| ISSUE-04 | Gap labels do not show px/rem context | `fixed`, superseded by beginner-safe labels | TASK-285-05 + TASK-336-19 | TASK-285 added exact scale context; TASK-336-19 later replaced visible rem/px/token-style labels with friendly spacing labels while preserving legacy zero-gap compatibility |
 | ISSUE-05 | Variant cards have no graphical preview | `fixed` | TASK-285-02 | Visual cards now render `data-split-variant-preview` miniatures tied to owner-resolved pane spans |
 | ISSUE-06 | Empty pane placeholder gives no next-step guidance | `fixed` | TASK-285-03 + TASK-256-03 | Preview-only empty panes now instruct authors to add a widget from Structure or insert controls, while public runtime stays free of admin-only placeholder copy |
 
@@ -78,8 +78,8 @@ Pierwotny audit wykrył trzy klasy problemów:
 ### TASK-285-05
 
 - Gap labels now expose scale context in rem and px.
-- Legacy `Gap 0` payloads remain valid, but the editor resolves them through the
-  canonical `None (0px)` control state and helper copy.
+- Older zero-gap payloads remain valid, but the editor resolves them through
+  the canonical no-gap control state and beginner-facing helper copy.
 
 ## 5. Shared closure notes
 
@@ -89,6 +89,10 @@ Pierwotny audit wykrył trzy klasy problemów:
   consumes the landed `none`/`0` decision and explains it locally.
 - No additional Split Layout findings remain deferred after the 2026-05-21
   closure pass.
+- TASK-336-19 later tightened the shared beginner-safe contract: Split Layout
+  Advanced no longer shows developer-facing saved-data snapshots or
+  implementation labels, and Visual uses friendly spacing/alignment labels
+  instead of visible technical scale labels.
 
 ## 6. Validation evidence
 
