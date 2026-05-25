@@ -131,6 +131,8 @@ Advanced must not duplicate Visual as a second design panel.
 - `background.color`, `background.gradient`, and media `overlay` can be cleared
   from the editor; clear removes the nested key instead of saving
   `transparent` or an empty string.
+- Media overlay authoring uses color and strength controls rather than raw
+  `rgba(...)` text.
 - `style.primaryButtonBg`, `style.secondaryButtonBg`, and related CTA color
   fields are clearable without changing CTA labels or links.
 - A deliberate user-entered `transparent` value remains valid authored data and

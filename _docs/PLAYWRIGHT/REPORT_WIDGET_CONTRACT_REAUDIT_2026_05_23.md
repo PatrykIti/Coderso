@@ -1013,6 +1013,24 @@ HTML authoring drift.
   Playwright rerun. A final Claude confirmation attempt timed out after 180
   seconds without new output.
 
+## TASK-336-19 Hero Overlay Authoring Evidence (2026-05-25)
+
+The nineteenth TASK-336-19 implementation family targets Hero media overlay raw
+CSS color authoring drift.
+
+- Hero Visual no longer exposes raw `rgba(...)` text inputs for `media.overlay`
+  or `background.media.overlay`.
+- Overlay authoring now uses color and strength controls while preserving the
+  stored overlay string contract for runtime rendering.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-overlay-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only review timed out after 180 seconds without output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

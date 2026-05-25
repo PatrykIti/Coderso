@@ -187,6 +187,11 @@ const linearGradientPattern =
 const defaultGradientStart = "#0f172a";
 const defaultGradientEnd = "#475569";
 const defaultGradientAngle = 135;
+const defaultInlineOverlayColor = "#000000";
+const defaultInlineOverlayOpacity = 0.2;
+const defaultBackgroundOverlayOpacity = 0.25;
+const rgbaPattern =
+  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 const heroSocialProofAvatarLimit = 5;
 const imageUrlPattern = /\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/i;
 const videoUrlPattern = /\.(?:m4v|mov|mp4|ogg|webm)(?:[?#].*)?$/i;
@@ -1344,6 +1349,113 @@ function GradientField({
   );
 }
 
+const clampOverlayOpacity = (value: number, fallback: number) => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(0.9, Math.max(0, value));
+};
+
+const parseOverlayOpacity = (value: string | undefined, fallback: number) => {
+  const match = value?.trim().match(rgbaPattern);
+  if (!match) return fallback;
+  const alpha = match[4];
+  if (typeof alpha !== "string" || alpha.length === 0) return 1;
+  return clampOverlayOpacity(Number.parseFloat(alpha), fallback);
+};
+
+const formatOverlayColor = (color: string, opacity: number) => {
+  const hex = resolveColorPickerValue(color, defaultInlineOverlayColor).replace("#", "");
+  const expanded =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((part) => part + part)
+          .join("")
+      : hex.padEnd(6, "0").slice(0, 6);
+  const red = Number.parseInt(expanded.slice(0, 2), 16);
+  const green = Number.parseInt(expanded.slice(2, 4), 16);
+  const blue = Number.parseInt(expanded.slice(4, 6), 16);
+  const alpha = clampOverlayOpacity(opacity, defaultInlineOverlayOpacity).toFixed(2);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
+function HeroOverlayField({
+  id,
+  label,
+  value,
+  onChange,
+  onClear,
+  defaultOpacity,
+}: {
+  id: string;
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+  onClear: () => void;
+  defaultOpacity: number;
+}) {
+  const color = resolveColorPickerValue(value, defaultInlineOverlayColor);
+  const opacity = parseOverlayOpacity(value, defaultOpacity);
+  const strength = Math.round(opacity * 100);
+  const updateColor = (nextColor: string) => onChange(formatOverlayColor(nextColor, opacity));
+  const updateOpacity = (nextOpacity: string) =>
+    onChange(formatOverlayColor(color, Number(nextOpacity) / 100));
+
+  return (
+    <WidgetControlRow
+      id={id}
+      label={label}
+      actions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={!hasClearableFieldValue(value)}
+        >
+          Clear
+        </Button>
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-3">
+          <div
+            className="h-10 rounded-md border border-border/70"
+            style={{ backgroundColor: formatOverlayColor(color, opacity) }}
+          />
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Overlay color</p>
+              <Input
+                id={fieldProps.id}
+                type="color"
+                value={color}
+                onChange={(event) => updateColor(event.target.value)}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">Overlay strength</p>
+                <span className="text-xs text-muted-foreground">{strength}%</span>
+              </div>
+              <Input
+                type="range"
+                min={0}
+                max={90}
+                step={5}
+                value={strength}
+                onChange={(event) => updateOpacity(event.target.value)}
+                aria-label={`${label} strength`}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </WidgetControlRow>
+  );
+}
+
 export function HeroVisualEditor({
   value,
   onChange,
@@ -2411,32 +2523,14 @@ export function HeroVisualEditor({
               </WidgetControlRow>
             ) : null}
             {selectedVariant !== "centered" || mediaType === "image" ? (
-              <WidgetControlRow
+              <HeroOverlayField
                 id="hero.media.overlay"
                 label="Media overlay"
-                actions={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => clearMediaField("overlay")}
-                    disabled={!hasClearableFieldValue(media.overlay)}
-                  >
-                    Clear
-                  </Button>
-                }
-              >
-                {(fieldProps) => (
-                  <Input
-                    id={fieldProps.id}
-                    value={media.overlay ?? ""}
-                    onChange={(event) => updateMedia({ overlay: event.target.value })}
-                    placeholder="rgba(0,0,0,0.2)"
-                    aria-labelledby={fieldProps["aria-labelledby"]}
-                    aria-describedby={fieldProps["aria-describedby"]}
-                  />
-                )}
-              </WidgetControlRow>
+                value={media.overlay}
+                onChange={(next) => updateMedia({ overlay: next })}
+                onClear={() => clearMediaField("overlay")}
+                defaultOpacity={defaultInlineOverlayOpacity}
+              />
             ) : null}
           </>
         ) : null}
@@ -3212,32 +3306,14 @@ export function HeroVisualEditor({
                 />
               </>
             ) : null}
-            <WidgetControlRow
+            <HeroOverlayField
               id="hero.background.media.overlay"
               label="Background media overlay"
-              actions={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => clearBackgroundMediaField("overlay")}
-                  disabled={!hasClearableFieldValue(backgroundMedia.overlay)}
-                >
-                  Clear
-                </Button>
-              }
-            >
-              {(fieldProps) => (
-                <Input
-                  id={fieldProps.id}
-                  value={backgroundMedia.overlay ?? ""}
-                  onChange={(event) => updateBackgroundMedia({ overlay: event.target.value })}
-                  placeholder="rgba(0,0,0,0.25)"
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-              )}
-            </WidgetControlRow>
+              value={backgroundMedia.overlay}
+              onChange={(next) => updateBackgroundMedia({ overlay: next })}
+              onClear={() => clearBackgroundMediaField("overlay")}
+              defaultOpacity={defaultBackgroundOverlayOpacity}
+            />
           </>
         ) : null}
         <div className="space-y-2">

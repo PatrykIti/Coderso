@@ -381,6 +381,17 @@ read-only diagnostics. It added these concrete cleanup requirements:
   fallback, and silent sanitizer drift; those findings were addressed before
   the final Playwright rerun. A final Claude confirmation attempt timed out
   after 180 seconds without new output.
+- In Progress (2026-05-25): nineteenth implementation family continues Hero
+  cleanup with media overlay authoring. Hero Visual `media.overlay` and
+  `background.media.overlay` now use overlay color plus strength controls
+  instead of raw `rgba(...)` text inputs while preserving the stored overlay
+  string contract. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-overlay-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only review timed out after 180 seconds
+  without output.
 
 ## Files to Change
 

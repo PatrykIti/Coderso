@@ -1535,6 +1535,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(findSelectsByOptions(view.container, ["none", "image", "video"])[0], "video");
     });
     expect(findInputByPlaceholder(view.container, "https://")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)")).toBeUndefined();
     expect(findSelectsByOptions(view.container, ["library", "external"])).toHaveLength(0);
     expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
@@ -1546,7 +1547,12 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         findTextareaByPlaceholder(view.container, "Optional context for screen readers"),
         "Launch walkthrough"
       );
-      setInputValue(findInputByPlaceholder(view.container, "rgba(0,0,0,0.2)"), "rgba(0,0,0,0.4)");
+      setInputValue(
+        view.container.querySelector(
+          '[data-widget-control="hero.media.overlay"] input[type="range"]'
+        ),
+        "40"
+      );
       setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
     });
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
@@ -1671,7 +1677,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           title: "Intro clip",
           description: "Launch walkthrough",
           ratio: "1:1",
-          overlay: "rgba(0,0,0,0.4)",
+          overlay: "rgba(0, 0, 0, 0.40)",
         }),
         layout: expect.objectContaining({
           align: "left",
