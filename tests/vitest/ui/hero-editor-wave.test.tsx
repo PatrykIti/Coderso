@@ -333,6 +333,34 @@ vi.mock("@/ui/media/MediaPicker", () => ({
   ),
 }));
 
+vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
+  PostRichTextAdapter: ({
+    value,
+    onChange,
+    placeholder,
+    id,
+    ariaLabelledBy,
+    ariaDescribedBy,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    id?: string;
+    ariaLabelledBy?: string;
+    ariaDescribedBy?: string;
+  }) => (
+    <textarea
+      id={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      data-rich-text-adapter="true"
+    />
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -820,6 +848,18 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
   try {
     await flush();
 
+    expect(view.container.textContent).toContain("Styled headline");
+    expect(view.container.textContent).toContain("Styled body copy");
+    expect(view.container.textContent).not.toContain("Rich headline HTML");
+    expect(view.container.textContent).not.toContain("Rich body HTML");
+    expect(view.container.textContent).not.toContain("Allowed tags");
+    expect(view.container.querySelectorAll("[data-rich-text-adapter='true']")).toHaveLength(2);
+    expect(
+      view.container
+        .querySelector('[data-widget-control="hero.richHeadline"] textarea')
+        ?.getAttribute("aria-labelledby")
+    ).toContain("hero-richheadline-label");
+
     React.act(() => {
       setTextareaValue(
         view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
@@ -869,6 +909,22 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
         }),
       })
     );
+
+    React.act(() => {
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richHeadline"] textarea'),
+        "<p><br></p>"
+      );
+      setTextareaValue(
+        view.container.querySelector('[data-widget-control="hero.richBody"] textarea'),
+        '<p>Keep this<img src="/inline.jpg" /></p>'
+      );
+    });
+
+    expect(latestValue.richHeadline).toBe("");
+    expect(latestValue.richBody).toBe("<p>Keep this</p>");
+    expect(view.container.textContent).toContain("Formatting adjusted");
+    expect(view.container.textContent).toContain("Pasted images are removed from styled copy.");
   } finally {
     view.cleanup();
   }

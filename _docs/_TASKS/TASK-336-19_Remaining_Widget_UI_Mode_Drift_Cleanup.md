@@ -368,6 +368,19 @@ read-only diagnostics. It added these concrete cleanup requirements:
   asset save edge cases; those were addressed before validation. Claude
   read-only review for this avatar-only slice timed out after 240 seconds
   without output.
+- In Progress (2026-05-25): eighteenth implementation family continues Hero
+  cleanup with rich copy authoring. Hero Visual `richHeadline` and `richBody`
+  now use the shared rich-text toolbar instead of raw HTML textareas while
+  preserving the existing sanitized runtime fields. Focused Vitest evidence
+  currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-rich-copy-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only review flagged aria linkage, empty-rich
+  fallback, and silent sanitizer drift; those findings were addressed before
+  the final Playwright rerun. A final Claude confirmation attempt timed out
+  after 180 seconds without new output.
 
 ## Files to Change
 

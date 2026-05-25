@@ -29,6 +29,7 @@ import {
   type HeroPresetSetting,
 } from "@/services/userSettingsClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 
 import type {
   HeroBadgePlacement,
@@ -39,6 +40,10 @@ import type {
   HeroSocialProofAvatar,
 } from "../../../../widgets/core/hero";
 import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
+import {
+  sanitizeRichTextHtmlWithDiagnostics,
+  type RichTextSanitizerDiagnostic,
+} from "../../../../widgets/core/richTextSection";
 import type {
   EditorMode,
   WidgetEditorProps,
@@ -691,6 +696,65 @@ function HeroAvatarAssetField({
   );
 }
 
+const isEmptyRichTextHtml = (html: string) =>
+  html
+    .replace(/<br\s*\/?>/gi, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .trim().length === 0;
+
+const normalizeHeroRichTextEditorValue = (next: string) => {
+  const result = sanitizeRichTextHtmlWithDiagnostics(next);
+  return {
+    html: result.html && isEmptyRichTextHtml(result.html) ? "" : result.html,
+    diagnostics: result.diagnostics,
+  };
+};
+
+function formatHeroRichTextSanitizerMessage(diagnostic: RichTextSanitizerDiagnostic) {
+  if (diagnostic.code === "href_rewritten") {
+    return "Unsafe link URLs are rewritten before publishing.";
+  }
+  if (diagnostic.code === "tag_removed") {
+    if (diagnostic.tagName === "img") {
+      return "Pasted images are removed from styled copy. Use Hero media fields for images.";
+    }
+    if (diagnostic.tagName === "script" || diagnostic.tagName === "style") {
+      return "Executable or styling markup is removed from styled copy.";
+    }
+    return `Unsupported ${diagnostic.tagName?.toUpperCase() ?? "markup"} formatting is removed.`;
+  }
+  if (diagnostic.attributeName) {
+    return `Unsupported ${diagnostic.attributeName} formatting is removed before publishing.`;
+  }
+  return "Unsupported formatting is removed before publishing.";
+}
+
+function HeroRichTextSanitizerNotice({
+  diagnostics,
+}: {
+  diagnostics: RichTextSanitizerDiagnostic[];
+}) {
+  if (diagnostics.length === 0) return null;
+
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900">
+      <p className="font-medium">Formatting adjusted</p>
+      <ul className="mt-2 space-y-1 text-xs text-amber-950/85">
+        {diagnostics.map((diagnostic, index) => (
+          <li
+            key={`${diagnostic.code}-${diagnostic.tagName ?? "tag"}-${
+              diagnostic.attributeName ?? index
+            }`}
+          >
+            {formatHeroRichTextSanitizerMessage(diagnostic)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function HeroVariantSelect({
   value,
   onChange,
@@ -1327,6 +1391,10 @@ export function HeroVisualEditor({
   const [presetImportValue, setPresetImportValue] = useState("");
   const [pendingDeletePreset, setPendingDeletePreset] = useState<HeroPresetSetting | null>(null);
   const [isPresetSaving, setIsPresetSaving] = useState(false);
+  const [richHeadlineDiagnostics, setRichHeadlineDiagnostics] = useState<
+    RichTextSanitizerDiagnostic[]
+  >([]);
+  const [richBodyDiagnostics, setRichBodyDiagnostics] = useState<RichTextSanitizerDiagnostic[]>([]);
 
   const selectedVariant = isHeroVariant(variant) ? variant : "centered";
   const heroSolidBackground = resolveHeroSolidBackgroundForContrast(value.background);
@@ -1436,6 +1504,16 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
+  const updateRichHeadline = (next: string) => {
+    const result = normalizeHeroRichTextEditorValue(next);
+    setRichHeadlineDiagnostics(result.diagnostics);
+    update({ richHeadline: result.html });
+  };
+  const updateRichBody = (next: string) => {
+    const result = normalizeHeroRichTextEditorValue(next);
+    setRichBodyDiagnostics(result.diagnostics);
+    update({ richBody: result.html });
+  };
   const updateSecondary = (patch: Partial<HeroData["secondaryCta"]>) =>
     update({
       secondaryCta: {
@@ -2087,37 +2165,45 @@ export function HeroVisualEditor({
       <EditorSection
         id="hero.rich-copy-social-proof"
         title="Rich copy and social proof"
-        description="Add optional sanitized HTML emphasis and a compact trust row without raw scripts."
+        description="Add optional emphasis and links with the formatting toolbar, then pair it with a compact trust row."
       >
-        <WidgetControlRow id="hero.richHeadline" label="Rich headline HTML">
+        <WidgetControlRow id="hero.richHeadline" label="Styled headline">
           {(fieldProps) => (
-            <Textarea
-              id={fieldProps.id}
-              value={value.richHeadline ?? ""}
-              onChange={(event) => update({ richHeadline: event.target.value })}
-              placeholder="<strong>Build</strong> with confidence"
-              rows={4}
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
+            <div className="space-y-2">
+              <PostRichTextAdapter
+                id={fieldProps.id}
+                value={value.richHeadline ?? ""}
+                onChange={updateRichHeadline}
+                toolbarProfile="paragraph"
+                minHeightClassName="min-h-[6rem]"
+                placeholder="Add optional emphasis to the headline..."
+                ariaLabelledBy={fieldProps["aria-labelledby"]}
+                ariaDescribedBy={fieldProps["aria-describedby"]}
+              />
+              <HeroRichTextSanitizerNotice diagnostics={richHeadlineDiagnostics} />
+            </div>
           )}
         </WidgetControlRow>
-        <WidgetControlRow id="hero.richBody" label="Rich body HTML">
+        <WidgetControlRow id="hero.richBody" label="Styled body copy">
           {(fieldProps) => (
-            <Textarea
-              id={fieldProps.id}
-              value={value.richBody ?? ""}
-              onChange={(event) => update({ richBody: event.target.value })}
-              placeholder="<p>Use <strong>bold</strong>, <em>emphasis</em>, and safe links.</p>"
-              rows={5}
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
+            <div className="space-y-2">
+              <PostRichTextAdapter
+                id={fieldProps.id}
+                value={value.richBody ?? ""}
+                onChange={updateRichBody}
+                toolbarProfile="paragraph"
+                minHeightClassName="min-h-[8rem]"
+                placeholder="Add optional emphasis, links, or line breaks to the body copy..."
+                ariaLabelledBy={fieldProps["aria-labelledby"]}
+                ariaDescribedBy={fieldProps["aria-describedby"]}
+              />
+              <HeroRichTextSanitizerNotice diagnostics={richBodyDiagnostics} />
+            </div>
           )}
         </WidgetControlRow>
         <p className="text-xs text-muted-foreground">
-          Leave rich HTML blank to keep the plain headline/body fields above. Allowed tags are
-          sanitized through the shared widget rich-text policy before runtime output.
+          Leave styled copy blank to keep the plain headline/body fields above. Public output is
+          sanitized through the shared widget rich-text policy.
         </p>
         <WidgetControlRow id="hero.socialProof.enabled" label="Show social proof">
           {(fieldProps) => (

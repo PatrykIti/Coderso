@@ -95,8 +95,10 @@ Advanced must not duplicate Visual as a second design panel.
 
 ## Rich Copy And Social Proof
 
-- `richHeadline` and `richBody` accept bounded sanitized HTML through the shared
-  widget rich-text sanitizer exported from `richTextSection`.
+- `richHeadline` and `richBody` store bounded sanitized rich-text HTML, but
+  Visual authoring uses the shared rich-text toolbar instead of raw HTML text.
+- Hero rich copy keeps inline emphasis, safe links, lists, line breaks, and
+  H2-H4 headings; unsupported pasted formatting is removed before publishing.
 - Plain `headline` / `body` remain the fallback when rich-copy fields are empty.
 - `socialProof` is optional and bounded: `rating`, `reviewCount`, `label`, and
   up to five avatar rows with `source`, `assetId`, `src`, and optional `alt`.

@@ -992,6 +992,27 @@ avatar raw URL authoring drift.
   those were addressed before validation. Claude read-only review for this
   avatar-only slice timed out after 240 seconds without output.
 
+## TASK-336-19 Hero Rich Copy Authoring Evidence (2026-05-25)
+
+The eighteenth TASK-336-19 implementation family targets Hero rich copy raw
+HTML authoring drift.
+
+- Hero Visual no longer exposes raw `Rich headline HTML` or `Rich body HTML`
+  textareas for `richHeadline` and `richBody`.
+- Styled headline/body authoring now uses the shared `PostRichTextAdapter`
+  toolbar while preserving the existing sanitized runtime fields.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  renderer compatibility, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-rich-copy-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only review flagged aria linkage, empty-rich fallback, and
+  silent sanitizer drift; those findings were addressed before the final
+  Playwright rerun. A final Claude confirmation attempt timed out after 180
+  seconds without new output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
