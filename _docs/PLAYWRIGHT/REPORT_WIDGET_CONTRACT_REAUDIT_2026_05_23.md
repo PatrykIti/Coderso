@@ -1260,6 +1260,40 @@ Advanced/layout/color drift.
   its MEDIUM docs/action-metadata/color-helper findings were addressed before
   final validation.
 
+## TASK-336-19 Toggle Block Advanced/Color Evidence (2026-05-25)
+
+The twenty-eighth TASK-336-19 implementation family targets Toggle Block after
+the Footer cleanup and closes the remaining Advanced writable-control and raw
+color authoring drift.
+
+- Toggle Block Advanced no longer renders writable accessibility inputs,
+  per-pane style selects, reset mutation, or raw JSON diagnostics. It now shows
+  read-only runtime, style, and support summaries.
+- Visual owns daily accessibility announcement copy and primary/secondary pane
+  card styling, matching the declared editor contract paths.
+- Visual color fields now use swatch-only controls. Fresh Toggle Block defaults
+  no longer seed root CSS variable color values into persisted data, while
+  runtime still applies theme fallbacks for omitted root colors.
+- Visible Wizard/Visual controls now emit ownership metadata so Playwright
+  checks real writable paths instead of passing through empty-path evidence.
+- Temporary Wizard/Visual duplicate allowances now point at the open `TASK-336`
+  setup-only compatibility umbrella instead of the closed `TASK-336-16`.
+- Focused Vitest evidence covers Visual ownership, swatch-only color authoring,
+  read-only Advanced, runtime default-color fallback behavior, and strict editor
+  contracts:
+  `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude and a fresh helper-agent audit both identified writable Advanced
+  controls as HIGH findings before implementation; Claude additionally flagged
+  seeded root color token defaults as a UX drift. Both are addressed in this
+  slice.
+- Fresh post-implementation helper-agent and Claude checks found only section
+  metadata plus docs/contract-section alignment drift; the final diff fixes
+  those before validation.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

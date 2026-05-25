@@ -1,0 +1,101 @@
+{
+  "generatedAt": "2026-05-25T10:05:13.475Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session t33619-toggle --widget toggle-block --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.md --strict",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["toggle-block"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "t33619-toggle"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "toggle-block",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 8,
+            "visibleSectionCount": 8,
+            "writablePaths": [
+              "variant",
+              "labels.primary",
+              "labels.secondary",
+              "labels.helper",
+              "options.defaultState",
+              "options.motion",
+              "labels.ariaLabel",
+              "labels.selectedSuffix",
+              "style.surfaceColor",
+              "style.borderColor",
+              "style.accentColor",
+              "style.accentContrastColor",
+              "style.panes.primary.surface",
+              "style.panes.primary.padding",
+              "style.panes.primary.radius",
+              "style.panes.primary.borderEmphasis",
+              "style.panes.secondary.surface",
+              "style.panes.secondary.padding",
+              "style.panes.secondary.radius",
+              "style.panes.secondary.borderEmphasis"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 3,
+            "visibleSectionCount": 3,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "pageId": "12d1d6fb-2aeb-46db-8775-088e87d8b70b",
+        "adminPath": "http://localhost:5173/admin/pages/12d1d6fb-2aeb-46db-8775-088e87d8b70b",
+        "status": "passed",
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "toggle-block",
+        "publicPath": "/test-toggle-block-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

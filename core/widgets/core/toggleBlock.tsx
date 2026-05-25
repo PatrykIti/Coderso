@@ -75,9 +75,9 @@ type NormalizedToggleBlockData = {
   };
   style: {
     surfaceColor?: string;
-    borderColor: string;
-    accentColor: string;
-    accentContrastColor: string;
+    borderColor?: string;
+    accentColor?: string;
+    accentContrastColor?: string;
     panes: {
       primary: NormalizedToggleBlockPaneStyle;
       secondary: NormalizedToggleBlockPaneStyle;
@@ -173,10 +173,6 @@ export const toggleBlockDefaults: ToggleBlockData = {
     motion: "none",
   },
   style: {
-    surfaceColor: "var(--color-surface)",
-    borderColor: "var(--color-border)",
-    accentColor: "var(--color-text)",
-    accentContrastColor: "var(--color-background)",
     panes: {
       primary: { ...toggleBlockPaneStyleDefaults },
       secondary: { ...toggleBlockPaneStyleDefaults },
@@ -187,28 +183,33 @@ export const toggleBlockDefaults: ToggleBlockData = {
 const toggleBlockWizardVisualDuplicateAllowances = [
   {
     path: "variant",
-    reason: "Wizard remains replayable until the one-time setup lifecycle hides starter fields.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds setup-only variant selection; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
+    expiresWithTask: "TASK-336",
   },
   {
     path: "labels.primary",
-    reason: "Wizard seeds initial labels; Visual remains the daily owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds setup-only labels; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
+    expiresWithTask: "TASK-336",
   },
   {
     path: "labels.secondary",
-    reason: "Wizard seeds initial labels; Visual remains the daily owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds setup-only labels; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
+    expiresWithTask: "TASK-336",
   },
   {
     path: "labels.helper",
-    reason: "Wizard seeds helper copy; Visual remains the daily owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds setup-only helper copy; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
+    expiresWithTask: "TASK-336",
   },
   {
     path: "options.defaultState",
-    reason: "Wizard seeds the opening pane; Visual remains the daily behavior owner.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds the setup-only opening pane; Visual remains the daily behavior owner until setup-only duplicate semantics are first-class.",
+    expiresWithTask: "TASK-336",
   },
 ] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
 
@@ -272,7 +273,15 @@ export const toggleBlockEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["variant", "labels", "options", "style", "slots.primary", "slots.secondary"],
+      readOnlyPaths: ["variant", "labels", "options", "slots.primary", "slots.secondary"],
+    },
+    {
+      mode: "advanced",
+      id: "toggle-block.advanced.style-summary",
+      title: "Style diagnostics",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["style"],
     },
     {
       mode: "advanced",
@@ -378,21 +387,12 @@ function normalizeToggleBlockStyle(style: unknown): NormalizedToggleBlockData["s
   const hasStyleObject = style !== undefined;
 
   return {
-    surfaceColor: hasStyleObject
-      ? resolveClearableStyleValue(current.surfaceColor)
-      : (toggleBlockDefaults.style?.surfaceColor ?? "var(--color-surface)"),
-    borderColor:
-      toTrimmedString(current.borderColor) ??
-      toggleBlockDefaults.style?.borderColor ??
-      "var(--color-border)",
-    accentColor:
-      toTrimmedString(current.accentColor) ??
-      toggleBlockDefaults.style?.accentColor ??
-      "var(--color-text)",
-    accentContrastColor:
-      toTrimmedString(current.accentContrastColor) ??
-      toggleBlockDefaults.style?.accentContrastColor ??
-      "var(--color-background)",
+    surfaceColor: hasStyleObject ? resolveClearableStyleValue(current.surfaceColor) : undefined,
+    borderColor: hasStyleObject ? resolveClearableStyleValue(current.borderColor) : undefined,
+    accentColor: hasStyleObject ? resolveClearableStyleValue(current.accentColor) : undefined,
+    accentContrastColor: hasStyleObject
+      ? resolveClearableStyleValue(current.accentContrastColor)
+      : undefined,
     panes: {
       primary: normalizeToggleBlockPaneStyle(panes.primary),
       secondary: normalizeToggleBlockPaneStyle(panes.secondary),
@@ -690,8 +690,9 @@ export function ToggleBlock({
       )}
       style={{
         ...containerStyle,
-        ["--nextless-toggle-accent" as string]: style.accentColor,
-        ["--nextless-toggle-accent-contrast" as string]: style.accentContrastColor,
+        ["--nextless-toggle-accent" as string]: style.accentColor ?? "var(--color-text)",
+        ["--nextless-toggle-accent-contrast" as string]:
+          style.accentContrastColor ?? "var(--color-background)",
       }}
       data-coderso-toggle-block="1"
       data-coderso-toggle-variant={resolvedVariant}

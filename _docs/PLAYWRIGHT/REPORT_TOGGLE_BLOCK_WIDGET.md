@@ -2,7 +2,7 @@
 
 **Widget:** `toggle-block`
 **Original audit date:** 2026-05-16
-**Status:** Refreshed on 2026-05-23 after TASK-292 implementation plus TASK-329 shared runtime transport sync
+**Status:** Refreshed on 2026-05-25 after TASK-336-19 mode-contract cleanup
 **Owner files:** `core/widgets/core/toggleBlock.tsx`, `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx`
 
 ---
@@ -14,8 +14,9 @@ Toggle Block remains a bounded two-pane widget with fixed `primary` /
 - distinct `switch` and `cards` surfaces
 - bounded motion options (`none`, `fade`, `slide`)
 - configurable accessible copy (`ariaLabel`, `selectedSuffix`)
-- shared color controls for wrapper / active trigger colors
-- independent pane style tokens for `primary` and `secondary`
+- swatch-only color controls for wrapper / active trigger colors in Visual
+- independent pane style tokens for `primary` and `secondary` in Visual
+- read-only Advanced diagnostics for runtime, style, and support summaries
 - explicit editor guidance that Toggle Block intentionally stops at two panes
 
 Shared TASK-256 repairs are already present on the current base and remain out
@@ -36,11 +37,11 @@ of TASK-292 implementation ownership.
 | Hardcoded radiogroup label | Fixed by TASK-292 | `labels.ariaLabel` and `labels.selectedSuffix` now drive radiogroup labeling and live-status copy. |
 | Missing variant previews | Fixed by TASK-292 | Wizard/Visual variant cards now include preview miniatures via `data-widget-control="toggle-block.variant-preview.*"`. |
 | Wizard felt too shallow | Fixed by TASK-292 | Wizard now follows a guided `Variant -> Labels -> Starting pane` setup path. |
-| All three editor modes duplicated the same Variant block | Fixed by TASK-292 | Advanced no longer owns Variant controls; it now focuses on accessibility, pane tokens, reset, and diagnostics. |
-| No reset-to-defaults action | Fixed by TASK-292 | Advanced ships `Reset to defaults` with undo feedback through a toast action. |
+| All three editor modes duplicated the same Variant block | Fixed by TASK-292 and tightened by TASK-336-19 | Advanced no longer owns Variant controls or any writable controls. Accessibility and pane-card styling now live in Visual, while Advanced is read-only diagnostics. |
+| No reset-to-defaults action | Superseded by TASK-336-19 | Advanced no longer performs immediate reset mutation. Reset/default repair belongs in a confirmed support flow outside the normal read-only Advanced diagnostics surface. |
 | Editor preview did not clearly communicate the active/default pane | Fixed by TASK-292 | Wizard/Visual now render a default-state preview notice that spells out which pane opens first. |
 | Empty pane placeholder did not explain how to add content | Fixed by TASK-292 | Editor-preview placeholders now use human-facing pane labels and page-builder guidance while public runtime stays clean. |
-| No color picker / token-list affordance | Fixed by TASK-292 through shared-control adoption | The widget now reuses the shared swatch + token input control instead of raw-only local text inputs. |
+| No color picker / token-list affordance | Fixed by TASK-292 and tightened by TASK-336-19 | The widget now uses swatch-only Visual color controls. Saved legacy/custom color values remain replace-or-clear compatible without asking nontechnical users to type CSS/token strings. |
 | No support for 3+ states | Intentional product boundary | Toggle Block remains explicitly limited to two panes; 3+ views are routed to Tabs or future product scope, not hidden inside this widget family. |
 
 ## 3. Product decisions captured by TASK-292
@@ -83,3 +84,16 @@ Validated on 2026-05-23 with:
 
 Validation evidence is synchronized with the task board and changelog in the
 TASK-292 closure pass.
+
+### TASK-336-19 validation refresh
+
+Validated on 2026-05-25 with:
+- `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/editorContract.test.ts` — PASS
+- `bun scripts/playwright-widget-contract-smoke.ts --session t33619-toggle --widget toggle-block --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.md --strict` — PASS (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`)
+
+TASK-336-19 also removes seeded root color token defaults from fresh Toggle
+Block payloads. Runtime still applies theme fallbacks when those values are
+omitted, so fresh widgets inherit the theme instead of appearing as saved custom
+CSS token values in Visual. Advanced also no longer renders the raw JSON payload
+preview; support sees read-only runtime, style, and contract summary rows
+instead.

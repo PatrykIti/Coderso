@@ -8,34 +8,8 @@ import type { ToggleBlockData } from "../../../core/widgets/core/toggleBlock";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const toastInfo = vi.fn();
-
-vi.mock("sonner", () => ({
-  toast: {
-    info: toastInfo,
-  },
-}));
-
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <button type="button" onClick={onClick} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
 }));
 
 vi.mock("@/components/ui/input", () => ({
@@ -239,14 +213,6 @@ const findSelectByOptions = (container: ParentNode, values: string[]) => {
   return select;
 };
 
-const getDiagnosticsSnapshot = (container: ParentNode): ToggleBlockData => {
-  const snapshot = container.querySelector("pre");
-  if (!(snapshot instanceof HTMLPreElement)) {
-    throw new Error("Missing diagnostics snapshot");
-  }
-  return JSON.parse(snapshot.textContent ?? "{}") as ToggleBlockData;
-};
-
 type EditorKind = "wizard" | "visual" | "advanced";
 
 const renderEditor = async ({
@@ -309,7 +275,6 @@ const renderEditor = async ({
 
 afterEach(() => {
   document.body.innerHTML = "";
-  toastInfo.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -326,6 +291,9 @@ test("ToggleBlock wizard editor guides setup through variant, labels, and starti
     expect(view.container.textContent).toContain("Step 3: Starting pane");
     expect(view.container.textContent).not.toContain("Theme");
     expect(view.container.textContent).not.toContain("Diagnostics");
+    const variantSection = getSectionByTitle(view.container, "Step 1: Variant");
+    expect(variantSection.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(variantSection.getAttribute("data-widget-editor-section-role")).toBe("setup");
     expect(
       view.container
         .querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
@@ -367,10 +335,6 @@ test("ToggleBlock wizard editor guides setup through variant, labels, and starti
         motion: "none",
       },
       style: {
-        surfaceColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-        accentColor: "var(--color-text)",
-        accentContrastColor: "var(--color-background)",
         panes: {
           primary: {
             surface: "default",
@@ -392,7 +356,7 @@ test("ToggleBlock wizard editor guides setup through variant, labels, and starti
   }
 });
 
-test("ToggleBlock visual editor uses shared color controls, motion, and contrast advisory", async () => {
+test("ToggleBlock visual editor owns motion, accessibility, pane cards, and swatch-only colors", async () => {
   const view = await renderEditor({
     editor: "visual",
     initialVariant: "switch",
@@ -402,9 +366,11 @@ test("ToggleBlock visual editor uses shared color controls, motion, and contrast
   try {
     expect(view.container.textContent).toContain("Experience");
     expect(view.container.textContent).toContain("Theme");
+    expect(view.container.textContent).toContain("Accessibility");
+    expect(view.container.textContent).toContain("Pane cards");
     expect(view.container.textContent).toContain("Pane authoring");
-    expect(view.container.textContent).not.toContain("Diagnostics");
-    expect(view.container.textContent).not.toContain("Accessibility");
+    expect(view.container.textContent).not.toContain("Runtime summary");
+    expect(view.container.textContent).not.toContain("Support summary");
 
     clickButton(findButtonByText(view.container, "Cards"));
     expect(view.getVariant()).toBe("cards");
@@ -414,46 +380,21 @@ test("ToggleBlock visual editor uses shared color controls, motion, and contrast
     setSelectValue(motionSelect, "slide");
 
     const themeSection = getSectionByTitle(view.container, "Theme");
+    expect(themeSection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(themeSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
     expect(findInputByAriaLabel(themeSection, "Accent color swatch").value).toBe("#0f172a");
     expect(findInputByAriaLabel(themeSection, "Accent contrast color swatch").value).toBe(
       "#ffffff"
     );
+    expect(themeSection.querySelector('[aria-label="Accent color value"]')).toBeNull();
+    expect(themeSection.textContent).toContain("Theme default");
 
-    setInputValue(findInputByAriaLabel(themeSection, "Accent color value"), "#111111");
-    setInputValue(findInputByAriaLabel(themeSection, "Accent contrast color value"), "#222222");
-
-    expect(view.container.textContent).toContain("Configured colors may be hard to read together.");
-    expect(view.container.textContent).toContain(
-      "Toggle Block stays intentionally limited to two panes."
-    );
-    expect(view.getValue().options?.motion).toBe("slide");
-    expect(view.getValue().style?.accentColor).toBe("#111111");
-    expect(view.getValue().style?.accentContrastColor).toBe("#222222");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("ToggleBlock advanced editor manages accessibility copy, pane tokens, and diagnostics", async () => {
-  const view = await renderEditor({
-    editor: "advanced",
-    initialVariant: "cards",
-    initialValue: {},
-  });
-
-  try {
-    expect(view.container.textContent).toContain("Accessibility");
-    expect(view.container.textContent).toContain("Pane cards");
-    expect(view.container.textContent).toContain("Advanced tools");
-    expect(view.container.textContent).toContain("Diagnostics");
-    expect(
-      view.container.querySelector('[data-widget-editor-section="toggle-block.variant"]')
-    ).toBeNull();
-    expect(
-      view.container.querySelector('[data-widget-editor-section="toggle-block.theme"]')
-    ).toBeNull();
+    setInputValue(findInputByAriaLabel(themeSection, "Accent color swatch"), "#111111");
+    setInputValue(findInputByAriaLabel(themeSection, "Accent contrast color swatch"), "#222222");
 
     const accessibilitySection = getSectionByTitle(view.container, "Accessibility");
+    expect(accessibilitySection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(accessibilitySection.getAttribute("data-widget-editor-section-role")).toBe("content");
     setInputValue(
       findInputByPlaceholder(accessibilitySection, "Toggle content view"),
       "Przelacz widok"
@@ -461,66 +402,51 @@ test("ToggleBlock advanced editor manages accessibility copy, pane tokens, and d
     setInputValue(findInputByPlaceholder(accessibilitySection, "selected"), "aktywny");
 
     const paneSection = getSectionByTitle(view.container, "Pane cards");
+    expect(paneSection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(paneSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
     const selects = Array.from(paneSection.querySelectorAll("select"));
     setSelectValue(selects[0], "contrast");
     setSelectValue(selects[3], "strong");
     setSelectValue(selects[4], "soft");
     setSelectValue(selects[6], "lg");
 
-    expect(getDiagnosticsSnapshot(view.container)).toEqual({
-      labels: {
-        primary: "View A",
-        secondary: "View B",
-        helper: "Switch between two content views.",
-        ariaLabel: "Przelacz widok",
-        selectedSuffix: "aktywny",
-      },
-      options: {
-        defaultState: "primary",
-        motion: "none",
-      },
-      style: {
-        surfaceColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-        accentColor: "var(--color-text)",
-        accentContrastColor: "var(--color-background)",
-        panes: {
-          primary: {
-            surface: "contrast",
-            padding: "comfortable",
-            radius: "md",
-            borderEmphasis: "strong",
-          },
-          secondary: {
-            surface: "soft",
-            padding: "comfortable",
-            radius: "lg",
-            borderEmphasis: "subtle",
-          },
-        },
-      },
-    });
+    expect(view.container.textContent).toContain("Configured colors may be hard to read together.");
+    expect(view.container.textContent).toContain(
+      "Toggle Block stays intentionally limited to two panes."
+    );
+    expect(view.getValue().options?.motion).toBe("slide");
+    expect(view.getValue().labels?.ariaLabel).toBe("Przelacz widok");
+    expect(view.getValue().labels?.selectedSuffix).toBe("aktywny");
+    expect(view.getValue().style?.accentColor).toBe("#111111");
+    expect(view.getValue().style?.accentContrastColor).toBe("#222222");
+    expect(view.getValue().style?.panes?.primary?.surface).toBe("contrast");
+    expect(view.getValue().style?.panes?.primary?.borderEmphasis).toBe("strong");
+    expect(view.getValue().style?.panes?.secondary?.surface).toBe("soft");
+    expect(view.getValue().style?.panes?.secondary?.radius).toBe("lg");
   } finally {
     view.cleanup();
   }
 });
 
-test("ToggleBlock advanced editor resets to defaults with undo toast", async () => {
+test("ToggleBlock advanced editor is read-only diagnostics", async () => {
   const view = await renderEditor({
     editor: "advanced",
+    initialVariant: "cards",
     initialValue: {
       labels: {
         primary: "Overview",
         secondary: "Specs",
-        helper: "Focus",
+        helper: "",
+        ariaLabel: "Przelacz widok",
+        selectedSuffix: "aktywny",
       },
       options: {
         defaultState: "secondary",
-        motion: "fade",
+        motion: "slide",
       },
       style: {
+        surfaceColor: "#f8fafc",
         accentColor: "#111111",
-        accentContrastColor: "#ffffff",
         panes: {
           primary: {
             surface: "contrast",
@@ -528,49 +454,44 @@ test("ToggleBlock advanced editor resets to defaults with undo toast", async () 
             radius: "sm",
             borderEmphasis: "strong",
           },
+          secondary: {
+            surface: "soft",
+            padding: "comfortable",
+            radius: "lg",
+          },
         },
       },
     },
   });
 
   try {
-    clickButton(findButtonByText(view.container, "Reset to defaults"));
-
-    expect(view.getValue()).toEqual({
-      labels: {
-        primary: "View A",
-        secondary: "View B",
-        helper: "Switch between two content views.",
-        ariaLabel: "Toggle content view",
-        selectedSuffix: "selected",
-      },
-      options: {
-        defaultState: "primary",
-        motion: "none",
-      },
-      style: {
-        surfaceColor: "var(--color-surface)",
-        borderColor: "var(--color-border)",
-        accentColor: "var(--color-text)",
-        accentContrastColor: "var(--color-background)",
-        panes: {
-          primary: {
-            surface: "default",
-            padding: "comfortable",
-            radius: "md",
-            borderEmphasis: "subtle",
-          },
-          secondary: {
-            surface: "default",
-            padding: "comfortable",
-            radius: "md",
-            borderEmphasis: "subtle",
-          },
-        },
-      },
-    });
-    expect(toastInfo).toHaveBeenCalledTimes(1);
-    expect(toastInfo.mock.calls[0]?.[0]).toBe("Toggle Block reset to defaults.");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Style diagnostics");
+    expect(view.container.textContent).toContain("Support summary");
+    const runtimeSection = getSectionByTitle(view.container, "Runtime summary");
+    const styleSection = getSectionByTitle(view.container, "Style diagnostics");
+    const supportSection = getSectionByTitle(view.container, "Support summary");
+    expect(runtimeSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(runtimeSection.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(styleSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(styleSection.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(supportSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(supportSection.getAttribute("data-widget-editor-section-role")).toBe("summary");
+    expect(view.container.textContent).toContain("Overview / Specs");
+    expect(view.container.textContent).toContain("Specs (secondary)");
+    expect(view.container.textContent).toContain("Slide");
+    expect(view.container.textContent).toContain("Surface: Contrast surface");
+    expect(view.container.textContent).toContain("Wizard seeds setup");
+    expect(view.container.querySelectorAll("input, select, button, textarea")).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
+    expect(
+      view.container.querySelectorAll('[data-widget-control-readonly="true"]').length
+    ).toBeGreaterThan(0);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

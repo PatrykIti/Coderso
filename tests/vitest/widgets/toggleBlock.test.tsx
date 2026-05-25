@@ -32,10 +32,6 @@ test("toggle block reset helper returns normalized defaults", () => {
       motion: "none",
     },
     style: {
-      surfaceColor: "var(--color-surface)",
-      borderColor: "var(--color-border)",
-      accentColor: "var(--color-text)",
-      accentContrastColor: "var(--color-background)",
       panes: {
         primary: {
           surface: "default",
@@ -104,7 +100,6 @@ test("toggle block normalization applies bounded defaults and independent pane f
     style: {
       borderColor: "#1f2937",
       accentColor: "#0f172a",
-      accentContrastColor: "var(--color-background)",
       panes: {
         primary: {
           surface: "contrast",
@@ -137,6 +132,8 @@ test("toggle block renders defaults with accessible labels and motion markers", 
   expect(html).toContain("data-coderso-toggle-status");
   expect(html).toContain("View A selected");
   expect(html).toContain('data-coderso-toggle-selected-suffix="selected"');
+  expect(html).toContain("--nextless-toggle-accent:var(--color-text)");
+  expect(html).toContain("--nextless-toggle-accent-contrast:var(--color-background)");
   expect(html).toContain("codersoToggleBound");
 });
 

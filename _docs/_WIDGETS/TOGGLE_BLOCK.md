@@ -40,16 +40,18 @@ Visual owns the day-to-day authoring surface:
 - labels and helper copy
 - default pane and motion choice
 - shared color controls for surface, border, accent, and accent contrast
+- accessibility copy overrides with beginner-facing labels
+- independent pane-card controls for `primary` and `secondary`
 - active-pane preview notice
 - two-pane authoring guidance
 
 ### Advanced
 
 Advanced keeps the contract explicit:
-- accessibility copy overrides (`ariaLabel`, `selectedSuffix`)
-- independent pane token controls for `primary` and `secondary`
-- reset-to-defaults with undo feedback
-- normalized payload diagnostics
+- read-only runtime summary
+- read-only style and pane-card diagnostics
+- read-only support summary for fixed `primary` / `secondary` slots
+- no mutations, reset buttons, or editable raw payload controls
 
 ## Runtime Contract
 
@@ -93,6 +95,9 @@ fall back through `motion-reduce:*` classes instead of forced animation.
 ## Style Contract
 
 ### Root colors
+
+Root color fields are optional in fresh payloads. When omitted, runtime applies
+theme fallbacks without persisting CSS variable strings as saved custom values.
 
 `style.surfaceColor`
 - Clearable.
@@ -139,10 +144,6 @@ fallbacks in editor/runtime code.
     "motion": "none"
   },
   "style": {
-    "surfaceColor": "var(--color-surface)",
-    "borderColor": "var(--color-border)",
-    "accentColor": "var(--color-text)",
-    "accentContrastColor": "var(--color-background)",
     "panes": {
       "primary": {
         "surface": "default",
@@ -166,13 +167,17 @@ fallbacks in editor/runtime code.
 - Empty-pane guidance is editor-preview-only and uses human-facing pane labels.
   Public runtime does not leak page-builder instructions.
 - Shared color controls are reused instead of raw-only local token inputs.
-- Reset to defaults restores the normalized v2 contract and offers undo.
+- Visual color authoring is swatch-only for normal users. Saved theme tokens or
+  custom legacy color values remain compatible as replace-or-clear state instead
+  of editable raw CSS/text fields.
 
-## TASK-336-18 Editor Contract
+## TASK-336-19 Editor Contract Cleanup
 
 - Exports `toggleBlockEditorContract` with `version: 2`.
 - Contract target: Wizard seeds variant, labels, and starting pane; Visual owns
-  daily labels, motion, accessibility copy, and pane styling; Advanced is
-  read-only runtime/contract diagnostics.
-- Existing Advanced writable controls and replayable Wizard/Visual duplicates
-  are routed to `TASK-336-19` / `TASK-336-16`.
+  daily labels, motion, accessibility copy, colors, and pane styling; Advanced
+  is read-only runtime/contract diagnostics.
+- `TASK-336-19` removes the remaining Advanced writable controls, moves
+  accessibility and pane-card styling to Visual, and retargets temporary
+  Wizard/Visual duplicate allowances to the open `TASK-336` umbrella until the
+  shared contract gains first-class setup-only duplicate semantics.

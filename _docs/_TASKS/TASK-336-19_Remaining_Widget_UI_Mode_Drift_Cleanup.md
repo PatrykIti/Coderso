@@ -540,6 +540,27 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0` after clearing the stale Vite optimized dependency cache and
   restarting `coderso-dev-core-host`.
+- In Progress (2026-05-25): twenty-eighth implementation family targets Toggle
+  Block Advanced and color-authoring drift. Accessibility announcement fields
+  (`labels.ariaLabel`, `labels.selectedSuffix`) and per-pane card styling now
+  live in Visual, matching the declared `toggle-block.visual.structure-copy`
+  and `toggle-block.visual.theme-panes` ownership. Advanced no longer receives
+  `onChange`; it renders read-only runtime, style, and support summaries only,
+  with no inputs, selects, buttons, reset action, or raw JSON payload preview.
+  Toggle Block Visual colors are now swatch-only, and fresh root color defaults
+  no longer seed CSS variable strings into persisted data; runtime keeps theme
+  fallbacks when colors are omitted. The temporary Wizard/Visual duplicate
+  allowances now point at the open `TASK-336` umbrella instead of the closed
+  `TASK-336-16`.
+  Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-toggle-block-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Fresh post-implementation helper-agent and Claude reviews
+  found only section metadata and docs/contract-section alignment drift; those
+  findings were fixed before the final targeted Vitest, Playwright, lint,
+  typecheck, and `gates:coderso` reruns.
 
 ## Files to Change
 

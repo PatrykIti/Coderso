@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -11,11 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 import {
   normalizeToggleBlockData,
-  resetToggleBlockData,
   type ToggleBlockData,
   type ToggleBlockMotion,
   type ToggleBlockPaneBorderEmphasis,
@@ -25,14 +22,18 @@ import {
   type ToggleBlockStateId,
   type ToggleBlockVariantId,
 } from "../../../../widgets/core/toggleBlock";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import {
   ClearableFieldHeader,
   ColorContrastNotice,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: ToggleBlockVariantId;
@@ -89,6 +90,14 @@ function resolveVariant(variant: string): ToggleBlockVariantId {
 
 function normalizeValue(value: ToggleBlockData): NormalizedToggleBlockData {
   return normalizeToggleBlockData(value);
+}
+
+function controlAttributes(id: string, path: string) {
+  return {
+    "data-widget-control": id,
+    "data-widget-control-path": path,
+    "data-widget-control-ownership": "writable",
+  };
 }
 
 function updateValue(
@@ -194,31 +203,23 @@ function updatePaneStyle(
   }));
 }
 
-function resetEditorValue(value: ToggleBlockData, onChange: (next: ToggleBlockData) => void) {
-  const previous = normalizeValue(value);
-  const next = resetToggleBlockData();
-  onChange(next);
-  toast.info("Toggle Block reset to defaults.", {
-    action: {
-      label: "Undo",
-      onClick: () => onChange(previous),
-    },
-  });
-}
-
 function EditorSection({
   id,
   title,
   description,
+  mode,
+  role,
   children,
 }: {
   id: string;
   title: string;
   description?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   children: ReactNode;
 }) {
   return (
-    <WidgetEditorSection id={id} title={title} description={description}>
+    <WidgetEditorSection id={id} title={title} mode={mode} role={role} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -258,12 +259,16 @@ function ToggleBlockVariantPreview({ variant }: { variant: ToggleBlockVariantId 
 function VariantCards({
   value,
   onChange,
+  controlId = "toggle-block.variant",
+  path = "variant",
 }: {
   value: ToggleBlockVariantId;
   onChange?: (next: string) => void;
+  controlId?: string;
+  path?: string;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" {...controlAttributes(controlId, path)}>
       {variantOptions.map((option) => (
         <button
           key={option.id}
@@ -317,19 +322,23 @@ function LabelsSection({
   sectionId = "toggle-block.labels",
   title = "Labels",
   description = "Name both toggle states and helper copy.",
+  mode = "visual",
+  role = "content",
 }: {
   value: ToggleBlockData;
   onChange: (next: ToggleBlockData) => void;
   sectionId?: string;
   title?: string;
   description?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
 }) {
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection id={sectionId} title={title} description={description}>
+    <EditorSection id={sectionId} title={title} mode={mode} role={role} description={description}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div className="space-y-2" {...controlAttributes(`${sectionId}.primary`, "labels.primary")}>
           <p className="text-sm font-medium">Primary label</p>
           <Input
             value={normalized.labels.primary}
@@ -341,7 +350,10 @@ function LabelsSection({
             placeholder="View A"
           />
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(`${sectionId}.secondary`, "labels.secondary")}
+        >
           <p className="text-sm font-medium">Secondary label</p>
           <Input
             value={normalized.labels.secondary}
@@ -354,7 +366,7 @@ function LabelsSection({
           />
         </div>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2" {...controlAttributes(`${sectionId}.helper`, "labels.helper")}>
         <ClearableFieldHeader
           label="Helper text"
           value={normalized.labels.helper}
@@ -389,18 +401,25 @@ function StartingPaneSection({
   sectionId = "toggle-block.starting-pane",
   title = "Starting pane",
   description = "Choose which pane users see first.",
+  mode = "visual",
+  role = "visual",
 }: {
   value: ToggleBlockData;
   onChange: (next: ToggleBlockData) => void;
   sectionId?: string;
   title?: string;
   description?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
 }) {
   const normalized = normalizeValue(value);
 
   return (
-    <EditorSection id={sectionId} title={title} description={description}>
-      <div className="space-y-2">
+    <EditorSection id={sectionId} title={title} mode={mode} role={role} description={description}>
+      <div
+        className="space-y-2"
+        {...controlAttributes(`${sectionId}.defaultState`, "options.defaultState")}
+      >
         <p className="text-sm font-medium">Default state</p>
         <Select
           value={normalized.options.defaultState}
@@ -437,10 +456,15 @@ function ExperienceSection({
     <EditorSection
       id="toggle-block.experience"
       title="Experience"
+      mode="visual"
+      role="visual"
       description="Tune the opening pane and transition feel."
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("toggle-block.experience.defaultState", "options.defaultState")}
+        >
           <p className="text-sm font-medium">Default state</p>
           <Select
             value={normalized.options.defaultState}
@@ -459,7 +483,10 @@ function ExperienceSection({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("toggle-block.experience.motion", "options.motion")}
+        >
           <p className="text-sm font-medium">Motion</p>
           <Select
             value={normalized.options.motion}
@@ -507,41 +534,60 @@ function ThemeSection({
     <EditorSection
       id="toggle-block.theme"
       title="Theme"
+      mode="visual"
+      role="visual"
       description="Control the wrapper surface plus active trigger contrast."
     >
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <SharedColorControl
-          label="Surface color"
-          value={normalized.style.surfaceColor}
-          onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-          onClear={() => clearStyleField(value, onChange, "surfaceColor")}
-          placeholder="var(--color-surface)"
-          pickerFallback="#ffffff"
-        />
-        <SharedColorControl
-          label="Border color"
-          value={normalized.style.borderColor}
-          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          onClear={() => clearStyleField(value, onChange, "borderColor")}
-          placeholder="var(--color-border)"
-          pickerFallback="#e2e8f0"
-        />
-        <SharedColorControl
-          label="Accent color"
-          value={normalized.style.accentColor}
-          onChange={(next) => updateStyle(value, onChange, { accentColor: next })}
-          onClear={() => clearStyleField(value, onChange, "accentColor")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
-        />
-        <SharedColorControl
-          label="Accent contrast color"
-          value={normalized.style.accentContrastColor}
-          onChange={(next) => updateStyle(value, onChange, { accentContrastColor: next })}
-          onClear={() => clearStyleField(value, onChange, "accentContrastColor")}
-          placeholder="var(--color-background)"
-          pickerFallback="#ffffff"
-        />
+        <div {...controlAttributes("toggle-block.theme.surfaceColor", "style.surfaceColor")}>
+          <SharedColorControl
+            label="Surface color"
+            value={value.style?.surfaceColor}
+            onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+            onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+            placeholder="var(--color-surface)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+        </div>
+        <div {...controlAttributes("toggle-block.theme.borderColor", "style.borderColor")}>
+          <SharedColorControl
+            label="Border color"
+            value={value.style?.borderColor}
+            onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+            onClear={() => clearStyleField(value, onChange, "borderColor")}
+            placeholder="var(--color-border)"
+            pickerFallback="#e2e8f0"
+            showValueInput={false}
+          />
+        </div>
+        <div {...controlAttributes("toggle-block.theme.accentColor", "style.accentColor")}>
+          <SharedColorControl
+            label="Accent color"
+            value={value.style?.accentColor}
+            onChange={(next) => updateStyle(value, onChange, { accentColor: next })}
+            onClear={() => clearStyleField(value, onChange, "accentColor")}
+            placeholder="var(--color-text)"
+            pickerFallback="#0f172a"
+            showValueInput={false}
+          />
+        </div>
+        <div
+          {...controlAttributes(
+            "toggle-block.theme.accentContrastColor",
+            "style.accentContrastColor"
+          )}
+        >
+          <SharedColorControl
+            label="Accent contrast color"
+            value={value.style?.accentContrastColor}
+            onChange={(next) => updateStyle(value, onChange, { accentContrastColor: next })}
+            onClear={() => clearStyleField(value, onChange, "accentContrastColor")}
+            placeholder="var(--color-background)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+        </div>
       </div>
       <ColorContrastNotice
         advisory={accentContrastAdvisory}
@@ -564,12 +610,17 @@ function AccessibilitySection({
     <EditorSection
       id="toggle-block.accessibility"
       title="Accessibility"
+      mode="visual"
+      role="content"
       description="Override the radiogroup label and selected-state announcement copy."
     >
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("toggle-block.accessibility.ariaLabel", "labels.ariaLabel")}
+        >
           <ClearableFieldHeader
-            label="ARIA group label"
+            label="Toggle group label"
             value={normalized.labels.ariaLabel}
             onClear={() => clearLabelField(value, onChange, "ariaLabel")}
             onRestoreValue={(next) => updateLabels(value, onChange, { ariaLabel: next })}
@@ -584,9 +635,15 @@ function AccessibilitySection({
             placeholder="Toggle content view"
           />
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(
+            "toggle-block.accessibility.selectedSuffix",
+            "labels.selectedSuffix"
+          )}
+        >
           <ClearableFieldHeader
-            label="Selected suffix"
+            label="Selected announcement"
             value={normalized.labels.selectedSuffix}
             onClear={() => clearLabelField(value, onChange, "selectedSuffix")}
             onRestoreValue={(next) => updateLabels(value, onChange, { selectedSuffix: next })}
@@ -624,7 +681,13 @@ function PaneStyleFields({
     <div className="space-y-3 rounded-lg border p-3">
       <p className="text-sm font-semibold">{title}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(
+            `toggle-block.pane-style.${pane}.surface`,
+            `style.panes.${pane}.surface`
+          )}
+        >
           <p className="text-sm font-medium">Surface</p>
           <Select
             value={style.surface}
@@ -646,7 +709,13 @@ function PaneStyleFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(
+            `toggle-block.pane-style.${pane}.padding`,
+            `style.panes.${pane}.padding`
+          )}
+        >
           <p className="text-sm font-medium">Padding</p>
           <Select
             value={style.padding}
@@ -668,7 +737,13 @@ function PaneStyleFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(
+            `toggle-block.pane-style.${pane}.radius`,
+            `style.panes.${pane}.radius`
+          )}
+        >
           <p className="text-sm font-medium">Radius</p>
           <Select
             value={style.radius}
@@ -690,7 +765,13 @@ function PaneStyleFields({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes(
+            `toggle-block.pane-style.${pane}.borderEmphasis`,
+            `style.panes.${pane}.borderEmphasis`
+          )}
+        >
           <p className="text-sm font-medium">Border emphasis</p>
           <Select
             value={style.borderEmphasis}
@@ -728,6 +809,8 @@ function PaneStyleSection({
     <EditorSection
       id="toggle-block.pane-style"
       title="Pane cards"
+      mode="visual"
+      role="visual"
       description="Style each pane independently without widening Toggle Block beyond two panes."
     >
       <PaneStyleFields pane="primary" title="Primary pane" value={value} onChange={onChange} />
@@ -743,6 +826,8 @@ function AuthoringGuidanceSection({ value }: { value: ToggleBlockData }) {
     <EditorSection
       id="toggle-block.authoring"
       title="Pane authoring"
+      mode="visual"
+      role="summary"
       description="Keep Toggle Block focused on two views and add content through the page builder."
     >
       <div className="space-y-2 text-sm text-muted-foreground">
@@ -759,43 +844,157 @@ function AuthoringGuidanceSection({ value }: { value: ToggleBlockData }) {
   );
 }
 
-function AdvancedToolsSection({
-  value,
-  onChange,
-}: {
-  value: ToggleBlockData;
-  onChange: (next: ToggleBlockData) => void;
-}) {
+function formatTokenLabel<T extends string>(
+  options: Array<{ id: T; label: string }>,
+  value: T
+): string {
+  return options.find((option) => option.id === value)?.label ?? value;
+}
+
+function colorDiagnostic(value: string | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return "Theme default";
+  if (trimmed.startsWith("var(")) return "Theme token configured";
+  return trimmed;
+}
+
+function paneStyleSummary(style: NormalizedToggleBlockData["style"]["panes"][ToggleBlockStateId]) {
+  return [
+    `Surface: ${formatTokenLabel(paneSurfaceOptions, style.surface)}`,
+    `Padding: ${formatTokenLabel(panePaddingOptions, style.padding)}`,
+    `Radius: ${formatTokenLabel(paneRadiusOptions, style.radius)}`,
+    `Border: ${formatTokenLabel(paneBorderOptions, style.borderEmphasis)}`,
+  ].join(" · ");
+}
+
+function RuntimeSummarySection({ value, variant }: { value: ToggleBlockData; variant?: string }) {
+  const normalized = normalizeValue(value);
+  const defaultLabel =
+    normalized.options.defaultState === "secondary"
+      ? normalized.labels.secondary
+      : normalized.labels.primary;
+
   return (
     <EditorSection
-      id="toggle-block.advanced-tools"
-      title="Advanced tools"
-      description="Use diagnostics, reset defaults, and keep advanced edits explicit."
+      id="toggle-block.advanced.runtime-summary"
+      title="Runtime summary"
+      mode="advanced"
+      role="diagnostics"
+      description="Read-only summary of the saved toggle behavior."
     >
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => resetEditorValue(value, onChange)}
-          data-widget-control="toggle-block.reset-defaults"
-          data-widget-control-ownership="action"
-        >
-          Reset to defaults
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Variant selection and day-to-day styling stay in Wizard or Visual. Advanced keeps the
-        contract explicit.
-      </p>
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.variant"
+        label="Variant"
+        path="variant"
+        value={variantOptions.find((option) => option.id === resolveVariant(variant ?? ""))?.label}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.defaultState"
+        label="Opening pane"
+        path="options.defaultState"
+        value={`${defaultLabel} (${normalized.options.defaultState})`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.motion"
+        label="Motion"
+        path="options.motion"
+        value={motionOptions.find((option) => option.id === normalized.options.motion)?.label}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.labels"
+        label="Pane labels"
+        path="labels"
+        value={`${normalized.labels.primary} / ${normalized.labels.secondary}`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.helper"
+        label="Helper copy"
+        path="labels.helper"
+        value={normalized.labels.helper || "Hidden"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.accessibility"
+        label="Accessibility announcement"
+        path="labels"
+        value={`${normalized.labels.ariaLabel} · suffix: ${normalized.labels.selectedSuffix}`}
+      />
     </EditorSection>
   );
 }
 
-function DiagnosticsSnapshot({ value }: { value: ToggleBlockData }) {
+function StyleSummarySection({ value }: { value: ToggleBlockData }) {
+  const normalized = normalizeValue(value);
+
   return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+    <EditorSection
+      id="toggle-block.advanced.style-summary"
+      title="Style diagnostics"
+      mode="advanced"
+      role="diagnostics"
+      description="Read-only summary of Visual-owned color and pane-card settings."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.surfaceColor"
+        label="Surface color"
+        path="style.surfaceColor"
+        value={colorDiagnostic(value.style?.surfaceColor)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.borderColor"
+        label="Border color"
+        path="style.borderColor"
+        value={colorDiagnostic(value.style?.borderColor)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.accentColor"
+        label="Accent color"
+        path="style.accentColor"
+        value={colorDiagnostic(value.style?.accentColor)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.accentContrastColor"
+        label="Accent contrast color"
+        path="style.accentContrastColor"
+        value={colorDiagnostic(value.style?.accentContrastColor)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.primaryPane"
+        label="Primary pane card"
+        path="style.panes.primary"
+        value={paneStyleSummary(normalized.style.panes.primary)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.secondaryPane"
+        label="Secondary pane card"
+        path="style.panes.secondary"
+        value={paneStyleSummary(normalized.style.panes.secondary)}
+      />
+    </EditorSection>
+  );
+}
+
+function ContractSummarySection() {
+  return (
+    <EditorSection
+      id="toggle-block.advanced.contract-summary"
+      title="Support summary"
+      mode="advanced"
+      role="summary"
+      description="Diagnostics only. Daily editing stays in Visual."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.scope"
+        label="Pane scope"
+        path="slots.primary"
+        value="Fixed two-pane widget: primary and secondary slots"
+      />
+      <ReadonlyWidgetSummaryRow
+        id="toggle-block.advanced.contract"
+        label="Editor contract"
+        path="editorContract"
+        value="Wizard seeds setup, Visual owns daily editing, Advanced is read-only."
+      />
+    </EditorSection>
   );
 }
 
@@ -810,6 +1009,8 @@ export function ToggleBlockWizardEditor({
       <EditorSection
         id="toggle-block.variant"
         title="Step 1: Variant"
+        mode="wizard"
+        role="setup"
         description="Pick the toggle surface that matches the page rhythm."
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
@@ -819,6 +1020,8 @@ export function ToggleBlockWizardEditor({
         onChange={onChange}
         sectionId="toggle-block.labels.step"
         title="Step 2: Labels"
+        mode="wizard"
+        role="setup"
         description="Name both views and decide whether helper copy is visible."
       />
       <StartingPaneSection
@@ -826,6 +1029,8 @@ export function ToggleBlockWizardEditor({
         onChange={onChange}
         sectionId="toggle-block.starting-pane.step"
         title="Step 3: Starting pane"
+        mode="wizard"
+        role="setup"
         description="Choose which pane opens first for visitors."
       />
     </div>
@@ -843,31 +1048,28 @@ export function ToggleBlockVisualEditor({
       <EditorSection
         id="toggle-block.variant"
         title="Variant"
+        mode="visual"
+        role="visual"
         description="Compare both visual surfaces with a live preview thumbnail."
       >
         <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
       </EditorSection>
       <LabelsSection value={value} onChange={onChange} />
       <ExperienceSection value={value} onChange={onChange} />
+      <AccessibilitySection value={value} onChange={onChange} />
       <ThemeSection value={value} onChange={onChange} />
+      <PaneStyleSection value={value} onChange={onChange} />
       <AuthoringGuidanceSection value={value} />
     </div>
   );
 }
 
-export function ToggleBlockAdvancedEditor({ value, onChange }: WidgetEditorProps<ToggleBlockData>) {
+export function ToggleBlockAdvancedEditor({ value, variant }: WidgetEditorProps<ToggleBlockData>) {
   return (
     <div className="space-y-4">
-      <AccessibilitySection value={value} onChange={onChange} />
-      <PaneStyleSection value={value} onChange={onChange} />
-      <AdvancedToolsSection value={value} onChange={onChange} />
-      <EditorSection
-        id="toggle-block.diagnostics"
-        title="Diagnostics"
-        description="Normalized payload preview."
-      >
-        <DiagnosticsSnapshot value={normalizeValue(value)} />
-      </EditorSection>
+      <RuntimeSummarySection value={value} variant={variant} />
+      <StyleSummarySection value={value} />
+      <ContractSummarySection />
     </div>
   );
 }
