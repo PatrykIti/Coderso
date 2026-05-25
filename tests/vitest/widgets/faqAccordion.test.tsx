@@ -71,12 +71,20 @@ test("faq accordion normalization keeps deterministic ids and open index bounds"
     style: {
       border: "",
       divider: "",
+      questionTextColor: "",
+      answerTextColor: "",
+      headerTitleColor: "",
+      headerDescriptionColor: "",
       spacing: "md",
     },
   });
   expect(normalized.options?.defaultOpenIndex).toBe(0);
   expect(normalized.style?.border).toBeUndefined();
   expect(normalized.style?.divider).toBeUndefined();
+  expect(normalized.style?.questionTextColor).toBeUndefined();
+  expect(normalized.style?.answerTextColor).toBeUndefined();
+  expect(normalized.style?.headerTitleColor).toBeUndefined();
+  expect(normalized.style?.headerDescriptionColor).toBeUndefined();
   expect(normalized.style?.spacing).toBe("md");
 });
 
@@ -292,7 +300,36 @@ test("faq accordion visual renders section-based IA", () => {
   expect(html).toContain("Questions and answers");
   expect(html).toContain("Layout and typography");
   expect(html).toContain("Colors and panel style");
-  expect(html).toContain("SEO and structured data");
+  expect(html).toContain("Search visibility");
+});
+
+test("faq accordion visual keeps custom color tokens behind swatch-only controls", () => {
+  const html = renderToString(
+    <FaqAccordionVisualEditor
+      value={{
+        ...faqAccordionDefaults,
+        style: {
+          ...faqAccordionDefaults.style,
+          surface: "var(--color-bg)",
+          border: "rgba(15, 23, 42, 0.18)",
+          questionTextColor: "brand-text-token",
+        },
+      }}
+      onChange={() => undefined}
+      variant="single-column"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Saved custom color");
+  expect(html).toContain('data-widget-control="faq-accordion.style.surface"');
+  expect(html).toContain('input type="color"');
+  expect(html).not.toContain('placeholder="var(--color-bg)"');
+  expect(html).not.toContain('placeholder="var(--color-border)"');
+  expect(html).not.toContain('placeholder="var(--color-text)"');
+  expect(html).not.toContain('value="var(--color-bg)"');
+  expect(html).not.toContain('value="rgba(15, 23, 42, 0.18)"');
+  expect(html).not.toContain('value="brand-text-token"');
 });
 
 test("faq accordion advanced keeps technical-only scope", () => {
@@ -305,10 +342,10 @@ test("faq accordion advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Open-state and fallback controls");
-  expect(html).toContain("Technical style tokens");
+  expect(html).toContain("Open-state diagnostics");
+  expect(html).toContain("Style token diagnostics");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
-  expect(html).toContain("Raw default open index");
+  expect(html).toContain("Default open item");
   expect(html).not.toContain("Questions and answers");
 });

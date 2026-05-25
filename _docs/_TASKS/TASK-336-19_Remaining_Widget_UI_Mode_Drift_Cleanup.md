@@ -406,6 +406,22 @@ read-only diagnostics. It added these concrete cleanup requirements:
   clear-path coverage plus docs/evidence synchronization; those findings were
   addressed before validation. Claude read-only review timed out after 240
   seconds without output.
+- In Progress (2026-05-25): twenty-first implementation family starts FAQ
+  Accordion color authoring cleanup. FAQ Visual color fields now use
+  swatch-only controls plus clear actions instead of raw CSS/token text inputs,
+  while existing theme tokens, rgba values, and custom strings remain
+  compatible as saved custom color state that can be replaced or cleared by
+  nontechnical authors. All seven style color fields now share the same
+  clearable normalization contract in `normalizeFaqAccordionData`. Focused
+  Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Helper-agent audits first found stale expectations,
+  incomplete clear coverage, and stale docs; those findings were fixed before
+  final review, which reported no high/medium/low drift. Claude read-only
+  review timed out after 240 seconds without output.
 
 ## Files to Change
 

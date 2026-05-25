@@ -912,18 +912,18 @@ export function normalizeFaqAccordionData(data: FaqAccordionData): FaqAccordionD
       sectionPaddingY: resolveFaqSectionPaddingY(
         data.style?.sectionPaddingY ?? styleDefaults.sectionPaddingY
       ),
-      questionTextColor: resolveClearableStyleValue(
-        data.style?.questionTextColor ?? styleDefaults.questionTextColor
-      ),
-      answerTextColor: resolveClearableStyleValue(
-        data.style?.answerTextColor ?? styleDefaults.answerTextColor
-      ),
-      headerTitleColor: resolveClearableStyleValue(
-        data.style?.headerTitleColor ?? styleDefaults.headerTitleColor
-      ),
-      headerDescriptionColor: resolveClearableStyleValue(
-        data.style?.headerDescriptionColor ?? styleDefaults.headerDescriptionColor
-      ),
+      questionTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.questionTextColor)
+        : styleDefaults.questionTextColor,
+      answerTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.answerTextColor)
+        : styleDefaults.answerTextColor,
+      headerTitleColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.headerTitleColor)
+        : styleDefaults.headerTitleColor,
+      headerDescriptionColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.headerDescriptionColor)
+        : styleDefaults.headerDescriptionColor,
       panelRadius: resolveFaqPanelRadius(data.style?.panelRadius ?? styleDefaults.panelRadius),
       borderWidth: resolveFaqBorderWidth(data.style?.borderWidth ?? styleDefaults.borderWidth),
       headerTitleSize: resolveFaqHeaderTitleSize(

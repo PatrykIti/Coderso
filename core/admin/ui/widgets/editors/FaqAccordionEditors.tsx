@@ -36,7 +36,11 @@ import {
 } from "../../../../widgets/core/faqAccordion";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
-import { ClearableFieldHeader, SharedColorFieldInputs } from "./ClearableFields";
+import {
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorPickerValue,
+} from "./ClearableFields";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -217,35 +221,67 @@ function VariantCards({
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback,
   onClear,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
 }) {
+  const hasValue = hasClearableFieldValue(value);
+  const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
+  const pickerValue = resolveColorPickerValue(value, pickerFallback);
+
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
-        label={label}
-        value={value}
-        onClear={onClear}
-        onRestoreValue={onChange}
-      />
-      <SharedColorFieldInputs
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        pickerFallback={pickerFallback}
-      />
-    </div>
+    <WidgetControlRow
+      id={id}
+      label={label}
+      path={id.replace("faq-accordion.", "")}
+      actions={
+        onClear ? (
+          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
+            Clear
+          </Button>
+        ) : null
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={pickerValue}
+              onChange={(event) => onChange(event.target.value)}
+              className="h-10 w-11 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-10 flex-wrap items-center gap-2">
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {hasCustomValue
+                  ? "Saved custom color"
+                  : hasValue
+                    ? "Selected color"
+                    : "Theme default"}
+              </span>
+            </div>
+          </div>
+          {hasCustomValue ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -1019,65 +1055,65 @@ export function FaqAccordionVisualEditor({
         description="Set FAQ card colors, border style, and text emphasis."
       >
         <ColorField
+          id="faq-accordion.style.surface"
           label="Panel surface"
           value={normalized.style?.surface}
           onChange={(next) => updateStyle(value, onChange, { surface: next })}
           onClear={() => clearStyleField(value, onChange, "surface")}
-          placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
 
         <ColorField
+          id="faq-accordion.style.border"
           label="Panel border"
           value={normalized.style?.border}
           onChange={(next) => updateStyle(value, onChange, { border: next })}
           onClear={() => clearStyleField(value, onChange, "border")}
-          placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
 
         <ColorField
+          id="faq-accordion.style.divider"
           label="Divider color"
           value={normalized.style?.divider}
           onChange={(next) => updateStyle(value, onChange, { divider: next })}
           onClear={() => clearStyleField(value, onChange, "divider")}
-          placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
         />
 
         <ColorField
+          id="faq-accordion.style.questionTextColor"
           label="Question text color"
           value={normalized.style?.questionTextColor}
           onChange={(next) => updateStyle(value, onChange, { questionTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "questionTextColor")}
-          placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
 
         <ColorField
+          id="faq-accordion.style.answerTextColor"
           label="Answer text color"
           value={normalized.style?.answerTextColor}
           onChange={(next) => updateStyle(value, onChange, { answerTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "answerTextColor")}
-          placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
 
         <ColorField
+          id="faq-accordion.style.headerTitleColor"
           label="Header title color"
           value={normalized.style?.headerTitleColor}
           onChange={(next) => updateStyle(value, onChange, { headerTitleColor: next })}
           onClear={() => clearStyleField(value, onChange, "headerTitleColor")}
-          placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
 
         <ColorField
+          id="faq-accordion.style.headerDescriptionColor"
           label="Header description color"
           value={normalized.style?.headerDescriptionColor}
           onChange={(next) => updateStyle(value, onChange, { headerDescriptionColor: next })}
           onClear={() => clearStyleField(value, onChange, "headerDescriptionColor")}
-          placeholder="var(--color-text)"
           pickerFallback="#0f172a"
         />
 

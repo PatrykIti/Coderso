@@ -1059,6 +1059,31 @@ token authoring drift.
   before validation. Claude read-only review timed out after 240 seconds
   without output.
 
+## TASK-336-19 FAQ Color Authoring Evidence (2026-05-25)
+
+The twenty-first TASK-336-19 implementation family targets FAQ Accordion raw
+color/CSS token authoring drift.
+
+- FAQ Visual no longer exposes raw CSS/token text inputs for style color
+  fields.
+- Color authoring now uses swatch-only controls plus explicit clear actions,
+  while preserving the string runtime contract for existing theme tokens,
+  rgba values, and custom strings as replace-or-clear saved custom color state.
+- All seven style color fields clear through `normalizeFaqAccordionData`:
+  `surface`, `border`, `divider`, `questionTextColor`, `answerTextColor`,
+  `headerTitleColor`, and `headerDescriptionColor`.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  normalization, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-faq-color-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Helper-agent audits first found stale expectations, incomplete clear-path
+  coverage, and stale docs; those findings were addressed before final review,
+  which reported no high/medium/low drift. Claude read-only review timed out
+  after 240 seconds without output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

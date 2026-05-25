@@ -92,11 +92,16 @@ payload repair behind explicit confirmation.
 
 ## Clear Controls
 
-- `style.surface`, `style.border`, and `style.divider` are clearable.
+- Visual color authoring uses swatch pickers and clear actions instead of raw
+  CSS token text fields.
+- `style.surface`, `style.border`, `style.divider`, `style.questionTextColor`,
+  `style.answerTextColor`, `style.headerTitleColor`, and
+  `style.headerDescriptionColor` are clearable.
 - Clearing a field removes the persisted token instead of forcing an empty
   string.
-- Color swatches may fall back to display-only hex values, but token text in
-  the input remains the source of truth.
+- Existing theme tokens, rgba values, and other custom strings remain
+  compatible as saved custom color state that can be replaced or cleared
+  without typing CSS.
 
 ## Data Model (summary)
 
@@ -149,5 +154,6 @@ payload repair behind explicit confirmation.
 - Contract target: Wizard seeds starter questions; Visual owns FAQ item
   content, behavior, SEO toggle, and presentation; Advanced is read-only
   runtime diagnostics.
-- Raw default-index/style-token controls in Advanced are routed to
-  `TASK-336-19`.
+- Advanced exposes read-only open-state/style diagnostics plus confirmed
+  normalization support; raw default-index/style-token authoring is not part of
+  the daily editor contract.

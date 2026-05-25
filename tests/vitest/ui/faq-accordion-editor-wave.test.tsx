@@ -348,6 +348,16 @@ const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string)
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findColorInputByControl = (container: HTMLElement, controlId: string) => {
+  const input = container.querySelector(
+    `[data-widget-control="${controlId}"] input[type="color"]`
+  ) as HTMLInputElement | null;
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for control "${controlId}"`);
+  }
+  return input;
+};
+
 const findCheckboxesWithAriaLabel = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
     (element) => element instanceof HTMLInputElement && element.hasAttribute("aria-label")
@@ -357,18 +367,6 @@ const findUnnamedCheckboxes = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
     (element) => element instanceof HTMLInputElement && !element.hasAttribute("aria-label")
   );
-
-const findColorInputForPlaceholder = (container: HTMLElement, placeholder: string, index = 0) => {
-  const textInput = findAllInputsByPlaceholder(container, placeholder)[index];
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
-  }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
-  }
-  return colorInput;
-};
 
 type EditorKind = "wizard" | "visual" | "advanced";
 
@@ -515,6 +513,10 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
         surface: "surface-token",
         border: "border-token",
         divider: "divider-token",
+        questionTextColor: "question-token",
+        answerTextColor: "answer-token",
+        headerTitleColor: "header-title-token",
+        headerDescriptionColor: "header-description-token",
         spacing: "md",
         maxWidth: "xl",
         headerAlign: "center",
@@ -536,9 +538,10 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
     expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
     expect((colorInputs[2] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
-    expect(view.container.textContent).toContain(
-      "Custom token active. Swatch preview uses the fallback until you replace it with a hex color."
-    );
+    expect(view.container.textContent).toContain("Saved custom color");
+    expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
+    expect(findAllInputsByPlaceholder(view.container, "var(--color-text)")).toHaveLength(0);
 
     clickElement(findButtonByText(view.container, "Two Column"));
     expect(view.getVariant()).toBe("two-column");
@@ -613,13 +616,37 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
 
     const unnamedCheckboxes = findUnnamedCheckboxes(view.container);
     toggleCheckbox(unnamedCheckboxes[0], true);
-    setInputValue(colorInputs[0], "#111111");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#123456");
-    const borderInputs = findAllInputsByPlaceholder(view.container, "var(--color-border)");
-    setInputValue(borderInputs[0], "#654321");
-    setInputValue(borderInputs[1], "#abcdef");
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.surface"),
+      "#123456"
+    );
+    setInputValue(findColorInputByControl(view.container, "faq-accordion.style.border"), "#654321");
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.divider"),
+      "#abcdef"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.questionTextColor"),
+      "#0a0a0a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.answerTextColor"),
+      "#1a1a1a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.headerTitleColor"),
+      "#2a2a2a"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "faq-accordion.style.headerDescriptionColor"),
+      "#3a3a3a"
+    );
     clickElement(findButtonsByText(view.container, "Clear")[1]);
     clickElement(findButtonsByText(view.container, "Clear")[2]);
+    clickElement(findButtonsByText(view.container, "Clear")[3]);
+    clickElement(findButtonsByText(view.container, "Clear")[4]);
+    clickElement(findButtonsByText(view.container, "Clear")[5]);
+    clickElement(findButtonsByText(view.container, "Clear")[6]);
     setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl", "full"]), "full");
     setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "left");
     setSelectValue(findSelectByOptions(view.container, ["auto", "sm", "md", "lg", "xl"]), "xl");
@@ -657,6 +684,10 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
           surface: "#123456",
           border: undefined,
           divider: undefined,
+          questionTextColor: undefined,
+          answerTextColor: undefined,
+          headerTitleColor: undefined,
+          headerDescriptionColor: undefined,
           maxWidth: "full",
           headerAlign: "left",
           headerTitleSize: "xl",
