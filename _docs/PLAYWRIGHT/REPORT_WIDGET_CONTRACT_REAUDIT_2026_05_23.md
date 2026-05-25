@@ -848,6 +848,29 @@ and social destination authoring drift.
   before being stopped with code 143. No Claude blocker output was available
   for this Team slice.
 
+## TASK-336-19 Footer Destination Authoring Evidence (2026-05-24)
+
+The twelfth TASK-336-19 implementation family targets Footer Wizard/Visual raw
+destination authoring drift.
+
+- Footer Wizard and Visual no longer expose raw logo URL, legal URL, column link
+  URL, or social URL inputs. Brand logo authoring uses Media Library picking,
+  column and legal links use the shared page-first `LinkDestinationField`, known
+  social platforms use profile names/handles, and custom social links use
+  page-first custom destination picking.
+- Saved custom destinations stay backward-compatible as replace-or-clear state
+  instead of editable raw URL fields. Newly added column/social links no longer
+  seed fake `#` or `https://` destinations.
+- Focused Vitest evidence covers the editor flow, renderer compatibility, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-authoring-2026-05-24.*`.
+  Footer reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only review was attempted for this Footer slice, but the returned
+  output contained no actionable findings or blocker list.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

@@ -348,8 +348,8 @@ export const footerDefaults: FooterData = {
   },
   socialEnabled: true,
   social: [
-    { type: "twitter", href: "https://twitter.com" },
-    { type: "linkedin", href: "https://linkedin.com" },
+    { type: "x", href: "https://x.com/coderso" },
+    { type: "linkedin", href: "https://www.linkedin.com/company/coderso" },
   ],
   layout: {
     align: "left",

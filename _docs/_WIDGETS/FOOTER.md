@@ -39,11 +39,13 @@ icon-based social actions.
 - Layout variant selection.
 - Quick setup for visible columns: title plus the first link per visible column,
   with explicit disclosure that additional links stay in Visual mode.
-- Brand basics: brand name, tagline, logo URL, and logo alt text.
+- Brand basics: brand name, tagline, Media Library logo picking, and logo alt
+  text.
 - Legal basics: visibility toggle, copyright, localized Privacy/Terms labels,
-  and URLs.
-- Social basics: visibility toggle, labeled platform / URL fields, custom
-  platform label support, and up to 8 quick social entries.
+  and page-first destination pickers.
+- Social basics: visibility toggle, platform choices with profile
+  names/handles, custom destination page picking, custom platform label support,
+  and up to 8 quick social entries.
 
 ### Visual
 - Primary editing mode (Footer owns variant selection in Visual).
@@ -57,6 +59,10 @@ icon-based social actions.
   - Typography and link styling
   - Slots overview and insertion hints
 - Visual owns content, legal, social, and user-facing link/style controls.
+- Visual destination authoring uses page-first pickers for column and legal
+  links, Media Library picking for the brand logo, and platform/profile fields
+  for social links. Legacy custom destinations stay replace-or-clear
+  compatible instead of editable raw URL fields.
 - Link reordering is supported.
 - Column reordering is supported only through the live footer block patch path,
   where the visible column data and matching `column-1/2/3` slot payloads move

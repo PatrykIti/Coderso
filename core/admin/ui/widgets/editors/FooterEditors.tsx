@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { listMediaCached } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
   footerColumnSlotIds,
@@ -26,8 +28,10 @@ import {
   type FooterLink,
   type FooterLinkTarget,
   type FooterSocial,
+  type FooterSocialType,
 } from "../../../../widgets/core/footer";
 import type { WidgetEditorProps } from "../../../../widgets/types";
+import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { WidgetEditorSection } from "./WidgetEditorControls";
 
@@ -126,7 +130,24 @@ const socialTypeOptions = footerSocialTypes.map((type) => ({
 
 const emptySocialLink: FooterSocial = {
   type: "linkedin",
-  href: "https://",
+  href: "",
+};
+
+const footerSocialProfilePlaceholders: Record<FooterSocialType, string> = {
+  linkedin: "company/coderso",
+  twitter: "coderso",
+  x: "coderso",
+  github: "coderso",
+  youtube: "coderso",
+  facebook: "coderso",
+  instagram: "coderso",
+  tiktok: "coderso",
+  discord: "coderso",
+  pinterest: "coderso",
+  mastodon: "coderso",
+  twitch: "coderso",
+  snapchat: "coderso",
+  custom: "",
 };
 
 const moveItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
@@ -278,7 +299,7 @@ const updateColumnLink = (
   const nextColumns = [...columns];
   const target = nextColumns[columnIndex];
   const links = Array.isArray(target.links) ? [...target.links] : [];
-  const base = links[linkIndex] ?? { label: "Link", href: "#", target: "_self" };
+  const base = links[linkIndex] ?? { label: "Link", href: "", target: "_self" };
   links[linkIndex] = {
     label: patch.label ?? base.label,
     href: patch.href ?? base.href,
@@ -317,7 +338,7 @@ const addColumnLink = (
   const nextColumns = [...columns];
   const target = nextColumns[columnIndex];
   const links = Array.isArray(target.links) ? [...target.links] : [];
-  links.push({ label: `Link ${links.length + 1}`, href: "#", target: "_self" });
+  links.push({ label: `Link ${links.length + 1}`, href: "", target: "_self" });
   nextColumns[columnIndex] = { ...target, links };
   onChange({ ...value, columns: nextColumns });
 };
@@ -339,6 +360,101 @@ const removeColumnLink = (
   };
   onChange({ ...value, columns: nextColumns });
 };
+
+function readFooterSocialProfile(type: string | undefined, href: string | undefined) {
+  const socialType = resolveFooterSocialType(type);
+  if (socialType === "custom" || typeof href !== "string" || href.trim().length === 0) return "";
+
+  try {
+    const parsed = new URL(href);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const parts = parsed.pathname.split("/").filter(Boolean);
+
+    switch (socialType) {
+      case "linkedin":
+        if (host !== "linkedin.com") return "";
+        if ((parts[0] === "company" || parts[0] === "in") && parts[1]) {
+          return `${parts[0]}/${parts[1]}`;
+        }
+        return "";
+      case "twitter":
+      case "x":
+        return host === "x.com" || host === "twitter.com" ? (parts[0] ?? "") : "";
+      case "github":
+        return host === "github.com" ? (parts[0] ?? "") : "";
+      case "youtube":
+        return host === "youtube.com" ? (parts[0]?.replace(/^@/, "") ?? "") : "";
+      case "facebook":
+        return host === "facebook.com" ? (parts[0] ?? "") : "";
+      case "instagram":
+        return host === "instagram.com" ? (parts[0] ?? "") : "";
+      case "tiktok":
+        return host === "tiktok.com" ? (parts[0]?.replace(/^@/, "") ?? "") : "";
+      case "discord":
+        if (host === "discord.gg") return parts[0] ?? "";
+        if (host === "discord.com" && parts[0] === "invite") return parts[1] ?? "";
+        return "";
+      case "pinterest":
+        return host === "pinterest.com" ? (parts[0] ?? "") : "";
+      case "mastodon":
+        return parts[0]?.replace(/^@/, "") ?? "";
+      case "twitch":
+        return host === "twitch.tv" ? (parts[0] ?? "") : "";
+      case "snapchat":
+        return host === "snapchat.com" && parts[0] === "add" ? (parts[1] ?? "") : "";
+    }
+  } catch {
+    return "";
+  }
+}
+
+function buildFooterSocialHref(type: FooterSocialType, profile: string | undefined) {
+  if (type === "custom") return "";
+  const trimmedProfile = typeof profile === "string" ? profile.trim() : "";
+  if (!trimmedProfile) return "";
+
+  let profileSource = trimmedProfile;
+  if (/^https?:\/\//i.test(trimmedProfile)) {
+    profileSource = readFooterSocialProfile(type, trimmedProfile);
+    if (!profileSource) return "";
+  }
+
+  const handle = profileSource.replace(/^@+/, "").replace(/^\/+|\/+$/g, "");
+  if (!handle) return "";
+
+  switch (type) {
+    case "linkedin": {
+      const parts = handle.split("/").filter(Boolean);
+      if ((parts[0] === "company" || parts[0] === "in") && parts[1]) {
+        return `https://www.linkedin.com/${parts[0]}/${encodeURIComponent(parts[1])}`;
+      }
+      return `https://www.linkedin.com/company/${encodeURIComponent(handle)}`;
+    }
+    case "twitter":
+    case "x":
+      return `https://x.com/${encodeURIComponent(handle)}`;
+    case "github":
+      return `https://github.com/${encodeURIComponent(handle.split("/")[0] ?? "")}`;
+    case "youtube":
+      return `https://www.youtube.com/@${encodeURIComponent(handle)}`;
+    case "facebook":
+      return `https://www.facebook.com/${encodeURIComponent(handle)}`;
+    case "instagram":
+      return `https://www.instagram.com/${encodeURIComponent(handle)}`;
+    case "tiktok":
+      return `https://www.tiktok.com/@${encodeURIComponent(handle)}`;
+    case "discord":
+      return `https://discord.gg/${encodeURIComponent(handle)}`;
+    case "pinterest":
+      return `https://www.pinterest.com/${encodeURIComponent(handle)}`;
+    case "mastodon":
+      return `https://mastodon.social/@${encodeURIComponent(handle)}`;
+    case "twitch":
+      return `https://www.twitch.tv/${encodeURIComponent(handle)}`;
+    case "snapchat":
+      return `https://www.snapchat.com/add/${encodeURIComponent(handle)}`;
+  }
+}
 
 const moveFooterColumn = (
   value: FooterData,
@@ -444,6 +560,94 @@ function SwitchField({
   );
 }
 
+function BrandLogoField({
+  value,
+  onChange,
+}: {
+  value: FooterData;
+  onChange: (next: FooterData) => void;
+}) {
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const savedLogo = value.brand?.logoUrl?.trim() ?? "";
+
+  const handleMediaChange = async (nextValue: unknown) => {
+    const mediaId = typeof nextValue === "string" ? nextValue : null;
+    setMediaError(null);
+
+    if (!mediaId) {
+      setSelectedMediaId(null);
+      updateFooterBrand(value, onChange, { logoUrl: "" });
+      return;
+    }
+
+    try {
+      const items = await listMediaCached({ force: false });
+      const media = items.find((item) => item.id === mediaId);
+      if (!media?.url) throw new Error("missing_footer_logo_url");
+      setSelectedMediaId(mediaId);
+      updateFooterBrand(value, onChange, { logoUrl: media.url });
+    } catch {
+      setSelectedMediaId(null);
+      setMediaError("Failed to resolve selected logo media.");
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-md border bg-muted/10 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Logo image</p>
+          <p className="text-xs text-muted-foreground">
+            Pick a Media Library image. Saved image paths stay compatible and can be replaced or
+            cleared.
+          </p>
+        </div>
+        {savedLogo ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedMediaId(null);
+              setMediaError(null);
+              updateFooterBrand(value, onChange, { logoUrl: "" });
+            }}
+          >
+            Clear logo
+          </Button>
+        ) : null}
+      </div>
+      {savedLogo ? (
+        <div className="flex items-center gap-3 rounded-md border bg-background p-2">
+          <img
+            src={savedLogo}
+            alt={value.brand?.logoAlt?.trim() || value.brand?.logoText?.trim() || "Footer logo"}
+            className="h-10 w-20 rounded border object-contain"
+            loading="lazy"
+          />
+          <p className="text-xs text-muted-foreground">
+            {selectedMediaId
+              ? "Using the selected Media Library image."
+              : "A saved logo image is configured. Browse media to replace it or clear the logo."}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">No logo image selected.</p>
+      )}
+      <MediaPicker
+        value={selectedMediaId}
+        onChange={(next) => {
+          void handleMediaChange(next);
+        }}
+        multiple={false}
+        accept={["image/*"]}
+      />
+      {mediaError ? <p className="text-xs text-destructive">{mediaError}</p> : null}
+    </div>
+  );
+}
+
 function ColorField({
   label,
   value,
@@ -511,13 +715,7 @@ function BrandEditor({
           placeholder="Build confidently with modular content."
         />
       </FieldLabel>
-      <FieldLabel label="Logo URL">
-        <Input
-          value={value.brand?.logoUrl ?? ""}
-          onChange={(event) => updateFooterBrand(value, onChange, { logoUrl: event.target.value })}
-          placeholder="/media/footer-logo.svg"
-        />
-      </FieldLabel>
+      <BrandLogoField value={value} onChange={onChange} />
       <FieldLabel
         label="Logo alt text"
         description="Used when the footer shows a logo image without visible brand copy."
@@ -574,15 +772,14 @@ function LegalEditor({
               placeholder="Privacy"
             />
           </FieldLabel>
-          <FieldLabel label="Privacy URL">
-            <Input
-              value={value.legal?.privacy ?? ""}
-              onChange={(event) =>
-                updateFooterLegal(value, onChange, { privacy: event.target.value })
-              }
-              placeholder="/privacy"
-            />
-          </FieldLabel>
+          <LinkDestinationField
+            fieldId="footer-legal-privacy"
+            label="Privacy destination"
+            value={value.legal?.privacy}
+            onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
+            emptyLabel="No privacy destination"
+            helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
+          />
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -605,15 +802,14 @@ function LegalEditor({
               placeholder="Terms"
             />
           </FieldLabel>
-          <FieldLabel label="Terms URL">
-            <Input
-              value={value.legal?.terms ?? ""}
-              onChange={(event) =>
-                updateFooterLegal(value, onChange, { terms: event.target.value })
-              }
-              placeholder="/terms"
-            />
-          </FieldLabel>
+          <LinkDestinationField
+            fieldId="footer-legal-terms"
+            label="Terms destination"
+            value={value.legal?.terms}
+            onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
+            emptyLabel="No terms destination"
+            helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
+          />
           {showTargets ? (
             <LabeledSelectField
               label="Link target"
@@ -684,17 +880,18 @@ function ColumnsQuickSetup({
                   placeholder="First link label"
                 />
               </FieldLabel>
-              <FieldLabel label={`Column ${index + 1} first link URL`}>
-                <Input
-                  value={firstLink.href}
-                  onChange={(event) =>
-                    updateColumnLink(value, onChange, variant, index, 0, {
-                      href: event.target.value,
-                    })
-                  }
-                  placeholder="First link URL"
-                />
-              </FieldLabel>
+              <LinkDestinationField
+                fieldId={`footer-wizard-column-${index + 1}-first-link`}
+                label={`Column ${index + 1} first link destination`}
+                value={firstLink.href}
+                onChange={(next) =>
+                  updateColumnLink(value, onChange, variant, index, 0, {
+                    href: next,
+                  })
+                }
+                emptyLabel="No destination"
+                helpText="Pick a page for this starter footer link. Saved custom destinations stay replace-or-clear compatible."
+              />
             </div>
             {hiddenLinkCount > 0 ? (
               <p className="text-xs text-muted-foreground">
@@ -740,6 +937,22 @@ function SocialLinksEditor({
     });
   };
 
+  const updateSocialType = (index: number, nextType: string) => {
+    const item = visibleItems[index] ?? emptySocialLink;
+    const currentType = resolveFooterSocialType(item.type);
+    const profile = readFooterSocialProfile(currentType, item.href);
+    const resolvedNextType = resolveFooterSocialType(nextType);
+    updateSocial(index, {
+      type: resolvedNextType,
+      href:
+        resolvedNextType === "custom"
+          ? item.href
+          : buildFooterSocialHref(resolvedNextType, profile),
+      label:
+        resolvedNextType === "custom" ? resolveFooterSocialLabel(item.type, item.label) : undefined,
+    });
+  };
+
   const addSocial = () => {
     updateFooterSocial(value, onChange, (social) => {
       if (typeof limit === "number" && social.length >= limit) return social;
@@ -760,8 +973,8 @@ function SocialLinksEditor({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        External social links open in a new tab automatically. Relative or hash URLs stay in the
-        current tab.
+        Choose a platform, then enter only the public profile name or handle. Custom saved
+        destinations can be replaced with a page picker or cleared.
       </p>
       {visibleItems.length === 0 ? (
         <p className="text-xs text-muted-foreground">No social links configured.</p>
@@ -800,25 +1013,53 @@ function SocialLinksEditor({
               <LabeledSelectField
                 label="Platform"
                 value={selectedType}
-                onValueChange={(next) =>
-                  updateSocial(index, {
-                    type: next,
-                    label:
-                      next === "custom"
-                        ? resolveFooterSocialLabel(item.type, item.label)
-                        : undefined,
-                  })
-                }
+                onValueChange={(next) => updateSocialType(index, next)}
                 options={socialTypeOptions}
               />
-              <FieldLabel label="URL">
-                <Input
+              {selectedType === "custom" ? (
+                <LinkDestinationField
+                  fieldId={`footer-social-${index + 1}-custom-destination`}
+                  label="Custom destination"
                   value={item.href}
-                  onChange={(event) => updateSocial(index, { href: event.target.value })}
-                  placeholder="https://example.com/profile"
+                  onChange={(next) => updateSocial(index, { href: next })}
+                  emptyLabel="No custom destination"
+                  helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
                 />
-              </FieldLabel>
+              ) : (
+                <FieldLabel
+                  label="Profile name"
+                  description="The editor builds the safe profile destination from this value."
+                >
+                  <Input
+                    value={readFooterSocialProfile(selectedType, item.href)}
+                    onChange={(event) =>
+                      updateSocial(index, {
+                        href: buildFooterSocialHref(selectedType, event.target.value),
+                      })
+                    }
+                    placeholder={footerSocialProfilePlaceholders[selectedType]}
+                  />
+                </FieldLabel>
+              )}
             </div>
+            {selectedType !== "custom" &&
+            (item.href ?? "").trim().length > 0 &&
+            readFooterSocialProfile(selectedType, item.href).length === 0 ? (
+              <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                <p>
+                  A saved destination is still stored for this social link. Replace it with a
+                  profile name or clear it before publishing changes.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSocial(index, { href: "" })}
+                >
+                  Clear saved destination
+                </Button>
+              </div>
+            ) : null}
             {selectedType === "custom" ? (
               <FieldLabel label="Accessible label">
                 <Input
@@ -1038,17 +1279,18 @@ export function FooterVisualEditor({
                           placeholder="About"
                         />
                       </FieldLabel>
-                      <FieldLabel label="Link URL">
-                        <Input
-                          value={link.href}
-                          onChange={(event) =>
-                            updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
-                              href: event.target.value,
-                            })
-                          }
-                          placeholder="/about"
-                        />
-                      </FieldLabel>
+                      <LinkDestinationField
+                        fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
+                        label="Link destination"
+                        value={link.href}
+                        onChange={(next) =>
+                          updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
+                            href: next,
+                          })
+                        }
+                        emptyLabel="No destination"
+                        helpText="Pick a page for this footer link. Saved custom destinations stay replace-or-clear compatible."
+                      />
                     </div>
                     <LabeledSelectField
                       label="Link target"

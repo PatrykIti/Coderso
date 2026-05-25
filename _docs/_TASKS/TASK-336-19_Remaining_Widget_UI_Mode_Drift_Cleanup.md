@@ -277,6 +277,19 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `metadataGaps=0`. Claude review was attempted twice; the budget-limited
   invocation exited with `Exceeded USD budget (1)`, and the no-budget retry
   produced no output before being stopped with code 143.
+- In Progress (2026-05-24): twelfth implementation family targets Footer
+  Wizard/Visual raw destination authoring. Footer brand logo authoring now uses
+  Media Library picking, visible column/legal links use the shared page-first
+  `LinkDestinationField`, social links use known platform profile
+  names/handles, and custom social destinations use page picking with saved
+  custom replace/clear compatibility state. Focused Vitest evidence currently
+  passes
+  `bun run test:vitest -- tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-footer-authoring-2026-05-24.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Claude read-only review was attempted for this slice, but
+  the returned output contained no actionable findings or blocker list.
 
 ## Files to Change
 

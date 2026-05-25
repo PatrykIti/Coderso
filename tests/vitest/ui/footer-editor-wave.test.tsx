@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import { listMediaCached } from "@/services/mediaClient";
 import type { FooterData } from "../../../core/widgets/core/footer";
 import type { WidgetBlock } from "../../../core/widgets/types";
 
@@ -123,6 +124,55 @@ vi.mock("@/components/ui/switch", () => ({
   ),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  listMediaCached: vi.fn(),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "about-page",
+      title: "About",
+      slug: "about",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "privacy-page",
+      title: "Privacy",
+      slug: "privacy",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "community-page",
+      title: "Community",
+      slug: "community",
+      status: "published",
+      updatedAt: "2026-05-24T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({ value, onChange }: { value: unknown; onChange?: (value: unknown) => void }) => (
+    <div>
+      <button type="button" onClick={() => onChange?.("footer-logo")}>
+        Browse media
+      </button>
+      {value ? (
+        <button type="button" onClick={() => onChange?.(null)}>
+          Clear selected media
+        </button>
+      ) : null}
+      <p>{value ? `Selected: ${String(value)}` : "No media selected yet."}</p>
+    </div>
+  ),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -159,6 +209,15 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   React.act(() => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const flushAsyncUpdates = async () => {
+  await React.act(async () => {
+    await flushPromises();
+    await flushPromises();
   });
 };
 
@@ -222,6 +281,9 @@ const findSelectByLabel = (container: ParentNode, label: string, index = 0) =>
     index
   ];
 
+const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
+  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+
 const findCheckboxByLabel = (container: ParentNode, label: string, index = 0) =>
   Array.from(container.querySelectorAll("div"))
     .filter(
@@ -263,6 +325,17 @@ afterEach(() => {
 test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern social controls", async () => {
   const { FooterWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+  vi.mocked(listMediaCached).mockResolvedValue([
+    {
+      id: "footer-logo",
+      url: "/media/footer-logo.svg",
+      alt: "Footer logo",
+      title: "Footer logo",
+      caption: "",
+      originalName: "footer-logo.svg",
+      mimeType: "image/svg+xml",
+    } as never,
+  ]);
 
   let latestValue: FooterData = {
     columns: [
@@ -312,7 +385,14 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
     setSelectValue(findSelectByLabel(view.container, "Footer variant"), "minimal");
     setInputValue(findInputByLabel(view.container, "Brand name"), "Coderso");
     setInputValue(findInputByLabel(view.container, "Tagline"), "Build confidently");
+    clickByText(view.container, "Browse media");
+    await flushAsyncUpdates();
     setInputValue(findInputByLabel(view.container, "Privacy label"), "Polityka");
+    await flushAsyncUpdates();
+    setSelectValue(
+      findLinkDestinationSelect(view.container, "footer-legal-privacy"),
+      "privacy-page"
+    );
     expect(findCheckboxByLabel(view.container, "Show social links")).toBeInstanceOf(
       HTMLInputElement
     );
@@ -321,9 +401,13 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
     const socialCard = findSectionCard(view.container, "Social link 1");
     setSelectValue(findSelectByLabel(socialCard as ParentNode, "Platform"), "custom");
     const updatedSocialCard = findSectionCard(view.container, "Social link 1");
-    setInputValue(
-      findInputByLabel(updatedSocialCard as ParentNode, "URL"),
-      "https://community.example"
+    await flushAsyncUpdates();
+    setSelectValue(
+      findLinkDestinationSelect(
+        updatedSocialCard as ParentNode,
+        "footer-social-1-custom-destination"
+      ),
+      "community-page"
     );
     setInputValue(
       findInputByLabel(updatedSocialCard as ParentNode, "Accessible label"),
@@ -334,11 +418,13 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
     expect(latestValue.brand).toMatchObject({
       logoText: "Coderso",
       tagline: "Build confidently",
+      logoUrl: "/media/footer-logo.svg",
     });
     expect(latestValue.legal?.privacyLabel).toBe("Polityka");
+    expect(latestValue.legal?.privacy).toBe("/privacy");
     expect(latestValue.social?.[0]).toEqual({
       type: "custom",
-      href: "https://community.example",
+      href: "/community",
       label: "Community",
     });
   } finally {
