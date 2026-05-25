@@ -67,7 +67,7 @@ read-only diagnostics. It added these concrete cleanup requirements:
 - Marketing/trust/media: `feature-grid`, `testimonials`, `pricing-plans`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`
 - Dynamic/commerce/source: `entry-teaser`, `product-gallery`,
-  `product-compare`, `newsletter`, `contact`
+  `product-compare`, `product-table`, `newsletter`, `contact`
 - Site chrome: `navigation`, `footer`
 - Contract residual revisits after completed leaves: `section`, `grid-columns`,
   `template-section`, `split-layout`, `tabs`, `accordion`, `spacer`, and shared
@@ -888,6 +888,25 @@ read-only diagnostics. It added these concrete cleanup requirements:
   opens Wizard via `Run setup again`, reports `wizardPassed=true`, missing
   metadata `0`, raw technical inputs `0`, and no support-owned option/value
   paths writable in Wizard.
+- In Progress (2026-05-25): Product Table residual drift is superseded under
+  this task after helper-agent and Claude audits flagged false-empty writable
+  metadata, raw Advanced query JSON, missing Wizard preview-section metadata,
+  and missing TASK-336-19 Playwright evidence. Shared commerce controls and
+  Product Table controls now emit `data-widget-control-path` for source,
+  layout/style, columns, labels, visitor controls, export, links, empty state,
+  and surfaces. Wizard preview status is wrapped in the declared
+  `product-table.wizard.preview-summary` section, Visual preview status is an
+  explicit diagnostics section, and Advanced replaces raw query JSON with
+  human source/runtime summaries. Targeted Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 46/46 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-table-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-table-focused-2026-05-25.*`
+  opens Wizard via `Run setup again`, reports `wizardPassed=true`, missing
+  metadata `0`, raw technical inputs `0`, and all source writable paths
+  present.
 
 ## Files to Change
 

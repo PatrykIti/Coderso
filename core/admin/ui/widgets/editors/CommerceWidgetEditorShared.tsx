@@ -40,6 +40,7 @@ export type CommerceSourceFieldOptions = {
   limitMax?: number;
   allowCollectionFallbackInput?: boolean;
   copy?: CommerceSourceFieldCopy;
+  controlIdPrefix?: string;
 };
 
 type CommerceProductPickerState = {
@@ -81,15 +82,24 @@ export function CommerceTextField({
   label,
   value,
   placeholder,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   value?: string;
   placeholder?: string;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <label className="space-y-1 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-1 text-sm"
+    >
       <span className="font-medium text-foreground">{label}</span>
       <Input
         value={value ?? ""}
@@ -105,16 +115,25 @@ export function CommerceNumberField({
   value,
   min,
   max,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   value: number;
   min: number;
   max: number;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: number) => void;
 }) {
   return (
-    <label className="space-y-1 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-1 text-sm"
+    >
       <span className="font-medium text-foreground">{label}</span>
       <Input
         type="number"
@@ -138,15 +157,24 @@ export function CommerceTextareaField({
   label,
   value,
   rows = 3,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   value?: string;
   rows?: number;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <label className="space-y-1 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-1 text-sm"
+    >
       <span className="font-medium text-foreground">{label}</span>
       <Textarea
         rows={rows}
@@ -390,15 +418,24 @@ export function CommerceToggleField({
   label,
   description,
   checked,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   description?: string;
   checked: boolean;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: boolean) => void;
 }) {
   return (
-    <label className="flex items-start gap-2 rounded-md border border-border/70 px-3 py-2 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="flex items-start gap-2 rounded-md border border-border/70 px-3 py-2 text-sm"
+    >
       <input
         type="checkbox"
         className="mt-0.5 h-4 w-4"
@@ -453,15 +490,24 @@ function CommerceSelectField({
   label,
   value,
   options,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   value: string;
   options: Array<{ value: string; label: string }>;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <label className="space-y-1 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-1 text-sm"
+    >
       <span className="font-medium text-foreground">{label}</span>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger>
@@ -494,6 +540,7 @@ export function CommerceSourceFields({
   const limitMax = resolveSourceLimitMax(options.limitMax);
   const copy = options.copy ?? {};
   const allowCollectionFallbackInput = options.allowCollectionFallbackInput === true;
+  const controlIdPrefix = options.controlIdPrefix ?? "commerce-source";
 
   useEffect(() => {
     let active = true;
@@ -521,6 +568,8 @@ export function CommerceSourceFields({
     <>
       <CommerceNumberField
         label="Limit"
+        controlId={`${controlIdPrefix}.limit`}
+        controlPath="source.limit"
         value={source.limit}
         min={1}
         max={limitMax}
@@ -530,14 +579,21 @@ export function CommerceSourceFields({
       <CommerceTextField
         label="Search"
         value={source.search}
-        placeholder={copy.searchPlaceholder ?? "title or slug"}
+        placeholder={copy.searchPlaceholder ?? "Product name"}
+        controlId={`${controlIdPrefix}.search`}
+        controlPath="source.search"
         onChange={(next) => onChange({ ...source, search: next })}
       />
       {copy.searchHelpText ? (
         <p className="text-xs text-muted-foreground">{copy.searchHelpText}</p>
       ) : null}
 
-      <div className="space-y-2">
+      <div
+        data-widget-control={`${controlIdPrefix}.collections`}
+        data-widget-control-path="source.collectionIds"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium text-foreground">Collections</p>
         {collectionsLoading ? (
           <p className="text-xs text-muted-foreground">Loading collections...</p>
@@ -555,6 +611,9 @@ export function CommerceSourceFields({
               return (
                 <label
                   key={collection.id}
+                  data-widget-control={`${controlIdPrefix}.collection.${collection.id}`}
+                  data-widget-control-path="source.collectionIds"
+                  data-widget-control-ownership="writable"
                   className="flex items-start gap-2 rounded-md border border-border/70 px-3 py-2 text-sm"
                 >
                   <input
@@ -573,7 +632,7 @@ export function CommerceSourceFields({
                   />
                   <span className="space-y-0.5">
                     <span className="block font-medium text-foreground">{collection.name}</span>
-                    <span className="block text-xs text-muted-foreground">{collection.slug}</span>
+                    <span className="block text-xs text-muted-foreground">Saved collection</span>
                   </span>
                 </label>
               );
@@ -584,6 +643,8 @@ export function CommerceSourceFields({
           <CommerceTextField
             label={copy.collectionFallbackLabel ?? "Collection IDs fallback"}
             value={toCollectionCsv(source.collectionIds)}
+            controlId={`${controlIdPrefix}.collection-fallback`}
+            controlPath="source.collectionIds"
             onChange={(next) =>
               onChange({
                 ...source,
@@ -593,8 +654,8 @@ export function CommerceSourceFields({
           />
         ) : (
           <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            Use collection checkboxes when collections are available. Raw collection IDs are hidden
-            from the Wizard.
+            Use collection checkboxes when collections are available. Manual collection keys are
+            support-owned and hidden from setup.
           </p>
         )}
         {copy.collectionHelpText && allowCollectionFallbackInput ? (
@@ -605,6 +666,8 @@ export function CommerceSourceFields({
       <CommerceSelectField
         label="Sort field"
         value={source.sortField}
+        controlId={`${controlIdPrefix}.sort-field`}
+        controlPath="source.sortField"
         options={commerceWidgetSortFieldValues.map((value) => ({
           value,
           label: commerceSortFieldLabelMap[value],
@@ -620,6 +683,8 @@ export function CommerceSourceFields({
       <CommerceSelectField
         label="Sort direction"
         value={source.sortDir}
+        controlId={`${controlIdPrefix}.sort-direction`}
+        controlPath="source.sortDir"
         options={commerceWidgetSortDirectionValues.map((value) => ({
           value,
           label: value === "asc" ? "Ascending" : "Descending",
@@ -640,6 +705,9 @@ export function CommerceSourceFields({
             return (
               <label
                 key={status}
+                data-widget-control={`${controlIdPrefix}.status.${status}`}
+                data-widget-control-path="source.status"
+                data-widget-control-ownership="writable"
                 className="flex items-center gap-2 rounded-md border border-border/70 px-2 py-2 text-sm"
               >
                 <input

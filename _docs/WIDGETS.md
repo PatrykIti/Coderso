@@ -169,6 +169,10 @@ Zasady:
   direction przez pickery; option/data match values oraz hierarchy keys sa
   support-owned. Visual edytuje labels/layout/presentation/swatches, a Advanced
   pokazuje human runtime/source summaries.
+- `product-table` po TASK-336-19 ma wykrywalne `data-widget-control-path`
+  metadata na prawdziwych kontrolkach Wizard/Visual, Wizard preview jest
+  osobna sekcja kontraktu, a Advanced pokazuje human runtime/source summaries
+  zamiast raw query JSON lub payload dumpow.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

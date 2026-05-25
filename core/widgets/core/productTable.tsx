@@ -259,6 +259,14 @@ export const productTableEditorContract: WidgetEditorContract = {
     },
     {
       mode: "visual",
+      id: "product-table.visual.preview-summary",
+      title: "Preview summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved.items", "resolved.total", "resolved.resolvedAt", "resolved.error"],
+    },
+    {
+      mode: "visual",
       id: "product-table.visual.layout-style",
       title: "Layout and style",
       role: "layout",
@@ -375,8 +383,8 @@ export const productTableEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "product-table.advanced.runtime-payload",
-      title: "Runtime payload",
+      id: "product-table.advanced.runtime-status",
+      title: "Runtime status",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [
@@ -389,9 +397,9 @@ export const productTableEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "product-table.advanced.query-preview",
-      title: "Query preview",
-      role: "technical",
+      id: "product-table.advanced.query-summary",
+      title: "Query summary",
+      role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["source", "controls"],
     },

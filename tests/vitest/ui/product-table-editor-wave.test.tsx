@@ -396,7 +396,9 @@ test("ProductTable editors normalize source, layout styles, export/currency cont
       " Curated context copy. "
     );
     expect(findInputByLabel(view.container, "Collection IDs fallback")).toBeUndefined();
-    expect(view.container.textContent).toContain("Raw collection IDs are hidden from the Wizard.");
+    expect(view.container.textContent).toContain(
+      "Manual collection keys are support-owned and hidden from setup."
+    );
     toggleCheckbox(findInputByLabel(view.container, "Summer"));
     toggleCheckbox(findInputByLabel(view.container, "Winter"));
     setSelectValue(findSelectByLabel(view.container, "Sort field"), "pricing.amount");
@@ -547,14 +549,45 @@ test("ProductTable editors normalize source, layout styles, export/currency cont
       },
     });
 
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"limit": 7');
-    expect(preview?.textContent).toContain('"field": "pricing.amount"');
-    expect(preview?.textContent).toContain('"dir": "asc"');
-    expect(preview?.textContent).toContain('"search": "starter suite"');
-    expect(preview?.textContent).toContain('"summer"');
-    expect(preview?.textContent).toContain('"winter"');
-    expect(preview?.textContent).toContain('"archived"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Query summary");
+    expect(view.container.textContent).toContain("Filtered by product search text");
+    expect(view.container.textContent).toContain("2 selected collections");
+    expect(view.container.textContent).toContain("Visitor sorting: Interactive headers");
+    expect(view.container.textContent).toContain("Pagination: Previous and next");
+    expect(view.container.textContent).not.toContain("Visitor sorting: interactive");
+    expect(view.container.textContent).not.toContain("Pagination: paged");
+    expect(view.container.textContent).not.toContain("pricing.amount");
+    expect(view.container.textContent).not.toContain('"limit"');
+
+    const writablePaths = Array.from(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    )
+      .map((element) => element.getAttribute("data-widget-control-path"))
+      .filter(Boolean);
+    expect(writablePaths).toEqual(
+      expect.arrayContaining([
+        "source.limit",
+        "source.search",
+        "source.collectionIds",
+        "source.status",
+        "source.sortField",
+        "source.sortDir",
+        "style.density",
+        "style.tableBackground",
+        "header.title",
+        "fields.showTitle",
+        "labels.title",
+        "controls.sorting",
+        "controls.pagination",
+        "format.moneyLocale",
+        "export.enabled",
+        "links.linkedColumn",
+        "emptyState.title",
+      ])
+    );
   } finally {
     view.cleanup();
   }
@@ -801,7 +834,19 @@ test("ProductTable preview hook resolves admin preview state", async () => {
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Resolved items: 1 · Total: 1")
     );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Visitor sorting: No sorting UI · Pagination: No pagination")
+    );
     expect(normalizeText(view.container.textContent)).toContain(normalizeText("Refresh preview"));
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).not.toContain("Query preview");
+    expect(view.container.textContent).not.toContain("Normalized query");
+    expect(view.container.textContent).not.toContain("runtime resolver");
+    expect(view.container.textContent).not.toContain("JSON");
+    const advancedControls = Array.from(view.container.querySelectorAll("input, select, textarea"));
+    expect(advancedControls).toHaveLength(0);
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    expect(buttons.map((button) => normalizeText(button.textContent))).toEqual(["refresh preview"]);
   } finally {
     view.cleanup();
   }

@@ -798,3 +798,24 @@ Finalny rerun `TASK-281-10` zakończył się green przed przejściem `TASK-281` 
 - `bun run scan:security:strict` (`semgrep`, `trivy`, and `gitleaks` missing locally; embedded `bun audit` still ran)
 - `bun run precommit`
 - `git diff --check`
+
+## Status po TASK-336-19 (2026-05-25)
+
+- Product Table now exposes widget-control metadata for real Wizard/Visual
+  controls, so Playwright ownership checks can detect writable paths instead of
+  reporting a false empty set.
+- Wizard source setup keeps manual collection keys support-owned, renders
+  preview status in the declared `product-table.wizard.preview-summary`
+  section, and focused `Run setup again` evidence reports raw technical inputs
+  `0`.
+- Visual preview status is now an explicit diagnostics section, while Visual
+  remains the daily owner for layout/style, columns, public controls, export,
+  links, empty state, and swatch-only surfaces.
+- Advanced no longer renders raw query JSON or payload dumps. It shows read-only
+  runtime status plus human source/query summaries for product limit, search
+  scope, collection scope, status scope, sort order, visitor controls, and page
+  size.
+- Fresh TASK-336-19 evidence:
+  - `bun run test:vitest -- tests/vitest/ui/product-table-editor-wave.test.tsx tests/vitest/widgets/productTable.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-table-2026-05-25.md`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-table-focused-2026-05-25.md`

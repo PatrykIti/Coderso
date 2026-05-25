@@ -41,13 +41,16 @@ and admin preview parity for the current source query.
 - surface color swatches
 
 ### Advanced
-- read-only runtime/admin preview diagnostics
-- query diagnostics
+- read-only runtime/admin preview status
+- human source/query summary for support and QA
 - manual preview refresh
 
 Wizard hides raw collection-ID fallback input for Product Table and keeps source
 selection beginner-friendly. Visual surfaces use swatches and clear controls
-instead of asking editors to type CSS variables or token names.
+instead of asking editors to type CSS variables or token names. Advanced does
+not render raw JSON query payloads, collection IDs, or runtime payload dumps;
+it summarizes product limit, search scope, collection scope, status scope, sort
+order, visitor controls, and page size in read-only rows.
 
 ## Column Model
 

@@ -11,6 +11,8 @@ type SharedColorControlProps = {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  controlId?: string;
+  controlPath?: string;
   onSwatchChange?: (next: string) => void;
   onClear?: () => void;
   placeholder?: string;
@@ -22,6 +24,8 @@ export function SharedColorControl({
   label,
   value,
   onChange,
+  controlId,
+  controlPath,
   onSwatchChange,
   onClear,
   placeholder,
@@ -33,7 +37,12 @@ export function SharedColorControl({
   const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
 
   return (
-    <div className="space-y-2">
+    <div
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-2"
+    >
       <ClearableFieldHeader
         label={label}
         value={value}

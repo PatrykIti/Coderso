@@ -40,6 +40,7 @@ import {
   type ProductTableTypography,
   type ProductTableVariantId,
 } from "../../../../widgets/core/productTable";
+import { commerceSortFieldLabelMap } from "../../../../widgets/core/commerceWidgetShared";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
@@ -51,6 +52,7 @@ import {
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
 import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
 
 const update = (
   value: ProductTableData,
@@ -86,6 +88,7 @@ const clearStyle = (
   const current = normalizeProductTableData(value);
   const { [key]: _removed, ...nextStyle } = current.style ?? {};
   update(value, onChange, {
+    // Empty style objects intentionally preserve explicitly cleared surface overrides.
     style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
   });
 };
@@ -202,7 +205,7 @@ const productTableLinkColumnOptions: Array<{
 }> = [
   { value: "none", label: "No linked column" },
   { value: "title", label: "Product column" },
-  { value: "slug", label: "Slug column" },
+  { value: "slug", label: "Product URL column" },
 ];
 
 const productTableSortingModeOptions: Array<{
@@ -332,15 +335,24 @@ function ProductTableSelectField({
   label,
   value,
   options,
+  controlId,
+  controlPath,
   onChange,
 }: {
   label: string;
   value: string;
   options: Array<{ value: string; label: string }>;
+  controlId?: string;
+  controlPath?: string;
   onChange: (next: string) => void;
 }) {
   return (
-    <label className="space-y-1 text-sm">
+    <label
+      data-widget-control={controlId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+      className="space-y-1 text-sm"
+    >
       <span className="font-medium text-foreground">{label}</span>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger>
@@ -470,6 +482,12 @@ function PreviewStatusCard({
   const normalized = normalizeProductTableData(value);
   const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
   const authoredPageSize = resolveProductTableAuthoredPageSize(normalized);
+  const controls = normalizeProductTableControls(normalized.controls);
+  const source = normalizeSourceForEditor(normalized.source, {
+    limit: productTableDefaults.source?.limit ?? 12,
+    sortField: "updatedAt",
+    sortDir: "desc",
+  });
   const guidanceTone =
     context?.previewState?.status === "error"
       ? "border-amber-300 bg-amber-50 text-amber-900"
@@ -485,16 +503,21 @@ function PreviewStatusCard({
             Resolved items: {resolved.items?.length ?? 0} · Total: {resolved.total ?? 0}
           </p>
           <p>
-            Query limit: {authoredPageSize} · Sort: {normalized.source?.sortField ?? "updatedAt"}{" "}
-            {normalized.source?.sortDir ?? "desc"}
+            Products shown: {authoredPageSize} · Sort: {commerceSortFieldLabelMap[source.sortField]}{" "}
+            {source.sortDir === "asc" ? "ascending" : "descending"}
           </p>
           <p>
-            Public sort UI: {normalized.controls?.sorting ?? "none"} · Pagination:{" "}
-            {normalized.controls?.pagination ?? "none"}
+            Visitor sorting:{" "}
+            {productTableSortingModeOptions.find((option) => option.value === controls.sorting)
+              ?.label ?? "No sorting UI"}{" "}
+            · Pagination:{" "}
+            {productTablePaginationModeOptions.find(
+              (option) => option.value === controls.pagination
+            )?.label ?? "No pagination"}
           </p>
           <p>
             {context?.previewState?.status === "loading"
-              ? "Preview refresh is running against the backend-owned commerce resolver."
+              ? "Refreshing the live product preview."
               : context?.previewState?.status === "error"
                 ? (context.previewState.message ??
                   "Preview refresh failed. Showing the last safe preview data when available.")
@@ -515,6 +538,45 @@ function PreviewStatusCard({
       </div>
     </div>
   );
+}
+
+function summarizeProductTableSource(value: ProductTableData) {
+  const normalized = normalizeProductTableData(value);
+  const source = normalizeSourceForEditor(normalized.source, {
+    limit: productTableDefaults.source?.limit ?? 12,
+    sortField: "updatedAt",
+    sortDir: "desc",
+  });
+  const controls = normalizeProductTableControls(normalized.controls);
+
+  return {
+    productLimit: `${source.limit} products per page`,
+    searchScope: source.search.trim() ? "Filtered by product search text" : "No search text",
+    collectionScope:
+      source.collectionIds.length > 0
+        ? `${source.collectionIds.length} selected collection${source.collectionIds.length === 1 ? "" : "s"}`
+        : "All available collections",
+    statusScope:
+      source.status.length > 0
+        ? source.status.map((status) => status.replaceAll("_", " ")).join(", ")
+        : "Published storefront default",
+    sortOrder: `${commerceSortFieldLabelMap[source.sortField]} · ${
+      source.sortDir === "asc" ? "Ascending" : "Descending"
+    }`,
+    visitorControls: [
+      controls.showSearchInput ? "Search" : null,
+      controls.showCollectionFilter ? "Collection filters" : null,
+      controls.showStatusFilter ? "Status filter" : null,
+      controls.sorting !== "none" ? "Sorting headers" : null,
+      controls.pagination !== "none" ? "Pagination" : null,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    pageSize:
+      controls.pagination === "none"
+        ? "Pagination disabled"
+        : `${controls.pageSize} products per page`,
+  };
 }
 
 function PublicControlsFields({
@@ -539,18 +601,24 @@ function PublicControlsFields({
       <CommerceToggleField
         label="Show search input"
         description="Front-end search is intended for authored sources without a fixed Source search term."
+        controlId="product-table.visual.show-search-input"
+        controlPath="controls.showSearchInput"
         checked={controls.showSearchInput}
         onChange={(next) => updateControls(normalized, onChange, { showSearchInput: next })}
       />
       <CommerceToggleField
         label="Show collection filter"
         description="Uses the authored Source collection scope. Add at least two Source collections above to surface visitor checkboxes."
+        controlId="product-table.visual.show-collection-filter"
+        controlPath="controls.showCollectionFilter"
         checked={controls.showCollectionFilter}
         onChange={(next) => updateControls(normalized, onChange, { showCollectionFilter: next })}
       />
       <CommerceToggleField
         label="Show status filter"
         description="Preview can show authored status options, but published pages stay public-safe and usually collapse to published only."
+        controlId="product-table.visual.show-status-filter"
+        controlPath="controls.showStatusFilter"
         checked={controls.showStatusFilter}
         onChange={(next) => updateControls(normalized, onChange, { showStatusFilter: next })}
       />
@@ -558,6 +626,8 @@ function PublicControlsFields({
         label="Sorting UI"
         value={controls.sorting}
         options={productTableSortingModeOptions}
+        controlId="product-table.visual.sorting"
+        controlPath="controls.sorting"
         onChange={(next) =>
           updateControls(normalized, onChange, { sorting: next as ProductTableSortingMode })
         }
@@ -566,6 +636,8 @@ function PublicControlsFields({
         label="Pagination mode"
         value={paginationMode}
         options={productTablePaginationModeOptions}
+        controlId="product-table.visual.pagination"
+        controlPath="controls.pagination"
         onChange={(next) =>
           updateControls(normalized, onChange, { pagination: next as ProductTablePaginationMode })
         }
@@ -576,6 +648,8 @@ function PublicControlsFields({
           value={controls.pageSize}
           min={1}
           max={24}
+          controlId="product-table.visual.page-size"
+          controlPath="controls.pageSize"
           onChange={(next) => updateControls(normalized, onChange, { pageSize: next })}
         />
       ) : null}
@@ -606,6 +680,8 @@ function ExportAndCurrencyFields({
         label="Money locale"
         value={format.moneyLocale}
         options={productTableMoneyLocaleOptions}
+        controlId="product-table.visual.money-locale"
+        controlPath="format.moneyLocale"
         onChange={(next) =>
           updateFormat(normalized, onChange, { moneyLocale: next as ProductTableMoneyLocale })
         }
@@ -614,6 +690,8 @@ function ExportAndCurrencyFields({
         label="Currency display"
         value={format.currencyDisplay}
         options={productTableCurrencyDisplayOptions}
+        controlId="product-table.visual.currency-display"
+        controlPath="format.currencyDisplay"
         onChange={(next) =>
           updateFormat(normalized, onChange, {
             currencyDisplay: next as ProductTableCurrencyDisplay,
@@ -623,6 +701,8 @@ function ExportAndCurrencyFields({
       <CommerceToggleField
         label="Show CSV export"
         description="Adds a public download button for the currently visible rows and columns only."
+        controlId="product-table.visual.export-enabled"
+        controlPath="export.enabled"
         checked={exportSettings.enabled}
         onChange={(next) => updateExport(normalized, onChange, { enabled: next })}
       />
@@ -630,6 +710,8 @@ function ExportAndCurrencyFields({
         <CommerceTextField
           label="Export label"
           value={exportSettings.label}
+          controlId="product-table.visual.export-label"
+          controlPath="export.label"
           onChange={(next) => updateExport(normalized, onChange, { label: next })}
         />
       ) : null}
@@ -664,12 +746,16 @@ function LayoutStyleFields({
         label="Table variant"
         value={resolvedVariant}
         options={productTableVariantOptions}
+        controlId="product-table.visual.variant"
+        controlPath="variant"
         onChange={(next) => onVariantChange?.(next as ProductTableVariantId)}
       />
       <ProductTableSelectField
         label="Row density"
         value={style.density}
         options={productTableDensityOptions}
+        controlId="product-table.visual.density"
+        controlPath="style.density"
         onChange={(next) =>
           updateStyle(normalized, onChange, { density: next as ProductTableDensity })
         }
@@ -678,6 +764,8 @@ function LayoutStyleFields({
         label="Row treatment"
         value={style.rowTreatment}
         options={productTableRowTreatmentOptions}
+        controlId="product-table.visual.row-treatment"
+        controlPath="style.rowTreatment"
         onChange={(next) =>
           updateStyle(normalized, onChange, { rowTreatment: next as ProductTableRowTreatment })
         }
@@ -685,12 +773,16 @@ function LayoutStyleFields({
       <CommerceToggleField
         label="Show row hover"
         description="Adds a gentle table-wide hover treatment. Linked rows still keep their stronger interaction cue."
+        controlId="product-table.visual.hover-rows"
+        controlPath="style.hoverRows"
         checked={style.hoverRows}
         onChange={(next) => updateStyle(normalized, onChange, { hoverRows: next })}
       />
       <CommerceToggleField
         label="Use sticky header"
         description="Keeps Product Table headers visible while long tables scroll vertically inside the page."
+        controlId="product-table.visual.sticky-header"
+        controlPath="style.stickyHeader"
         checked={style.stickyHeader}
         onChange={(next) => updateStyle(normalized, onChange, { stickyHeader: next })}
       />
@@ -698,6 +790,8 @@ function LayoutStyleFields({
         label="Table max width"
         value={style.maxWidth}
         options={productTableMaxWidthOptions}
+        controlId="product-table.visual.max-width"
+        controlPath="style.maxWidth"
         onChange={(next) =>
           updateStyle(normalized, onChange, { maxWidth: next as ProductTableMaxWidth })
         }
@@ -706,12 +800,16 @@ function LayoutStyleFields({
         label="Table alignment"
         value={style.align}
         options={productTableAlignOptions}
+        controlId="product-table.visual.align"
+        controlPath="style.align"
         onChange={(next) => updateStyle(normalized, onChange, { align: next as ProductTableAlign })}
       />
       <ProductTableSelectField
         label="Typography"
         value={style.typography}
         options={productTableTypographyOptions}
+        controlId="product-table.visual.typography"
+        controlPath="style.typography"
         onChange={(next) =>
           updateStyle(normalized, onChange, { typography: next as ProductTableTypography })
         }
@@ -740,6 +838,8 @@ function SurfaceFields({
       <SharedColorControl
         label="Table background"
         value={normalized.style?.tableBackground}
+        controlId="product-table.visual.table-background"
+        controlPath="style.tableBackground"
         onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
         onSwatchChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
         onClear={() => clearStyle(value, onChange, "tableBackground")}
@@ -750,6 +850,8 @@ function SurfaceFields({
       <SharedColorControl
         label="Table border"
         value={normalized.style?.tableBorderColor}
+        controlId="product-table.visual.table-border-color"
+        controlPath="style.tableBorderColor"
         onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
         onSwatchChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "tableBorderColor")}
@@ -760,6 +862,8 @@ function SurfaceFields({
       <SharedColorControl
         label="Header background"
         value={normalized.style?.headerBackground}
+        controlId="product-table.visual.header-background"
+        controlPath="style.headerBackground"
         onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
         onSwatchChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
         onClear={() => clearStyle(value, onChange, "headerBackground")}
@@ -770,6 +874,8 @@ function SurfaceFields({
       <SharedColorControl
         label="Empty background"
         value={normalized.style?.emptyBackground}
+        controlId="product-table.visual.empty-background"
+        controlPath="style.emptyBackground"
         onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onSwatchChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onClear={() => clearStyle(value, onChange, "emptyBackground")}
@@ -780,6 +886,8 @@ function SurfaceFields({
       <SharedColorControl
         label="Empty border"
         value={normalized.style?.emptyBorderColor}
+        controlId="product-table.visual.empty-border-color"
+        controlPath="style.emptyBorderColor"
         onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onSwatchChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
@@ -822,15 +930,26 @@ export function ProductTableWizardEditor({
         <CommerceSourceFields
           source={source}
           onChange={(nextSource) => update(normalized, onChange, { source: nextSource })}
-          options={{ allowCollectionFallbackInput: false }}
+          options={{
+            allowCollectionFallbackInput: false,
+            controlIdPrefix: "product-table.wizard.source",
+          }}
         />
       </CommerceEditorSection>
-      <PreviewStatusCard
-        value={normalized}
-        context={context}
-        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
-        disabled={preview.isLoading}
-      />
+      <CommerceEditorSection
+        id="product-table.wizard.preview-summary"
+        mode="wizard"
+        role="diagnostics"
+        title="Preview summary"
+        description="Read-only backend preview for the selected product source."
+      >
+        <PreviewStatusCard
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
+        />
+      </CommerceEditorSection>
     </div>
   );
 }
@@ -853,12 +972,20 @@ export function ProductTableVisualEditor({
 
   return (
     <div className="space-y-4">
-      <PreviewStatusCard
-        value={normalized}
-        context={context}
-        onRefresh={context?.setPreviewState ? preview.refresh : undefined}
-        disabled={preview.isLoading}
-      />
+      <CommerceEditorSection
+        id="product-table.visual.preview-summary"
+        mode="visual"
+        role="diagnostics"
+        title="Preview summary"
+        description="Read-only product preview status for the current visual settings."
+      >
+        <PreviewStatusCard
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
+        />
+      </CommerceEditorSection>
 
       <LayoutStyleFields
         value={normalized}
@@ -877,17 +1004,23 @@ export function ProductTableVisualEditor({
         <CommerceTextField
           label="Section eyebrow"
           value={normalized.header?.eyebrow}
+          controlId="product-table.visual.header-eyebrow"
+          controlPath="header.eyebrow"
           onChange={(next) => updateHeader(normalized, onChange, { eyebrow: next })}
         />
         <CommerceTextField
           label="Section title"
           value={normalized.header?.title}
+          controlId="product-table.visual.header-title"
+          controlPath="header.title"
           onChange={(next) => updateHeader(normalized, onChange, { title: next })}
         />
         <CommerceTextareaField
           label="Section description"
           rows={3}
           value={normalized.header?.description}
+          controlId="product-table.visual.header-description"
+          controlPath="header.description"
           onChange={(next) => updateHeader(normalized, onChange, { description: next })}
         />
       </CommerceEditorSection>
@@ -905,6 +1038,8 @@ export function ProductTableVisualEditor({
             label={column.toggleLabel}
             description={column.guardDescription}
             checked={normalized.fields?.[column.visibilityKey] ?? false}
+            controlId={`product-table.visual.${column.visibilityKey}`}
+            controlPath={`fields.${column.visibilityKey}`}
             onChange={(next) =>
               updateFieldVisibility(normalized, onChange, column.visibilityKey, next)
             }
@@ -915,6 +1050,8 @@ export function ProductTableVisualEditor({
             label="Show stock quantity"
             description="Append normalized quantity to the stock label when runtime data includes it."
             checked={normalized.fields?.showStockQuantity === true}
+            controlId="product-table.visual.show-stock-quantity"
+            controlPath="fields.showStockQuantity"
             onChange={(next) =>
               updateFieldVisibility(normalized, onChange, "showStockQuantity", next)
             }
@@ -934,6 +1071,8 @@ export function ProductTableVisualEditor({
             key={column.key}
             label={column.labelControlLabel}
             value={normalized.labels?.[column.labelKey]}
+            controlId={`product-table.visual.label-${column.labelKey}`}
+            controlPath={`labels.${column.labelKey}`}
             onChange={(next) => updateLabel(normalized, onChange, column.labelKey, next)}
           />
         ))}
@@ -954,6 +1093,8 @@ export function ProductTableVisualEditor({
           label="Linked column"
           value={normalized.links?.linkedColumn ?? "none"}
           options={productTableLinkColumnOptions}
+          controlId="product-table.visual.linked-column"
+          controlPath="links.linkedColumn"
           onChange={(next) =>
             updateLinks(normalized, onChange, {
               linkedColumn: next as ProductTableLinkColumn,
@@ -963,12 +1104,16 @@ export function ProductTableVisualEditor({
         <CommerceToggleField
           label="Show action column"
           checked={normalized.links?.showAction === true}
+          controlId="product-table.visual.show-action"
+          controlPath="links.showAction"
           onChange={(next) => updateLinks(normalized, onChange, { showAction: next })}
         />
         {normalized.links?.showAction ? (
           <CommerceTextField
             label="Action label"
             value={normalized.links?.actionLabel}
+            controlId="product-table.visual.action-label"
+            controlPath="links.actionLabel"
             onChange={(next) => updateLinks(normalized, onChange, { actionLabel: next })}
           />
         ) : null}
@@ -976,6 +1121,8 @@ export function ProductTableVisualEditor({
           <CommerceToggleField
             label="Open product links in new tab"
             checked={normalized.links?.openInNewTab === true}
+            controlId="product-table.visual.open-in-new-tab"
+            controlPath="links.openInNewTab"
             onChange={(next) => updateLinks(normalized, onChange, { openInNewTab: next })}
           />
         ) : null}
@@ -991,6 +1138,8 @@ export function ProductTableVisualEditor({
         <CommerceTextField
           label="Title"
           value={normalized.emptyState?.title}
+          controlId="product-table.visual.empty-title"
+          controlPath="emptyState.title"
           onChange={(next) =>
             update(normalized, onChange, {
               emptyState: {
@@ -1003,6 +1152,8 @@ export function ProductTableVisualEditor({
         <CommerceTextField
           label="Description"
           value={normalized.emptyState?.description}
+          controlId="product-table.visual.empty-description"
+          controlPath="emptyState.description"
           onChange={(next) =>
             update(normalized, onChange, {
               emptyState: {
@@ -1023,7 +1174,7 @@ export function ProductTableAdvancedEditor({
   context,
 }: WidgetEditorProps<ProductTableData>) {
   const normalized = normalizeProductTableData(value);
-  const previewQuery = buildProductTableQueryInput(normalized);
+  const sourceSummary = summarizeProductTableSource(normalized);
   const preview = useProductTablePreview({
     active: context?.editorMode === "advanced",
     value: normalized,
@@ -1035,11 +1186,11 @@ export function ProductTableAdvancedEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
-        id="product-table.advanced.runtime-payload"
+        id="product-table.advanced.runtime-status"
         mode="advanced"
         role="diagnostics"
-        title="Runtime payload"
-        description="Read-only admin preview from the commerce runtime resolver."
+        title="Runtime status"
+        description="Read-only product preview status for support and QA."
       >
         <PreviewStatusCard
           value={normalized}
@@ -1050,15 +1201,54 @@ export function ProductTableAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
-        id="product-table.advanced.query-preview"
+        id="product-table.advanced.query-summary"
         mode="advanced"
-        role="technical"
-        title="Query preview"
-        description="Normalized query payload sent to commerce runtime resolver."
+        role="diagnostics"
+        title="Query summary"
+        description="Human support summary of the product source. Raw query payloads stay out of the editor."
       >
-        <pre className="max-h-52 overflow-auto rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          {JSON.stringify(previewQuery, null, 2)}
-        </pre>
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-limit"
+          label="Product limit"
+          path="source.limit"
+          value={sourceSummary.productLimit}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-search"
+          label="Search scope"
+          path="source.search"
+          value={sourceSummary.searchScope}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-collections"
+          label="Collection scope"
+          path="source.collectionIds"
+          value={sourceSummary.collectionScope}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-status"
+          label="Status scope"
+          path="source.status"
+          value={sourceSummary.statusScope}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-sort"
+          label="Sort order"
+          path="source.sortField"
+          value={sourceSummary.sortOrder}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-visitor-controls"
+          label="Visitor controls"
+          path="controls"
+          value={sourceSummary.visitorControls || "No visitor controls enabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-table.advanced.query-page-size"
+          label="Page size"
+          path="controls.pageSize"
+          value={sourceSummary.pageSize}
+        />
       </CommerceEditorSection>
     </div>
   );

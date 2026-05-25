@@ -42,6 +42,7 @@ test("product table exposes a strict v2 editor contract", () => {
   expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
     "product-table.wizard.table-source",
     "product-table.wizard.preview-summary",
+    "product-table.visual.preview-summary",
     "product-table.visual.layout-style",
     "product-table.visual.section-header",
     "product-table.visual.columns",
@@ -51,8 +52,8 @@ test("product table exposes a strict v2 editor contract", () => {
     "product-table.visual.links-actions",
     "product-table.visual.empty-state",
     "product-table.visual.surfaces",
-    "product-table.advanced.runtime-payload",
-    "product-table.advanced.query-preview",
+    "product-table.advanced.runtime-status",
+    "product-table.advanced.query-summary",
   ]);
   expect(
     widget.editorContract?.sections
@@ -60,6 +61,11 @@ test("product table exposes a strict v2 editor contract", () => {
       .flatMap((section) => section.writablePaths)
       .some((path) => path.startsWith("style."))
   ).toBe(false);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .every((section) => section.writablePaths.length === 0 && section.role !== "technical")
+  ).toBe(true);
 });
 
 test("product table renders empty state", () => {
@@ -1497,6 +1503,7 @@ test("product table editors render expected panels and registry-backed controls"
       onVariantChange={() => undefined}
     />
   );
-  expect(advanced).toContain("Runtime payload");
-  expect(advanced).toContain("Query preview");
+  expect(advanced).toContain("Runtime status");
+  expect(advanced).toContain("Query summary");
+  expect(advanced).not.toContain('"pagination"');
 });
