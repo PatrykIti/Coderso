@@ -569,3 +569,22 @@ Final browser evidence captured locally on 2026-05-21:
 - The replay used an isolated local DB and a supported first-run completion via
   `PATCH /admin/api/settings`; no shared remote environment was used for final
   closure.
+
+## Status po TASK-336-19 source/color cleanup (2026-05-25)
+
+- Advanced raw source drift is closed: Advanced no longer edits output mode or
+  raw `body.html`; it reports read-only source, sanitizer, sanitized preview,
+  and payload diagnostics.
+- Visual now owns output source changes through a source-preference control,
+  so saved `html`/`blocks` widgets can still change rendered source.
+- Normalize/reset in Advanced are retained only as confirm-gated support
+  actions.
+- Visual color authoring is swatch-only for text/background colors. Legacy
+  token/custom values remain backward-compatible as replace-or-clear saved
+  custom color state.
+- Focused Vitest evidence:
+  `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/rich-text-section-editor-wave.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-rich-text-section-source-color-2026-05-25.*`
+  with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.

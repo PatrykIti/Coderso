@@ -385,6 +385,7 @@ export const richTextSectionEditorContract: WidgetEditorContract = {
         "titleBlock.headingLevel",
         "body.blocks",
         "body.html",
+        "options.outputMode",
         "options.dropcap",
         "options.toc",
         "options.maxWidth",

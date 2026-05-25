@@ -514,7 +514,9 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("HTML is the only rendered source in this mode.");
+    expect(view.container.textContent).toContain(
+      "Rich text body is the only rendered source for this preference."
+    );
 
     clickByText(view.container, "Two Column");
     expect(latestVariant).toBe("two-column");
@@ -547,6 +549,14 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     expect(latestValue.body?.html).not.toContain("<img");
     expect(view.container.textContent).toContain("Sanitizer guidance");
 
+    const bodySection = findSectionByTitle(view.container, "Body content");
+    const sourcePreferenceSelect = bodySection?.querySelector("select");
+    setSelectValue(sourcePreferenceSelect, "blocks");
+    expect(latestValue.options?.outputMode).toBe("blocks");
+    expect(view.container.textContent).toContain(
+      "Structured blocks are the only rendered source for this preference."
+    );
+
     const readerSection = findSectionByTitle(view.container, "Reader options");
     expect(readerSection?.textContent).toContain("Dropcap is off until you enable it.");
     const readerSwitches = Array.from(
@@ -555,7 +565,7 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     setCheckboxValue(readerSwitches[0], true);
     expect(latestValue.options?.dropcap).toBe(true);
     expect(view.container.textContent).toContain(
-      "Dropcap will style the first paragraph from the html source."
+      "Dropcap will style the first paragraph from the blocks source."
     );
 
     const blockSection = findSectionByTitle(view.container, "Structured content blocks");
@@ -587,6 +597,12 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     expect(latestValue.body?.blocks).toHaveLength(2);
 
     const typographySection = findSectionByTitle(view.container, "Typography and colors");
+    expect(
+      findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)")
+    ).toBeUndefined();
+    expect(
+      findInputByPlaceholder(typographySection ?? view.container, "transparent")
+    ).toBeUndefined();
     clickByText(typographySection ?? view.container, "Clear", 0);
     expect(latestValue.style?.textColor).toBeUndefined();
   } finally {
@@ -628,7 +644,7 @@ test("RichTextSection visual editor manages image, attachment, and embed blocks 
 
   try {
     expect(view.container.textContent).toContain(
-      "Structured blocks are the only rendered source in this mode."
+      "Structured blocks are the only rendered source for this preference."
     );
 
     clickByText(view.container, "Add image block");
@@ -755,7 +771,7 @@ test("RichTextSection visual editor pages long block lists and explains unavaila
   }
 });
 
-test("RichTextSection advanced editor sanitizes raw HTML, updates output mode, and resets defaults", async () => {
+test("RichTextSection advanced editor keeps source diagnostics read-only with confirmed support actions", async () => {
   const { RichTextSectionAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
@@ -789,37 +805,29 @@ test("RichTextSection advanced editor sanitizes raw HTML, updates output mode, a
 
   try {
     expect(view.container.textContent).toContain("Output mode and source diagnostics");
-    expect(view.container.textContent).toContain("Raw HTML technical editor");
+    expect(view.container.textContent).toContain("Sanitizer diagnostics");
     expect(view.container.textContent).not.toContain("Technical typography tokens");
+    expect(view.container.textContent).not.toContain("Raw HTML technical editor");
+    expect(view.container.textContent).not.toContain("Sanitize and apply");
+    expect(view.container.querySelectorAll("select")).toHaveLength(0);
+    expect(view.container.querySelectorAll("textarea")).toHaveLength(0);
 
     const outputSection = findSectionByTitle(view.container, "Output mode and source diagnostics");
     expect(outputSection?.textContent).toContain("Rendered source");
     expect(outputSection?.textContent).toContain("Reason:");
-
-    const outputModeSelect = outputSection?.querySelector("select");
-    setSelectValue(outputModeSelect, "blocks");
-    expect(latestValue.options?.outputMode).toBe("blocks");
-
-    setTextareaValue(
-      findTextareaByPlaceholder(
-        view.container,
-        "<h2>Section heading</h2><p>Paragraph content...</p>"
-      ),
-      '<h1>Bad</h1><iframe src="https://evil.example"></iframe><p>Safe</p>'
-    );
-    expect(view.container.textContent).toContain("Sanitizer guidance");
-    expect(view.container.textContent).toContain(
-      "Raw embeds and iframes are removed. Use a safe embed or attachment block instead."
-    );
-    clickByText(view.container, "Sanitize and apply");
-    expect(latestValue.body?.html).not.toContain("<h1");
-    expect(latestValue.body?.html).not.toContain("<iframe");
-    expect(latestValue.body?.html).toContain("Safe");
+    expect(outputSection?.textContent).toContain("blocks-fallback");
+    expect(outputSection?.textContent).toContain("Rich content, output preference");
 
     clickByText(view.container, "Normalize now");
+    expect(view.container.textContent).toContain("Normalize rich text section");
+    const normalizeDialog = view.container.querySelector('[data-confirm-dialog="true"]');
+    clickByText(normalizeDialog ?? view.container, "Normalize");
     expect(latestValue.titleBlock?.title).toBe(richTextSectionDefaults.titleBlock?.title);
 
     clickByText(view.container, "Reset to defaults");
+    expect(view.container.textContent).toContain("Reset rich text section");
+    const resetDialog = view.container.querySelector('[data-confirm-dialog="true"]');
+    clickByText(resetDialog ?? view.container, "Reset");
     expect(latestValue).toEqual(richTextSectionDefaults);
   } finally {
     view.cleanup();

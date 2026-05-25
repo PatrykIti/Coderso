@@ -455,6 +455,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-stats-kpi-color-authoring-2026-05-25.*`
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
+- In Progress (2026-05-25): twenty-fourth implementation family targets Rich
+  Text Section raw source and color authoring drift. Rich Text Section Visual
+  color controls now use swatch-only authoring while preserving legacy custom
+  token values as replace-or-clear saved custom color state. Advanced no longer
+  edits `options.outputMode` or raw `body.html`; it reports read-only source,
+  sanitizer, preview, and payload diagnostics, with normalize/reset kept as
+  confirm-gated support actions. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/rich-text-section-editor-wave.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-rich-text-section-source-color-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+  Visual now owns `options.outputMode` through a friendly source-preference
+  control, so saved `html`/`blocks` widgets are not stranded after Advanced
+  becomes read-only.
 
 ## Files to Change
 

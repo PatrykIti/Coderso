@@ -423,7 +423,13 @@ test("rich text editors expose the updated wizard, visual, and advanced IA", () 
   expect(visualHtml).toContain("Structured content blocks");
   expect(visualHtml).toContain("Title heading level");
   expect(advancedHtml).toContain("Output mode and source diagnostics");
-  expect(advancedHtml).toContain("Raw HTML technical editor");
+  expect(advancedHtml).toContain("Sanitizer diagnostics");
   expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(visualHtml).not.toContain('placeholder="var(--color-text)"');
+  expect(visualHtml).not.toContain('placeholder="transparent"');
+  expect(advancedHtml).not.toContain("Raw HTML technical editor");
+  expect(advancedHtml).not.toContain("Sanitize and apply");
+  expect(advancedHtml).not.toContain("<textarea");
+  expect(advancedHtml).not.toContain("<select");
   expect(advancedHtml).not.toContain("Technical typography tokens");
 });

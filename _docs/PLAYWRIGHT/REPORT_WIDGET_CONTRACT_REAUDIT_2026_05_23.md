@@ -1131,6 +1131,31 @@ color/CSS token authoring drift in Visual.
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
 
+## TASK-336-19 Rich Text Section Source/Color Evidence (2026-05-25)
+
+The twenty-fourth TASK-336-19 implementation family targets Rich Text Section
+raw source authoring in Advanced and raw color-token inputs in Visual.
+
+- Rich Text Section Visual no longer exposes raw CSS/token text inputs for text
+  or background color authoring. Existing theme tokens, transparent values, and
+  custom color strings remain compatible as saved custom color state that can
+  be replaced with a swatch or cleared.
+- Rich Text Section Advanced no longer edits `options.outputMode` or raw
+  `body.html`. It reports read-only output/source, sanitizer, sanitized
+  preview, and payload diagnostics.
+- Visual owns `options.outputMode` through a friendly source-preference control
+  so saved `html`/`blocks` widgets can still change rendered source without
+  using Advanced.
+- Normalize and reset remain available only as confirm-gated support actions.
+- Focused Vitest evidence covers raw-token input absence, read-only Advanced
+  source diagnostics, confirm-gated support actions, SSR editor metadata, and
+  strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/rich-text-section-editor-wave.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright mode/public smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-rich-text-section-source-color-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

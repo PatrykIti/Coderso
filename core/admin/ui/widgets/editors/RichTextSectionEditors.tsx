@@ -100,10 +100,26 @@ const spacingOptions: Array<{ id: RichTextSectionSpacing; label: string }> = [
   { id: "lg", label: "Spacious" },
 ];
 
-const outputModeOptions: Array<{ id: RichTextSectionOutputMode; label: string }> = [
-  { id: "html", label: "HTML only" },
-  { id: "blocks-fallback", label: "HTML with blocks fallback" },
-  { id: "blocks", label: "Blocks only" },
+const outputModeOptions: Array<{
+  id: RichTextSectionOutputMode;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "html",
+    label: "Prefer rich text body",
+    description: "Render the Visual body copy only.",
+  },
+  {
+    id: "blocks-fallback",
+    label: "Use body, then blocks",
+    description: "Render body copy when present, otherwise use structured blocks.",
+  },
+  {
+    id: "blocks",
+    label: "Use structured blocks only",
+    description: "Render the structured blocks and keep body copy on standby.",
+  },
 ];
 
 const titleHeadingLevelOptions: Array<{
@@ -470,27 +486,27 @@ function RichTextSourceStatus({
   section: "html" | "blocks";
 }) {
   const isActive = section === "html" ? source.htmlIsActive : source.blocksAreActive;
-  const label = section === "html" ? "HTML source" : "Structured blocks";
+  const label = section === "html" ? "Rich text body" : "Structured blocks";
 
   let description = "";
   if (section === "html") {
     description =
       source.mode === "html"
-        ? "HTML is the only rendered source in this mode."
+        ? "Rich text body is the only rendered source for this preference."
         : source.reason === "fallback-html-present"
-          ? "HTML is currently rendering because the body is not empty."
+          ? "Rich text body currently renders because it has content."
           : source.reason === "fallback-html-empty"
-            ? "HTML is empty, so blocks currently render instead."
-            : "Switch the output mode to HTML or blocks fallback to render this source.";
+            ? "Rich text body is empty, so blocks currently render instead."
+            : "Choose a body-first source preference to render this source.";
   } else {
     description =
       source.mode === "blocks"
-        ? "Structured blocks are the only rendered source in this mode."
+        ? "Structured blocks are the only rendered source for this preference."
         : source.reason === "fallback-html-empty"
-          ? "Blocks currently render because the HTML body is empty."
+          ? "Blocks currently render because the rich text body is empty."
           : source.reason === "fallback-html-present"
-            ? "Blocks are on standby until the HTML body becomes empty."
-            : "Switch the output mode to Blocks only to render this source.";
+            ? "Blocks are on standby until the rich text body becomes empty."
+            : "Choose structured blocks only to render this source.";
   }
 
   return (
@@ -676,6 +692,10 @@ export function RichTextSectionVisualEditor({
   const normalized = normalizeValue(value);
   const source = resolveRichTextRenderedSource(normalized);
   const dropcapStatus = resolveRichTextDropcapStatus(normalized);
+  const selectedOutputMode =
+    outputModeOptions.find(
+      (option) => option.id === (normalized.options?.outputMode ?? "blocks-fallback")
+    ) ?? outputModeOptions[1];
   const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(blocks[0]?.id ?? null);
   const [blockPage, setBlockPage] = useState(0);
@@ -1013,6 +1033,27 @@ export function RichTextSectionVisualEditor({
         title="Body content"
         description="Edit the primary HTML source with safe rich-text authoring instead of raw HTML."
       >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Source preference</p>
+          <Select
+            value={normalized.options?.outputMode ?? "blocks-fallback"}
+            onValueChange={(next) =>
+              updateOptions(value, onChange, { outputMode: next as RichTextSectionOutputMode })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source preference" />
+            </SelectTrigger>
+            <SelectContent>
+              {outputModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{selectedOutputMode.description}</p>
+        </div>
         <RichTextSourceStatus source={source} section="html" />
         <PostRichTextAdapter
           value={normalized.body?.html ?? ""}
@@ -1645,7 +1686,7 @@ export function RichTextSectionVisualEditor({
 
       <EditorSection
         title="Typography and colors"
-        description="Adjust the reader-facing text scale, spacing, and color tokens."
+        description="Adjust the reader-facing text scale, spacing, and color swatches."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Font scale</p>
@@ -1712,16 +1753,16 @@ export function RichTextSectionVisualEditor({
           value={normalized.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
           onClear={() => clearStyleField(value, onChange, "textColor")}
-          placeholder="var(--color-text)"
           pickerFallback="#0f172a"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Background color"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
           onClear={() => clearStyleField(value, onChange, "background")}
-          placeholder="transparent"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
       </EditorSection>
 
@@ -1774,6 +1815,8 @@ type RichTextSectionAdvancedEditorContentProps = {
   source: RichTextRenderedSourceState;
 };
 
+type AdvancedSupportAction = "normalize" | "reset" | null;
+
 export function RichTextSectionAdvancedEditor({
   value,
   onChange,
@@ -1804,82 +1847,63 @@ function RichTextSectionAdvancedEditorContent({
   blocks,
   source,
 }: RichTextSectionAdvancedEditorContentProps) {
-  const [rawHtmlDraft, setRawHtmlDraft] = useState(normalized.body?.html ?? "");
-  const rawHtmlPreview = sanitizeRichTextHtmlWithDiagnostics(rawHtmlDraft);
+  const [pendingSupportAction, setPendingSupportAction] = useState<AdvancedSupportAction>(null);
+  const htmlDiagnostics = sanitizeRichTextHtmlWithDiagnostics(normalized.body?.html ?? "");
+  const supportActionDescription =
+    pendingSupportAction === "reset"
+      ? "Reset this rich text section to the default sample content? This replaces the current title, body, blocks, options, and style."
+      : "Normalize this rich text section now? The current content is preserved while deterministic defaults are reapplied.";
 
   return (
     <div className="space-y-4">
       <EditorSection
         title="Output mode and source diagnostics"
-        description="Technical ownership for output mode plus a read-only snapshot of the rendered source."
+        description="Read-only output mode and rendered-source summary."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Output mode</p>
-          <Select
-            value={normalized.options?.outputMode ?? "blocks-fallback"}
-            onValueChange={(next) =>
-              updateOptions(value, onChange, { outputMode: next as RichTextSectionOutputMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select output mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {outputModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Output mode</p>
+            <p className="mt-1 text-muted-foreground">
+              {normalized.options?.outputMode ?? "blocks-fallback"}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Rendered source</p>
+            <p className="mt-1 text-muted-foreground">{source.renderedSource}</p>
+          </div>
         </div>
         <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-          <p className="font-medium">Rendered source</p>
+          <p className="font-medium">Source status</p>
           <p className="mt-1 text-muted-foreground">
-            Variant: {resolveRichTextSectionVariant(variant)} · Active source:{" "}
-            {source.renderedSource} · Block count: {blocks.length}
+            Variant: {resolveRichTextSectionVariant(variant)} · Block count: {blocks.length}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Reason: {source.reason}. Typography, spacing, and color tokens stay in Visual mode.
+            Reason: {source.reason}. Rich content, output preference, typography, spacing, and color
+            swatches stay in Visual mode.
           </p>
         </div>
       </EditorSection>
 
       <EditorSection
-        title="Raw HTML technical editor"
-        description="Use this only for technical cleanup. Apply runs the widget sanitizer before saving."
+        title="Sanitizer diagnostics"
+        description="Read-only sanitizer status for the active HTML source."
       >
-        <Textarea
-          value={rawHtmlDraft}
-          onChange={(event) => setRawHtmlDraft(event.target.value)}
-          className="min-h-52"
-          placeholder="<h2>Section heading</h2><p>Paragraph content...</p>"
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              updateBody(value, onChange, { html: rawHtmlPreview.html });
-              setRawHtmlDraft(rawHtmlPreview.html);
-            }}
-          >
-            Sanitize and apply
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setRawHtmlDraft(normalized.body?.html ?? "")}
-          >
-            Reset draft
-          </Button>
+        <RichTextSanitizerNotice diagnostics={htmlDiagnostics.diagnostics} />
+        <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+          <p>
+            Stored HTML length: {htmlDiagnostics.html.length} characters · Diagnostics:{" "}
+            {htmlDiagnostics.diagnostics.length}
+          </p>
+          <p className="mt-1 text-xs">
+            Edit body copy and structured blocks in Visual mode. Advanced only reports sanitizer
+            results.
+          </p>
         </div>
-        <RichTextSanitizerNotice diagnostics={rawHtmlPreview.diagnostics} />
         <div className="space-y-2">
           <p className="text-sm font-medium">Sanitized preview</p>
           <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
-            {rawHtmlPreview.html.length > 0 ? (
-              <div>{renderRichTextSectionHtmlPreview(rawHtmlPreview.html)}</div>
+            {htmlDiagnostics.html.length > 0 ? (
+              <div>{renderRichTextSectionHtmlPreview(htmlDiagnostics.html)}</div>
             ) : (
               <p>No rendered HTML after sanitization.</p>
             )}
@@ -1889,13 +1913,17 @@ function RichTextSectionAdvancedEditorContent({
 
       <EditorSection
         title="Normalization and safeguards"
-        description="Apply deterministic defaults or reset the widget payload."
+        description="Confirmed support actions for deterministic cleanup."
       >
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPendingSupportAction("normalize")}
+          >
             Normalize now
           </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(richTextSectionDefaults)}>
+          <Button type="button" variant="outline" onClick={() => setPendingSupportAction("reset")}>
             Reset to defaults
           </Button>
         </div>
@@ -1904,6 +1932,28 @@ function RichTextSectionAdvancedEditorContent({
       <EditorSection title="Raw payload snapshot">
         <DiagnosticsSnapshot value={normalized} />
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingSupportAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSupportAction(null);
+        }}
+        title={
+          pendingSupportAction === "reset"
+            ? "Reset rich text section"
+            : "Normalize rich text section"
+        }
+        description={supportActionDescription}
+        confirmLabel={pendingSupportAction === "reset" ? "Reset" : "Normalize"}
+        onConfirm={() => {
+          if (pendingSupportAction === "reset") {
+            onChange(richTextSectionDefaults);
+          } else {
+            onChange(normalizeValue(value));
+          }
+          setPendingSupportAction(null);
+        }}
+      />
     </div>
   );
 }

@@ -23,7 +23,7 @@ blocks, and bounded inline media/attachment/embed support.
 - Eyebrow and title quick setup
 - Quick authoring for the first two structured text blocks only
 - Does not change `options.outputMode`; Wizard now leaves output ownership to
-  Visual/Advanced
+  Visual
 
 If one of the first two structured blocks is not a text block, Wizard explains
 that the block must be edited in Visual mode instead of silently rewriting it.
@@ -42,22 +42,26 @@ Visual is the primary authoring surface. It now owns:
 
 - title heading level
 - safe rich-text body editing through `PostRichTextAdapter`
+- source preference / output-mode selection
+- output-source changes through daily body and structured block authoring
 - rendered-source status and sanitizer guidance
 - structured text/image/attachment/embed block authoring
 - confirm + undo flows for destructive block-count and remove actions
 - block navigation/paging for large block sets
 - bounded media picking for images and attachments
 - text color clearing and inherited/dropcap guidance
+- swatch-only color controls that preserve legacy custom/token values as
+  replace-or-clear saved custom color state
 
 ### Advanced
 
-- Output mode and rendered-source diagnostics
-- Raw HTML technical editor with `Sanitize and apply`, reset, and preview
-- Normalization and reset actions
+- Read-only output mode and rendered-source diagnostics
+- Read-only sanitizer diagnostics and sanitized preview
+- Confirm-gated normalization and reset support actions
 - Raw payload snapshot
 
-Advanced intentionally stays technical. Variant selection and style duplication
-do not live here anymore.
+Advanced intentionally stays diagnostic. Variant selection, output-mode changes,
+style duplication, and raw HTML authoring do not live here anymore.
 
 ## Data Model Summary
 
@@ -177,4 +181,5 @@ do not live here anymore.
 - Contract target: Wizard seeds safe structured copy; Visual owns daily rich
   content, typography, spacing, and color; Advanced is read-only source,
   sanitizer, and runtime diagnostics.
-- Raw HTML/output-mode authoring drift is routed to `TASK-336-19`.
+- TASK-336-19 closes raw HTML/output-mode authoring drift by keeping Advanced
+  read-only and moving authoring through Visual rich-text/structured controls.

@@ -715,7 +715,8 @@ Katalog zawiera podstawowe metadata:
 - Count selectors w Wizard musza odpowiadac liczbie widocznych repeatable rows
   albo jawnie ograniczac zakres quick setup.
 - Routine rich text setup uzywa structured `body.blocks` i sanitizer-owned
-  output mode; raw HTML pozostaje sciezka Visual/Advanced.
+  output mode; raw HTML nie jest authoringiem w Advanced, a dzienna edycja
+  przechodzi przez Visual rich-text/structured controls.
 - Product widget collection selection korzysta z cached collection picker, z
   fallbackiem na jawne collection IDs tylko dla technicznej kompatybilnosci.
 - Media picker w Gallery Mosaic zapisuje tylko schema-owned, public-runtime-safe
