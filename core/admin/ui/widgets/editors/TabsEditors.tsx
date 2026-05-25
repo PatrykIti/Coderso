@@ -22,7 +22,6 @@ import {
   type TabsOrientation,
   type TabsSpacing,
   type TabsTriggerFontWeight,
-  type TabsTriggerOverflow,
   type TabsTriggerTextSize,
   type TabsVariantId,
 } from "../../../../widgets/core/tabs";
@@ -31,11 +30,8 @@ import type {
   WidgetEditorProps,
   WidgetEditorSectionRole,
 } from "../../../../widgets/types";
-import {
-  ClearableFieldHeader,
-  SharedColorFieldInputs,
-  resolveColorContrastAdvisory,
-} from "./ClearableFields";
+import { resolveColorContrastAdvisory } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -50,7 +46,7 @@ const variantOptions: Array<{
   {
     id: "pills",
     label: "Pills",
-    description: "Rounded segmented triggers.",
+    description: "Rounded segmented tabs.",
   },
   {
     id: "underline",
@@ -73,11 +69,6 @@ const alignmentOptions = [
 const orientationOptions: Array<{ value: TabsOrientation; label: string }> = [
   { value: "horizontal", label: "Horizontal" },
   { value: "vertical", label: "Vertical" },
-];
-
-const overflowOptions: Array<{ value: TabsTriggerOverflow; label: string }> = [
-  { value: "wrap", label: "Wrap" },
-  { value: "scroll", label: "Scroll" },
 ];
 
 const spacingOptions: Array<{ value: TabsSpacing; label: string }> = [
@@ -103,6 +94,14 @@ const motionOptions: Array<{ value: TabsMotion; label: string }> = [
   { value: "fade", label: "Fade" },
   { value: "slide", label: "Slide" },
 ];
+
+function optionLabel(
+  options: ReadonlyArray<{ value: string; label: string }>,
+  value: string | undefined,
+  fallback: string
+) {
+  return options.find((option) => option.value === value)?.label ?? fallback;
+}
 
 const tabCountOptions = Array.from({ length: tabsItemMax - tabsItemMin + 1 }, (_, index) =>
   String(tabsItemMin + index)
@@ -140,7 +139,7 @@ function setCount(value: TabsData, onChange: (next: TabsData) => void, count: nu
   const removed = resolveRemovedTabs(value, count);
   if (removed.length > 0 && typeof window !== "undefined" && typeof window.confirm === "function") {
     const confirmed = window.confirm(
-      `Reduce tabs to ${count}? This removes tab/panel pairs: ${removed
+      `Reduce tabs to ${count}? This removes these tab content areas: ${removed
         .map((item) => item.label)
         .join(", ")}. This cannot be undone.`
     );
@@ -310,7 +309,7 @@ function VariantCards({
               <TabsVariantPreview variant={option.id} selected={value === option.id} />
             </div>
             <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
-              {value === option.id ? "Selected" : "Pick"}
+              {value === option.id ? "Current style" : "Choose"}
             </Badge>
           </div>
         </button>
@@ -345,7 +344,7 @@ function TabsStructureSection({
       description={
         isSetupMode
           ? "Set the initial tab count and default tab before daily visual editing."
-          : "Edit tab labels, panel intro copy, trigger metadata, and disabled state."
+          : "Edit tab labels, content intro copy, tab notes, icons, and unavailable states."
       }
     >
       {isSetupMode ? (
@@ -374,8 +373,8 @@ function TabsStructureSection({
             )}
           </WidgetControlRow>
           <p className="text-xs text-muted-foreground">
-            Each tab owns a matching panel slot in the builder. Reducing the count confirms which
-            tab/panel pairs will be removed.
+            Each tab owns a matching content area. Reducing the count confirms which tab content
+            areas will be removed.
           </p>
           <WidgetControlRow
             id="tabs.wizard.default-tab"
@@ -415,7 +414,7 @@ function TabsStructureSection({
 
       <div className="space-y-3">
         {items.map((item, index) => {
-          const slotLabel = context?.slotTargets?.[index]?.label ?? `Panel ${index + 1}`;
+          const slotLabel = context?.slotTargets?.[index]?.label ?? `Tab ${index + 1}`;
           const isDefault = item.id === defaultItemId;
           return (
             <div key={item.id} className="space-y-3 rounded-md border p-3">
@@ -424,7 +423,7 @@ function TabsStructureSection({
                   {slotLabel}
                 </p>
                 <div className="flex items-center gap-2">
-                  {item.disabled ? <Badge variant="outline">Disabled</Badge> : null}
+                  {item.disabled ? <Badge variant="outline">Unavailable</Badge> : null}
                   {isDefault ? <Badge>Default</Badge> : null}
                 </div>
               </div>
@@ -461,14 +460,14 @@ function TabsStructureSection({
               {isSetupMode ? (
                 <ReadonlyWidgetSummaryRow
                   id={`tabs.wizard.item.${item.id}.panel-intro`}
-                  label="Panel intro text"
+                  label="Content intro text"
                   path={`items.${index}.panelIntro`}
                   value={item.panelIntro || "Not set"}
                 />
               ) : (
                 <WidgetControlRow
                   id={`tabs.visual.item.${item.id}.panel-intro`}
-                  label="Panel intro text"
+                  label="Content intro text"
                   path={`items.${index}.panelIntro`}
                 >
                   {(fieldProps) => (
@@ -480,7 +479,7 @@ function TabsStructureSection({
                       onChange={(event) =>
                         updateItem(value, onChange, item.id, { panelIntro: event.target.value })
                       }
-                      placeholder="Optional panel intro text"
+                      placeholder="Optional content intro text"
                     />
                   )}
                 </WidgetControlRow>
@@ -490,7 +489,7 @@ function TabsStructureSection({
                 <>
                   <WidgetControlRow
                     id={`tabs.visual.item.${item.id}.trigger-description`}
-                    label="Trigger subtitle"
+                    label="Tab subtitle"
                     path={`items.${index}.triggerDescription`}
                   >
                     {(fieldProps) => (
@@ -504,7 +503,7 @@ function TabsStructureSection({
                             triggerDescription: event.target.value,
                           })
                         }
-                        placeholder="Optional trigger subtitle"
+                        placeholder="Optional tab subtitle"
                       />
                     )}
                   </WidgetControlRow>
@@ -530,7 +529,8 @@ function TabsStructureSection({
 
                   <WidgetControlRow
                     id={`tabs.visual.item.${item.id}.disabled`}
-                    label="Disabled state"
+                    label="Show as unavailable"
+                    help="The tab remains visible, but visitors cannot open it."
                     path={`items.${index}.disabled`}
                   >
                     {() => (
@@ -544,7 +544,7 @@ function TabsStructureSection({
                             })
                           }
                         />
-                        Disable this tab
+                        Keep this tab visible but unavailable
                       </label>
                     )}
                   </WidgetControlRow>
@@ -556,8 +556,7 @@ function TabsStructureSection({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Each tab maps to a matching panel slot in the builder, so slot order stays aligned with the
-        tab order.
+        Each tab maps to a matching content area, so content order stays aligned with the tab order.
       </p>
     </EditorSection>
   );
@@ -580,7 +579,7 @@ function TabsLayoutSection({
       mode="visual"
       role="layout"
       title="Layout"
-      description="Control tab direction, overflow, and spacing."
+      description="Control tab direction, alignment, and spacing."
     >
       <div className="space-y-3">
         <div
@@ -652,36 +651,6 @@ function TabsLayoutSection({
 
         <div className="space-y-3">
           <WidgetControlRow
-            id="tabs.visual.trigger-overflow"
-            label="Tab overflow"
-            path="options.triggerOverflow"
-          >
-            {(fieldProps) => (
-              <Select
-                value={normalized.options?.triggerOverflow ?? "wrap"}
-                onValueChange={(next) =>
-                  updateOptions(value, onChange, { triggerOverflow: next as TabsTriggerOverflow })
-                }
-              >
-                <SelectTrigger
-                  id={fieldProps.id}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                >
-                  <SelectValue placeholder="Choose overflow" />
-                </SelectTrigger>
-                <SelectContent>
-                  {overflowOptions.map((option) => (
-                    <SelectItem key={`tabs-overflow-${option.value}`} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </WidgetControlRow>
-
-          <WidgetControlRow
             id="tabs.visual.container-padding"
             label="Container padding"
             path="options.containerPadding"
@@ -737,7 +706,7 @@ function TabsLayoutSection({
             )}
           </WidgetControlRow>
 
-          <WidgetControlRow id="tabs.visual.panel-gap" label="Panel gap" path="options.panelGap">
+          <WidgetControlRow id="tabs.visual.panel-gap" label="Content gap" path="options.panelGap">
             {(fieldProps) => (
               <Select
                 value={normalized.options?.panelGap ?? "md"}
@@ -782,13 +751,13 @@ function TabsTriggerStyleSection({
       id="tabs.visual.trigger-style"
       mode="visual"
       role="visual"
-      title="Trigger style"
-      description="Adjust trigger typography and panel motion."
+      title="Tab label style"
+      description="Adjust tab label readability and content motion."
     >
       <div className="space-y-3">
         <WidgetControlRow
           id="tabs.visual.trigger-text-size"
-          label="Trigger text size"
+          label="Tab label size"
           path="options.triggerTextSize"
         >
           {(fieldProps) => (
@@ -818,7 +787,7 @@ function TabsTriggerStyleSection({
 
         <WidgetControlRow
           id="tabs.visual.trigger-font-weight"
-          label="Trigger weight"
+          label="Tab label weight"
           path="options.triggerFontWeight"
         >
           {(fieldProps) => (
@@ -835,7 +804,7 @@ function TabsTriggerStyleSection({
                 aria-labelledby={fieldProps["aria-labelledby"]}
                 aria-describedby={fieldProps["aria-describedby"]}
               >
-                <SelectValue placeholder="Choose trigger weight" />
+                <SelectValue placeholder="Choose tab label weight" />
               </SelectTrigger>
               <SelectContent>
                 {fontWeightOptions.map((option) => (
@@ -848,7 +817,7 @@ function TabsTriggerStyleSection({
           )}
         </WidgetControlRow>
 
-        <WidgetControlRow id="tabs.visual.motion" label="Panel motion" path="options.motion">
+        <WidgetControlRow id="tabs.visual.motion" label="Content motion" path="options.motion">
           {(fieldProps) => (
             <Select
               value={normalized.options?.motion ?? "none"}
@@ -901,7 +870,7 @@ function TabsColorsSection({
       mode="visual"
       role="visual"
       title="Colors"
-      description="Tune the tab surface, trigger, and panel colors."
+      description="Tune the tab surface, tab labels, and content area colors."
     >
       <div className="space-y-3">
         <WidgetControlRow
@@ -909,24 +878,16 @@ function TabsColorsSection({
           label="Surface color"
           path="style.surfaceColor"
         >
-          {(fieldProps) => (
-            <div className="space-y-2">
-              <ClearableFieldHeader
-                label="Surface color"
-                value={normalized.style?.surfaceColor}
-                onClear={() => clearStyleField(value, onChange, "surfaceColor")}
-                onRestoreValue={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-              />
-              <SharedColorFieldInputs
-                inputId={fieldProps.id}
-                ariaLabelledby={fieldProps["aria-labelledby"]}
-                ariaDescribedby={fieldProps["aria-describedby"]}
-                value={normalized.style?.surfaceColor}
-                onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
-                placeholder="var(--color-surface)"
-                pickerFallback="#f8fafc"
-              />
-            </div>
+          {() => (
+            <SharedColorControl
+              label="Surface color"
+              value={normalized.style?.surfaceColor}
+              onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+              onSwatchChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+              onClear={() => clearStyleField(value, onChange, "surfaceColor")}
+              pickerFallback="#f8fafc"
+              showValueInput={false}
+            />
           )}
         </WidgetControlRow>
 
@@ -935,15 +896,14 @@ function TabsColorsSection({
           label="Border color"
           path="style.borderColor"
         >
-          {(fieldProps) => (
-            <SharedColorFieldInputs
-              inputId={fieldProps.id}
-              ariaLabelledby={fieldProps["aria-labelledby"]}
-              ariaDescribedby={fieldProps["aria-describedby"]}
+          {() => (
+            <SharedColorControl
+              label="Border color"
               value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor}
               onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-              placeholder="var(--color-border)"
+              onSwatchChange={(next) => updateStyle(value, onChange, { borderColor: next })}
               pickerFallback="#cbd5e1"
+              showValueInput={false}
             />
           )}
         </WidgetControlRow>
@@ -953,26 +913,18 @@ function TabsColorsSection({
           label="Active background"
           path="style.activeBackgroundColor"
         >
-          {(fieldProps) => (
-            <div className="space-y-2">
-              <ClearableFieldHeader
-                label="Active background"
-                value={normalized.style?.activeBackgroundColor}
-                onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
-                onRestoreValue={(next) =>
-                  updateStyle(value, onChange, { activeBackgroundColor: next })
-                }
-              />
-              <SharedColorFieldInputs
-                inputId={fieldProps.id}
-                ariaLabelledby={fieldProps["aria-labelledby"]}
-                ariaDescribedby={fieldProps["aria-describedby"]}
-                value={normalized.style?.activeBackgroundColor}
-                onChange={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
-                placeholder="var(--color-text)"
-                pickerFallback="#0f172a"
-              />
-            </div>
+          {() => (
+            <SharedColorControl
+              label="Active background"
+              value={normalized.style?.activeBackgroundColor}
+              onChange={(next) => updateStyle(value, onChange, { activeBackgroundColor: next })}
+              onSwatchChange={(next) =>
+                updateStyle(value, onChange, { activeBackgroundColor: next })
+              }
+              onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
+              pickerFallback="#0f172a"
+              showValueInput={false}
+            />
           )}
         </WidgetControlRow>
 
@@ -981,15 +933,14 @@ function TabsColorsSection({
           label="Active text color"
           path="style.activeTextColor"
         >
-          {(fieldProps) => (
-            <SharedColorFieldInputs
-              inputId={fieldProps.id}
-              ariaLabelledby={fieldProps["aria-labelledby"]}
-              ariaDescribedby={fieldProps["aria-describedby"]}
+          {() => (
+            <SharedColorControl
+              label="Active text color"
               value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor}
               onChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
-              placeholder="var(--color-background)"
+              onSwatchChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
               pickerFallback="#ffffff"
+              showValueInput={false}
             />
           )}
         </WidgetControlRow>
@@ -999,44 +950,35 @@ function TabsColorsSection({
           label="Inactive text color"
           path="style.inactiveTextColor"
         >
-          {(fieldProps) => (
-            <SharedColorFieldInputs
-              inputId={fieldProps.id}
-              ariaLabelledby={fieldProps["aria-labelledby"]}
-              ariaDescribedby={fieldProps["aria-describedby"]}
+          {() => (
+            <SharedColorControl
+              label="Inactive text color"
               value={normalized.style?.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor}
               onChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
-              placeholder="var(--color-text)"
+              onSwatchChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
               pickerFallback="#0f172a"
+              showValueInput={false}
             />
           )}
         </WidgetControlRow>
 
         <WidgetControlRow
           id="tabs.visual.panel-background-color"
-          label="Panel background"
+          label="Content background"
           path="style.panelBackgroundColor"
         >
-          {(fieldProps) => (
-            <div className="space-y-2">
-              <ClearableFieldHeader
-                label="Panel background"
-                value={normalized.style?.panelBackgroundColor}
-                onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
-                onRestoreValue={(next) =>
-                  updateStyle(value, onChange, { panelBackgroundColor: next })
-                }
-              />
-              <SharedColorFieldInputs
-                inputId={fieldProps.id}
-                ariaLabelledby={fieldProps["aria-labelledby"]}
-                ariaDescribedby={fieldProps["aria-describedby"]}
-                value={normalized.style?.panelBackgroundColor}
-                onChange={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
-                placeholder="var(--color-surface)"
-                pickerFallback="#f8fafc"
-              />
-            </div>
+          {() => (
+            <SharedColorControl
+              label="Content background"
+              value={normalized.style?.panelBackgroundColor}
+              onChange={(next) => updateStyle(value, onChange, { panelBackgroundColor: next })}
+              onSwatchChange={(next) =>
+                updateStyle(value, onChange, { panelBackgroundColor: next })
+              }
+              onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
+              pickerFallback="#f8fafc"
+              showValueInput={false}
+            />
           )}
         </WidgetControlRow>
       </div>
@@ -1048,14 +990,6 @@ function TabsColorsSection({
         <p className="text-xs text-amber-700">Inactive tab: {inactiveContrast.message}</p>
       ) : null}
     </EditorSection>
-  );
-}
-
-function DiagnosticsSnapshot({ value }: { value: TabsData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
   );
 }
 
@@ -1105,74 +1039,136 @@ export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
   const items = normalizeTabsItems(normalized.items);
   const activeId = normalized.options?.activeId ?? items[0]?.id ?? "1";
   const defaultItemId = normalized.options?.defaultItemId ?? activeId;
-  const disabledCount = items.filter((item) => item.disabled === true).length;
+  const unavailableCount = items.filter((item) => item.disabled === true).length;
+  const activeIndex = items.findIndex((item) => item.id === activeId);
+  const defaultIndex = items.findIndex((item) => item.id === defaultItemId);
+  const colorFieldCount = Object.values(normalized.style ?? {}).filter(
+    (styleValue) => typeof styleValue === "string" && styleValue.trim().length > 0
+  ).length;
+  const activeContrast = resolveColorContrastAdvisory({
+    foreground: normalized.style?.activeTextColor,
+    background: normalized.style?.activeBackgroundColor,
+  });
+  const inactiveContrast = resolveColorContrastAdvisory({
+    foreground: normalized.style?.inactiveTextColor,
+    background: normalized.style?.surfaceColor,
+  });
+  const readabilitySummary =
+    activeContrast.status === "warning" || inactiveContrast.status === "warning"
+      ? "Review color readability in Visual before publishing."
+      : "No saved color readability warnings are visible.";
+
+  const tabChoiceLabel = (index: number) => {
+    const item = items[index];
+    return item ? `${item.label} (tab ${index + 1})` : "First available tab";
+  };
 
   return (
     <div className="space-y-4">
       <EditorSection
-        id="tabs.advanced.runtime-diagnostics"
+        id="tabs.advanced.behavior-summary"
         mode="advanced"
         role="diagnostics"
-        title="Runtime diagnostics"
-        description="Read-only activation, accessibility, and runtime behavior."
+        title="Behavior summary"
+        description="Read-only summary of opening behavior and availability."
       >
         <ReadonlyWidgetSummaryRow
           id="tabs.advanced.active-tab"
-          label="Active tab"
+          label="Opens on"
           path="options.activeId"
-          value={activeId}
+          value={tabChoiceLabel(activeIndex)}
         />
         <ReadonlyWidgetSummaryRow
           id="tabs.advanced.default-tab"
           label="Default tab"
           path="options.defaultItemId"
-          value={defaultItemId}
+          value={tabChoiceLabel(defaultIndex)}
         />
         <ReadonlyWidgetSummaryRow
-          id="tabs.advanced.disabled-count"
-          label="Disabled tabs"
-          path="items.disabled"
-          value={`${disabledCount} of ${items.length}`}
+          id="tabs.advanced.unavailable-count"
+          label="Unavailable tabs"
+          path="items.*.disabled"
+          value={`${unavailableCount} of ${items.length}`}
         />
         <ReadonlyWidgetSummaryRow
-          id="tabs.advanced.activation-model"
-          label="Activation model"
-          value="Root-scoped tabs, disabled tabs skipped, active panel remains focusable."
+          id="tabs.advanced.line-behavior"
+          label="Line behavior"
+          path="options.triggerOverflow"
+          value="Tabs wrap onto extra lines when space is tight."
         />
       </EditorSection>
       <EditorSection
-        id="tabs.advanced.technical-ids"
+        id="tabs.advanced.item-summary"
         mode="advanced"
-        role="technical"
-        title="Technical ids"
-        description="Read-only tab, trigger, and panel id summary."
+        role="summary"
+        title="Saved tabs summary"
+        description="Read-only overview of the saved tab content."
       >
         {items.map((item, index) => (
           <ReadonlyWidgetSummaryRow
             key={item.id}
-            id={`tabs.advanced.item.${item.id}.id`}
+            id={`tabs.advanced.item.${item.id}.summary`}
             label={`Tab ${index + 1}`}
-            path={`items.${index}.id`}
-            value={`item=${item.id}; trigger suffix=trigger-${item.id}; panel suffix=panel-${item.id}`}
+            path={`items.${index}.label`}
+            value={`${item.label}; ${
+              item.panelIntro ? "intro text saved" : "no intro text"
+            }; ${item.triggerDescription ? "subtitle saved" : "no subtitle"}; ${
+              item.icon ? "icon saved" : "no icon"
+            }; ${item.disabled ? "unavailable" : "available"}`}
           />
         ))}
       </EditorSection>
       <EditorSection
-        id="tabs.advanced.runtime-payload"
+        id="tabs.advanced.display-summary"
         mode="advanced"
-        role="diagnostics"
-        title="Runtime payload"
-        description="Normalized data payload preview."
+        role="summary"
+        title="Saved display summary"
+        description="Read-only layout, style, and motion summary."
       >
-        <WidgetControlRow
-          id="tabs.advanced.normalized-payload"
-          label="Normalized payload"
-          path="items"
-          ownership="readonly"
-          readOnly
-        >
-          {() => <DiagnosticsSnapshot value={normalized} />}
-        </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.direction"
+          label="Direction and alignment"
+          path="options.orientation"
+          value={`${optionLabel(
+            orientationOptions,
+            normalized.options?.orientation,
+            "Horizontal"
+          )}; ${optionLabel(alignmentOptions, normalized.options?.alignment, "Start")} aligned`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.spacing"
+          label="Spacing"
+          path="options.containerPadding"
+          value={`Container ${optionLabel(
+            spacingOptions,
+            normalized.options?.containerPadding,
+            "Medium"
+          )}; tabs ${optionLabel(
+            spacingOptions,
+            normalized.options?.triggerGap,
+            "Medium"
+          )}; content ${optionLabel(spacingOptions, normalized.options?.panelGap, "Medium")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.label-style"
+          label="Tab label style"
+          path="options.triggerTextSize"
+          value={`${optionLabel(
+            textSizeOptions,
+            normalized.options?.triggerTextSize,
+            "Small"
+          )}; ${optionLabel(
+            fontWeightOptions,
+            normalized.options?.triggerFontWeight,
+            "Medium"
+          )}; ${optionLabel(motionOptions, normalized.options?.motion, "None")} motion`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="tabs.advanced.color-summary"
+          label="Color choices"
+          path="style.surfaceColor"
+          value={`${colorFieldCount} saved color choices. ${readabilitySummary}`}
+        />
       </EditorSection>
       <EditorSection
         id="tabs.advanced.contract-summary"
@@ -1182,8 +1178,8 @@ export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
         description="Tabs runtime and editor ownership summary."
       >
         <p className="text-xs text-muted-foreground">
-          Visual owns variant, tab presentation, layout, trigger style, and colors. Advanced is
-          read-only diagnostics.
+          Visual owns variant, tab content, layout, tab label style, and colors. Advanced only
+          summarizes the saved state.
         </p>
       </EditorSection>
     </div>

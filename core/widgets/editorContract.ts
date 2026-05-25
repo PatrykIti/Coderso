@@ -63,7 +63,7 @@ const sectionRoles = new Set<string>([
   "diagnostics",
   "summary",
 ] satisfies WidgetEditorSectionRole[]);
-const pathPattern = /^[a-zA-Z0-9_.-]+$/;
+const pathSegmentPattern = /^[a-zA-Z0-9_-]+$/;
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
 const wizardStyleSegments = new Set([
   "style",
@@ -114,10 +114,10 @@ function normalizeTitleId(value: string): string {
 }
 
 function isSafePath(path: string): boolean {
-  return (
-    pathPattern.test(path) &&
-    !path.split(".").some((segment) => !segment || unsafePathSegments.has(segment))
-  );
+  return path.split(".").every((segment) => {
+    if (!segment || unsafePathSegments.has(segment)) return false;
+    return segment === "*" || pathSegmentPattern.test(segment);
+  });
 }
 
 function isWizardStylePath(path: string): boolean {

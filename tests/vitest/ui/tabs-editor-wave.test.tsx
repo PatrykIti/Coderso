@@ -178,6 +178,17 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string, inde
   return input;
 };
 
+const findColorInputByLabel = (container: ParentNode, label: string) => {
+  const input = Array.from(container.querySelectorAll('input[type="color"]')).find(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
+  );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input "${label}"`);
+  }
+  return input;
+};
+
 const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element): element is HTMLInputElement =>
@@ -339,7 +350,6 @@ test("Tabs editors expose non-overlapping writable ownership metadata", async ()
         "items.0.disabled",
         "options.orientation",
         "options.alignment",
-        "options.triggerOverflow",
         "options.containerPadding",
         "options.triggerGap",
         "options.panelGap",
@@ -386,8 +396,8 @@ test("Tabs wizard editor covers starter item-count growth and default-tab select
     ]);
     const defaultSelect = findSelectByOptions(structureSection, ["overview", "details"]);
 
-    expect(structureSection.textContent).toContain("matching panel slot");
-    expect(structureSection.textContent).not.toContain("Trigger subtitle");
+    expect(structureSection.textContent).toContain("matching content area");
+    expect(structureSection.textContent).not.toContain("Tab subtitle");
     expect(structureSection.textContent).toContain("Visual owns daily label edits");
     expect(defaultSelect.value).toBe("overview");
 
@@ -458,7 +468,7 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
   try {
     const variantSection = getSectionByTitle(view.container, "Variant");
     expect(normalizeText(findButtonsByText(variantSection, "Pills")[0]?.textContent)).toContain(
-      "selected"
+      "current style"
     );
     expect(variantSection.querySelector('[data-tabs-variant-preview="pills"]')).not.toBeNull();
     expect(variantSection.querySelector('[data-tabs-variant-preview="underline"]')).not.toBeNull();
@@ -469,12 +479,12 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("minimal");
 
     const structureSection = getSectionByTitle(view.container, "Tab content");
-    expect(findInputsByPlaceholder(structureSection, "Optional panel intro text")[1]?.value).toBe(
+    expect(findInputsByPlaceholder(structureSection, "Optional content intro text")[1]?.value).toBe(
       "Deep dive."
     );
 
     setInputValue(
-      findInputsByPlaceholder(structureSection, "Optional trigger subtitle")[0],
+      findInputsByPlaceholder(structureSection, "Optional tab subtitle")[0],
       "Start here first"
     );
     setInputValue(findInputsByPlaceholder(structureSection, "e.g. ⭐")[0], "🚀");
@@ -485,7 +495,6 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     const layoutSection = getSectionByTitle(view.container, "Layout");
     const alignmentSelect = findSelectByOptions(layoutSection, ["start", "center", "end"]);
     const orientationSelect = findSelectByOptions(layoutSection, ["horizontal", "vertical"]);
-    const overflowSelect = findSelectByOptions(layoutSection, ["wrap", "scroll"]);
     const containerPaddingSelect = findSelectByOptions(layoutSection, ["sm", "md", "lg"]);
     const allSpacingSelects = Array.from(layoutSection.querySelectorAll("select")).filter(
       (element): element is HTMLSelectElement =>
@@ -499,15 +508,15 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
 
     expect(alignmentSelect.value).toBe("start");
     expect(orientationSelect.value).toBe("horizontal");
-    expect(overflowSelect.value).toBe("wrap");
+    expect(layoutSection.textContent).not.toContain("Scroll");
+    expect(layoutSection.textContent).not.toContain("overflow");
     setSelectValue(alignmentSelect, "center");
     setSelectValue(orientationSelect, "vertical");
-    setSelectValue(overflowSelect, "scroll");
     setSelectValue(containerPaddingSelect, "lg");
     setSelectValue(triggerGapSelect, "sm");
     setSelectValue(panelGapSelect, "lg");
 
-    const triggerStyleSection = getSectionByTitle(view.container, "Trigger style");
+    const triggerStyleSection = getSectionByTitle(view.container, "Tab label style");
     const triggerTextSizeSelect = findSelectByOptions(triggerStyleSection, ["xs", "sm", "base"]);
     const triggerWeightSelect = findSelectByOptions(triggerStyleSection, [
       "normal",
@@ -520,19 +529,30 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     setSelectValue(motionSelect, "slide");
 
     const colorsSection = getSectionByTitle(view.container, "Colors");
-    const surfaceColorInput = findInputByPlaceholder(colorsSection, "var(--color-surface)", 0);
-    const panelBackgroundInput = findInputByPlaceholder(colorsSection, "var(--color-surface)", 1);
-    const borderColorInput = findInputByPlaceholder(colorsSection, "var(--color-border)");
-    const activeBackgroundInput = findInputByPlaceholder(colorsSection, "var(--color-text)", 0);
-    const inactiveTextColorInput = findInputByPlaceholder(colorsSection, "var(--color-text)", 1);
-    const activeTextColorInput = findInputByPlaceholder(colorsSection, "var(--color-background)");
+    const surfaceColorInput = findColorInputByLabel(colorsSection, "Surface color swatch");
+    const panelBackgroundInput = findColorInputByLabel(colorsSection, "Content background swatch");
+    const borderColorInput = findColorInputByLabel(colorsSection, "Border color swatch");
+    const activeBackgroundInput = findColorInputByLabel(colorsSection, "Active background swatch");
+    const inactiveTextColorInput = findColorInputByLabel(
+      colorsSection,
+      "Inactive text color swatch"
+    );
+    const activeTextColorInput = findColorInputByLabel(colorsSection, "Active text color swatch");
 
-    expect(surfaceColorInput.value).toBe("");
-    expect(panelBackgroundInput.value).toBe("");
-    expect(borderColorInput.value).toBe(tabsDefaults.style?.borderColor);
+    expect(colorsSection.textContent).not.toContain("var(--color");
+    expect(colorsSection.textContent).not.toContain("token");
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-surface)")).toHaveLength(0);
+    expect(
+      Array.from(colorsSection.querySelectorAll("button")).filter(
+        (button) => button.textContent === "Clear"
+      )
+    ).toHaveLength(3);
+    expect(surfaceColorInput.value).toBe("#f8fafc");
+    expect(panelBackgroundInput.value).toBe("#f8fafc");
+    expect(borderColorInput.value).toBe("#cbd5e1");
     expect(activeBackgroundInput.value).toBe("#111111");
-    expect(activeTextColorInput.value).toBe(tabsDefaults.style?.activeTextColor);
-    expect(inactiveTextColorInput.value).toBe(tabsDefaults.style?.inactiveTextColor);
+    expect(activeTextColorInput.value).toBe("#ffffff");
+    expect(inactiveTextColorInput.value).toBe("#0f172a");
 
     setInputValue(surfaceColorInput, "#f3f4f6");
     setInputValue(borderColorInput, "#d1d5db");
@@ -560,7 +580,7 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
           activeId: "intro",
           alignment: "center",
           orientation: "vertical",
-          triggerOverflow: "scroll",
+          triggerOverflow: "wrap",
           containerPadding: "lg",
           triggerGap: "sm",
           panelGap: "lg",
@@ -611,7 +631,7 @@ test("Tabs colors section surfaces contrast advisories when trigger colors lose 
   }
 });
 
-test("Tabs advanced editor exposes read-only runtime diagnostics and normalized payload", async () => {
+test("Tabs advanced editor exposes read-only human summaries without raw diagnostics", async () => {
   const view = await renderEditor({
     editor: "advanced",
     initialVariant: "legacy-tabs",
@@ -639,37 +659,33 @@ test("Tabs advanced editor exposes read-only runtime diagnostics and normalized 
   });
 
   try {
-    const diagnosticsSection = getSectionByTitle(view.container, "Runtime diagnostics");
-    const idsSection = getSectionByTitle(view.container, "Technical ids");
-    const payloadSection = getSectionByTitle(view.container, "Runtime payload");
+    const diagnosticsSection = getSectionByTitle(view.container, "Behavior summary");
+    const itemsSection = getSectionByTitle(view.container, "Saved tabs summary");
+    const displaySection = getSectionByTitle(view.container, "Saved display summary");
     const summarySection = getSectionByTitle(view.container, "Contract summary");
-    const snapshotBefore = payloadSection.querySelector("pre");
 
-    expect(diagnosticsSection.textContent).toContain("Active tab");
+    expect(diagnosticsSection.textContent).toContain("Opens on");
     expect(diagnosticsSection.textContent).toContain("Default tab");
-    expect(diagnosticsSection.textContent).toContain("Disabled tabs");
-    expect(diagnosticsSection.textContent).toContain("Root-scoped tabs");
-    expect(idsSection.textContent).toContain("trigger suffix=trigger-dup");
-    expect(idsSection.textContent).toContain("panel suffix=panel-2");
-    expect(summarySection.textContent).toContain("Advanced is read-only diagnostics");
-    expect(snapshotBefore?.textContent).toContain('"id": "dup"');
-    expect(snapshotBefore?.textContent).toContain('"id": "2"');
-    expect(snapshotBefore?.textContent).toContain('"label": "Tab 1"');
-    expect(snapshotBefore?.textContent).toContain('"panelIntro": "Specification sheet."');
-    expect(snapshotBefore?.textContent).toContain('"defaultItemId": "dup"');
-    expect(snapshotBefore?.textContent).toContain('"activeId": "dup"');
-    expect(snapshotBefore?.textContent).toContain('"alignment": "end"');
-    expect(snapshotBefore?.textContent).toContain('"orientation": "vertical"');
-    expect(snapshotBefore?.textContent).toContain('"triggerOverflow": "scroll"');
-    expect(snapshotBefore?.textContent).toContain('"motion": "fade"');
-    expect(snapshotBefore?.textContent).toContain('"disabled": false');
-    expect(snapshotBefore?.textContent).not.toContain('"surfaceColor"');
-    expect(snapshotBefore?.textContent).toContain('"borderColor": "token-border"');
+    expect(diagnosticsSection.textContent).toContain("Unavailable tabs");
+    expect(diagnosticsSection.textContent).toContain("Tabs wrap onto extra lines");
+    expect(itemsSection.textContent).toContain("Tab 1; intro text saved; no subtitle; no icon");
+    expect(itemsSection.textContent).toContain("Specs; intro text saved");
+    expect(displaySection.textContent).toContain("Vertical; End aligned");
+    expect(displaySection.textContent).toContain("Fade motion");
+    expect(displaySection.textContent).toContain("saved color choices");
+    expect(summarySection.textContent).toContain("Advanced only summarizes the saved state");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).not.toContain('"id"');
+    expect(view.container.textContent).not.toContain("trigger-");
+    expect(view.container.textContent).not.toContain("panel-");
+    expect(view.container.textContent).not.toContain("token-border");
+    expect(view.container.textContent).not.toContain("Runtime payload");
+    expect(view.container.textContent).not.toContain("Technical ids");
 
     expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
     expect(() => getSectionByTitle(view.container, "Tab content")).toThrow();
     expect(() => getSectionByTitle(view.container, "Layout")).toThrow();
-    expect(() => getSectionByTitle(view.container, "Trigger style")).toThrow();
+    expect(() => getSectionByTitle(view.container, "Tab label style")).toThrow();
     expect(() => getSectionByTitle(view.container, "Colors")).toThrow();
     expect(view.container.querySelectorAll("input, select, button")).toHaveLength(0);
     expect(writablePaths(view.container)).toEqual([]);

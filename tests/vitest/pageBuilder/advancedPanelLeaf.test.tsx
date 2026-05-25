@@ -5,63 +5,10 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { AdvancedPanel } from "../../../core/admin/ui/pages/builder/AdvancedPanel";
-import type {
-  Block,
-  LayoutValue,
-  WidgetDefinition,
-} from "../../../core/admin/ui/pages/builder/types";
+import type { Block, WidgetDefinition } from "../../../core/admin/ui/pages/builder/types";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-vi.mock("@/components/ui/badge", () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("@/components/ui/switch", () => ({
-  Switch: ({
-    checked,
-    onCheckedChange,
-  }: {
-    checked?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-  }) => (
-    <button
-      type="button"
-      data-switch-checked={String(Boolean(checked))}
-      onClick={() => onCheckedChange?.(!checked)}
-    >
-      switch
-    </button>
-  ),
-}));
-
-vi.mock("../../../core/admin/ui/pages/builder/LayoutPanel", () => ({
-  LayoutPanel: ({
-    value,
-    onChange,
-  }: {
-    value: LayoutValue;
-    onChange: (next: LayoutValue) => void;
-  }) => (
-    <button
-      type="button"
-      data-layout-panel="true"
-      data-layout-container={value.container}
-      data-layout-padding-top={value.padding.top}
-      onClick={() =>
-        onChange({
-          container: "full",
-          padding: { top: "sm", bottom: "lg" },
-          margin: { top: "none", bottom: "md" },
-          background: { color: "transparent", image: null },
-        })
-      }
-    >
-      layout-panel
-    </button>
-  ),
-}));
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -83,7 +30,7 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
+test("AdvancedPanel wires editor callbacks and renders layout visibility summaries", () => {
   const onChange = vi.fn();
   const block: Block = {
     id: "block-1",
@@ -157,48 +104,22 @@ test("AdvancedPanel wires editor, layout, and visibility callbacks", () => {
     React.act(() => {
       byText("change-data")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byText("change-variant")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      container
-        .querySelector("button[data-layout-panel='true']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
-    React.act(() => {
-      switches[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onChange).toHaveBeenCalledWith({ ...block, data: { title: "Updated" } });
     expect(onChange).toHaveBeenCalledWith({ ...block, variant: "secondary" });
-    expect(onChange).toHaveBeenCalledWith({
-      ...block,
-      layout: {
-        container: "full",
-        padding: { top: "sm", bottom: "lg" },
-        margin: { top: "none", bottom: "md" },
-        background: { color: "transparent", image: null },
-      },
-    });
-    expect(onChange).toHaveBeenCalledWith({
-      ...block,
-      visibility: {
-        enabled: true,
-        devices: ["mobile"],
-      },
-    });
-    expect(onChange).toHaveBeenCalledWith({
-      ...block,
-      visibility: {
-        enabled: true,
-        devices: ["desktop", "mobile", "tablet"],
-      },
-    });
+    expect(container.textContent).toContain("Block layout summary");
+    expect(container.textContent).toContain("Visibility summary");
+    expect(container.textContent).toContain("Desktop, Mobile");
+    expect(container.querySelectorAll("button")).toHaveLength(2);
+    expect(container.querySelector("[data-layout-panel='true']")).toBeNull();
+    expect(container.querySelector("[data-switch-checked]")).toBeNull();
   } finally {
     cleanup();
   }
 });
 
-test("AdvancedPanel routes data, variant, layout, and visibility edits through block patches", () => {
+test("AdvancedPanel routes data and variant edits through block patches", () => {
   const onChange = vi.fn();
   const onBlockPatch = vi.fn();
   const block: Block = {
@@ -271,19 +192,10 @@ test("AdvancedPanel routes data, variant, layout, and visibility edits through b
     React.act(() => {
       byText("change-data")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byText("change-variant")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      container
-        .querySelector("button[data-layout-panel='true']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
-    React.act(() => {
-      switches[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onChange).not.toHaveBeenCalled();
-    expect(onBlockPatch).toHaveBeenCalled();
+    expect(onBlockPatch).toHaveBeenCalledTimes(2);
   } finally {
     cleanup();
   }
@@ -333,33 +245,17 @@ test("AdvancedPanel falls back for missing variant, visibility, and invalid layo
   );
 
   try {
-    const layoutButton = container.querySelector("button[data-layout-panel='true']");
     expect(container.innerHTML).toContain('data-widget-editor="hero"');
     expect(container.innerHTML).toContain('data-widget-editor-mode="advanced"');
-    expect(layoutButton?.getAttribute("data-layout-container")).toBe("default");
-    expect(layoutButton?.getAttribute("data-layout-padding-top")).toBe("md");
+    expect(container.textContent).toContain("Content width");
+    expect(container.textContent).toContain("default");
+    expect(container.textContent).toContain("Top MD, bottom MD");
+    expect(container.textContent).toContain("Desktop, Tablet, Mobile");
     expect(
       container.querySelector("[data-variant-fallback]")?.getAttribute("data-variant-fallback")
     ).toBe("");
-
-    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
-    expect(switches.map((item) => item.getAttribute("data-switch-checked"))).toEqual([
-      "true",
-      "true",
-      "true",
-    ]);
-
-    React.act(() => {
-      switches[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(onChange).toHaveBeenCalledWith({
-      ...block,
-      visibility: {
-        devices: ["desktop", "tablet"],
-        enabled: true,
-      },
-    });
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     cleanup();
   }

@@ -116,10 +116,18 @@ Zasady:
   zastepuje komponentow `editor.*`, tylko jest testowalnym ownerem UX i danych.
   W trakcie TASK-336 brak kontraktu jest dopuszczony w trybie migracyjnym, ale
   walidacja strict musi byc wlaczona przed zamknieciem programu.
+- Powtarzalne kolekcje moga uzywac wildcard segmentu w kontrakcie, np.
+  `items.*.label`, podczas gdy DOM konkretnego kontrolera emituje indeksowana
+  sciezke `items.0.label`. Wildcard jest dozwolony tylko jako caly segment
+  sciezki.
 - `Wizard` nie powinien byc wlascicielem sciezek stylu/layoutu; `Visual`
   wlada contentem i wygladem, a `Advanced` ogranicza sie do technicznych,
   layoutowych i diagnostycznych ustawien. Sekcje diagnostyczne w `Advanced` sa
   read-only.
+- Shared block-level `layout.*` i `visibility.devices.*` sa codziennymi
+  kontrolami w `Visual`, z wlasnym `data-widget-control-path`. `Advanced`
+  pokazuje dla nich tylko read-only summaries, zeby nie tworzyc drugiego
+  edytora layout/visibility pod diagnostyka.
 - `Wizard` jest one-time setup surface. Nowy lub jawnie ponownie otwarty widget
   startuje w `Wizard`; po ukonczeniu setupu shell pokazuje read-only summary
   `Setup complete`, codzienne zakladki `Visual` i `Advanced`, oraz akcje
@@ -137,6 +145,11 @@ Zasady:
   labels w `Advanced`. Dopuszczalne legacy compatibility hooks musza byc
   `hidden`, `aria-hidden`, bez tab focusu i nie moga byc widocznym kontraktem
   UX.
+- `tabs` po TASK-336-19 stosuje ten sam beginner-safe kontrakt: Visual kolory
+  sa swatch-only bez widocznych raw CSS/token text inputs, Advanced pokazuje
+  tylko human summaries zamiast JSON/ID/suffix payloadow, a legacy
+  `triggerOverflow: "scroll"` normalizuje sie do zawijania, bo Tabs nie sa
+  zatwierdzonym publicznym regionem poziomego scrolla.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

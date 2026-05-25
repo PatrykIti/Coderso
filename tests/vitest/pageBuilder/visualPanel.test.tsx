@@ -40,6 +40,24 @@ import { createNewsletterWidget, newsletterDefaults } from "../../../core/widget
 import { createTimelineWidget, timelineDefaults } from "../../../core/widgets/core/timeline";
 import type { WidgetDefinition, WidgetEditorProps } from "../../../core/widgets/types";
 
+vi.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+  }) => (
+    <button
+      type="button"
+      data-switch-checked={String(Boolean(checked))}
+      onClick={() => onCheckedChange?.(!checked)}
+    >
+      switch
+    </button>
+  ),
+}));
+
 const StubVisual: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => (
   <div>Hero visual editor body</div>
 );
@@ -513,4 +531,60 @@ test("VisualPanel forwards generic variant clicks and visual editor callbacks", 
   expect(onChange).toHaveBeenCalledWith({ ...baseBlock, variant: "split" });
 
   cleanup();
+});
+
+test("VisualPanel owns shared block layout and device visibility controls", () => {
+  const onChange = vi.fn();
+  const block: Block = {
+    ...baseBlock,
+    layout: {
+      container: "default",
+      padding: { top: "xl", bottom: "md" },
+      margin: { top: "none", bottom: "none" },
+      background: { color: "transparent", image: null },
+    },
+    visibility: {
+      enabled: true,
+      devices: ["desktop", "mobile"],
+    },
+  };
+
+  const { container, cleanup } = mount(
+    <VisualPanel widget={asVisualPanelWidget(createWidget())} block={block} onChange={onChange} />
+  );
+
+  try {
+    expect(container.textContent).toContain("Block layout");
+    expect(container.textContent).toContain("Device visibility");
+    const writablePaths = Array.from(container.querySelectorAll("[data-widget-control-path]"))
+      .filter((element) => element.getAttribute("data-widget-control-readonly") !== "true")
+      .map((element) => element.getAttribute("data-widget-control-path"));
+    expect(writablePaths).toEqual(
+      expect.arrayContaining([
+        "layout.container",
+        "layout.padding.top",
+        "layout.padding.bottom",
+        "layout.margin.top",
+        "layout.margin.bottom",
+        "visibility.devices.desktop",
+        "visibility.devices.tablet",
+        "visibility.devices.mobile",
+      ])
+    );
+
+    const switches = Array.from(container.querySelectorAll("button[data-switch-checked]"));
+    React.act(() => {
+      switches[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...block,
+      visibility: {
+        enabled: true,
+        devices: ["desktop", "mobile", "tablet"],
+      },
+    });
+  } finally {
+    cleanup();
+  }
 });

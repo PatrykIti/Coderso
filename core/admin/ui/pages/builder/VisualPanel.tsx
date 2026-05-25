@@ -1,13 +1,22 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
-import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
-import { applyWidgetBlockPatch } from "./blockUtils";
+import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
+import { applyWidgetBlockPatch, sanitizeLayout } from "./blockUtils";
+import { LayoutPanel } from "./LayoutPanel";
 import {
+  WidgetControlRow,
   WidgetEditorModeRoot,
   WidgetEditorSection,
 } from "../../widgets/editors/WidgetEditorControls";
+
+const deviceLabels: { id: DeviceTarget; label: string }[] = [
+  { id: "desktop", label: "Desktop" },
+  { id: "tablet", label: "Tablet" },
+  { id: "mobile", label: "Mobile" },
+];
 
 export type VisualPanelSlotControlItem = {
   id: string;
@@ -61,11 +70,26 @@ export function VisualPanel({
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const Editor = widget.editor.visual;
   const visualOwnsVariantSelection = Boolean(widget.editorCapabilities?.visualOwnsVariantSelection);
+  const layoutValue = sanitizeLayout(block.layout);
   const patchBlock =
     onBlockPatch ??
     ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
       onChange(applyWidgetBlockPatch(block, patch));
     });
+  const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
+  const toggleDevice = (device: DeviceTarget) => {
+    const nextDevices = devices.includes(device)
+      ? devices.filter((entry) => entry !== device)
+      : [...devices, device];
+    patchBlock((current) => ({
+      ...current,
+      visibility: {
+        ...current.visibility,
+        devices: nextDevices,
+        enabled: current.visibility?.enabled ?? true,
+      },
+    }));
+  };
 
   return (
     <WidgetEditorModeRoot widgetType={widget.type} mode="visual">
@@ -222,6 +246,45 @@ export function VisualPanel({
           ) : null}
         </WidgetEditorSection>
       ) : null}
+      <WidgetEditorSection
+        id="builder.visual.block-layout"
+        mode="visual"
+        role="layout"
+        title="Block layout"
+        description="Control this block's outer content width and spacing."
+      >
+        <LayoutPanel value={layoutValue} onChange={(layout) => patchBlock({ layout })} />
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        id="builder.visual.visibility"
+        mode="visual"
+        role="visual"
+        title="Device visibility"
+        description="Choose which visitor device sizes should show this block."
+      >
+        <div className="space-y-2">
+          {deviceLabels.map((device) => (
+            <WidgetControlRow
+              key={device.id}
+              id={`builder.visual.visibility.${device.id}`}
+              label={device.label}
+              path={`visibility.devices.${device.id}`}
+            >
+              {() => (
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="text-sm text-muted-foreground">
+                    {devices.includes(device.id) ? "Shown" : "Hidden"}
+                  </span>
+                  <Switch
+                    checked={devices.includes(device.id)}
+                    onCheckedChange={() => toggleDevice(device.id)}
+                  />
+                </div>
+              )}
+            </WidgetControlRow>
+          ))}
+        </div>
+      </WidgetEditorSection>
     </WidgetEditorModeRoot>
   );
 }

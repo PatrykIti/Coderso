@@ -454,3 +454,29 @@ className={joinClasses(
 ### 9.2 Remaining residual scope po zamknięciu TASK-329
 
 - Brak aktywnych shared residuali w rodzinie Tabs po domknięciu `TASK-329` i `TASK-330`.
+
+## 10. TASK-336-19 supersession (2026-05-25)
+
+TASK-336-19 supersedes the older editor-mode notes above where they mention
+Wizard layout ownership, trigger-style wording, bounded scroll authoring, raw
+Advanced payloads, or technical IDs.
+
+Current state:
+
+- Wizard is one-time setup only for starter count and default tab.
+- Visual owns variant, tab content, layout spacing/alignment, tab label style,
+  and swatch-only colors.
+- Advanced is read-only human summaries only: behavior, saved tabs, saved
+  display, and contract summary. It does not show raw JSON, technical IDs,
+  trigger/panel suffixes, or raw CSS/token values.
+- Shared block layout and device visibility controls now live in Visual with
+  explicit ownership metadata. Advanced only shows read-only summaries for
+  those block-level settings.
+- Tabs are not an approved public horizontal-scroll region. Saved legacy
+  `triggerOverflow: "scroll"` is accepted for compatibility but normalizes to
+  wrapping at render time.
+- Repeatable editor contract paths now use safe wildcard segments such as
+  `items.*.label` instead of aggregate `items.label` ownership shortcuts.
+
+Validation for this supersession is recorded in
+`widget-contract-smoke-task-336-19-tabs-advanced-readonly-2026-05-25.*`.

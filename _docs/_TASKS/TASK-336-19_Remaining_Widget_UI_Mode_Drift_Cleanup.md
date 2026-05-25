@@ -710,6 +710,28 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-split-layout-advanced-readonly-2026-05-25.*`
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`.
+- In Progress (2026-05-25): next family returns to `tabs` to close residual
+  Visual color, Advanced diagnostics, public overflow, and repeatable contract
+  path drift. Visual color controls now use swatch-only authoring instead of
+  raw CSS/token text fields. Advanced no longer exposes raw normalized JSON,
+  technical IDs, trigger/panel suffixes, or raw token values; it renders
+  read-only behavior, saved-tabs, display, and contract summaries. Tabs no
+  longer expose the unapproved horizontal-scroll option and saved legacy
+  `triggerOverflow: "scroll"` normalizes to wrapping so public runtime stays
+  within the shared overflow contract. The editor contract validator now
+  accepts safe wildcard path segments such as `items.*.label`, and Tabs uses
+  those paths for repeatable item ownership. Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx tests/vitest/widgets/tabs.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Fresh post-implementation agent review found a shared page-builder shell
+  blocker: `AdvancedPanel` still appended writable block layout and visibility
+  controls that the Tabs editor itself did not own. That blocker is fixed by
+  moving shared `layout.*` and `visibility.devices.*` controls into Visual with
+  explicit ownership metadata and rendering only read-only layout/visibility
+  summaries in Advanced.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-tabs-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Files to Change
 

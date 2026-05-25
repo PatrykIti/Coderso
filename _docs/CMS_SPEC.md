@@ -266,8 +266,10 @@ Widoki:
 
 UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow:
 - Wizard: minimal onboarding i bezpieczne defaulty.
-- Visual: glowny tryb content + style editing.
-- Advanced: techniczne ustawienia layout/responsive bez duplikacji pol Visual.
+- Visual: glowny tryb content + style editing, w tym block-level layout i
+  widocznosc na urzadzeniach.
+- Advanced: read-only diagnostyka/support summaries bez duplikacji writable
+  pol Visual.
 
 ## Dashboard runtime data
 

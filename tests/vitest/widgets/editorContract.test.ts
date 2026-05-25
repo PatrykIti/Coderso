@@ -138,6 +138,74 @@ describe("widget editor contract validation", () => {
     expect(validation.errors).toEqual([]);
   });
 
+  test("accepts repeatable wildcard path segments for editor contracts", () => {
+    const validation = validateWidgetEditorContract({
+      type: "sample-widget",
+      editorContract: contract([
+        {
+          mode: "wizard",
+          id: "wiz-foundation",
+          title: "Initial questions",
+          role: "setup",
+          writablePaths: ["content.items.count"],
+        },
+        {
+          mode: "visual",
+          id: "vis-repeatable-items",
+          title: "Repeatable items",
+          role: "content",
+          writablePaths: ["content.items.*.title", "content.items.*.summary"],
+        },
+        {
+          mode: "advanced",
+          id: "adv-repeatable-summary",
+          title: "Repeatable summary",
+          role: "summary",
+          writablePaths: [],
+          readOnlyPaths: ["content.items.*.title"],
+        },
+      ]),
+    });
+
+    expect(validation).toEqual(
+      expect.objectContaining({
+        valid: true,
+        errors: [],
+      })
+    );
+  });
+
+  test("rejects unsafe wildcard path fragments", () => {
+    const validation = validateWidgetEditorContract({
+      type: "sample-widget",
+      editorContract: contract([
+        {
+          mode: "wizard",
+          id: "wiz-foundation",
+          title: "Initial questions",
+          role: "setup",
+          writablePaths: ["content.items.count"],
+        },
+        {
+          mode: "visual",
+          id: "vis-repeatable-items",
+          title: "Repeatable items",
+          role: "content",
+          writablePaths: ["content.it*ems.title"],
+        },
+        {
+          mode: "advanced",
+          id: "adv-repeatable-summary",
+          title: "Repeatable summary",
+          role: "summary",
+          writablePaths: [],
+        },
+      ]),
+    });
+
+    expect(errorCodes(validation)).toContain("editor_contract_invalid_path");
+  });
+
   test("requires wizard, visual, and advanced sections", () => {
     const validation = validateWidgetEditorContract({
       type: "sample-widget",

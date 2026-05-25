@@ -1,5 +1,11 @@
 # RAPORT: Tabs Widget — kontrakt edytora
 
+> **Historical note (2026-05-25):** ten snapshot jest archiwalny. Aktualny
+> stan po `TASK-336-19` usuwa raw Advanced payload/ID output, usuwa
+> niezatwierdzony scroll z UI Tabs, zmienia `Trigger style` na beginner-facing
+> `Tab label style`, i przenosi kontrakt repeatable fields na wildcard paths
+> typu `items.*.label`.
+
 > **Data:** 2026-05-23 22:18 → 2026-05-24
 > **Widget ID:** `tabs`
 > **Edytor:** `core/admin/ui/widgets/editors/TabsEditors.tsx` (918 linii)

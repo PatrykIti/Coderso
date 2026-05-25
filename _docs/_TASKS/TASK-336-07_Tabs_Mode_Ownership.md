@@ -24,11 +24,11 @@ recent Tabs fixes while making Advanced technical-only or read-only.
 
 - `Wizard` owns initial tab count, starter structure, default tab setup, and
   onboarding guidance.
-- `Visual` owns tab labels, panel intro/content affordances, disabled state,
-  trigger metadata, layout, overflow, typography, spacing, colors, and motion.
-- `Advanced` owns technical ids, activation/runtime diagnostics, script/runtime
-  summary, accessibility diagnostics, and read-only visual summaries where
-  useful.
+- `Visual` owns tab labels, content intro affordances, unavailable state, tab
+  subtitle/icon metadata, layout, typography, spacing, colors, and motion.
+- `Advanced` owns read-only behavior, saved tab, display, accessibility, and
+  contract summaries. It must not expose technical IDs, JSON payload snapshots,
+  CSS token text, or implementation suffixes to nontechnical authors.
 
 Evidence caveat: the re-audit finding is source-backed, not a completed
 38-widget browser traversal. TASK-336-03 admin smoke must confirm this widget
@@ -59,15 +59,24 @@ before the task can move to Done.
 
 - 2026-05-24: Completed. Wizard now owns starter tab count and default-tab
   setup only, Visual owns variant/content/layout/trigger-style/color authoring,
-  and Advanced is read-only runtime diagnostics, technical IDs, payload, and
-  contract summary. The widget declares a v2 `editorContract`, targeted Vitest
-  ownership/runtime coverage passes, and Playwright smoke for `tabs` passed with
-  no admin, metadata, or public failures.
+  and Advanced was initially read-only runtime diagnostics, technical IDs,
+  payload, and contract summary. This 2026-05-24 Advanced wording is superseded
+  by the 2026-05-25 `TASK-336-19` note below. The widget declares a v2
+  `editorContract`, targeted Vitest ownership/runtime coverage passes, and
+  Playwright smoke for `tabs` passed with no admin, metadata, or public
+  failures.
 - 2026-05-24: Lifecycle caveat: this task is an ownership cleanup only. Wizard
   remains visible as a standard editor tab until `TASK-336-16` ships the
   one-time Wizard lifecycle and `Run setup again` affordance. TASK-336-07 also
   supersedes the earlier Tabs Wizard layout shortcut from TASK-288; layout is
   now Visual-owned.
+- 2026-05-25: Superseded by `TASK-336-19` Tabs drift cleanup. Visual color
+  controls now use swatch-only authoring instead of visible raw CSS/token text
+  inputs, Advanced now renders human read-only summaries instead of raw JSON
+  payloads or technical ID/suffix output, Tabs no longer expose or render the
+  unapproved horizontal-scroll option, and repeatable editor contract paths use
+  wildcard paths such as `items.*.label` instead of aggregate `items.label`
+  shortcuts.
 
 ## Files to Change
 
@@ -85,12 +94,12 @@ before the task can move to Done.
 function TabsAdvancedEditor(props: WidgetEditorProps<TabsData>) {
   return (
     <WidgetEditorModeRoot mode="advanced" widgetType="tabs">
-      <WidgetEditorSection mode="advanced" sectionId="tabs-runtime" role="diagnostics" title="Runtime diagnostics">
+      <WidgetEditorSection mode="advanced" sectionId="tabs-behavior" role="diagnostics" title="Behavior summary">
         <ReadonlyWidgetSummaryRow label="Default tab" value={resolveDefaultTabLabel(props.value)} />
-        <ReadonlyWidgetSummaryRow label="Activation model" value="Root scoped, accessible tablist" />
+        <ReadonlyWidgetSummaryRow label="Line behavior" value="Tabs wrap onto extra lines when space is tight." />
       </WidgetEditorSection>
-      <WidgetEditorSection mode="advanced" sectionId="tabs-ids" role="technical" title="Technical ids">
-        <StableIdSummary tabs={props.value.items} />
+      <WidgetEditorSection mode="advanced" sectionId="tabs-display" role="summary" title="Saved display summary">
+        <ReadonlyWidgetSummaryRow label="Tab label style" value={resolveDisplaySummary(props.value)} />
       </WidgetEditorSection>
     </WidgetEditorModeRoot>
   );
@@ -99,13 +108,14 @@ function TabsAdvancedEditor(props: WidgetEditorProps<TabsData>) {
 
 Data flow:
 
-- Visual remains the writable daily owner for trigger/panel/layout/style.
-- Advanced reads normalized tabs and renders diagnostics only.
+- Visual remains the writable daily owner for tab content/layout/style.
+- Advanced reads normalized tabs and renders human diagnostics only.
 - Runtime and preview behavior from previous Tabs tasks remains unchanged.
 
 Error handling:
 
-- Do not remove diagnostics needed to debug active tab or id mismatches.
+- Do not remove diagnostics needed to explain active/default tab mismatches.
+- Do not render raw IDs or JSON snapshots in the default Advanced UI.
 - Do not reintroduce client scripts in preview as part of editor cleanup.
 - If a duplicate appears necessary, add a temporary allowlist with a removal
   task and explain why Visual cannot be the single owner.

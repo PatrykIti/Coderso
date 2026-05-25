@@ -79,7 +79,7 @@ export const tabsPanelSlot = {
 
 const alignmentOptions = ["start", "center", "end"] as const;
 const orientationOptions = ["horizontal", "vertical"] as const;
-const triggerOverflowOptions = ["wrap", "scroll"] as const;
+const legacyTriggerOverflowOptions = ["wrap", "scroll"] as const;
 const spacingOptions = ["sm", "md", "lg"] as const;
 const triggerTextSizeOptions = ["xs", "sm", "base"] as const;
 const triggerFontWeightOptions = ["normal", "medium", "semibold"] as const;
@@ -115,7 +115,7 @@ export const tabsSchema = {
         activeId: { type: "string" },
         alignment: { enum: [...alignmentOptions] },
         orientation: { enum: [...orientationOptions] },
-        triggerOverflow: { enum: [...triggerOverflowOptions] },
+        triggerOverflow: { enum: [...legacyTriggerOverflowOptions] },
         containerPadding: { enum: [...spacingOptions] },
         triggerGap: { enum: [...spacingOptions] },
         panelGap: { enum: [...spacingOptions] },
@@ -190,11 +190,11 @@ export const tabsEditorContract: WidgetEditorContract = {
       title: "Tab content",
       role: "content",
       writablePaths: [
-        "items.label",
-        "items.panelIntro",
-        "items.triggerDescription",
-        "items.icon",
-        "items.disabled",
+        "items.*.label",
+        "items.*.panelIntro",
+        "items.*.triggerDescription",
+        "items.*.icon",
+        "items.*.disabled",
       ],
     },
     {
@@ -205,7 +205,6 @@ export const tabsEditorContract: WidgetEditorContract = {
       writablePaths: [
         "options.orientation",
         "options.alignment",
-        "options.triggerOverflow",
         "options.containerPadding",
         "options.triggerGap",
         "options.panelGap",
@@ -214,7 +213,7 @@ export const tabsEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "tabs.visual.trigger-style",
-      title: "Trigger style",
+      title: "Tab label style",
       role: "visual",
       writablePaths: ["options.triggerTextSize", "options.triggerFontWeight", "options.motion"],
     },
@@ -234,27 +233,53 @@ export const tabsEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "tabs.advanced.runtime-diagnostics",
-      title: "Runtime diagnostics",
+      id: "tabs.advanced.behavior-summary",
+      title: "Behavior summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["options.activeId", "options.defaultItemId", "items.disabled"],
+      readOnlyPaths: [
+        "options.activeId",
+        "options.defaultItemId",
+        "options.triggerOverflow",
+        "items.*.disabled",
+      ],
     },
     {
       mode: "advanced",
-      id: "tabs.advanced.technical-ids",
-      title: "Technical ids",
-      role: "technical",
+      id: "tabs.advanced.item-summary",
+      title: "Saved tabs summary",
+      role: "summary",
       writablePaths: [],
-      readOnlyPaths: ["items.id"],
+      readOnlyPaths: [
+        "items.*.label",
+        "items.*.panelIntro",
+        "items.*.triggerDescription",
+        "items.*.icon",
+        "items.*.disabled",
+      ],
     },
     {
       mode: "advanced",
-      id: "tabs.advanced.runtime-payload",
-      title: "Runtime payload",
-      role: "diagnostics",
+      id: "tabs.advanced.display-summary",
+      title: "Saved display summary",
+      role: "summary",
       writablePaths: [],
-      readOnlyPaths: ["items"],
+      readOnlyPaths: [
+        "options.orientation",
+        "options.alignment",
+        "options.containerPadding",
+        "options.triggerGap",
+        "options.panelGap",
+        "options.triggerTextSize",
+        "options.triggerFontWeight",
+        "options.motion",
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.activeBackgroundColor",
+        "style.activeTextColor",
+        "style.inactiveTextColor",
+        "style.panelBackgroundColor",
+      ],
     },
     {
       mode: "advanced",
@@ -361,8 +386,7 @@ const resolveOrientation = (value: string | undefined): TabsOrientation => {
   return "horizontal";
 };
 
-const resolveTriggerOverflow = (value: string | undefined): TabsTriggerOverflow =>
-  isEnumValue(value, triggerOverflowOptions) ? value : "wrap";
+const resolveTriggerOverflow = (_value: string | undefined): TabsTriggerOverflow => "wrap";
 
 const resolveSpacing = (value: string | undefined): TabsSpacing =>
   isEnumValue(value, spacingOptions) ? value : "md";
@@ -680,10 +704,7 @@ const tabsRuntimeClientScript = `
 
 const getTabsRuntimeClientScript = () => tabsRuntimeClientScript;
 
-const resolveHorizontalTablistClassName = (overflow: TabsTriggerOverflow) =>
-  overflow === "scroll"
-    ? "flex flex-nowrap items-center overflow-x-auto pb-1"
-    : "flex flex-wrap items-center";
+const horizontalTablistClassName = "flex flex-wrap items-center";
 
 const resolveTriggerClasses = (variant: TabsVariantId) => {
   if (variant === "underline") {
@@ -865,9 +886,7 @@ export function TabsBlock({
         aria-label={defaultTabsTablistAriaLabel}
         aria-orientation={orientation}
         className={joinClasses(
-          orientation === "vertical"
-            ? "flex flex-col"
-            : resolveHorizontalTablistClassName(options.triggerOverflow ?? "wrap"),
+          orientation === "vertical" ? "flex flex-col" : horizontalTablistClassName,
           triggerGapClassMap[options.triggerGap ?? "md"],
           orientation === "vertical"
             ? verticalAlignmentClassMap[options.alignment ?? "start"]

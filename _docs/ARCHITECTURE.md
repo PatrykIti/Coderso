@@ -1346,8 +1346,11 @@ Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
 - Wizard: kreator pytan, wybor wariantu i szybka konfiguracja.
 - Visual: glowny tryb edycji content/style, warianty + sekcje wizualne;
   widget moze przejac wariant selector (`visualOwnsVariantSelection`).
-- Advanced: tryb techniczny (spacing/layout/responsive + pola eksperckie),
-  bez duplikowania podstawowych pol z Visual.
+  Block-level layout/visibility controls also live in Visual as daily
+  authoring controls.
+- Advanced: read-only diagnostics/support summaries and explicitly confirmed
+  support actions only; it must not duplicate Visual layout/style/visibility
+  controls as writable fields.
 - Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
 
 Composite-first delivery (Coderso):

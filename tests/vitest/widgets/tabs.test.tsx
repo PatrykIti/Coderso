@@ -113,7 +113,7 @@ test("tabs normalization migrates legacy descriptions, keeps disabled tabs out o
       activeId: "overview",
       alignment: "center",
       orientation: "vertical",
-      triggerOverflow: "scroll",
+      triggerOverflow: "wrap",
       containerPadding: "lg",
       triggerGap: "sm",
       panelGap: "lg",
@@ -268,12 +268,12 @@ test("tabs render metadata, disabled tabs, and extended style options", () => {
 
   expect(html).toContain('data-coderso-tabs-active-id="details"');
   expect(html).toContain('data-coderso-tabs-motion="slide"');
-  expect(html).toContain('data-coderso-tabs-overflow="scroll"');
+  expect(html).toContain('data-coderso-tabs-overflow="wrap"');
   expect(html).toContain('aria-disabled="true"');
   expect(html).toContain("Start here");
   expect(html).toContain("⭐");
   expect(html).toContain("Deep dive.");
-  expect(html).toContain("overflow-x-auto");
+  expect(html).not.toContain("overflow-x-auto");
   expect(html).toContain("motion-safe:animate-in");
   expect(html).toContain("motion-reduce:animate-none");
 });
@@ -344,9 +344,9 @@ test("tabs visual editor renders task-288 sections", () => {
 
   expect(html).toContain("Tab content");
   expect(html).toContain("Layout");
-  expect(html).toContain("Trigger style");
+  expect(html).toContain("Tab label style");
   expect(html).toContain("Colors");
-  expect(html).toContain("Trigger subtitle");
+  expect(html).toContain("Tab subtitle");
   expect(html).toContain('data-widget-editor-section="tabs.visual.variant"');
   expect(html).toContain('data-widget-editor-section="tabs.visual.item-content"');
   expect(html).toContain('data-widget-editor-section="tabs.visual.layout"');
@@ -373,17 +373,17 @@ test("tabs wizard and advanced editors render v2 ownership surfaces", () => {
   );
 
   expect(wizardHtml).toContain("Starter tabs");
-  expect(wizardHtml).toContain("Panel intro text");
+  expect(wizardHtml).toContain("Content intro text");
   expect(wizardHtml).toContain("Visual owns daily label edits");
   expect(wizardHtml).not.toContain("Variant");
   expect(wizardHtml).not.toContain("Layout");
-  expect(wizardHtml).not.toContain("Trigger subtitle");
-  expect(advancedHtml).toContain("Runtime diagnostics");
-  expect(advancedHtml).toContain("Technical ids");
-  expect(advancedHtml).toContain("Runtime payload");
+  expect(wizardHtml).not.toContain("Tab subtitle");
+  expect(advancedHtml).toContain("Behavior summary");
+  expect(advancedHtml).toContain("Saved tabs summary");
+  expect(advancedHtml).toContain("Saved display summary");
   expect(advancedHtml).toContain("Contract summary");
   expect(advancedHtml).not.toContain("Variant");
-  expect(advancedHtml).not.toContain("Trigger subtitle");
+  expect(advancedHtml).not.toContain("Tab subtitle");
   expect(advancedHtml).not.toContain('data-widget-control-ownership="writable"');
 });
 
@@ -410,9 +410,9 @@ test("tabs ships a strict v2 editor contract", () => {
       "tabs.visual.layout",
       "tabs.visual.trigger-style",
       "tabs.visual.colors",
-      "tabs.advanced.runtime-diagnostics",
-      "tabs.advanced.technical-ids",
-      "tabs.advanced.runtime-payload",
+      "tabs.advanced.behavior-summary",
+      "tabs.advanced.item-summary",
+      "tabs.advanced.display-summary",
       "tabs.advanced.contract-summary",
     ])
   );

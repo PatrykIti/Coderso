@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Switch between grouped content panels with repeatable tab/panel pairs and a
-bounded visual surface.
+Switch between grouped content areas with repeatable tabs and a bounded visual
+surface.
 
 ## Widget ID
 
@@ -25,43 +25,44 @@ bounded visual surface.
 ### Wizard
 - starter tab count
 - default tab selection with badge state
-- read-only starter label and `panelIntro` summary
-- repeatable panel-slot guidance
+- read-only starter label and content-intro summary
+- repeatable content-area guidance
 
 Wizard is setup-only in the v2 editor contract. It does not own variant,
-layout, trigger style, color, or daily tab copy edits.
-
-Interim before `TASK-336-16`: Wizard still appears as a normal editor tab in
-the existing builder shell. The one-time Wizard lifecycle and `Run setup again`
-affordance are not part of `TASK-336-07`.
+layout, tab label style, color, or daily tab copy edits. The one-time Wizard
+lifecycle from `TASK-336-16` hides Wizard during normal daily editing and
+exposes setup through `Run setup again`.
 
 ### Visual
 Sections:
 1. Variant
 2. Tab content
 3. Layout
-4. Trigger style
+4. Tab label style
 5. Colors
 
 Notes:
 - Tabs owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Tab content exposes `label`, `panelIntro`, `triggerDescription`, `icon`, and
-  `disabled`.
-- Layout owns orientation, alignment, trigger overflow, container padding,
-  trigger gap, and panel gap.
-- Trigger style owns trigger text size, trigger font weight, and motion.
-- Colors reuse the shared clearable-surface policy for `surfaceColor`,
-  `activeBackgroundColor`, and `panelBackgroundColor`, plus a bounded contrast
-  advisory for active/inactive trigger text.
+  `disabled` through beginner-facing tab copy and unavailable-state controls.
+- Layout owns orientation, alignment, container padding, tab gap, and content
+  gap. Tabs wrap onto additional lines when space is tight; the old scroll
+  value is accepted only as legacy data and normalizes back to wrapping.
+- Tab label style owns text size, label weight, and content motion.
+- Colors use swatch-only controls plus clear/replace state. Existing theme
+  tokens or custom strings remain compatible but are not shown as editable CSS
+  text to nontechnical authors.
 
 ### Advanced
-- runtime diagnostics for resolved active/default tab state and disabled count
-- technical IDs for tab, trigger, and panel wiring
-- normalized payload snapshot for diagnostics
+- behavior summary for opening tab, default tab, unavailable count, and line
+  wrapping
+- saved tabs summary using human labels and availability state
+- saved display summary for direction, alignment, spacing, label style, motion,
+  and color-readability status
 - read-only contract summary
 
-Advanced is technical/read-only only. It must not render writable Visual
-controls for variant, tab content, layout, trigger style, or colors.
+Advanced is read-only only. It must not render writable Visual controls, raw
+JSON snapshots, technical IDs, CSS token text, or implementation suffixes.
 
 ## Runtime Behavior Notes
 
@@ -79,7 +80,7 @@ controls for variant, tab content, layout, trigger style, or colors.
   - `data-coderso-tabs-panels`
   - `data-coderso-tabs-orientation`
   - `data-coderso-tabs-motion`
-  - `data-coderso-tabs-overflow`
+  - `data-coderso-tabs-overflow` (`wrap` after normalization)
 - Disabled tabs are removed from activation order. If every item is disabled,
   normalization re-enables the first item so the widget always has one valid
   active panel.
@@ -100,8 +101,11 @@ controls for variant, tab content, layout, trigger style, or colors.
 
 ## Layout Ownership Notes
 
-- Tabs now owns bounded trigger overflow, trigger typography, trigger/panel gap,
-  and container padding.
+- Tabs owns tab label typography, tab/content gap, and container padding.
+- Saved legacy `options.triggerOverflow: "scroll"` is accepted by schema for
+  backward compatibility, but normalization renders it as wrapping. Tabs are
+  not an approved intentional horizontal-scroll region under the shared public
+  overflow contract.
 - Tabs does not introduce a duplicate local max-width field. Outer container
   width remains owned by the shared layout/container contract.
 
