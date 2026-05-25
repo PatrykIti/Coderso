@@ -51,6 +51,7 @@ import {
   resolveColorPickerValue,
   SharedColorFieldInputs,
 } from "./ClearableFields";
+import { LinkDestinationField } from "./LinkDestinationField";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow as BaseWidgetControlRow,
@@ -86,11 +87,6 @@ const variantOptions: Array<{
     description: "Centered copy with inline showcase media below.",
   },
 ];
-
-const heroCtaPlaceholderExamples = {
-  primary: "/signup",
-  secondary: "/examples",
-} as const;
 
 const goalOptions = [
   { id: "lead", label: "Lead generation" },
@@ -166,8 +162,6 @@ const badgePlacementOptions: Array<{ id: HeroBadgePlacement; label: string }> = 
   { id: "above-headline", label: "Above headline" },
   { id: "inline-headline", label: "Inline headline" },
 ];
-
-const isValidHref = (value: string | undefined) => !value || normalizeHeroHref(value) !== undefined;
 
 const isValidMediaUrl = (value: string | undefined) =>
   !value || value.startsWith("http") || value.startsWith("/");
@@ -810,17 +804,15 @@ export function HeroWizardEditor({
               />
             )}
           </WidgetControlRow>
-          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA URL">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
+          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA destination">
+            {() => (
+              <LinkDestinationField
+                fieldId="hero-wizard-primary-cta-destination"
+                label="Destination page"
                 value={primary.href}
-                onChange={(event) =>
-                  update({ primaryCta: { ...primary, href: event.target.value } })
-                }
-                placeholder={heroCtaPlaceholderExamples.primary}
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
+                onChange={(next) => update({ primaryCta: { ...primary, href: next } })}
+                emptyLabel="No primary destination"
+                helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
               />
             )}
           </WidgetControlRow>
@@ -1828,23 +1820,16 @@ export function HeroVisualEditor({
                 />
               )}
             </WidgetControlRow>
-            <WidgetControlRow id="hero.badge.href" label="Badge URL">
-              {(fieldProps) => (
-                <div className="space-y-2">
-                  <Input
-                    id={fieldProps.id}
-                    value={badge.href}
-                    onChange={(event) => updateBadge({ href: event.target.value })}
-                    placeholder="/launch"
-                    aria-labelledby={fieldProps["aria-labelledby"]}
-                    aria-describedby={fieldProps["aria-describedby"]}
-                  />
-                  {!isValidHref(badge.href) ? (
-                    <p className="text-xs text-destructive">
-                      Use a relative path, hash, or full URL.
-                    </p>
-                  ) : null}
-                </div>
+            <WidgetControlRow id="hero.badge.href" label="Badge destination">
+              {() => (
+                <LinkDestinationField
+                  fieldId="hero-badge-destination"
+                  label="Destination page"
+                  value={badge.href}
+                  onChange={(next) => updateBadge({ href: next })}
+                  emptyLabel="No badge destination"
+                  helpText="Pick a site page for the badge. Saved custom destinations stay replace-or-clear only."
+                />
               )}
             </WidgetControlRow>
             <div className="grid gap-3 md:grid-cols-2">
@@ -1982,21 +1967,16 @@ export function HeroVisualEditor({
               />
             )}
           </WidgetControlRow>
-          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA URL">
-            {(fieldProps) => (
-              <div className="space-y-2">
-                <Input
-                  id={fieldProps.id}
-                  value={primary.href}
-                  onChange={(event) => updatePrimary({ href: event.target.value })}
-                  placeholder={heroCtaPlaceholderExamples.primary}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-                {!isValidHref(primary.href) ? (
-                  <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-                ) : null}
-              </div>
+          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA destination">
+            {() => (
+              <LinkDestinationField
+                fieldId="hero-primary-cta-destination"
+                label="Destination page"
+                value={primary.href}
+                onChange={(next) => updatePrimary({ href: next })}
+                emptyLabel="No primary destination"
+                helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
+              />
             )}
           </WidgetControlRow>
           <WidgetControlRow id="hero.style.primaryButtonSize" label="Primary button size">
@@ -2036,21 +2016,16 @@ export function HeroVisualEditor({
                   />
                 )}
               </WidgetControlRow>
-              <WidgetControlRow id="hero.secondaryCta.href" label="Secondary CTA URL">
-                {(fieldProps) => (
-                  <div className="space-y-2">
-                    <Input
-                      id={fieldProps.id}
-                      value={secondary.href}
-                      onChange={(event) => updateSecondary({ href: event.target.value })}
-                      placeholder={heroCtaPlaceholderExamples.secondary}
-                      aria-labelledby={fieldProps["aria-labelledby"]}
-                      aria-describedby={fieldProps["aria-describedby"]}
-                    />
-                    {!isValidHref(secondary.href) ? (
-                      <p className="text-xs text-destructive">Use a relative path or full URL.</p>
-                    ) : null}
-                  </div>
+              <WidgetControlRow id="hero.secondaryCta.href" label="Secondary CTA destination">
+                {() => (
+                  <LinkDestinationField
+                    fieldId="hero-secondary-cta-destination"
+                    label="Destination page"
+                    value={secondary.href}
+                    onChange={(next) => updateSecondary({ href: next })}
+                    emptyLabel="No secondary destination"
+                    helpText="Pick an existing site page for the secondary Hero action. Saved custom destinations stay replace-or-clear only."
+                  />
                 )}
               </WidgetControlRow>
               <WidgetControlRow id="hero.style.secondaryButtonSize" label="Secondary button size">

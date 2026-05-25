@@ -46,7 +46,9 @@ test("hero visual editor exposes badge controls through shared section metadata"
   expect(html).toContain('data-widget-editor-section="hero.badge-headline"');
   expect(html).toContain('data-widget-control="hero.badge.enabled"');
   expect(html).toContain('data-widget-control="hero.badge.href"');
-  expect(html).toContain("Use a relative path, hash, or full URL.");
+  expect(html).toContain('data-link-destination-field="hero-badge-destination"');
+  expect(html).toContain("A custom destination is already configured");
+  expect(html).not.toContain("Use a relative path, hash, or full URL.");
 });
 
 test("hero visual editor hides inline media frame controls for centered and keeps them for inline media variants", () => {

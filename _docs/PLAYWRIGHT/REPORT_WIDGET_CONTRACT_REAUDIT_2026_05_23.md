@@ -921,6 +921,29 @@ Visual destination, and Advanced diagnostics drift.
 - Claude read-only review returned `NO BLOCKERS`, then `NO REMAINING ACTIONS`
   after the medium/low suggestions were addressed.
 
+## TASK-336-19 Hero Destination Authoring Evidence (2026-05-25)
+
+The fifteenth TASK-336-19 implementation family starts Hero cleanup with the
+link-destination-only sub-slice.
+
+- Hero Wizard and Visual no longer expose raw URL/path inputs for
+  `primaryCta.href`, `secondaryCta.href`, or `badge.href`.
+- Those fields now use the shared page-first `LinkDestinationField`, preserving
+  saved custom/hash/external destinations as replace-or-clear compatibility
+  state.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  renderer compatibility, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Helper-agent audit accepted this as the first safe Hero sub-slice and queued
+  separate follow-up sub-slices for media URL, avatar URL, rich HTML, and
+  color/overlay authoring.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-link-destinations-2026-05-25.*`.
+  Hero reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Claude read-only review was attempted for this link-only slice, but the
+  process timed out before returning output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

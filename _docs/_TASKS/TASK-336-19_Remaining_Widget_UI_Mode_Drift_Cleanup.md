@@ -324,6 +324,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0`. Claude returned `NO BLOCKERS` after the first review,
   then `NO REMAINING ACTIONS` after the low suggestions were addressed.
+- In Progress (2026-05-25): fifteenth implementation family starts the Hero
+  cleanup with Wizard/Visual destination authoring only. Hero primary CTA,
+  secondary CTA, and badge destinations now use the shared page-first
+  `LinkDestinationField` instead of visible raw URL/path fields while saved
+  custom/hash/external destinations stay replace-or-clear compatible. Focused
+  Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-link-destinations-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+  Helper-agent audit accepted this as the first safe Hero sub-slice and queued
+  separate follow-up sub-slices for media URL, avatar URL, rich HTML, and
+  color/overlay authoring. Claude review for this link-only slice timed out
+  before returning output.
 
 ## Files to Change
 

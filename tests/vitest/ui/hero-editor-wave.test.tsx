@@ -234,6 +234,51 @@ vi.mock("@/services/mediaClient", () => ({
   }),
 }));
 
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "hero-signup-page",
+      title: "Signup",
+      slug: "signup",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-demo-page",
+      title: "Demo",
+      slug: "demo",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-join-page",
+      title: "Join",
+      slug: "join",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-case-study-page",
+      title: "Case Study",
+      slug: "case-study",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "hero-launch-page",
+      title: "Launch",
+      slug: "launch",
+      status: "published",
+      updatedAt: "2026-05-25T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 vi.mock("@/services/userSettingsClient", () => ({
   getUserSetting: vi.fn(async () => {
     if (heroState.userSettingError) throw heroState.userSettingError;
@@ -379,6 +424,9 @@ const findButtonContainingText = (container: ParentNode, text: string) =>
 const findMediaPickers = (container: ParentNode) =>
   Array.from(container.querySelectorAll("[data-media-picker='true']"));
 
+const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
+  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -423,6 +471,7 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
   };
 
   const view = mount(<Harness />);
+  await flush();
 
   try {
     expect(view.container.textContent).toContain("Daily presentation changes live in Visual.");
@@ -473,7 +522,10 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
         "Pipeline-ready hero"
       );
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
-      setInputValue(findInputByPlaceholder(view.container, "/signup"), "/join");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero-wizard-primary-cta-destination"),
+        "hero-join-page"
+      );
     });
 
     React.act(() => {
@@ -1281,13 +1333,17 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
     React.act(() => {
-      setInputValue(findInputByPlaceholder(view.container, "/signup"), "javascript:alert(1)");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero-primary-cta-destination"),
+        "hero-signup-page"
+      );
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Read case study");
-      setInputValue(findInputByPlaceholder(view.container, "/examples"), "ftp://secondary.invalid");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero-secondary-cta-destination"),
+        "hero-case-study-page"
+      );
     });
-    expect(
-      view.container.textContent?.match(/Use a relative path or full URL\./g)?.length
-    ).toBeGreaterThanOrEqual(2);
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
 
     React.act(() => {
       const ctaSizeSelects = findSelectsByOptions(ctaSection ?? view.container, ["sm", "md", "lg"]);
@@ -1441,7 +1497,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         body: "Explain the offer with a little more precision.",
         primaryCta: expect.objectContaining({
           label: "Start trial",
-          href: "javascript:alert(1)",
+          href: "/signup",
         }),
         media: expect.objectContaining({
           type: "video",
@@ -1641,21 +1697,25 @@ test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", a
     expect(badgeSection?.getAttribute("data-widget-editor-section")).toBe("hero.badge-headline");
     const badgeToggle = badgeSection?.querySelector("input[type='checkbox']");
     clickElement(badgeToggle ?? undefined);
+    await flush();
 
     React.act(() => {
       setInputValue(findInputByPlaceholder(view.container, "Now shipping"), "Launch week");
       setInputValue(findInputByPlaceholder(view.container, "New"), "New");
-      setInputValue(findInputByPlaceholder(view.container, "/launch"), "javascript:alert(1)");
+      setSelectValue(
+        findLinkDestinationSelect(view.container, "hero-badge-destination"),
+        "hero-launch-page"
+      );
     });
 
-    expect(view.container.textContent).toContain("Use a relative path, hash, or full URL.");
+    expect(view.container.textContent).not.toContain("Use a relative path, hash, or full URL.");
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         badge: expect.objectContaining({
           enabled: true,
           label: "Launch week",
           prefix: "New",
-          href: "javascript:alert(1)",
+          href: "/launch",
         }),
       })
     );

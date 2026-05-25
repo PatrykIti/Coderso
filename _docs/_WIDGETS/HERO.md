@@ -31,6 +31,9 @@ Top-of-page section with main value proposition, CTA, and optional media.
 - Temporary duplicate writable paths with Visual (`variant`, `headline`,
   `primaryCta.label`, `primaryCta.href`) are allowed only until
   `TASK-336-16` hides completed Wizard setup for existing widgets.
+- `primaryCta.href` is authored through the shared page-first destination
+  picker. Saved custom/hash/external destinations remain replace-or-clear
+  compatible instead of editable raw URL text.
 
 ### Visual
 
@@ -50,6 +53,10 @@ Visual owns all public-facing and presentation fields: copy, badges, CTA copy
 and button sizes, media, background media/overlay, typography, appearance,
 colors, borders, alignment, width, height, bleed, spacing, and mobile media
 visibility.
+
+CTA and badge destinations are authored through the shared page-first
+destination picker. Saved custom/hash/external destinations remain
+replace-or-clear compatible instead of editable raw URL text.
 
 Variant presets are persisted per user in `user_settings` key:
 `widgets.hero.presets`.
