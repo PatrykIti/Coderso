@@ -61,6 +61,8 @@ test("testimonials normalization keeps deterministic ids, clamps ratings, and ra
   const normalized = normalizeTestimonialsData({ testimonials: [] });
   expect(normalized.testimonials).toHaveLength(3);
   expect(normalized.style?.spacing).toBe("md");
+  expect(normalized.style?.textColor).toBeUndefined();
+  expect(normalized.style?.accentColor).toBeUndefined();
   expect(normalized.layout?.spotlightItemId).toBe("testimonial-1");
 });
 
@@ -535,6 +537,7 @@ test("testimonials editors still render their expanded section labels in SSR smo
   );
   expect(visualHtml).toContain("Section surface and typography");
   expect(visualHtml).toContain("CTA and conversion follow-up");
+  expect(visualHtml).toContain("Pagination and load more");
 
   const advancedHtml = renderToString(
     <TestimonialsAdvancedEditor
@@ -544,6 +547,8 @@ test("testimonials editors still render their expanded section labels in SSR smo
       onVariantChange={() => undefined}
     />
   );
-  expect(advancedHtml).toContain("Import and export");
-  expect(advancedHtml).toContain("Raw payload snapshot");
+  expect(advancedHtml).toContain("Runtime summary");
+  expect(advancedHtml).toContain("Content health");
+  expect(advancedHtml).not.toContain("Import and export");
+  expect(advancedHtml).not.toContain("Raw payload snapshot");
 });

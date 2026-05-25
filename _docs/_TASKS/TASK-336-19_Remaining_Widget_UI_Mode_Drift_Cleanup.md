@@ -594,6 +594,36 @@ read-only diagnostics. It added these concrete cleanup requirements:
   returned PASS with only a low informational note that Playwright validates
   the daily Visual/Advanced path while Wizard source-only ownership remains
   covered by focused Vitest/source review.
+- In Progress (2026-05-25): next family targets `testimonials` editor-mode
+  drift. Advanced no longer receives `onChange` and now renders read-only
+  runtime/display/content-health summaries only. Load-more pagination moved to
+  Visual, color authoring is swatch-only without raw CSS token text boxes, rich
+  quote copy no longer says HTML, fresh defaults no longer persist
+  `var(--color-*)` style strings, and Wizard/Visual duplicate allowances now
+  target the umbrella `TASK-336` one-time starter social-proof setup fields.
+  Focused Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx tests/vitest/widgets/testimonials.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Focused smoke-helper evidence passes
+  `bun test tests/unit/playwright-widget-contract-smoke.test.ts` after the
+  duplicate detector was corrected to compare path ownership across modes, not
+  repeated controls inside the same mode.
+  Pre-implementation fresh helper-agent audit found writable Advanced controls,
+  undeclared Wizard fields, raw CSS color text inputs, stale duplicate
+  allowance task IDs, and incomplete Playwright ownership metadata; Claude
+  read-only review agreed Advanced pagination/import/export/normalization was
+  the main blocker and recommended moving pagination to Visual. Post-follow-up
+  agent audit found one medium mismatch where Visual reorder metadata used the
+  broad `testimonials` path while the source contract omitted it; this was
+  fixed by making `testimonials` Visual-owned and removing the broad Wizard
+  owner. A final fresh helper-agent audit returned no findings, and Claude
+  read-only UI/UX review returned PASS. Targeted Playwright strict smoke is
+  stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-testimonials-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. `bun --cwd core lint` and
+  `bun --cwd core lint:types` pass after the final ownership correction.
+  `bun run gates:coderso` passes with functional, UX, performance, security,
+  and reliability gates green.
 
 ## Files to Change
 

@@ -419,6 +419,29 @@ Testimonials widget służy do wyświetlania cytatów klientów z ocenami gwiazd
 | A7 | Fixed by `TASK-290-05` | Contrast warnings now surface locally in the Visual editor. |
 | A8 | No action, preserved | Non-zero rating `aria-label` behavior remains intact in the shipped runtime output. |
 
+### TASK-336-19 ownership refresh (2026-05-25)
+
+- Advanced was re-audited against the shared Wizard/Visual/Advanced contract
+  and no longer exposes writable pagination, normalization, import/export, or
+  raw payload controls.
+- Load-more pagination is now Visual-owned, matching the
+  `testimonialsEditorContract` paths for `pagination.mode`,
+  `pagination.pageSize`, and `pagination.loadMoreLabel`.
+- Visual color controls are swatch-only and do not show raw `var(--color-*)`
+  text fields to nontechnical users. Fresh defaults also stop persisting those
+  CSS variable strings.
+- Wizard remains one-time starter setup for variant, section copy, count, quote,
+  author, role, source, rating, and avatar seed data. Duplicate allowances are
+  now tied to the umbrella `TASK-336` one-time setup program.
+- Focused Vitest evidence:
+  `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx tests/vitest/widgets/testimonials.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Focused smoke-helper evidence:
+  `bun test tests/unit/playwright-widget-contract-smoke.test.ts`.
+- Targeted strict Playwright evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-testimonials-advanced-readonly-2026-05-25.*`
+  with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+
 ### Walidacja końcowa
 
 - `bun --cwd core lint`

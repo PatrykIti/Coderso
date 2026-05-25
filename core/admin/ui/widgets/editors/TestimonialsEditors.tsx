@@ -21,7 +21,6 @@ import {
   isValidTestimonialsAvatarUrl,
   isValidTestimonialsBackgroundImageUrl,
   isValidTestimonialsCtaHref,
-  normalizeTestimonialsCount,
   normalizeTestimonialsData,
   normalizeTestimonialsItems,
   resolveTestimonialsCountForVariant,
@@ -46,17 +45,15 @@ import {
   type TestimonialsVariantId,
   type TestimonialItem,
 } from "../../../../widgets/core/testimonials";
-import {
-  TestimonialsImportError,
-  parseTestimonialsImport,
-  serializeTestimonialsExport,
-  type TestimonialsImportFormat,
-} from "../../../../widgets/core/testimonialsImportExport";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { ColorContrastNotice, resolveColorContrastAdvisory } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: TestimonialsVariantId;
@@ -180,20 +177,43 @@ function normalizeValue(value: TestimonialsData): TestimonialsData {
 function EditorSection({
   id,
   title,
+  mode,
+  role,
   description,
   children,
 }: {
   id?: string;
   title: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      title={title}
+      mode={mode}
+      role={role}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
+}
+
+function controlAttributes(
+  id: string,
+  path: string,
+  ownership: "writable" | "readonly" = "writable"
+) {
+  return {
+    "data-widget-control": id,
+    "data-widget-control-path": path,
+    "data-widget-control-ownership": ownership,
+    "data-widget-control-readonly": ownership === "readonly" ? "true" : undefined,
+  } satisfies Record<string, string | undefined>;
 }
 
 function VariantCards({
@@ -253,6 +273,7 @@ function ColorField({
       onClear={onClear}
       placeholder={placeholder}
       pickerFallback={pickerFallback}
+      showValueInput={false}
     />
   );
 }
@@ -581,14 +602,6 @@ function resolveAvatarInputValue(
     : (avatar ?? "");
 }
 
-function DiagnosticsSnapshot({ value }: { value: TestimonialsData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function FieldNote({ children }: { children: ReactNode }) {
   return <p className="text-xs text-muted-foreground">{children}</p>;
 }
@@ -672,6 +685,8 @@ function TestimonialContentCard({
 }) {
   const rowKey = resolveItemRowKey(testimonial, index);
   const isSpotlight = value.layout?.spotlightItemId === testimonial.id;
+  const itemControlAttributes = (id: string, path: string) =>
+    controlAttributes(`testimonials.visual.${id}.${index + 1}`, path);
 
   return (
     <div key={rowKey} className="space-y-3 rounded-lg border p-3">
@@ -685,6 +700,7 @@ function TestimonialContentCard({
         <div className="flex flex-wrap gap-2">
           {variant === "spotlight" ? (
             <Button
+              {...itemControlAttributes("layout.spotlightItemId", "layout.spotlightItemId")}
               type="button"
               variant="outline"
               size="sm"
@@ -695,6 +711,7 @@ function TestimonialContentCard({
             </Button>
           ) : null}
           <Button
+            {...controlAttributes(`testimonials.visual.moveUp.${index + 1}`, "testimonials")}
             type="button"
             variant="outline"
             size="sm"
@@ -704,6 +721,7 @@ function TestimonialContentCard({
             Move up
           </Button>
           <Button
+            {...controlAttributes(`testimonials.visual.moveDown.${index + 1}`, "testimonials")}
             type="button"
             variant="outline"
             size="sm"
@@ -713,6 +731,7 @@ function TestimonialContentCard({
             Move down
           </Button>
           <Button
+            {...controlAttributes(`testimonials.visual.remove.${index + 1}`, "testimonials.count")}
             type="button"
             variant="outline"
             size="sm"
@@ -724,7 +743,7 @@ function TestimonialContentCard({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2" {...itemControlAttributes("quote", "testimonials.quote")}>
         <p className="text-sm font-medium">Quote</p>
         <Textarea
           value={testimonial.quote ?? ""}
@@ -733,8 +752,8 @@ function TestimonialContentCard({
         />
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Rich quote formatting</p>
+      <div className="space-y-2" {...itemControlAttributes("quoteHtml", "testimonials.quoteHtml")}>
+        <p className="text-sm font-medium">Formatted quote</p>
         <PostRichTextAdapter
           value={testimonial.quoteHtml ?? ""}
           onChange={(next) => updateItem(value, onChange, index, { quoteHtml: next })}
@@ -744,13 +763,12 @@ function TestimonialContentCard({
           placeholder="Optional emphasized quote with links or line breaks..."
         />
         <FieldNote>
-          Rich quote HTML is sanitized before it reaches the widget runtime. Plain quote text still
-          stays available as fallback.
+          Formatting is cleaned before publishing. Plain quote text stays available as fallback.
         </FieldNote>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div className="space-y-2" {...itemControlAttributes("author", "testimonials.author")}>
           <p className="text-sm font-medium">Author</p>
           <Input
             value={testimonial.author ?? ""}
@@ -759,7 +777,7 @@ function TestimonialContentCard({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" {...itemControlAttributes("role", "testimonials.role")}>
           <p className="text-sm font-medium">Role</p>
           <Input
             value={testimonial.role ?? ""}
@@ -768,17 +786,22 @@ function TestimonialContentCard({
           />
         </div>
 
-        <AvatarPickerField
-          label="Avatar image"
-          avatarValue={avatarValue}
-          rowKey={rowKey}
-          mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
-          mediaError={mediaPickerErrorsByRowKey[rowKey]}
-          onClear={() => onClearAvatar(testimonial.id ?? rowKey, index)}
-          onAssetChange={(next) => onAvatarAssetChange(testimonial.id ?? rowKey, index, next)}
-        />
+        <div {...itemControlAttributes("avatar", "testimonials.avatar")}>
+          <AvatarPickerField
+            label="Avatar image"
+            avatarValue={avatarValue}
+            rowKey={rowKey}
+            mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
+            mediaError={mediaPickerErrorsByRowKey[rowKey]}
+            onClear={() => onClearAvatar(testimonial.id ?? rowKey, index)}
+            onAssetChange={(next) => onAvatarAssetChange(testimonial.id ?? rowKey, index, next)}
+          />
+        </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...itemControlAttributes("sourceLabel", "testimonials.sourceLabel")}
+        >
           <p className="text-sm font-medium">Source label</p>
           <Input
             value={testimonial.sourceLabel ?? ""}
@@ -789,7 +812,10 @@ function TestimonialContentCard({
           />
         </div>
 
-        <div className="space-y-2 sm:col-span-2">
+        <div
+          className="space-y-2 sm:col-span-2"
+          {...itemControlAttributes("rating", "testimonials.rating")}
+        >
           <p className="text-sm font-medium">Rating</p>
           <Select
             value={String(testimonial.rating ?? 0)}
@@ -909,7 +935,7 @@ export function TestimonialsWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
+      <div className="space-y-2" {...controlAttributes("testimonials.wizard.variant", "variant")}>
         <p className="text-sm font-medium">Testimonials style</p>
         <Select value={resolveTestimonialsVariant(variant)} onValueChange={handleVariantChange}>
           <SelectTrigger>
@@ -927,9 +953,14 @@ export function TestimonialsWizardEditor({
 
       <EditorSection
         title="Section copy"
+        mode="wizard"
+        role="setup"
         description="Configure the headline and supporting social proof context up front."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.wizard.header.eyebrow", "header.eyebrow")}
+        >
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={normalized.header?.eyebrow ?? ""}
@@ -938,7 +969,10 @@ export function TestimonialsWizardEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.wizard.header.title", "header.title")}
+        >
           <p className="text-sm font-medium">Section title</p>
           <Input
             value={normalized.header?.title ?? ""}
@@ -947,7 +981,10 @@ export function TestimonialsWizardEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.wizard.header.description", "header.description")}
+        >
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
@@ -957,7 +994,10 @@ export function TestimonialsWizardEditor({
         </div>
       </EditorSection>
 
-      <div className="space-y-2">
+      <div
+        className="space-y-2"
+        {...controlAttributes("testimonials.wizard.count", "testimonials.count")}
+      >
         <p className="text-sm font-medium">Testimonials count</p>
         <Select
           value={String(testimonials.length)}
@@ -978,9 +1018,13 @@ export function TestimonialsWizardEditor({
 
       <EditorSection
         title="Initial testimonials"
+        mode="wizard"
+        role="setup"
         description="Capture the essential author, quote, role, source, rating, and avatar fields."
       >
         {testimonials.map((testimonial, index) => {
+          const itemControlAttributes = (id: string, path: string) =>
+            controlAttributes(`testimonials.wizard.${id}.${index + 1}`, path);
           const rowKey = resolveItemRowKey(testimonial, index);
           const avatarValue = resolveAvatarInputValue(
             rowKey,
@@ -992,67 +1036,79 @@ export function TestimonialsWizardEditor({
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Testimonial {index + 1}
               </p>
-              <Textarea
-                value={testimonial.quote ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { quote: event.target.value })
-                }
-                placeholder="Customer quote"
-              />
-              <Input
-                value={testimonial.author ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { author: event.target.value })
-                }
-                placeholder="Author name"
-              />
-              <Input
-                value={testimonial.role ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { role: event.target.value })
-                }
-                placeholder="Role or position"
-              />
-              <Input
-                value={testimonial.sourceLabel ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { sourceLabel: event.target.value })
-                }
-                placeholder="Acme Studio"
-              />
-              <Select
-                value={String(testimonial.rating ?? 0)}
-                onValueChange={(next) =>
-                  updateItem(value, onChange, index, { rating: Number(next) })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Rating" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ratingOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option} / 5
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <AvatarPickerField
-                label="Avatar image"
-                avatarValue={avatarValue}
-                rowKey={rowKey}
-                mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
-                mediaError={mediaPickerErrorsByRowKey[rowKey]}
-                onClear={() => {
-                  setAvatarInputValue(rowKey, undefined);
-                  setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
-                  setAvatarError(rowKey);
-                  updateItem(value, onChange, index, { avatar: undefined });
-                }}
-                onAssetChange={(next) =>
-                  void handleAvatarAssetChange(testimonial.id ?? rowKey, index, next)
-                }
-              />
+              <div {...itemControlAttributes("quote", "testimonials.quote")}>
+                <Textarea
+                  value={testimonial.quote ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { quote: event.target.value })
+                  }
+                  placeholder="Customer quote"
+                />
+              </div>
+              <div {...itemControlAttributes("author", "testimonials.author")}>
+                <Input
+                  value={testimonial.author ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { author: event.target.value })
+                  }
+                  placeholder="Author name"
+                />
+              </div>
+              <div {...itemControlAttributes("role", "testimonials.role")}>
+                <Input
+                  value={testimonial.role ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { role: event.target.value })
+                  }
+                  placeholder="Role or position"
+                />
+              </div>
+              <div {...itemControlAttributes("sourceLabel", "testimonials.sourceLabel")}>
+                <Input
+                  value={testimonial.sourceLabel ?? ""}
+                  onChange={(event) =>
+                    updateItem(value, onChange, index, { sourceLabel: event.target.value })
+                  }
+                  placeholder="Acme Studio"
+                />
+              </div>
+              <div {...itemControlAttributes("rating", "testimonials.rating")}>
+                <Select
+                  value={String(testimonial.rating ?? 0)}
+                  onValueChange={(next) =>
+                    updateItem(value, onChange, index, { rating: Number(next) })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ratingOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option} / 5
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div {...itemControlAttributes("avatar", "testimonials.avatar")}>
+                <AvatarPickerField
+                  label="Avatar image"
+                  avatarValue={avatarValue}
+                  rowKey={rowKey}
+                  mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
+                  mediaError={mediaPickerErrorsByRowKey[rowKey]}
+                  onClear={() => {
+                    setAvatarInputValue(rowKey, undefined);
+                    setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
+                    setAvatarError(rowKey);
+                    updateItem(value, onChange, index, { avatar: undefined });
+                  }}
+                  onAssetChange={(next) =>
+                    void handleAvatarAssetChange(testimonial.id ?? rowKey, index, next)
+                  }
+                />
+              </div>
             </div>
           );
         })}
@@ -1216,12 +1272,19 @@ export function TestimonialsVisualEditor({
     <div className="space-y-4">
       <EditorSection
         title="Variant and layout structure"
+        mode="visual"
+        role="visual"
         description="Choose display style, baseline count, and spotlight/navigation behavior."
       >
-        <VariantCards value={resolvedVariant} onChange={handleVariantChange} />
+        <div {...controlAttributes("testimonials.visual.variant", "variant")}>
+          <VariantCards value={resolvedVariant} onChange={handleVariantChange} />
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.count", "testimonials.count")}
+          >
             <p className="text-sm font-medium">Testimonials count</p>
             <Select
               value={String(testimonials.length)}
@@ -1240,7 +1303,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.spacing", "style.spacing")}
+          >
             <p className="text-sm font-medium">Card spacing</p>
             <Select
               value={normalized.style?.spacing ?? testimonialsDefaults.style?.spacing ?? "md"}
@@ -1261,7 +1327,13 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes(
+              "testimonials.visual.sliderNavigation",
+              "behavior.sliderNavigation"
+            )}
+          >
             <p className="text-sm font-medium">Slider navigation</p>
             <Select
               value={normalized.behavior?.sliderNavigation ?? "dots"}
@@ -1287,7 +1359,10 @@ export function TestimonialsVisualEditor({
             ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.ratingDisplay", "behavior.ratingDisplay")}
+          >
             <p className="text-sm font-medium">Rating zero display</p>
             <Select
               value={normalized.behavior?.ratingDisplay ?? "hide-empty"}
@@ -1314,9 +1389,14 @@ export function TestimonialsVisualEditor({
 
       <EditorSection
         title="Header copy"
+        mode="visual"
+        role="content"
         description="Edit section eyebrow, title, and supporting description."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.visual.header.eyebrow", "header.eyebrow")}
+        >
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={normalized.header?.eyebrow ?? ""}
@@ -1325,7 +1405,10 @@ export function TestimonialsVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.visual.header.title", "header.title")}
+        >
           <p className="text-sm font-medium">Title</p>
           <Input
             value={normalized.header?.title ?? ""}
@@ -1334,7 +1417,10 @@ export function TestimonialsVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.visual.header.description", "header.description")}
+        >
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
@@ -1346,6 +1432,8 @@ export function TestimonialsVisualEditor({
 
       <EditorSection
         title="Testimonials content and ratings"
+        mode="visual"
+        role="content"
         description="Manage quotes, author identity, source labels, ratings, avatars, and spotlight selection."
       >
         {testimonials.map((testimonial, index) => (
@@ -1379,6 +1467,7 @@ export function TestimonialsVisualEditor({
         ))}
 
         <Button
+          {...controlAttributes("testimonials.visual.add", "testimonials.count")}
           type="button"
           variant="outline"
           onClick={() => addTestimonial(value, onChange)}
@@ -1390,19 +1479,28 @@ export function TestimonialsVisualEditor({
 
       <EditorSection
         title="Section surface and typography"
+        mode="visual"
+        role="visual"
         description="Control section background, background media, heading alignment, and bounded card styling."
       >
-        <ColorField
-          label="Section background"
-          value={normalized.style?.sectionBackground}
-          onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
-          onClear={() => clearStyleField(value, onChange, "sectionBackground")}
-          placeholder="var(--color-surface)"
-          pickerFallback="#ffffff"
-        />
+        <div
+          {...controlAttributes("testimonials.visual.sectionBackground", "style.sectionBackground")}
+        >
+          <ColorField
+            label="Section background"
+            value={normalized.style?.sectionBackground}
+            onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
+            onClear={() => clearStyleField(value, onChange, "sectionBackground")}
+            placeholder="Theme section background"
+            pickerFallback="#ffffff"
+          />
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.sectionGradient", "style.sectionGradient")}
+          >
             <p className="text-sm font-medium">Background gradient</p>
             <Select
               value={normalized.style?.sectionGradient ?? "none"}
@@ -1425,7 +1523,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.backgroundTone", "style.backgroundTone")}
+          >
             <p className="text-sm font-medium">Background tone</p>
             <Select
               value={normalized.style?.backgroundTone ?? "plain"}
@@ -1446,7 +1547,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.headerAlign", "style.headerAlign")}
+          >
             <p className="text-sm font-medium">Header alignment</p>
             <Select
               value={normalized.style?.headerAlign ?? "center"}
@@ -1467,7 +1571,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.titleSize", "style.titleSize")}
+          >
             <p className="text-sm font-medium">Title size</p>
             <Select
               value={normalized.style?.titleSize ?? "md"}
@@ -1488,7 +1595,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.cardRadius", "style.cardRadius")}
+          >
             <p className="text-sm font-medium">Card radius</p>
             <Select
               value={normalized.style?.cardRadius ?? "lg"}
@@ -1509,7 +1619,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.cardBorderWidth", "style.cardBorderWidth")}
+          >
             <p className="text-sm font-medium">Card border width</p>
             <Select
               value={normalized.style?.cardBorderWidth ?? "sm"}
@@ -1533,7 +1646,10 @@ export function TestimonialsVisualEditor({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.visual.backgroundImage", "style.backgroundImage")}
+        >
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium">Background image</p>
             <Button
@@ -1579,43 +1695,53 @@ export function TestimonialsVisualEditor({
 
       <EditorSection
         title="Colors and emphasis"
+        mode="visual"
+        role="visual"
         description="Control card surface, border, text, and accent color used for ratings and source labels."
       >
-        <ColorField
-          label="Card background"
-          value={normalized.style?.cardSurface}
-          onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
-          onClear={() => clearStyleField(value, onChange, "cardSurface")}
-          placeholder="var(--color-bg)"
-          pickerFallback="#ffffff"
-        />
+        <div {...controlAttributes("testimonials.visual.cardSurface", "style.cardSurface")}>
+          <ColorField
+            label="Card background"
+            value={normalized.style?.cardSurface}
+            onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
+            onClear={() => clearStyleField(value, onChange, "cardSurface")}
+            placeholder="Theme card background"
+            pickerFallback="#ffffff"
+          />
+        </div>
 
-        <ColorField
-          label="Card border"
-          value={normalized.style?.cardBorder}
-          onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
-          onClear={() => clearStyleField(value, onChange, "cardBorder")}
-          placeholder="var(--color-border)"
-          pickerFallback="#e2e8f0"
-        />
+        <div {...controlAttributes("testimonials.visual.cardBorder", "style.cardBorder")}>
+          <ColorField
+            label="Card border"
+            value={normalized.style?.cardBorder}
+            onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
+            onClear={() => clearStyleField(value, onChange, "cardBorder")}
+            placeholder="Theme card border"
+            pickerFallback="#e2e8f0"
+          />
+        </div>
 
-        <ColorField
-          label="Text color"
-          value={normalized.style?.textColor}
-          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
-          onClear={() => clearStyleField(value, onChange, "textColor")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
-        />
+        <div {...controlAttributes("testimonials.visual.textColor", "style.textColor")}>
+          <ColorField
+            label="Text color"
+            value={normalized.style?.textColor}
+            onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+            onClear={() => clearStyleField(value, onChange, "textColor")}
+            placeholder="Theme text color"
+            pickerFallback="#0f172a"
+          />
+        </div>
 
-        <ColorField
-          label="Accent color"
-          value={normalized.style?.accentColor}
-          onChange={(next) => updateStyle(value, onChange, { accentColor: next })}
-          onClear={() => clearStyleField(value, onChange, "accentColor")}
-          placeholder="var(--color-primary)"
-          pickerFallback="#1d4ed8"
-        />
+        <div {...controlAttributes("testimonials.visual.accentColor", "style.accentColor")}>
+          <ColorField
+            label="Accent color"
+            value={normalized.style?.accentColor}
+            onChange={(next) => updateStyle(value, onChange, { accentColor: next })}
+            onClear={() => clearStyleField(value, onChange, "accentColor")}
+            placeholder="Theme accent color"
+            pickerFallback="#1d4ed8"
+          />
+        </div>
 
         <ColorContrastNotice advisory={sectionTextContrast} label="Text contrast advisory" />
         <ColorContrastNotice advisory={accentContrast} label="Accent contrast advisory" />
@@ -1623,9 +1749,14 @@ export function TestimonialsVisualEditor({
 
       <EditorSection
         title="CTA and conversion follow-up"
+        mode="visual"
+        role="visual"
         description="Add an optional section CTA below the testimonial list with safe link handling."
       >
-        <div className="space-y-2">
+        <div
+          className="space-y-2"
+          {...controlAttributes("testimonials.visual.cta.enabled", "cta.enabled")}
+        >
           <p className="text-sm font-medium">CTA visibility</p>
           <Select
             value={normalized.cta?.enabled ? "enabled" : "disabled"}
@@ -1642,7 +1773,10 @@ export function TestimonialsVisualEditor({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
+          <div
+            className="space-y-2 sm:col-span-2"
+            {...controlAttributes("testimonials.visual.cta.label", "cta.label")}
+          >
             <p className="text-sm font-medium">CTA label</p>
             <Input
               value={normalized.cta?.label ?? ""}
@@ -1651,7 +1785,10 @@ export function TestimonialsVisualEditor({
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div
+            className="sm:col-span-2"
+            {...controlAttributes("testimonials.visual.cta.href", "cta.href")}
+          >
             <LinkDestinationField
               fieldId="testimonials-cta-destination"
               label="CTA destination"
@@ -1662,7 +1799,10 @@ export function TestimonialsVisualEditor({
             />
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.cta.target", "cta.target")}
+          >
             <p className="text-sm font-medium">CTA target</p>
             <Select
               value={normalized.cta?.target ?? "same-tab"}
@@ -1683,7 +1823,10 @@ export function TestimonialsVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.cta.style", "cta.style")}
+          >
             <p className="text-sm font-medium">CTA style</p>
             <Select
               value={normalized.cta?.style ?? "secondary"}
@@ -1702,6 +1845,82 @@ export function TestimonialsVisualEditor({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Pagination and load more"
+        mode="visual"
+        role="visual"
+        description="Decide how many testimonials appear before the visitor loads more."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.pagination.mode", "pagination.mode")}
+          >
+            <p className="text-sm font-medium">Pagination mode</p>
+            <Select
+              value={normalized.pagination?.mode ?? "none"}
+              onValueChange={(next) =>
+                updatePagination(value, onChange, { mode: next as TestimonialsPaginationMode })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pagination" />
+              </SelectTrigger>
+              <SelectContent>
+                {paginationModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div
+            className="space-y-2"
+            {...controlAttributes("testimonials.visual.pagination.pageSize", "pagination.pageSize")}
+          >
+            <p className="text-sm font-medium">Visible before load more</p>
+            <Select
+              value={String(
+                normalized.pagination?.pageSize ?? testimonialsDefaults.pagination?.pageSize ?? 6
+              )}
+              onValueChange={(next) =>
+                updatePagination(value, onChange, { pageSize: Number(next) })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Page size" />
+              </SelectTrigger>
+              <SelectContent>
+                {pageSizeOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div
+            className="space-y-2 sm:col-span-2"
+            {...controlAttributes(
+              "testimonials.visual.pagination.loadMoreLabel",
+              "pagination.loadMoreLabel"
+            )}
+          >
+            <p className="text-sm font-medium">Button label</p>
+            <Input
+              value={normalized.pagination?.loadMoreLabel ?? ""}
+              onChange={(event) =>
+                updatePagination(value, onChange, { loadMoreLabel: event.target.value })
+              }
+              placeholder="Load more testimonials"
+            />
           </div>
         </div>
       </EditorSection>
@@ -1730,7 +1949,6 @@ export function TestimonialsVisualEditor({
 
 export function TestimonialsAdvancedEditor({
   value,
-  onChange,
   variant,
 }: WidgetEditorProps<TestimonialsData>) {
   const normalized = normalizeValue(value);
@@ -1738,251 +1956,116 @@ export function TestimonialsAdvancedEditor({
   const resolvedSpacing = normalized.style?.spacing ?? testimonialsDefaults.style?.spacing ?? "md";
   const resolvedRatingDisplay = normalized.behavior?.ratingDisplay ?? "hide-empty";
   const resolvedSliderNavigation = normalized.behavior?.sliderNavigation ?? "dots";
-  const [importDraft, setImportDraft] = useState("");
-  const [importSummary, setImportSummary] = useState<string | null>(null);
-  const [importIssues, setImportIssues] = useState<string[]>([]);
-  const [exportText, setExportText] = useState("");
-  const [exportFormat, setExportFormat] = useState<TestimonialsImportFormat>("json");
-
-  const runImportPreview = () => {
-    try {
-      const result = parseTestimonialsImport(importDraft);
-      setImportIssues([]);
-      setImportSummary(
-        `Preview ready: ${result.items.length} testimonial${result.items.length === 1 ? "" : "s"} from ${result.format.toUpperCase()}.`
-      );
-    } catch (error) {
-      if (error instanceof TestimonialsImportError) {
-        setImportSummary(null);
-        setImportIssues(error.issues.map((issue) => `Row ${issue.row}: ${issue.message}`));
-        return;
-      }
-      setImportSummary(null);
-      setImportIssues(["Import preview failed."]);
-    }
-  };
-
-  const applyImport = () => {
-    try {
-      const result = parseTestimonialsImport(importDraft);
-      const nextCount = normalizeTestimonialsCount(result.items.length);
-      const nextTestimonials = normalizeTestimonialsItems(result.items, nextCount);
-      const nextSpotlightId = nextTestimonials.some(
-        (item) => item.id === normalized.layout?.spotlightItemId
-      )
-        ? normalized.layout?.spotlightItemId
-        : nextTestimonials[0]?.id;
-
-      onChange(
-        normalizeTestimonialsData({
-          ...normalized,
-          testimonials: nextTestimonials,
-          layout: {
-            ...normalized.layout,
-            spotlightItemId: nextSpotlightId,
-          },
-        })
-      );
-      setImportIssues([]);
-      setImportSummary(
-        `Imported ${nextTestimonials.length} testimonial${nextTestimonials.length === 1 ? "" : "s"} from ${result.format.toUpperCase()}.`
-      );
-    } catch (error) {
-      if (error instanceof TestimonialsImportError) {
-        setImportSummary(null);
-        setImportIssues(error.issues.map((issue) => `Row ${issue.row}: ${issue.message}`));
-        return;
-      }
-      setImportSummary(null);
-      setImportIssues(["Import failed."]);
-    }
-  };
+  const resolvedPaginationMode = normalized.pagination?.mode ?? "none";
+  const resolvedPageSize =
+    normalized.pagination?.pageSize ?? testimonialsDefaults.pagination?.pageSize ?? 6;
+  const configuredAvatarCount = normalized.testimonials.filter((item) =>
+    (item.avatar ?? "").trim()
+  ).length;
+  const configuredRatingCount = normalized.testimonials.filter(
+    (item) => (item.rating ?? 0) > 0
+  ).length;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Display diagnostics"
-        description="Visual owns spacing and testimonial display behavior. Advanced keeps read-only diagnostics plus pagination, normalization, and payload tools."
+        title="Runtime summary"
+        mode="advanced"
+        role="diagnostics"
+        description="Read-only support summary. Daily editing stays in Visual."
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 rounded-lg border p-3 text-sm text-muted-foreground sm:col-span-2">
-            <p>
-              Variant: <span className="font-medium text-foreground">{resolvedVariant}</span>
-            </p>
-            <p>
-              Card spacing token:{" "}
-              <span className="font-medium text-foreground">{resolvedSpacing}</span>
-            </p>
-            <p>
-              Rating zero display:{" "}
-              <span className="font-medium text-foreground">{resolvedRatingDisplay}</span>
-            </p>
-            <p>
-              Slider navigation:{" "}
-              <span className="font-medium text-foreground">
-                {resolvedVariant === "slider-static"
-                  ? resolvedSliderNavigation
-                  : `${resolvedSliderNavigation} (inactive outside slider-static)`}
-              </span>
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Pagination mode</p>
-            <Select
-              value={normalized.pagination?.mode ?? "none"}
-              onValueChange={(next) =>
-                updatePagination(value, onChange, { mode: next as TestimonialsPaginationMode })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pagination" />
-              </SelectTrigger>
-              <SelectContent>
-                {paginationModeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Load more page size</p>
-            <Select
-              value={String(
-                normalized.pagination?.pageSize ?? testimonialsDefaults.pagination?.pageSize ?? 6
-              )}
-              onValueChange={(next) =>
-                updatePagination(value, onChange, { pageSize: Number(next) })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Page size" />
-              </SelectTrigger>
-              <SelectContent>
-                {pageSizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm font-medium">Load more label</p>
-            <Input
-              value={normalized.pagination?.loadMoreLabel ?? ""}
-              onChange={(event) =>
-                updatePagination(value, onChange, { loadMoreLabel: event.target.value })
-              }
-              placeholder="Load more testimonials"
-            />
-          </div>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.variant"
+          label="Variant"
+          path="variant"
+          value={resolvedVariant}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.count"
+          label="Testimonials"
+          path="testimonials"
+          value={`${normalized.testimonials.length} configured`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.spotlight"
+          label="Spotlight item"
+          path="layout.spotlightItemId"
+          value={normalized.layout?.spotlightItemId ?? "First testimonial"}
+        />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and fallback"
-        description="Normalize testimonial list to the current variant baseline or rebuild the full payload."
+        title="Display settings"
+        mode="advanced"
+        role="diagnostics"
+        description="Current Visual-owned display settings, shown for support only."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setTestimonialsCount(
-                value,
-                onChange,
-                resolveTestimonialsCountForVariant(resolvedVariant)
-              )
-            }
-          >
-            Normalize list to variant baseline
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onChange(normalizeTestimonialsData(value))}
-          >
-            Normalize full payload
-          </Button>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.spacing"
+          label="Card spacing"
+          path="style.spacing"
+          value={resolvedSpacing}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.ratingDisplay"
+          label="Empty rating display"
+          path="behavior.ratingDisplay"
+          value={resolvedRatingDisplay}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.sliderNavigation"
+          label="Slider navigation"
+          path="behavior.sliderNavigation"
+          value={
+            resolvedVariant === "slider-static"
+              ? resolvedSliderNavigation
+              : `${resolvedSliderNavigation} (inactive outside slider-static)`
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.paginationMode"
+          label="Pagination"
+          path="pagination.mode"
+          value={resolvedPaginationMode}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.pageSize"
+          label="Visible before load more"
+          path="pagination.pageSize"
+          value={String(resolvedPageSize)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.loadMoreLabel"
+          label="Load more label"
+          path="pagination.loadMoreLabel"
+          value={normalized.pagination?.loadMoreLabel ?? "Load more testimonials"}
+        />
       </EditorSection>
 
       <EditorSection
-        title="Import and export"
-        description="Preview or apply local JSON/CSV testimonial imports, and generate normalized exports."
+        title="Content health"
+        mode="advanced"
+        role="diagnostics"
+        description="Read-only completeness checks for support and QA."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Import JSON or CSV</p>
-          <Textarea
-            value={importDraft}
-            onChange={(event) => setImportDraft(event.target.value)}
-            placeholder='[{"quote":"Great support","author":"Alex"}]'
-            rows={8}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={runImportPreview}>
-              Preview import
-            </Button>
-            <Button type="button" variant="outline" onClick={applyImport}>
-              Apply import
-            </Button>
-          </div>
-          {importSummary ? <p className="text-xs text-muted-foreground">{importSummary}</p> : null}
-          {importIssues.length > 0 ? (
-            <div className="space-y-1">
-              {importIssues.map((issue) => (
-                <p key={issue} className="text-xs text-destructive">
-                  {issue}
-                </p>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">Export normalized testimonials</p>
-            <Select
-              value={exportFormat}
-              onValueChange={(next) => setExportFormat(next as TestimonialsImportFormat)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Format" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="json">JSON</SelectItem>
-                <SelectItem value="csv">CSV</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setExportText(serializeTestimonialsExport(normalized.testimonials, exportFormat))
-            }
-          >
-            Generate export
-          </Button>
-          <Textarea
-            value={exportText}
-            readOnly
-            rows={8}
-            placeholder="Generated export will appear here."
-          />
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Raw payload snapshot"
-        description="Use this only for technical validation while refining the data model."
-      >
-        <DiagnosticsSnapshot value={normalized} />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.avatars"
+          label="Avatars"
+          path="testimonials.avatar"
+          value={`${configuredAvatarCount} of ${normalized.testimonials.length} configured`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.ratings"
+          label="Ratings"
+          path="testimonials.rating"
+          value={`${configuredRatingCount} of ${normalized.testimonials.length} configured`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.advanced.cta"
+          label="CTA"
+          path="cta.enabled"
+          value={normalized.cta?.enabled ? normalized.cta.label || "Enabled" : "Disabled"}
+        />
       </EditorSection>
     </div>
   );

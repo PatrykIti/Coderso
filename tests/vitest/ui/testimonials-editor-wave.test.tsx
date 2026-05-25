@@ -386,6 +386,31 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 const findMediaPickers = (container: ParentNode) =>
   Array.from(container.querySelectorAll("[data-media-picker-value]"));
 
+const findInputByAriaLabel = (container: ParentNode, label: string) => {
+  const input = container.querySelector(`input[aria-label="${label}"]`);
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with aria-label "${label}"`);
+  }
+  return input;
+};
+
+const writableControlPaths = (container: ParentNode) =>
+  Array.from(
+    container.querySelectorAll(
+      '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+    )
+  )
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
+
+const writableControlCount = (container: ParentNode, path: string) =>
+  writableControlPaths(container).filter((candidate) => candidate === path).length;
+
+const readonlyControlPaths = (container: ParentNode) =>
+  Array.from(container.querySelectorAll('[data-widget-control-readonly="true"]'))
+    .map((element) => element.getAttribute("data-widget-control-path"))
+    .filter((path): path is string => Boolean(path));
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -465,6 +490,23 @@ test("TestimonialsWizardEditor covers header copy, social proof fields, and avat
     setSelectValue(variantSelect, "spotlight");
     expect(view.getLatestVariant()).toBe("spotlight");
     expect(view.getLatestValue().testimonials).toHaveLength(2);
+    expect(writableControlPaths(view.container)).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "header.eyebrow",
+        "header.title",
+        "header.description",
+        "testimonials.count",
+        "testimonials.quote",
+        "testimonials.author",
+        "testimonials.role",
+        "testimonials.sourceLabel",
+        "testimonials.rating",
+        "testimonials.avatar",
+      ])
+    );
+    expect(writableControlCount(view.container, "testimonials.quote")).toBe(2);
+    expect(writableControlCount(view.container, "testimonials.avatar")).toBe(2);
 
     setInputValue(findInputsByPlaceholder(view.container, "Customer stories")[0], "Proof");
     setInputValue(
@@ -582,6 +624,29 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
 
     const surfaceSection = findSectionByTitle(view.container, "Section surface and typography");
     if (!(surfaceSection instanceof HTMLElement)) throw new Error("Missing surface section");
+    expect(writableControlPaths(view.container)).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "testimonials.count",
+        "testimonials",
+        "testimonials.quote",
+        "testimonials.quoteHtml",
+        "testimonials.author",
+        "testimonials.role",
+        "testimonials.avatar",
+        "testimonials.rating",
+        "testimonials.sourceLabel",
+        "style.sectionBackground",
+        "style.cardSurface",
+        "style.textColor",
+        "cta.href",
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.loadMoreLabel",
+      ])
+    );
+    expect(writableControlCount(view.container, "testimonials.quote")).toBe(3);
+    expect(writableControlCount(view.container, "testimonials.avatar")).toBe(3);
 
     expect(
       findInputsByPlaceholder(surfaceSection, "https://cdn.example.com/section-bg.jpg")
@@ -603,9 +668,13 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     setSelectValue(findSelectByOptions(surfaceSection, ["none", "sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectsByOptions(surfaceSection, ["none", "sm", "md"])[1], "md");
 
-    setInputValue(findInputsByPlaceholder(view.container, "var(--color-bg)")[0], "#ffffff");
-    setInputValue(findInputsByPlaceholder(view.container, "var(--color-text)")[0], "#ffffff");
-    setInputValue(findInputsByPlaceholder(view.container, "var(--color-primary)")[0], "#ffffff");
+    const rawColorInputs = Array.from(view.container.querySelectorAll("input")).filter((input) =>
+      input.getAttribute("placeholder")?.includes("var(")
+    );
+    expect(rawColorInputs).toHaveLength(0);
+    setInputValue(findInputByAriaLabel(view.container, "Card background swatch"), "#fefefe");
+    setInputValue(findInputByAriaLabel(view.container, "Text color swatch"), "#ffffff");
+    setInputValue(findInputByAriaLabel(view.container, "Accent color swatch"), "#ffffff");
     expect(view.container.textContent).toContain("Text contrast advisory");
     expect(view.container.textContent).toContain("Accent contrast advisory");
 
@@ -624,6 +693,29 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     setSelectValue(
       findSelectByOptions(view.container, ["hide-empty", "label-empty", "stars"]),
       "label-empty"
+    );
+    const paginationSection = findSectionByTitle(view.container, "Pagination and load more");
+    if (!(paginationSection instanceof HTMLElement)) throw new Error("Missing pagination section");
+    setSelectValue(findSelectByOptions(paginationSection, ["none", "load-more"]), "load-more");
+    setSelectValue(
+      findSelectByOptions(paginationSection, [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+      ]),
+      "4"
+    );
+    setInputValue(
+      findInputsByPlaceholder(paginationSection, "Load more testimonials")[0],
+      "More proof"
     );
 
     clickButton(findButtonsByText(contentSection, "Remove")[2]);
@@ -647,6 +739,7 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
       titleSize: "lg",
       cardRadius: "xl",
       cardBorderWidth: "md",
+      cardSurface: "#fefefe",
       textColor: "#ffffff",
       accentColor: "#ffffff",
     });
@@ -661,122 +754,30 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
       sliderNavigation: "dots",
       ratingDisplay: "label-empty",
     });
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("TestimonialsAdvancedEditor previews invalid imports, applies valid imports, and generates exports", () => {
-  const view = renderEditor(TestimonialsAdvancedEditor, {
-    initialValue: {
-      ...testimonialsDefaults,
-      testimonials: [
-        { id: "t-1", quote: "A", author: "Alice", rating: 5 },
-        { id: "t-2", quote: "B", author: "Bob", rating: 4 },
-        { id: "t-3", quote: "C", author: "Cara", rating: 3 },
-        { id: "t-4", quote: "D", author: "Drew", rating: 5 },
-      ],
-      layout: { spotlightItemId: "missing" },
-      behavior: {
-        ratingDisplay: "stars",
-        sliderNavigation: "dots",
-      },
-      style: {
-        ...testimonialsDefaults.style,
-        spacing: "lg",
-      },
-    },
-    initialVariant: "spotlight",
-  });
-
-  try {
-    setSelectValue(findSelectByOptions(view.container, ["none", "load-more"]), "load-more");
-    setSelectValue(
-      findSelectByOptions(view.container, [
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-        "11",
-        "12",
-      ]),
-      "4"
-    );
-    setInputValue(
-      findInputsByPlaceholder(view.container, "Load more testimonials")[0],
-      "More proof"
-    );
-
-    clickButton(findButtonsByText(view.container, "Normalize list to variant baseline")[0]);
-    expect(view.getLatestValue().testimonials).toHaveLength(2);
-
-    clickButton(findButtonsByText(view.container, "Normalize full payload")[0]);
-    expect(view.getLatestValue().layout?.spotlightItemId).toBe("t-1");
-
-    const importArea = findTextareasByPlaceholder(
-      view.container,
-      '[{"quote":"Great support","author":"Alex"}]'
-    )[0];
-    setTextareaValue(importArea, JSON.stringify([{ quote: "Only one", author: "Alex" }]));
-    clickButton(findButtonsByText(view.container, "Preview import")[0]);
-    expect(view.container.textContent).toContain("Import requires at least 2 testimonials");
-    expect(view.getLatestValue().testimonials).toHaveLength(2);
-
-    setTextareaValue(
-      importArea,
-      JSON.stringify([{ quote: "Bad row", author: "Alex", unknownField: true }])
-    );
-    clickButton(findButtonsByText(view.container, "Preview import")[0]);
-    expect(view.container.textContent).toContain("Unknown field unknownField");
-    expect(view.getLatestValue().testimonials).toHaveLength(2);
-
-    setTextareaValue(
-      importArea,
-      JSON.stringify([
-        { quote: "Great support", author: "Alex", rating: 4, sourceLabel: "Acme" },
-        { quote: "Fast setup", author: "Riley", rating: 5 },
-      ])
-    );
-    clickButton(findButtonsByText(view.container, "Apply import")[0]);
-    expect(view.getLatestValue().testimonials).toHaveLength(2);
-    expect(view.getLatestValue().testimonials[0]).toMatchObject({
-      author: "Alex",
-      sourceLabel: "Acme",
-      rating: 4,
-    });
     expect(view.getLatestValue().pagination).toMatchObject({
       mode: "load-more",
       pageSize: 4,
       loadMoreLabel: "More proof",
     });
-    expect(view.getLatestValue().behavior).toMatchObject({
-      ratingDisplay: "stars",
-      sliderNavigation: "dots",
-    });
-    expect(view.getLatestValue().style?.spacing).toBe("lg");
-
-    setSelectValue(findSelectByOptions(view.container, ["json", "csv"]), "csv");
-    clickButton(findButtonsByText(view.container, "Generate export")[0]);
-    const exportArea = findTextareasByPlaceholder(
-      view.container,
-      "Generated export will appear here."
-    )[0];
-    expect(exportArea?.value).toContain("id,quote,quoteHtml,author,role,avatar,rating,sourceLabel");
-    expect(exportArea?.value).toContain("Alex");
   } finally {
     view.cleanup();
   }
 });
 
-test("TestimonialsAdvancedEditor keeps shared display controls diagnostic-only", () => {
+test("TestimonialsAdvancedEditor is read-only diagnostics without authoring inputs", () => {
   const view = renderEditor(TestimonialsAdvancedEditor, {
     initialValue: {
       ...testimonialsDefaults,
+      testimonials: [
+        { id: "t-1", quote: "A", author: "Alice", avatar: "/media/a.jpg", rating: 5 },
+        { id: "t-2", quote: "B", author: "Bob", rating: 0 },
+        { id: "t-3", quote: "C", author: "Cara", rating: 4 },
+      ],
+      pagination: {
+        mode: "load-more",
+        pageSize: 3,
+        loadMoreLabel: "More proof",
+      },
       behavior: {
         sliderNavigation: "dots",
         ratingDisplay: "stars",
@@ -790,16 +791,39 @@ test("TestimonialsAdvancedEditor keeps shared display controls diagnostic-only",
   });
 
   try {
-    expect(view.container.textContent).toContain("Display diagnostics");
-    expect(view.container.textContent).toContain("Card spacing token");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Display settings");
+    expect(view.container.textContent).toContain("Content health");
     expect(view.container.textContent).toContain("lg");
     expect(view.container.textContent).toContain("stars");
     expect(view.container.textContent).toContain("dots (inactive outside slider-static)");
+    expect(view.container.textContent).toContain("load-more");
+    expect(view.container.textContent).toContain("More proof");
+    expect(view.container.querySelectorAll("input, select, textarea, button, pre")).toHaveLength(0);
+    expect(writableControlPaths(view.container)).toHaveLength(0);
+    expect(readonlyControlPaths(view.container)).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "testimonials",
+        "layout.spotlightItemId",
+        "style.spacing",
+        "behavior.ratingDisplay",
+        "behavior.sliderNavigation",
+        "pagination.mode",
+        "pagination.pageSize",
+        "pagination.loadMoreLabel",
+        "testimonials.avatar",
+        "testimonials.rating",
+        "cta.enabled",
+      ])
+    );
     expect(findSelectsByOptions(view.container, ["none", "sm", "md", "lg"])).toHaveLength(0);
     expect(
       findSelectsByOptions(view.container, ["hide-empty", "label-empty", "stars"])
     ).toHaveLength(0);
     expect(findSelectsByOptions(view.container, ["none", "dots"])).toHaveLength(0);
+    expect(view.container.textContent).not.toMatch(/\b(JSON|CSV|HTML)\b/);
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

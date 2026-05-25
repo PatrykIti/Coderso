@@ -535,13 +535,13 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     const owners = new Map();
     for (const mode of modes) {
       for (const path of mode.writablePaths || []) {
-        const current = owners.get(path) || [];
-        current.push(mode.mode);
+        const current = owners.get(path) || new Set();
+        current.add(mode.mode);
         owners.set(path, current);
       }
     }
     return Array.from(owners.entries())
-      .filter(([path, owners]) => owners.length > 1 && !allowed.has(path))
+      .filter(([path, owners]) => owners.size > 1 && !allowed.has(path))
       .map(([path]) => path);
   }
   async function dismissCustomDirtyDialog() {
@@ -934,16 +934,16 @@ function findDuplicateWritablePaths(
   allowedDuplicateWritablePaths: WidgetSmokeCase["allowedDuplicateWritablePaths"] = []
 ): string[] {
   const allowed = new Set(allowedDuplicateWritablePaths.map((entry) => entry.path));
-  const owners = new Map<string, EditorMode[]>();
+  const owners = new Map<string, Set<EditorMode>>();
   for (const mode of modes) {
     for (const path of mode.writablePaths) {
-      const current = owners.get(path) ?? [];
-      current.push(mode.mode);
+      const current = owners.get(path) ?? new Set<EditorMode>();
+      current.add(mode.mode);
       owners.set(path, current);
     }
   }
   return Array.from(owners.entries())
-    .filter(([path, modeOwners]) => modeOwners.length > 1 && !allowed.has(path))
+    .filter(([path, modeOwners]) => modeOwners.size > 1 && !allowed.has(path))
     .map(([path]) => path);
 }
 

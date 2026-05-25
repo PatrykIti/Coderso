@@ -5,8 +5,9 @@
 Customer proof section with quote cards, spotlight emphasis, or a static
 horizontal slider strip. The widget now supports richer authoring for social
 proof, safe avatar/background media selection, bounded section/card styling,
-optional CTA output, and local JSON/CSV import-export for larger testimonial
-sets.
+and optional CTA output. Local import/export parsing remains a domain helper
+for support tooling, but the normal widget editor no longer asks users to paste
+raw data.
 
 ## Widget ID
 
@@ -47,20 +48,18 @@ Visual owns the full product authoring surface:
 - card spacing, radius, border width, and bounded color tokens
 - contrast advisories for text/card and accent/card combinations
 - optional CTA label, published-page destination, target, and style
+- load-more pagination mode, visible count, and button label
 - slider dot navigation and zero-rating semantics
 
 ### Advanced
 
-Advanced keeps display diagnostics and large-set tooling without duplicating the
-Visual-owned spacing and display controls.
+Advanced is read-only diagnostics. It must not duplicate Visual authoring or
+ask nontechnical users for raw data.
 
-- display diagnostics for variant, spacing token, rating-zero mode, and slider
-  navigation state
-- pagination `mode`, `pageSize`, `loadMoreLabel`
-- normalization/reset helpers
-- local JSON/CSV import preview + apply
-- normalized JSON/CSV export generation
-- raw payload snapshot
+- runtime summary for variant, testimonial count, and spotlight item
+- display summaries for spacing, rating-zero mode, slider navigation, and
+  pagination
+- content-health summaries for avatar/rating completeness and CTA state
 
 ## Runtime Behavior
 
@@ -103,6 +102,9 @@ Visual-owned spacing and display controls.
 
 - The widget-local parser lives in
   `core/widgets/core/testimonialsImportExport.ts`.
+- The parser is not exposed as a normal Widget editor control. Any future
+  import/export workflow must be support-only or live in a dedicated bulk-data
+  flow with confirmation, validation, and beginner-safe copy.
 - Supported formats: local JSON array/object-with-`testimonials`, and CSV with
   the header row:
   `id,quote,quoteHtml,author,role,avatar,rating,sourceLabel`.
@@ -155,14 +157,14 @@ Visual-owned spacing and display controls.
     "loadMoreLabel": "Load more testimonials"
   },
   "style": {
-    "sectionBackground": "var(--color-surface)",
+    "sectionBackground": "#ffffff",
     "sectionGradient": "soft",
     "backgroundTone": "soft",
     "backgroundImage": "/media/testimonials-bg.jpg",
-    "cardSurface": "var(--color-bg)",
-    "cardBorder": "var(--color-border)",
-    "textColor": "var(--color-text)",
-    "accentColor": "var(--color-primary)",
+    "cardSurface": "#ffffff",
+    "cardBorder": "#e2e8f0",
+    "textColor": "#0f172a",
+    "accentColor": "#1d4ed8",
     "spacing": "md",
     "headerAlign": "center",
     "titleSize": "md",
@@ -178,5 +180,7 @@ Visual-owned spacing and display controls.
 - Contract target: Wizard seeds starter social-proof copy/count; Visual owns
   quotes, authors, avatars, ratings, CTA, pagination, and style; Advanced is
   read-only runtime diagnostics.
-- JSON/CSV import, pagination placement, and replayable duplicate ownership are
-  routed to `TASK-336-19` / `TASK-336-16`.
+- `TASK-336-19` aligns the editor with that target: pagination is Visual-owned,
+  Advanced has no writable inputs/selects/textareas/buttons/raw snapshots, color
+  authoring is swatch-only, and temporary Wizard/Visual duplicate allowances are
+  tied to the umbrella `TASK-336` one-time starter setup contract.

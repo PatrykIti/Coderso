@@ -279,6 +279,11 @@ describe("playwright widget contract smoke helpers", () => {
     ];
     expect(findDuplicateWritablePaths(duplicateModes)).toEqual(["content.title"]);
     expect(
+      findDuplicateWritablePaths([
+        makeMode({ mode: "visual", writablePaths: ["content.item", "content.item"] }),
+      ])
+    ).toEqual([]);
+    expect(
       findDuplicateWritablePaths(duplicateModes, [
         {
           path: "content.title",
