@@ -525,6 +525,12 @@ test("hero normalizer bounds new tokens and trims social proof media", () => {
       label: " Trusted by teams ",
       avatars: [
         { src: " /avatar-a.jpg ", alt: " Reviewer A " },
+        {
+          source: "library",
+          assetId: " asset-avatar ",
+          src: " /avatar-b.jpg ",
+          alt: " ",
+        },
         { src: "   ", alt: "Skip me" },
       ],
     },
@@ -554,7 +560,10 @@ test("hero normalizer bounds new tokens and trims social proof media", () => {
     rating: undefined,
     reviewCount: "2,000+",
     label: "Trusted by teams",
-    avatars: [{ src: "/avatar-a.jpg", alt: "Reviewer A" }],
+    avatars: [
+      { source: "external", assetId: undefined, src: "/avatar-a.jpg", alt: "Reviewer A" },
+      { source: "library", assetId: "asset-avatar", src: "/avatar-b.jpg", alt: undefined },
+    ],
   });
 });
 

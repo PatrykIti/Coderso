@@ -52,6 +52,8 @@ export type HeroBadge = {
 };
 
 export type HeroSocialProofAvatar = {
+  source?: HeroMediaSource;
+  assetId?: string;
   src: string;
   alt?: string;
 };
@@ -216,6 +218,8 @@ export const heroSchema = {
             additionalProperties: false,
             required: ["src"],
             properties: {
+              source: { enum: ["library", "external"] },
+              assetId: { type: "string" },
               src: { type: "string" },
               alt: { type: "string" },
             },
@@ -619,6 +623,11 @@ function normalizeHeroSocialProof(value: HeroSocialProof | undefined): HeroSocia
     .filter((avatar) => avatar && typeof avatar.src === "string" && avatar.src.trim().length > 0)
     .slice(0, 5)
     .map((avatar) => ({
+      source:
+        avatar.source === "library" || trimOptionalString(avatar.assetId)
+          ? ("library" as const)
+          : ("external" as const),
+      assetId: trimOptionalString(avatar.assetId),
       src: avatar.src.trim(),
       alt: trimOptionalString(avatar.alt),
     }));
@@ -1269,6 +1278,8 @@ const heroSetupDuplicateAllowances = [
 ] satisfies WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"];
 
 const heroSocialProofAvatarWritablePaths = Array.from({ length: 5 }, (_, index) => [
+  `socialProof.avatars.${index}.source`,
+  `socialProof.avatars.${index}.assetId`,
   `socialProof.avatars.${index}.src`,
   `socialProof.avatars.${index}.alt`,
 ]).flat();

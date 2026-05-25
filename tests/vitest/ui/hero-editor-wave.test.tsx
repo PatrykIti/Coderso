@@ -11,6 +11,8 @@ const heroState = vi.hoisted(() => {
     {
       id: "asset-hero",
       url: "/media/hero.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
       alt: "Hero alt",
       title: "Hero still",
       originalName: "hero.jpg",
@@ -18,6 +20,8 @@ const heroState = vi.hoisted(() => {
     {
       id: "asset-video",
       url: "https://cdn.example.com/demo.mp4",
+      type: "file",
+      mimeType: "video/mp4",
       alt: null,
       title: "Demo video",
       originalName: "demo.mp4",
@@ -25,6 +29,8 @@ const heroState = vi.hoisted(() => {
     {
       id: "asset-background",
       url: "/media/background.jpg",
+      type: "image",
+      mimeType: "image/jpeg",
       alt: "Backdrop",
       title: "Backdrop",
       originalName: "background.jpg",
@@ -838,12 +844,10 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
         findInputByPlaceholder(view.container, "Trusted by product and ops teams."),
         "Trusted by customer-facing teams."
       );
-      setInputValue(
-        findInputByPlaceholder(view.container, "https://cdn.example.com/avatar-1.jpg"),
-        "/avatars/a1.jpg"
-      );
       setInputValue(findInputByPlaceholder(view.container, "Reviewer avatar"), "Reviewer one");
     });
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
+    await flush();
 
     expect(latestValue).toEqual(
       expect.objectContaining({
@@ -854,10 +858,119 @@ test("HeroVisualEditor updates rich copy and social proof fields", async () => {
           rating: "4.8/5",
           reviewCount: "1,200+ reviews",
           label: "Trusted by customer-facing teams.",
-          avatars: [{ src: "/avatars/a1.jpg", alt: "Reviewer one" }],
+          avatars: [
+            {
+              source: "library",
+              assetId: "asset-hero",
+              src: "/media/hero.jpg",
+              alt: "Reviewer one",
+            },
+          ],
         }),
       })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps saved external social proof avatars replace-or-clear only", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    socialProof: {
+      enabled: true,
+      avatars: [{ src: "https://legacy.example.com/avatar.jpg", alt: "Legacy reviewer" }],
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="centered"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Saved external avatar image is configured.");
+    expect(view.container.textContent).toContain(
+      "Avatar images use the Media Library; saved external avatars stay replace-or-clear compatible."
+    );
+    expect(view.container.textContent).not.toContain("Avatar 1 URL");
+    expect(view.container.textContent).not.toContain("Use a relative path or full URL.");
+    expect(
+      findInputByPlaceholder(view.container, "https://cdn.example.com/avatar-1.jpg")
+    ).toBeUndefined();
+    expect(findMediaPickers(view.container)).toHaveLength(5);
+    expect(getMediaPickerValue(findMediaPickers(view.container)[0])).toBe("none");
+
+    clickElement(findButtonsByText(view.container, "Clear saved external avatar")[0]);
+    await flush();
+    expect(latestValue.socialProof?.avatars).toEqual([]);
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
+    await flush();
+    expect(view.container.textContent).toContain("Select an image from the Media Library.");
+    expect(latestValue.socialProof?.avatars).toEqual([]);
+
+    clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-hero")[0]);
+    await flush();
+    expect(latestValue.socialProof?.avatars?.[0]).toEqual(
+      expect.objectContaining({
+        source: "library",
+        assetId: "asset-hero",
+        src: "/media/hero.jpg",
+        alt: "Hero alt",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps library social proof avatar state selected", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  const view = mount(
+    <HeroVisualEditor
+      value={{
+        headline: "Hero",
+        socialProof: {
+          enabled: true,
+          avatars: [
+            {
+              source: "library",
+              assetId: "asset-hero",
+              src: "/media/hero.jpg",
+              alt: "Reviewer",
+            },
+          ],
+        },
+      }}
+      onChange={() => undefined}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(getMediaPickerValue(findMediaPickers(view.container)[0])).toBe("asset-hero");
+    expect(view.container.textContent).not.toContain("Saved external avatar image is configured.");
   } finally {
     view.cleanup();
   }
@@ -928,7 +1041,7 @@ test("HeroVisualEditor exposes contract metadata for visible Visual controls", a
         "media.title",
         "background.media.type",
         "background.media.title",
-        "socialProof.avatars.0.src",
+        "socialProof.avatars.0.assetId",
         "socialProof.avatars.0.alt",
         "layout.align",
         "spacing.paddingTop",

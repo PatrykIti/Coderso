@@ -99,7 +99,10 @@ Advanced must not duplicate Visual as a second design panel.
   widget rich-text sanitizer exported from `richTextSection`.
 - Plain `headline` / `body` remain the fallback when rich-copy fields are empty.
 - `socialProof` is optional and bounded: `rating`, `reviewCount`, `label`, and
-  up to five avatar rows with `src` and optional `alt`.
+  up to five avatar rows with `source`, `assetId`, `src`, and optional `alt`.
+- Social proof avatar authoring uses Media Library pickers. Existing external
+  avatar URLs remain runtime-compatible and appear in Visual as
+  replace-or-clear saved external state instead of editable URL text.
 
 ## Appearance And Contrast
 
@@ -162,7 +165,14 @@ Advanced must not duplicate Visual as a second design panel.
     "rating": "4.9/5",
     "reviewCount": "2,000+ reviews",
     "label": "Trusted by product teams.",
-    "avatars": [{ "src": "/avatars/reviewer.jpg", "alt": "Reviewer avatar" }]
+    "avatars": [
+      {
+        "source": "library",
+        "assetId": "media-1",
+        "src": "/avatars/reviewer.jpg",
+        "alt": "Reviewer avatar"
+      }
+    ]
   },
   "layout": {
     "align": "center",

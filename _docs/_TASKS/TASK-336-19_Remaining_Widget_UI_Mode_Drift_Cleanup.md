@@ -354,6 +354,20 @@ read-only diagnostics. It added these concrete cleanup requirements:
   before the final legacy-state refinements; a final `claude -p
   --permission-mode plan --output-format text` confirmation attempt timed out
   after 240 seconds without new output.
+- In Progress (2026-05-25): seventeenth implementation family continues Hero
+  cleanup with social proof avatar authoring. Hero Visual avatar rows now use
+  Media Library image pickers with additive `source`/`assetId` metadata while
+  preserving `src` as the runtime field. Existing `src`-only avatars remain
+  runtime-compatible and appear as replace-or-clear saved avatar state instead
+  of editable raw URL inputs. Focused Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-avatar-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Helper-agent review flagged source/assetId and partial
+  asset save edge cases; those were addressed before validation. Claude
+  read-only review for this avatar-only slice timed out after 240 seconds
+  without output.
 
 ## Files to Change
 

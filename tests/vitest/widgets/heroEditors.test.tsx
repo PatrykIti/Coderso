@@ -111,8 +111,11 @@ test("hero visual editor exposes rich copy, social proof, palette, and contrast 
   expect(html).toContain('data-widget-control="hero.richHeadline"');
   expect(html).toContain('data-widget-control="hero.richBody"');
   expect(html).toContain('data-widget-control="hero.socialProof.enabled"');
+  expect(html).toContain('data-widget-control="hero.socialProof.avatars.0.assetId"');
   expect(html).toContain("Hero palettes");
   expect(html).toContain("Contrast guidance");
+  expect(html).not.toContain("Avatar 1 URL");
+  expect(html).not.toContain("https://cdn.example.com/avatar-1.jpg");
 });
 
 test("hero visual editor switches image alt controls to video metadata", () => {

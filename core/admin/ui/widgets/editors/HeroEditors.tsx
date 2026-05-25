@@ -36,6 +36,7 @@ import type {
   HeroBackgroundMedia,
   HeroData,
   HeroMedia,
+  HeroSocialProofAvatar,
 } from "../../../../widgets/core/hero";
 import { normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
 import type {
@@ -161,9 +162,6 @@ const badgePlacementOptions: Array<{ id: HeroBadgePlacement; label: string }> = 
   { id: "above-headline", label: "Above headline" },
   { id: "inline-headline", label: "Inline headline" },
 ];
-
-const isValidMediaUrl = (value: string | undefined) =>
-  !value || value.startsWith("http") || value.startsWith("/");
 
 const headlineSizeOptions = ["none", "2xl", "3xl", "4xl", "5xl"] as const;
 const subheadSizeOptions = ["none", "base", "lg", "xl", "2xl"] as const;
@@ -575,6 +573,113 @@ function HeroPosterFields({
             <MediaPicker
               value={selectedPosterAssetId}
               onChange={(value) => void handlePosterAssetChange(value)}
+              multiple={false}
+              accept={["image/*"]}
+            />
+            {lookupError ? <p className="text-xs text-destructive">{lookupError}</p> : null}
+          </div>
+        )}
+      </WidgetControlRow>
+    </div>
+  );
+}
+
+function HeroAvatarAssetField({
+  avatar,
+  index,
+  onChange,
+}: {
+  avatar: Partial<HeroSocialProofAvatar>;
+  index: number;
+  onChange: (patch: Partial<HeroSocialProofAvatar>) => void;
+}) {
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const avatarSource = avatar.source ?? (avatar.assetId?.trim() ? "library" : "external");
+  const savedExternalAvatar = Boolean(avatar.src?.trim()) && avatarSource === "external";
+  const selectedAssetId = avatarSource === "library" ? (avatar.assetId ?? null) : null;
+  const avatarNumber = index + 1;
+
+  const handleAvatarAssetChange = async (value: unknown) => {
+    const assetId = typeof value === "string" ? value : null;
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    if (!assetId) {
+      onChange({ source: undefined, assetId: undefined, src: undefined, alt: undefined });
+      return;
+    }
+
+    setLookupError(null);
+    try {
+      const items = await listMediaCached({ force: true });
+      if (requestId !== requestIdRef.current) return;
+      const match = items.find((item) => item.id === assetId);
+      if (match && (match.type === "image" || match.mimeType.toLowerCase().startsWith("image/"))) {
+        onChange({
+          source: "library",
+          assetId,
+          src: match.url,
+          alt:
+            avatar.alt && avatar.alt.trim().length > 0
+              ? avatar.alt
+              : (match.alt ?? match.title ?? match.originalName ?? ""),
+        });
+      } else {
+        setLookupError("Select an image from the Media Library.");
+      }
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      if (isApiClientError(err)) {
+        setLookupError(err.message);
+      } else {
+        setLookupError("Failed to resolve avatar image.");
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <ReadonlyWidgetSummaryRow
+        id={`hero.socialProof.avatars.${index}.src`}
+        label={`Avatar ${avatarNumber} source`}
+        path={`socialProof.avatars.${index}.src`}
+        value={
+          savedExternalAvatar
+            ? "Saved external avatar"
+            : selectedAssetId
+              ? "Media library image"
+              : "No avatar image"
+        }
+        help="Avatar images are selected from the Media Library. Saved external avatar URLs can be replaced or cleared without hand-editing a URL."
+      />
+      {savedExternalAvatar ? (
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-sm text-muted-foreground">
+          <p>
+            Saved external avatar image is configured. Pick a Media Library image to replace it.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() =>
+              onChange({ source: undefined, assetId: undefined, src: undefined, alt: undefined })
+            }
+          >
+            Clear saved external avatar
+          </Button>
+        </div>
+      ) : null}
+      <WidgetControlRow
+        id={`hero.socialProof.avatars.${index}.assetId`}
+        label={`Avatar ${avatarNumber} image`}
+        path={`socialProof.avatars.${index}.assetId`}
+      >
+        {() => (
+          <div className="space-y-2">
+            <MediaPicker
+              value={selectedAssetId}
+              onChange={(value) => void handleAvatarAssetChange(value)}
               multiple={false}
               accept={["image/*"]}
             />
@@ -1405,6 +1510,8 @@ export function HeroVisualEditor({
     patch: Partial<NonNullable<HeroSocialProof["avatars"]>[number]>
   ) => {
     const nextAvatars = Array.from({ length: heroSocialProofAvatarLimit }, (_, avatarIndex) => ({
+      source: socialProof.avatars[avatarIndex]?.source,
+      assetId: socialProof.avatars[avatarIndex]?.assetId,
       src: socialProof.avatars[avatarIndex]?.src ?? "",
       alt: socialProof.avatars[avatarIndex]?.alt ?? "",
     }));
@@ -1412,8 +1519,16 @@ export function HeroVisualEditor({
       ...nextAvatars[index],
       ...patch,
     };
+    nextAvatars[index] = {
+      source: nextAvatars[index]?.source,
+      assetId: nextAvatars[index]?.assetId,
+      src: nextAvatars[index]?.src ?? "",
+      alt: nextAvatars[index]?.alt ?? "",
+    };
     while (
       nextAvatars.length > 0 &&
+      !nextAvatars[nextAvatars.length - 1]?.source &&
+      !nextAvatars[nextAvatars.length - 1]?.assetId?.trim() &&
       !nextAvatars[nextAvatars.length - 1]?.src.trim() &&
       !nextAvatars[nextAvatars.length - 1]?.alt.trim()
     ) {
@@ -2055,38 +2170,21 @@ export function HeroVisualEditor({
             <div className="space-y-3 rounded-md border border-border/70 p-3">
               <p className="text-sm font-medium">Social proof avatars</p>
               <p className="text-xs text-muted-foreground">
-                Leave unused rows empty. Avatar URLs follow the same relative-or-full-URL media
-                policy as other Hero media fields.
+                Leave unused rows empty. Avatar images use the Media Library; saved external avatars
+                stay replace-or-clear compatible.
               </p>
               {Array.from({ length: heroSocialProofAvatarLimit }, (_, index) => {
                 const avatar = socialProof.avatars[index] ?? { src: "", alt: "" };
                 return (
-                  <div key={`hero-avatar-${index}`} className="grid gap-3 md:grid-cols-2">
-                    <WidgetControlRow
-                      id={`hero.socialProof.avatars.${index}.src`}
-                      label={`Avatar ${index + 1} URL`}
-                      path={`socialProof.avatars.${index}.src`}
-                    >
-                      {(fieldProps) => (
-                        <div className="space-y-2">
-                          <Input
-                            id={fieldProps.id}
-                            value={avatar.src}
-                            onChange={(event) =>
-                              updateSocialProofAvatar(index, { src: event.target.value })
-                            }
-                            placeholder={`https://cdn.example.com/avatar-${index + 1}.jpg`}
-                            aria-labelledby={fieldProps["aria-labelledby"]}
-                            aria-describedby={fieldProps["aria-describedby"]}
-                          />
-                          {!isValidMediaUrl(avatar.src) ? (
-                            <p className="text-xs text-destructive">
-                              Use a relative path or full URL.
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </WidgetControlRow>
+                  <div
+                    key={`hero-avatar-${index}`}
+                    className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"
+                  >
+                    <HeroAvatarAssetField
+                      avatar={avatar}
+                      index={index}
+                      onChange={(patch) => updateSocialProofAvatar(index, patch)}
+                    />
                     <WidgetControlRow
                       id={`hero.socialProof.avatars.${index}.alt`}
                       label={`Avatar ${index + 1} alt text`}

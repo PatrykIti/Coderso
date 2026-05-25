@@ -969,6 +969,29 @@ URL authoring drift.
   --output-format text` confirmation attempt timed out after 240 seconds
   without new output.
 
+## TASK-336-19 Hero Avatar Authoring Evidence (2026-05-25)
+
+The seventeenth TASK-336-19 implementation family targets Hero social proof
+avatar raw URL authoring drift.
+
+- Hero Visual avatar rows no longer expose normal raw URL inputs for
+  `socialProof.avatars.*.src`.
+- Avatar replacement now uses image-only Media Library pickers with additive
+  `source`/`assetId` metadata while preserving `src` as the runtime render
+  field.
+- Saved `src`-only avatar values remain runtime-compatible and appear as
+  replace-or-clear read-only state in Visual.
+- Focused Vitest evidence covers the editor flow, SSR editor metadata,
+  renderer normalization compatibility, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/hero.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-hero-avatar-authoring-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Helper-agent review flagged source/assetId and partial asset save edge cases;
+  those were addressed before validation. Claude read-only review for this
+  avatar-only slice timed out after 240 seconds without output.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget
