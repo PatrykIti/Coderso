@@ -170,7 +170,8 @@ test("can hide the technical text input while keeping swatch overrides", () => {
     const text = view.container.querySelector('input[aria-label="Frame value"]');
     expect((swatch as HTMLInputElement | null)?.value).toBe("#ffffff");
     expect(text).toBeNull();
-    expect(view.container.textContent).toContain("Theme or custom color active");
+    expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).not.toContain("token");
 
     dispatchInputValue(swatch as HTMLInputElement, "#112233");
 

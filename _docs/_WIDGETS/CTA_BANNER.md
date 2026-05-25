@@ -166,4 +166,10 @@ Notes:
 - Contract target: Wizard seeds conversion copy and primary action; Visual owns
   badge/body/actions/background/motion/style; Advanced is read-only runtime
   diagnostics.
-- Raw style-token Advanced controls are routed to `TASK-336-19`.
+- TASK-336-19 follow-up removed raw style-token Advanced controls. Advanced
+  now shows read-only style diagnostics plus confirmed normalization/reset
+  support actions.
+- Visual color authoring uses swatch-only controls and clear actions instead of
+  raw CSS token text inputs. Existing theme tokens, transparent values, and
+  custom color strings remain compatible as saved custom color state that can
+  be replaced or cleared without typing CSS.

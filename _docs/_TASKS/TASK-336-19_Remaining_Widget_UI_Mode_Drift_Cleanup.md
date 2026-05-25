@@ -422,6 +422,22 @@ read-only diagnostics. It added these concrete cleanup requirements:
   incomplete clear coverage, and stale docs; those findings were fixed before
   final review, which reported no high/medium/low drift. Claude read-only
   review timed out after 240 seconds without output.
+- In Progress (2026-05-25): twenty-second implementation family targets CTA
+  Banner color and Advanced drift. CTA Banner Visual style/background color
+  fields now use swatch-only controls plus clear actions instead of raw
+  CSS/token text inputs. Existing theme tokens, transparent values, and custom
+  color strings remain compatible as saved custom color state that can be
+  replaced or cleared without asking nontechnical authors to type CSS.
+  Advanced no longer edits raw style tokens; it shows read-only style
+  diagnostics and keeps normalize/reset as confirmed support actions. Focused
+  Vitest evidence currently passes
+  `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-cta-color-advanced-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. Helper-agent triage ranked this as the next high-priority
+  slice; Claude independently ranked `stats-kpi` color authoring as the next
+  color slice, which remains queued after CTA.
 
 ## Files to Change
 

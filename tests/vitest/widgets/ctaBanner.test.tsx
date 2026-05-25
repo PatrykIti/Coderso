@@ -350,7 +350,7 @@ test("cta banner wizard renders onboarding fields", () => {
   expect(html).toContain("Banner layout");
   expect(html).toContain("Headline");
   expect(html).toContain("Primary CTA label");
-  expect(html).toContain("Primary CTA URL");
+  expect(html).toContain("Primary CTA destination");
   expect(html).toContain("Enable secondary CTA");
 });
 
@@ -369,9 +369,15 @@ test("cta banner visual renders section-based IA", () => {
   expect(html).toContain("Actions");
   expect(html).toContain("Colors and button styles");
   expect(html).toContain("Background and motion");
+  expect(html).toContain("Saved custom color");
+  expect(html).not.toContain('placeholder="var(--color-text)"');
+  expect(html).not.toContain('placeholder="var(--color-primary)"');
+  expect(html).not.toContain('placeholder="var(--color-bg)"');
+  expect(html).not.toContain('placeholder="var(--color-border)"');
+  expect(html).not.toContain('placeholder="var(--color-surface)"');
 });
 
-test("cta banner advanced keeps technical-only scope", () => {
+test("cta banner advanced keeps diagnostics read-only", () => {
   const html = renderToString(
     <CtaBannerAdvancedEditor
       value={ctaBannerDefaults}
@@ -381,8 +387,12 @@ test("cta banner advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Technical style tokens");
+  expect(html).toContain("Style diagnostics");
+  expect(html).toContain("Visual owns color editing");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Raw payload snapshot");
+  expect(html).not.toContain('placeholder="background token"');
+  expect(html).not.toContain('placeholder="text token"');
+  expect(html).not.toContain('placeholder="border token"');
   expect(html).not.toContain("Tertiary CTA");
 });

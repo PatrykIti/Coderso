@@ -163,7 +163,9 @@ Zasady:
 - Advanced cleanup slices convert second-editor controls into diagnostics.
   FAQ Accordion and Newsletter keep only confirm-gated normalization support
   actions in Advanced; Navigation layout/sticky/collapse controls live in
-  Visual and Advanced reports summaries only.
+  Visual and Advanced reports summaries only. CTA Banner style-token controls
+  are read-only diagnostics in Advanced, while Visual uses swatch-only color
+  controls plus clear actions.
 - Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
   are chosen from a Form picker, field mapping is selected from Form fields or
   shown as safe defaults, and external provider action URL/method/webhook

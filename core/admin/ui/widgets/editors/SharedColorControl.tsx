@@ -1,6 +1,11 @@
 import { Input } from "@/components/ui/input";
 
-import { ClearableFieldHeader, resolveColorSwatchValue } from "./ClearableFields";
+import {
+  ClearableFieldHeader,
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorSwatchValue,
+} from "./ClearableFields";
 
 type SharedColorControlProps = {
   label: string;
@@ -24,6 +29,8 @@ export function SharedColorControl({
   showValueInput = true,
 }: SharedColorControlProps) {
   const handleSwatchChange = onSwatchChange ?? onChange;
+  const hasValue = hasClearableFieldValue(value);
+  const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
 
   return (
     <div className="space-y-2">
@@ -49,24 +56,22 @@ export function SharedColorControl({
             placeholder={placeholder}
           />
         ) : (
-          <>
-            <Input
-              hidden
-              aria-hidden="true"
-              tabIndex={-1}
-              value={value ?? ""}
-              onChange={(event) => onChange(event.target.value)}
-              placeholder={placeholder}
-              className="hidden"
-            />
-            <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
-              {value
-                ? "Custom token active. Use the swatch to replace it, or Clear to inherit."
-                : "Inherited theme color. Use the swatch to override."}
-            </p>
-          </>
+          <div className="flex min-h-9 flex-wrap items-center gap-2">
+            <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+              {hasCustomValue
+                ? "Saved custom color"
+                : hasValue
+                  ? "Selected color"
+                  : "Theme default"}
+            </span>
+          </div>
         )}
       </div>
+      {!showValueInput && hasCustomValue ? (
+        <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+          A saved custom color is configured. Pick a swatch to replace it, or clear the field.
+        </p>
+      ) : null}
     </div>
   );
 }

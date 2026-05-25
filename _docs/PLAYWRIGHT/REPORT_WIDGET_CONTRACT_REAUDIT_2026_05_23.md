@@ -1084,6 +1084,30 @@ color/CSS token authoring drift.
   which reported no high/medium/low drift. Claude read-only review timed out
   after 240 seconds without output.
 
+## TASK-336-19 CTA Banner Color/Advanced Evidence (2026-05-25)
+
+The twenty-second TASK-336-19 implementation family targets CTA Banner raw
+color/CSS token authoring and writable Advanced style-token drift.
+
+- CTA Banner Visual no longer exposes raw CSS/token text inputs for style and
+  background color fields.
+- Color authoring now uses swatch-only controls plus explicit clear actions,
+  while preserving the string runtime contract for existing theme tokens,
+  transparent values, and custom color strings as replace-or-clear saved custom
+  color state.
+- CTA Banner Advanced no longer edits raw style tokens. It shows read-only
+  style diagnostics and keeps normalize/reset as confirmed support actions.
+- Focused Vitest evidence covers the shared swatch-only color helper, CTA
+  editor flow, SSR editor metadata, and strict editor contracts:
+  `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+- Targeted Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-cta-color-advanced-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Helper-agent triage ranked CTA Banner as the next high-priority slice. Claude
+  independently ranked `stats-kpi` color authoring as the next color slice;
+  that remains queued after CTA.
+
 ## Claude and Helper Agent Review Summary
 
 - Accepted: keep `Wizard`, `Visual`, and `Advanced` as the internal widget

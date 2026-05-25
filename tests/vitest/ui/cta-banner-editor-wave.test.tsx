@@ -223,6 +223,36 @@ vi.mock("@/ui/media/MediaPicker", () => ({
   ),
 }));
 
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div data-cta-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -296,6 +326,12 @@ const getInputByPlaceholder = (container: ParentNode, placeholder: string, index
   }
   return input;
 };
+
+const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
 
 const getDestinationSelect = (container: ParentNode, fieldId: string) => {
   const select = (container as ParentNode).querySelector(
@@ -561,6 +597,13 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     const backgroundSection = getSectionByTitle(container, "Background and motion");
 
     expect(getButtonsByText(layoutSection, "Selected")).toHaveLength(1);
+    expect(colorsSection.textContent).toContain("Saved custom color");
+    expect(backgroundSection.textContent).toContain("Saved custom color");
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-text)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-primary)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-bg)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(colorsSection, "var(--color-border)")).toHaveLength(0);
+    expect(findInputsByPlaceholder(backgroundSection, "var(--color-surface)")).toHaveLength(0);
     clickButton(getButtonsByText(layoutSection, "With Badge")[0]);
     expect(getLatestVariant()).toBe("with-badge");
 
@@ -673,7 +716,7 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
   }
 });
 
-test("CtaBanner advanced covers raw token updates, normalize now, reset to defaults, and payload snapshot", async () => {
+test("CtaBanner advanced keeps style diagnostics read-only and confirms support actions", async () => {
   const { CtaBannerAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
@@ -690,10 +733,12 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
     style: {
       background: "",
       text: "#111111",
+      border: "var(--cta-border)",
       borderWidth: "8" as never,
       radius: "circle" as never,
       padding: "loose" as never,
-      primaryButtonBorder: "",
+      primaryButtonBorder: "var(--cta-primary-border)",
+      secondaryButtonBorder: "var(--cta-secondary-border)",
     },
   };
 
@@ -704,27 +749,19 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
   });
 
   try {
-    setInputValue(getInputByPlaceholder(container, "background token"), "var(--cta-bg)");
-    setInputValue(getInputByPlaceholder(container, "text token"), "var(--cta-text)");
-    setInputValue(getInputByPlaceholder(container, "border token"), "var(--cta-border)");
-    setInputValue(
-      getInputByPlaceholder(container, "primary button border token"),
-      "var(--cta-primary-border)"
-    );
-    setInputValue(
-      getInputByPlaceholder(container, "secondary button border token"),
-      "var(--cta-secondary-border)"
-    );
-
-    expect(getLatestValue().style).toMatchObject({
-      background: "var(--cta-bg)",
-      text: "var(--cta-text)",
-      border: "var(--cta-border)",
-      primaryButtonBorder: "var(--cta-primary-border)",
-      secondaryButtonBorder: "var(--cta-secondary-border)",
-    });
+    const diagnosticsSection = getSectionByTitle(container, "Style diagnostics");
+    expect(diagnosticsSection.textContent).toContain("Visual owns color editing");
+    expect(diagnosticsSection.textContent).toContain("#111111");
+    expect(diagnosticsSection.textContent).toContain("var(--cta-border)");
+    expect(findInputsByPlaceholder(container, "background token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "text token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "border token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "primary button border token")).toHaveLength(0);
+    expect(findInputsByPlaceholder(container, "secondary button border token")).toHaveLength(0);
 
     clickButton(getButtonsByText(container, "Normalize now")[0]);
+    expect(container.textContent).toContain("Normalize CTA banner data?");
+    clickButton(getButtonsByText(container, "Normalize now").at(-1));
 
     expect(getLatestValue()).toMatchObject({
       content: {
@@ -750,8 +787,7 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
         },
       },
       style: {
-        background: "var(--cta-bg)",
-        text: "var(--cta-text)",
+        text: "#111111",
         border: "var(--cta-border)",
         borderWidth: "1",
         radius: "xl",
@@ -769,6 +805,8 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
     );
 
     clickButton(getButtonsByText(container, "Reset to defaults")[0]);
+    expect(container.textContent).toContain("Reset CTA banner to defaults?");
+    clickButton(getButtonsByText(container, "Reset to defaults").at(-1));
 
     expect(getLatestValue()).toEqual(ctaBannerDefaults);
     const snapshotAfterReset = container.querySelector("pre")?.textContent ?? "";

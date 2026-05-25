@@ -17,6 +17,7 @@ import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { cn } from "@/lib/utils";
 
+import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
   ctaBannerDefaults,
   normalizeCtaBannerData,
@@ -442,6 +443,25 @@ function DiagnosticsSnapshot({ value }: { value: CtaBannerData }) {
     <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
       {JSON.stringify(value, null, 2)}
     </pre>
+  );
+}
+
+function ReadonlyDiagnosticRows({
+  rows,
+}: {
+  rows: Array<{ label: string; value: string | undefined }>;
+}) {
+  return (
+    <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-start justify-between gap-3">
+          <dt className="font-medium text-foreground">{row.label}</dt>
+          <dd className="max-w-[60%] break-words text-right text-muted-foreground">
+            {row.value?.trim() ? row.value : "Theme default"}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -924,6 +944,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "text")}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Badge background"
@@ -932,6 +953,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "badgeBackground")}
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Badge text"
@@ -940,6 +962,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "badgeText")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Primary button background"
@@ -948,6 +971,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "primaryButtonBg")}
           placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Primary button text"
@@ -956,13 +980,16 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "primaryButtonText")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Primary button border"
           value={normalized.style?.primaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "primaryButtonBorder")}
           placeholder="transparent"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Secondary button background"
@@ -971,6 +998,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "secondaryButtonBg")}
           placeholder="transparent"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Secondary button text"
@@ -979,13 +1007,16 @@ export function CtaBannerVisualEditor({
           onClear={() => clearStyleField(value, onChange, "secondaryButtonText")}
           placeholder="var(--color-text)"
           pickerFallback="#0f172a"
+          showValueInput={false}
         />
         <SharedColorControl
           label="Secondary button border"
           value={normalized.style?.secondaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
+          onClear={() => clearStyleField(value, onChange, "secondaryButtonBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          showValueInput={false}
         />
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -1064,8 +1095,10 @@ export function CtaBannerVisualEditor({
           label="Border color"
           value={normalized.style?.border}
           onChange={(next) => updateStyle(value, onChange, { border: next })}
+          onClear={() => clearStyleField(value, onChange, "border")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          showValueInput={false}
         />
 
         <div className="grid gap-3 md:grid-cols-3">
@@ -1145,6 +1178,7 @@ export function CtaBannerVisualEditor({
           onClear={() => clearBackgroundField(value, onChange, "color")}
           placeholder="var(--color-surface)"
           pickerFallback="#f8fafc"
+          showValueInput={false}
         />
 
         <GradientField
@@ -1223,53 +1257,42 @@ export function CtaBannerVisualEditor({
 
 export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<CtaBannerData>) {
   const normalized = normalizeValue(value);
+  const [pendingSupportAction, setPendingSupportAction] = useState<"normalize" | "reset" | null>(
+    null
+  );
+  const styleRows = [
+    {
+      label: "Background",
+      value: normalized.background?.color ?? normalized.style?.background,
+    },
+    { label: "Text", value: normalized.style?.text },
+    { label: "Border", value: normalized.style?.border },
+    { label: "Primary button border", value: normalized.style?.primaryButtonBorder },
+    { label: "Secondary button border", value: normalized.style?.secondaryButtonBorder },
+  ];
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Technical style tokens"
-        description="Raw style token controls for integrations and fine-tuning."
+        title="Style diagnostics"
+        description="Read-only resolved CTA banner colors. Visual owns color editing."
       >
-        <Input
-          value={normalized.background?.color ?? normalized.style?.background ?? ""}
-          onChange={(event) => updateSurfaceColor(value, onChange, event.target.value)}
-          placeholder="background token"
-        />
-        <Input
-          value={normalized.style?.text ?? ""}
-          onChange={(event) => updateStyle(value, onChange, { text: event.target.value })}
-          placeholder="text token"
-        />
-        <Input
-          value={normalized.style?.border ?? ""}
-          onChange={(event) => updateStyle(value, onChange, { border: event.target.value })}
-          placeholder="border token"
-        />
-        <Input
-          value={normalized.style?.primaryButtonBorder ?? ""}
-          onChange={(event) =>
-            updateStyle(value, onChange, { primaryButtonBorder: event.target.value })
-          }
-          placeholder="primary button border token"
-        />
-        <Input
-          value={normalized.style?.secondaryButtonBorder ?? ""}
-          onChange={(event) =>
-            updateStyle(value, onChange, { secondaryButtonBorder: event.target.value })
-          }
-          placeholder="secondary button border token"
-        />
+        <ReadonlyDiagnosticRows rows={styleRows} />
       </EditorSection>
 
       <EditorSection
         title="Normalization and safeguards"
-        description="Apply deterministic fallbacks for all CTA banner fields."
+        description="Confirmed support actions for deterministic CTA banner repair."
       >
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPendingSupportAction("normalize")}
+          >
             Normalize now
           </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(ctaBannerDefaults)}>
+          <Button type="button" variant="outline" onClick={() => setPendingSupportAction("reset")}>
             Reset to defaults
           </Button>
         </div>
@@ -1278,6 +1301,32 @@ export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<C
       <EditorSection title="Raw payload snapshot">
         <DiagnosticsSnapshot value={normalized} />
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingSupportAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSupportAction(null);
+        }}
+        title={
+          pendingSupportAction === "reset"
+            ? "Reset CTA banner to defaults?"
+            : "Normalize CTA banner data?"
+        }
+        description={
+          pendingSupportAction === "reset"
+            ? "Replace this CTA banner configuration with the default content and style values."
+            : "Apply schema-owned fallbacks and remove unsupported CTA banner values."
+        }
+        confirmLabel={pendingSupportAction === "reset" ? "Reset to defaults" : "Normalize now"}
+        onConfirm={() => {
+          if (pendingSupportAction === "reset") {
+            onChange(ctaBannerDefaults);
+          } else if (pendingSupportAction === "normalize") {
+            onChange(normalizeValue(value));
+          }
+          setPendingSupportAction(null);
+        }}
+      />
     </div>
   );
 }
