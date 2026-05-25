@@ -34,15 +34,18 @@ None.
 ### Advanced
 - read-only resolved template diagnostics
 - read-only `metadata.version` summary
-- read-only runtime payload snapshot
+- read-only resolved content summary; raw JSON payload is not shown in the
+  normal Advanced UI
+- internal template ids and resolver error codes are mapped to human-readable
+  setup/resolution status
 - no writable template selection or presentation controls
 
 ## Runtime Behavior Notes
 
 - Resolves the selected widget template into `resolved.blocks`.
 - Renders template blocks in order as a single page section.
-- Draft templates only render in preview mode; public runtime shows a placeholder.
-- Missing template or looped template references render a safe placeholder.
+- Draft, missing, looped, or otherwise errored template references render a safe
+  placeholder even if stale resolved blocks are still present in legacy payloads.
 - Exposes deterministic runtime markers:
   - `data-template-section`
   - `data-template-section-state`

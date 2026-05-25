@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 950 | 2026-05-25 | Template Section editor ownership | CMS Widgets/Admin UI/Runtime/Contracts/QA/Docs |
 | 949 | 2026-05-25 | Grid Columns editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 948 | 2026-05-25 | Section editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 947 | 2026-05-25 | Testimonials editor ownership | CMS Widgets/Admin UI/Contracts/QA/Docs |

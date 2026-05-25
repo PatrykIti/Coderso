@@ -93,21 +93,29 @@ vi.mock("@/components/ui/select", () => {
       value?: string;
       disabled?: boolean;
     }) => (
-      <select
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onValueChange?.(event.target.value)}
-      >
-        {collectOptions(children).map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <>
+        <select
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onValueChange?.(event.target.value)}
+        >
+          {collectOptions(children).map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {children}
+      </>
     ),
     SelectContent: () => null,
     SelectItem: () => null,
-    SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children ?? null}</>,
+    SelectTrigger: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLSpanElement> & { children?: React.ReactNode }) => (
+      <span {...props}>{children ?? null}</span>
+    ),
     SelectValue: ({
       children,
       placeholder,
@@ -183,7 +191,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("TemplateSection editors cover template selection, draft badge, reset, and advanced payload preview", async () => {
+test("TemplateSection editors cover template selection, draft badge, reset, and advanced summaries", async () => {
   const {
     TemplateSectionAdvancedEditor,
     TemplateSectionVisualEditor,
@@ -247,11 +255,23 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     );
     expect(view.container.textContent).toContain("Runtime behavior");
     expect(view.container.textContent).toContain("Template presentation");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Resolved content summary");
+    expect(view.container.textContent).toContain("1 content block resolved: Rich Text.");
+    expect(view.container.textContent).toContain("The selected template is still a draft.");
+    expect(view.container.textContent).not.toContain("Template ID");
+    expect(view.container.textContent).not.toContain("template_unpublished");
     expect(
       view.container
         .querySelector("[data-widget-editor-section='template-section.wizard.template-setup']")
         ?.getAttribute("data-widget-editor-mode")
     ).toBe("wizard");
+    const wizardTemplateField = view.container.querySelector(
+      "#template-section-wizard-template-id-field"
+    );
+    expect(wizardTemplateField?.getAttribute("aria-labelledby")).toBe(
+      "template-section-wizard-template-id-label"
+    );
 
     const selects = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selects[0], "template-2");
@@ -286,15 +306,17 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     expect(view.container.textContent).toContain("Promo grid");
     expect(view.container.textContent).toContain("Draft promotional grid");
 
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"id": "block-1"');
-    expect(preview?.textContent).toContain('"error": "template_unpublished"');
+    expect(view.container.textContent).toContain("Resolved content summary");
+    expect(view.container.textContent).toContain("No content blocks resolved.");
+    expect(view.container.textContent).toContain("No resolution problem detected.");
+    expect(view.container.textContent).not.toContain("Template ID");
+    expect(view.container.textContent).not.toContain("template_unpublished");
 
     setSelectValue(selects[0], "__no-template__");
 
     expect(latestValue.templateId).toBe("");
     expect(latestValue.templateName).toBe("");
-    expect(latestValue.resolved?.blocks).toHaveLength(1);
+    expect(latestValue.resolved).toBeUndefined();
     expect(view.container.textContent).toContain(
       "Select a widget template to render in this section."
     );

@@ -16,9 +16,10 @@ import {
   type TemplateSectionData,
 } from "../../../../widgets/core/templateSection";
 import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetBlock, WidgetEditorProps } from "../../../../widgets/types";
 import {
   ReadonlyWidgetSummaryRow,
+  type WidgetControlFieldProps,
   WidgetControlRow,
   WidgetEditorSection,
 } from "./WidgetEditorControls";
@@ -40,13 +41,17 @@ function updateValue(
 ) {
   const normalized = normalizeTemplateSectionData(value);
   const { resolved: patchResolved, ...rest } = patch;
-  const nextResolved = patchResolved === undefined ? normalized.resolved : patchResolved;
+  const hasResolvedPatch = Object.prototype.hasOwnProperty.call(patch, "resolved");
   const next: TemplateSectionData = {
     ...normalized,
     ...rest,
   };
-  if (nextResolved) {
-    next.resolved = nextResolved;
+  if (hasResolvedPatch) {
+    if (patchResolved) {
+      next.resolved = patchResolved;
+    } else {
+      delete next.resolved;
+    }
   }
   onChange(next);
 }
@@ -54,9 +59,11 @@ function updateValue(
 function TemplateSelectField({
   value,
   onChange,
+  fieldProps,
 }: {
   value: TemplateSectionData;
   onChange: (next: TemplateSectionData) => void;
+  fieldProps: WidgetControlFieldProps;
 }) {
   const { items: templates, isLoading, error } = useWidgetTemplates();
 
@@ -88,7 +95,7 @@ function TemplateSelectField({
       <div className="space-y-2">
         <p className="text-sm font-medium">Template selection</p>
         <Select value={selectValue} onValueChange={handleSelect}>
-          <SelectTrigger>
+          <SelectTrigger {...fieldProps}>
             <SelectValue
               placeholder={isLoading ? "Loading templates..." : "Choose a widget template"}
             />
@@ -123,6 +130,44 @@ function TemplateSelectField({
       )}
     </div>
   );
+}
+
+function humanizeTemplateError(error: string | undefined): string {
+  switch (error) {
+    case "template_missing":
+      return "The selected template could not be found.";
+    case "template_unpublished":
+      return "The selected template is still a draft.";
+    case "template_loop":
+      return "This template contains itself and cannot be rendered safely.";
+    case undefined:
+    case "":
+      return "No resolution problem detected.";
+    default:
+      return "The template could not be resolved.";
+  }
+}
+
+function humanizeWidgetType(type: string | undefined): string {
+  if (!type) return "Unknown content";
+  return type
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function summarizeResolvedBlocks(blocks: WidgetBlock[] | undefined): string {
+  if (!Array.isArray(blocks) || blocks.length === 0) return "No content blocks resolved.";
+  const typeCounts = new Map<string, number>();
+  for (const block of blocks) {
+    const label = humanizeWidgetType(block.type);
+    typeCounts.set(label, (typeCounts.get(label) ?? 0) + 1);
+  }
+  const typeSummary = Array.from(typeCounts.entries())
+    .map(([label, count]) => (count === 1 ? label : `${label} (${count})`))
+    .join(", ");
+  return `${blocks.length} content block${blocks.length === 1 ? "" : "s"} resolved: ${typeSummary}.`;
 }
 
 function TemplatePresentationEditor({
@@ -209,8 +254,12 @@ export function TemplateSectionWizardEditor({
           label="Template selection"
           path="templateId"
         >
-          {() => (
-            <TemplateSelectField value={normalizeTemplateSectionData(value)} onChange={onChange} />
+          {(fieldProps) => (
+            <TemplateSelectField
+              value={normalizeTemplateSectionData(value)}
+              onChange={onChange}
+              fieldProps={fieldProps}
+            />
           )}
         </WidgetControlRow>
       </WidgetEditorSection>
@@ -251,7 +300,6 @@ export function TemplateSectionVisualEditor({
 
 export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<TemplateSectionData>) {
   const normalized = normalizeTemplateSectionData(value);
-  const resolvedPayload = normalized.resolved ?? { blocks: [] };
   const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
   const resolvedBlockCount = Array.isArray(normalized.resolved?.blocks)
     ? normalized.resolved.blocks.length
@@ -267,10 +315,13 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
         description="Read-only setup and resolution state for troubleshooting."
       >
         <ReadonlyWidgetSummaryRow
-          id="template-section.advanced.template-id"
-          label="Template ID"
+          id="template-section.advanced.template-selection"
+          label="Template selection"
           path="templateId"
-          value={normalized.templateId || "Not selected"}
+          value={
+            normalized.templateName ||
+            (normalized.templateId ? "Template selected" : "Not selected")
+          }
         />
         <ReadonlyWidgetSummaryRow
           id="template-section.advanced.template-name"
@@ -300,22 +351,22 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           id="template-section.advanced.resolution-error"
           label="Resolution error"
           path="resolved.error"
-          value={normalized.resolved?.error || "None"}
+          value={humanizeTemplateError(normalized.resolved?.error)}
         />
       </WidgetEditorSection>
       <WidgetEditorSection
         id="template-section.advanced.runtime-payload"
         mode="advanced"
         role="diagnostics"
-        title="Runtime payload"
-        description="Read-only normalized template payload used by the renderer."
+        title="Resolved content summary"
+        description="Read-only summary of the template content used by the renderer."
       >
-        <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-          Resolved payload (read-only)
-          <pre className="mt-2 overflow-auto rounded-md bg-muted/40 p-3 text-[11px]">
-            {JSON.stringify(resolvedPayload, null, 2)}
-          </pre>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.resolved-content"
+          label="Resolved content"
+          path="resolved.blocks"
+          value={summarizeResolvedBlocks(normalized.resolved?.blocks)}
+        />
       </WidgetEditorSection>
       <WidgetEditorSection
         id="template-section.advanced.runtime-rules"

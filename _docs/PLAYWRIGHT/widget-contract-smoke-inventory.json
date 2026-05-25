@@ -27,7 +27,7 @@
       "publicPath": "/ctr-template-section-2305",
       "publicFixtureStatus": "published",
       "requiredModes": ["visual", "advanced"],
-      "notes": "Hidden from the regular page-builder picker in the 2026-05-23 re-audit; published fixture verifies the runtime empty-template contract."
+      "notes": "Hidden from the regular page-builder picker in the 2026-05-23 re-audit; completed daily fixture validates Visual and Advanced while one-time Wizard remains covered by lifecycle/source tests."
     },
     {
       "widgetType": "grid-columns",

@@ -678,6 +678,22 @@ read-only diagnostics. It added these concrete cleanup requirements:
   and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
   `metadataGaps=0` after clearing the stale Vite optimized dependency cache and
   restarting `coderso-dev-core-host`.
+- In Progress (2026-05-25): next family targets `template-section`
+  editor-mode and runtime drift. Wizard remains one-time template setup, Visual
+  owns daily presentation metadata only, and Advanced now renders read-only
+  human summaries instead of raw template ids, resolver error codes, or JSON
+  payload previews. Template selection/clear now explicitly drops stale
+  `resolved` payloads, and runtime prioritizes resolver errors over stale
+  `resolved.blocks` so draft/missing/looped templates render safe placeholders.
+  A fresh helper-agent audit found stale resolved-payload retention, raw
+  Advanced diagnostics, error-with-blocks runtime rendering, stale `.tmp`
+  evidence, and stale docs; those findings are fixed. Focused Vitest evidence
+  passes
+  `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx tests/vitest/widgets/templateSection.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Targeted Playwright strict smoke evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-template-section-advanced-readonly-2026-05-25.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
 
 ## Files to Change
 

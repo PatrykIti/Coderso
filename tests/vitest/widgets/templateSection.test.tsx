@@ -50,6 +50,25 @@ test("template section renders placeholder when empty", () => {
   expect(html).toContain("Select a widget template");
 });
 
+test("template section placeholder does not expose raw template ids", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "tpl_01HT_RAW_IDENTIFIER",
+        resolved: {
+          error: "template_missing",
+        },
+      }}
+      variant="default"
+    />
+  );
+  const visibleText = html.replace(/<[^>]*>/g, "");
+
+  expect(html).toContain("Template section");
+  expect(html).toContain("Template not found. Pick another template.");
+  expect(visibleText).not.toContain("tpl_01HT_RAW_IDENTIFIER");
+});
+
 test("template section renders resolved blocks", () => {
   clearWidgets();
   registerWidget(
@@ -84,6 +103,66 @@ test("template section renders resolved blocks", () => {
   expect(html).toContain('data-template-section-version="v2"');
   expect(html).toContain("Homepage Hero");
   expect(html).toContain('data-dummy="true"');
+});
+
+test("template section renders safe placeholder when resolution has an error", () => {
+  clearWidgets();
+  registerWidget(
+    createTemplateSectionWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget(dummyWidget);
+
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Draft Hero Cluster",
+        resolved: {
+          error: "template_unpublished",
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain("Template is not published yet.");
+  expect(html).not.toContain('data-dummy="true"');
+});
+
+test("template section renders safe placeholder when a missing template carries stale blocks", () => {
+  clearWidgets();
+  registerWidget(
+    createTemplateSectionWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+  registerWidget(dummyWidget);
+
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Missing Hero Cluster",
+        resolved: {
+          error: "template_missing",
+          blocks: [{ id: "dummy-1", type: "dummy", variant: "default", data: {} }],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain("Template not found. Pick another template.");
+  expect(html).not.toContain('data-dummy="true"');
 });
 
 test("template section schema accepts runtime payload", () => {

@@ -111,7 +111,7 @@ const templateSectionEditorContract = {
     {
       mode: "advanced",
       id: "template-section.advanced.runtime-payload",
-      title: "Runtime payload",
+      title: "Resolved content summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["resolved.blocks", "resolved.error"],
@@ -162,8 +162,6 @@ const resolveTemplateLabel = (data: TemplateSectionData) => {
   if (previewLabel) return previewLabel;
   const name = data.templateName?.trim();
   if (name) return name;
-  const id = data.templateId?.trim();
-  if (id) return id;
   return "Template section";
 };
 
@@ -224,7 +222,7 @@ export function TemplateSectionBlock({
   const previewLabel = metadata.previewLabel?.trim();
   const version = metadata.version?.trim();
 
-  if (!blocks.length) {
+  if (normalized.resolved?.error || !blocks.length) {
     return (
       <TemplateSectionPlaceholder
         label={label}

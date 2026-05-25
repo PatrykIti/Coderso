@@ -26,15 +26,15 @@ technical diagnostics separate.
   guidance.
 - `Visual` owns public-facing presentation of the selected template section,
   including label/copy/surface controls if they exist.
-- `Advanced` owns resolved template diagnostics, internal ids, version/source
-  summaries, and read-only payload previews.
+- `Advanced` owns resolved template diagnostics, version/source summaries, and
+  read-only content summaries without exposing raw JSON payloads or internal ids
+  in the normal UI.
 
 Current TASK-336-03 smoke evidence confirmed the widget after implementation:
 targeted admin smoke for `template-section` passed with `adminFailures=0` and
-`metadataGaps=0` on 2026-05-24. The widget remains documented as missing a
-standalone public fixture in the smoke inventory because it is hidden from the
-regular picker; frontend fixture closure remains part of `TASK-336-15` /
-`TASK-336-17`.
+`metadataGaps=0` on 2026-05-24. TASK-336-19 later supersedes this with durable
+Visual/Advanced plus public fixture evidence for `/ctr-template-section-2305`
+under `_docs/PLAYWRIGHT/`.
 
 ## Sub-Tasks
 
@@ -154,12 +154,25 @@ Final ownership:
 - `Wizard` owns template setup through `templateId` and derived `templateName`.
 - `Visual` owns presentation metadata (`metadata.previewLabel`,
   `metadata.category`) and shows the active template as a summary.
-- `Advanced` is read-only diagnostics/runtime payload for template id/name,
-  metadata version, resolved blocks, and resolution errors.
+- `Advanced` is read-only diagnostics/content summary for template selection,
+  template name, metadata version, resolved block count/types, and
+  human-readable resolution errors.
 
 Validation:
 
 - `bun run test:vitest -- tests/vitest/ui/template-section-editor-wave.test.tsx tests/vitest/widgets/templateSection.test.tsx tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/widgets/searchBox.test.tsx tests/vitest/widgets/editorContract.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun scripts/playwright-widget-contract-smoke.ts --session widget-contract-task-336-04-05 --widget template-section --skip-front --output-json .tmp/widget-smoke-template-section.json --output-md .tmp/widget-smoke-template-section.md`
+- Historical TASK-336-04 admin-only smoke is superseded by the durable
+  TASK-336-19 strict Visual/Advanced/public fixture evidence below.
+
+TASK-336-19 supersession on 2026-05-25:
+
+- `Advanced` no longer renders a raw JSON payload preview, raw template ids, or
+  resolver error codes; it shows human summaries.
+- Selecting or clearing a template explicitly clears stale `resolved` payloads.
+- Runtime prioritizes resolution errors over stale resolved blocks and renders a
+  safe placeholder for errored template references.
+- Durable strict Playwright evidence is now stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-template-section-advanced-readonly-2026-05-25.*`
+  and includes the public fixture path.

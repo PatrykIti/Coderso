@@ -84,12 +84,15 @@ mode-specific ownership:
 Targeted admin smoke evidence:
 
 - `template-section`: `adminFailures=0`, `metadataGaps=0`
-  (`.tmp/widget-smoke-template-section.json`).
+  in the historical TASK-336-04 admin-only run. TASK-336-19 supersedes this
+  with durable strict Visual/Advanced plus public fixture evidence in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-template-section-advanced-readonly-2026-05-25.*`.
 - `search-box`: rerun `adminFailures=0`, `metadataGaps=0`
   (`.tmp/widget-smoke-search-box-rerun.json`).
 
-The standalone public fixture gaps for both widgets remain assigned to
-`TASK-336-15` / `TASK-336-17`; this update closes admin ownership only.
+The standalone public fixture gap for `template-section` is superseded by the
+TASK-336-19 strict smoke for `/ctr-template-section-2305`; `search-box`
+fixture closure remains tracked separately.
 
 ## 2026-05-24 TASK-336-06 Ownership Update
 
@@ -238,7 +241,7 @@ The page-builder scope is therefore 38 widgets:
 | Widget | Public page coverage | Prior `_docs/PLAYWRIGHT` report | Notes |
 |---|---:|---:|---|
 | `section` | yes | yes | Published test page exists. |
-| `template-section` | no | no | Hidden from picker in `WidgetPicker`; no direct public fixture found. |
+| `template-section` | yes | yes | Hidden from picker in `WidgetPicker`; TASK-336-19 strict smoke covers `/ctr-template-section-2305` with durable Visual/Advanced and public fixture evidence. |
 | `grid-columns` | yes | yes | Public fixture exists but only shallow visual coverage. |
 | `split-layout` | yes | yes | Public fixture is effectively empty. |
 | `tabs` | yes | yes | Interaction smoke passed. |
