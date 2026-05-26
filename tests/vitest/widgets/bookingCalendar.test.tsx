@@ -52,6 +52,12 @@ test("booking calendar exposes a strict v2 editor contract", () => {
       .flatMap((section) => section.writablePaths)
       .some((path) => path.startsWith("style."))
   ).toBe(false);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .flatMap((section) => section.writablePaths)
+  ).toEqual([]);
+  expect(bookingCalendarDefaults.style).toBeUndefined();
 });
 
 test("booking calendar normalizes slots endpoint to a same-origin relative path", () => {
@@ -399,5 +405,5 @@ test("booking calendar editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(advanced).toContain("Runtime endpoint");
+  expect(advanced).toContain("Runtime route");
 });

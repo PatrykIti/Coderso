@@ -165,7 +165,6 @@ export const appointmentFormEditorContract: WidgetEditorContract = {
       title: "Custom fields",
       role: "content",
       writablePaths: [
-        "customFields.id",
         "customFields.label",
         "customFields.type",
         "customFields.required",
@@ -203,9 +202,10 @@ export const appointmentFormEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "appointment-form.advanced.runtime-endpoint",
-      title: "Runtime endpoint",
-      role: "technical",
-      writablePaths: ["submissionEndpoint"],
+      title: "Runtime route",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["submissionEndpoint", "flowId"],
     },
     {
       mode: "advanced",
@@ -213,13 +213,7 @@ export const appointmentFormEditorContract: WidgetEditorContract = {
       title: "Submission security",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: [
-        "resolved.submissionNonce",
-        "resolved.captcha",
-        "resolved.captcha.provider",
-        "resolved.captcha.action",
-        "resolved.error",
-      ],
+      readOnlyPaths: ["resolved.submissionNonce", "resolved.captcha", "resolved.error"],
     },
   ],
 };
@@ -266,13 +260,6 @@ export const appointmentFormDefaults: AppointmentFormData = {
     termsUrl: "",
   },
   submissionEndpoint: "/api/booking/reservations",
-  style: {
-    frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
-    frameBorderColor: "var(--color-border)",
-    summaryBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-    summaryBorderColor: "color-mix(in srgb, var(--color-border) 70%, transparent)",
-    submitBackground: "var(--color-primary)",
-  },
 };
 
 const text = (value: string | undefined, fallback: string) => {

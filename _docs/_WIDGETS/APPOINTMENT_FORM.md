@@ -23,13 +23,13 @@ future product scope rather than an implicit variant of this widget.
 ## Editor Modes
 
 ### Wizard
-- flow key
-- same-surface Booking Calendar pairing feedback
+- Booking Calendar picker; the technical pairing key is managed by the builder
+- same-surface pairing feedback
 
 ### Visual
 - variant selection
-- locale override
-- success redirect URL
+- form language preset
+- page-first after-submit destination picker
 - title/description
 - submit/loading/success copy
 - slot summary copy
@@ -39,17 +39,17 @@ future product scope rather than an implicit variant of this widget.
 - truthful field visibility and required toggles
 - phone validation presets and help copy
 - notes length limit
-- consent label/required/privacy/terms controls
+- consent label/required plus page-first privacy/terms pickers
 - custom fields
 - surface color swatches, including submit text color
 
 ### Advanced
-- runtime endpoint override
+- read-only reservation route status and booking flow summary
 - read-only runtime diagnostics for submission nonce, captcha presence, and runtime error
 
 Wizard/Visual do not ask nontechnical editors to type regex patterns or CSS
-tokens. Advanced diagnostics redact server-injected nonce values and show
-presence only.
+tokens, raw URLs, flow keys, or endpoint paths. Advanced diagnostics redact
+server-injected nonce values and show presence only.
 
 ## Runtime Behavior Notes
 
@@ -59,7 +59,9 @@ presence only.
   state before re-enabling the form.
 - Selected-slot summary can render service/resource context and uses the widget
   locale override when configured.
-- Success redirect is limited to relative or same-origin targets.
+- Success redirect and consent links are authored through page pickers in
+  Wizard/Visual. Legacy custom destinations remain compatible as replace-or-
+  clear state.
 - Consent metadata and CAPTCHA token acquisition stay backend-owned; widget data
   does not store provider secrets.
 
@@ -135,3 +137,6 @@ shared control state is routed to `TASK-256-02`.
   cache layer.
 - `UX-04` clearable style inheritance-state indicators route through
   `TASK-256-02`.
+- Style fields are optional and absent by default. Runtime theme classes provide
+  the default frame, summary, and submit appearance until an author chooses
+  explicit swatches in Visual.

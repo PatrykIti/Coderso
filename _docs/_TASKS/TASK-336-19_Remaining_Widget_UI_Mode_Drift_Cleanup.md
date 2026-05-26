@@ -1059,6 +1059,30 @@ read-only diagnostics. It added these concrete cleanup requirements:
   smoke attempt exposed stale Vite optimized dependencies (`504 Outdated
   Optimize Dep`); clearing `core/node_modules/.vite` and restarting
   `coderso-dev-core-host` fixed the false fixture gap.
+- In Progress (2026-05-26): Booking Calendar and Appointment Form residual
+  drift is addressed after helper-agent and Claude read-only UX reviews flagged
+  raw flow-key authoring, writable Advanced endpoint overrides, raw Visual
+  destination URLs, raw locale text, missing control-path metadata, seeded CSS
+  token defaults, and Appointment Form's phantom `customFields.id` writable
+  path. Booking Calendar now uses a picker-style booking flow setup, friendly
+  service/resource labels, locale presets, swatch-only style controls with
+  explicit metadata, absent-by-default style data, and read-only Advanced route,
+  flow, default, catalog, token, and runtime diagnostics. Appointment Form now
+  uses a Booking Calendar picker, page-first destination pickers for success/
+  privacy/terms, locale presets, swatch-only style controls with explicit
+  metadata, absent-by-default style data, no editable Advanced submission
+  endpoint, and redacted human captcha/nonce diagnostics. Targeted Vitest
+  evidence passes `bun run test:vitest -- tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/ui/link-destination-field.test.tsx`.
+  Standard strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-booking-calendar-flow-link-2026-05-26.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-appointment-form-flow-link-2026-05-26.*`;
+  both report `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused UI probe in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-booking-appointment-focused-2026-05-26.*`
+  reports no Wizard tab before re-entry, visible `Run setup again`, Visual
+  raw technical inputs `0`, Advanced writable paths `0`, Advanced raw inputs
+  `0`, Advanced `<pre>` payloads `0`, and missing metadata `0`.
 
 ## Files to Change
 

@@ -126,9 +126,11 @@ type EditorKind = "wizard" | "visual" | "advanced";
 const renderEditor = async ({
   editor,
   initialValue,
+  context,
 }: {
   editor: EditorKind;
   initialValue: BookingCalendarData;
+  context?: WidgetEditorContext;
 }) => {
   const {
     BookingCalendarAdvancedEditor,
@@ -160,6 +162,7 @@ const renderEditor = async ({
         }}
         variant="default"
         onVariantChange={() => undefined}
+        context={context}
       />
     );
   };
@@ -191,12 +194,23 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
       refreshLabel: "   ",
       intervalMinutes: 999,
     },
+    context: {
+      surface: "page-builder",
+      blockId: "calendar-1",
+      bookingFlows: {
+        calendars: [
+          { blockId: "calendar-1", flowId: "booking-flow", label: "Current calendar" },
+          { blockId: "calendar-2", flowId: "concierge-flow", label: "Concierge calendar" },
+        ],
+      },
+    },
   });
 
   try {
     expect(
-      (findInputByLabel(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value
-    ).toBe(bookingCalendarDefaults.flowId);
+      (findSelectByLabel(view.container, "Booking flow") as HTMLSelectElement | null | undefined)
+        ?.value
+    ).toBe("__coderso_booking_flow_default__");
     expect(findInputByLabel(view.container, "Title")).toBeUndefined();
     expect(findTextareaByLabel(view.container, "Description")).toBeUndefined();
     expect(
@@ -204,7 +218,13 @@ test("BookingCalendar wizard editor normalizes defaults and clamps interval chan
         ?.value
     ).toBe("180");
 
-    setInputValue(findInputByLabel(view.container, "Flow key"), " concierge-flow ");
+    React.act(() => {
+      const bookingFlow = findSelectByLabel(view.container, "Booking flow");
+      if (bookingFlow instanceof HTMLSelectElement) {
+        bookingFlow.value = "calendar-2";
+        bookingFlow.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
     setInputValue(findInputByLabel(view.container, "Slot interval (minutes)"), "not-a-number");
     setInputValue(findInputByLabel(view.container, "Default date"), "2030-02-15");
     setInputValue(findInputByLabel(view.container, "Minimum date"), "2030-02-10");
@@ -352,50 +372,21 @@ test("BookingCalendar advanced editor normalizes resolved payload and keeps diag
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Services: 1 · Resources: 1")
     );
-    expect(
-      (findInputByLabel(view.container, "Slots endpoint") as HTMLInputElement | null | undefined)
-        ?.value
-    ).toBe(bookingCalendarDefaults.slotsEndpoint);
-    expect(normalizeText(view.container.textContent)).toContain("default service idsvc-2");
-    expect(normalizeText(view.container.textContent)).toContain("default resource idres-2");
+    expect(findInputByLabel(view.container, "Slots endpoint")).toBeUndefined();
+    expect(normalizeText(view.container.textContent)).toContain("slot loading routedefault");
+    expect(normalizeText(view.container.textContent)).toContain(
+      "default servicesaved default service"
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      "default resourcesaved default resource"
+    );
+    expect(view.container.textContent).not.toContain("svc-2");
+    expect(view.container.textContent).not.toContain("res-2");
     expect(view.container.textContent).toContain("resolver-timeout");
-    expect(findSelectByLabel(view.container, "Default service ID")).toBeUndefined();
-    expect(findSelectByLabel(view.container, "Default resource ID")).toBeUndefined();
+    expect(findSelectByLabel(view.container, "Default service")).toBeUndefined();
+    expect(findSelectByLabel(view.container, "Default resource")).toBeUndefined();
     expect(findInputByLabel(view.container, "Runtime error flag")).toBeUndefined();
-
-    setInputValue(findInputByLabel(view.container, "Slots endpoint"), " /api/proxy/booking/slots ");
-
-    const withEndpointOverride = view.getLatestValue();
-    expect(withEndpointOverride.slotsEndpoint).toBe("/api/proxy/booking/slots");
-    expect(withEndpointOverride.defaultServiceId).toBe("svc-2");
-    expect(withEndpointOverride.defaultResourceId).toBe("res-2");
-    expect(withEndpointOverride.resolved?.slotsToken).toBeNull();
-    expect(withEndpointOverride.resolved?.services).toEqual([
-      {
-        id: "svc-1",
-        name: "Intro call",
-        description: "Planning session",
-        durationMinutes: 44,
-        bufferBeforeMinutes: 0,
-        bufferAfterMinutes: 2,
-        priceCents: 0,
-        currency: "usd",
-        status: "active",
-        submissionAccess: "internal",
-        resourceIds: ["res-1"],
-      },
-    ]);
-    expect(withEndpointOverride.resolved?.resources).toEqual([
-      {
-        id: "res-1",
-        name: "Room A",
-        type: "room",
-        timezone: "Europe/Warsaw",
-        capacity: 1,
-        status: "inactive",
-      },
-    ]);
-    expect(withEndpointOverride.resolved?.error).toBe("resolver-timeout");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -479,8 +470,12 @@ test("BookingCalendar visual editor updates context and date-picker controls", a
       if (showDescription instanceof HTMLInputElement) {
         showDescription.click();
       }
+      const dateLanguage = findSelectByLabel(view.container, "Date language");
+      if (dateLanguage instanceof HTMLSelectElement) {
+        dateLanguage.value = "pl-PL";
+        dateLanguage.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     });
-    setInputValue(findInputByLabel(view.container, "Summary locale"), "pl-PL");
     setInputValue(
       findInputByLabel(view.container, "Empty state"),
       "Contact us for manual booking."

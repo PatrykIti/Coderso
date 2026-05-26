@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-05-26T04:12:38Z",
+  "session": "widget-contract-smoke-task-336-19-booking-focused",
+  "tool": "playwright-cli",
+  "passed": true,
+  "checks": {
+    "initialWizardTabs": 0,
+    "runSetupAgainVisible": true,
+    "visualMissingMetadata": 0,
+    "advancedMissingMetadata": 0,
+    "advancedWritablePaths": 0,
+    "advancedPrePayloads": 0,
+    "visualRawTechnicalInputs": 0,
+    "advancedRawInputs": 0,
+    "rawFlowKeyText": false,
+    "rawEndpointText": false,
+    "rawUrlLabelText": false,
+    "rawLocaleLabelText": false,
+    "captchaEnumText": false
+  },
+  "results": [
+    {
+      "widgetType": "booking-calendar",
+      "passed": true,
+      "wizardTabInitial": 0,
+      "runSetupAgainVisible": true,
+      "appointmentDestinationFields": 0,
+      "visualMissingMetadata": 0,
+      "advancedMissingMetadata": 0,
+      "visualRawTechnicalInputs": 0,
+      "advancedWritablePaths": 0,
+      "advancedRawInputs": 0,
+      "advancedPrePayloads": 0,
+      "rawTextMatches": {
+        "flowKey": false,
+        "endpointInput": false,
+        "rawUrlLabel": false,
+        "rawLocaleLabel": false,
+        "captchaEnums": false
+      }
+    },
+    {
+      "widgetType": "appointment-form",
+      "passed": true,
+      "wizardTabInitial": 0,
+      "runSetupAgainVisible": true,
+      "appointmentDestinationFields": 1,
+      "visualMissingMetadata": 0,
+      "advancedMissingMetadata": 0,
+      "visualRawTechnicalInputs": 0,
+      "advancedWritablePaths": 0,
+      "advancedRawInputs": 0,
+      "advancedPrePayloads": 0,
+      "rawTextMatches": {
+        "flowKey": false,
+        "endpointInput": false,
+        "rawUrlLabel": false,
+        "rawLocaleLabel": false,
+        "captchaEnums": false
+      }
+    }
+  ],
+  "notes": [
+    "Probe inspected daily Visual and Advanced surfaces after selecting each fixture block.",
+    "Completed widgets had no Wizard tab by default and exposed Run setup again.",
+    "Appointment Form consent links are covered by Vitest; the Playwright focused probe did not toggle dirty consent state."
+  ]
+}

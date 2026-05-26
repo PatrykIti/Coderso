@@ -169,9 +169,10 @@ export const bookingCalendarEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "booking-calendar.advanced.runtime-endpoint",
-      title: "Runtime endpoint",
-      role: "technical",
-      writablePaths: ["slotsEndpoint"],
+      title: "Runtime route",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["slotsEndpoint"],
     },
     {
       mode: "advanced",
@@ -180,6 +181,7 @@ export const bookingCalendarEditorContract: WidgetEditorContract = {
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [
+        "flowId",
         "defaultServiceId",
         "defaultResourceId",
         "resolved.services",
@@ -216,10 +218,6 @@ export const bookingCalendarDefaults: BookingCalendarData = {
   datePickerMode: "native",
   slotIntervalMode: "fixed",
   slotsEndpoint: "/api/booking/slots",
-  style: {
-    frameBackground: "color-mix(in srgb, var(--color-bg) 95%, transparent)",
-    frameBorderColor: "var(--color-border)",
-  },
 };
 
 const text = (value: string | undefined, fallback: string) => {

@@ -19,7 +19,7 @@ bounded public slot lookup, and runtime slot handoff to `appointment-form`.
 ## Editor Modes
 
 ### Wizard
-- flow key
+- booking flow picker; the technical pairing key is managed by the builder
 - slot interval
 - optional default service/resource selected from the resolved booking catalog
 - `defaultDate`, `minDate`, `maxDate`
@@ -29,18 +29,20 @@ bounded public slot lookup, and runtime slot handoff to `appointment-form`.
 - title/description/labels
 - status copy plus user-facing empty state
 - service context toggles (`price`, `duration`, `description`, `timezone`)
-- summary locale/date style
+- date language preset and date style
 - date picker mode (`native` / `week`)
 - slot interval mode (`fixed`, `service-duration`, `non-overlapping`)
 - frame and selected-slot style surface swatches
 
 ### Advanced
-- slots endpoint override
-- read-only default service/resource diagnostics
+- read-only slot-loading route status
+- read-only booking flow and default service/resource diagnostics
 - read-only resolved runtime/admin-preview diagnostics
 
-Wizard never asks editors to type raw service/resource IDs. Visual surface
-colors use swatches and clear controls instead of CSS-variable/token text inputs.
+Wizard never asks editors to type raw flow keys or service/resource IDs. Visual
+surface colors use swatches and clear controls instead of CSS-variable/token
+text inputs. Advanced keeps legacy custom route data compatible but does not
+offer endpoint text editing in normal authoring.
 
 ## Runtime Behavior Notes
 
@@ -116,13 +118,10 @@ colors use swatches and clear controls instead of CSS-variable/token text inputs
   "slotIntervalMode": "non-overlapping",
   "defaultServiceId": "service-1",
   "defaultResourceId": "resource-1",
-  "slotsEndpoint": "/api/booking/slots",
-  "style": {
-    "frameBackground": "var(--color-bg)",
-    "frameBorderColor": "var(--color-border)",
-    "selectedSlotBackground": "var(--color-primary)",
-    "selectedSlotBorderColor": "var(--color-primary)",
-    "slotHoverBorderColor": "var(--color-primary)"
-  }
+  "slotsEndpoint": "/api/booking/slots"
 }
 ```
+
+Style fields are optional and absent by default. When an author chooses swatches
+in Visual, the widget stores those explicit style values; otherwise runtime
+theme classes provide the default frame and slot appearance.

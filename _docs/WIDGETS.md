@@ -178,6 +178,13 @@ Zasady:
   inputow, a Advanced zastapil normalized payload snapshot human runtime,
   security, authoring i contract summaries bez raw endpointow/form ID/API
   scope copy.
+- `booking-calendar` i `appointment-form` po TASK-336-19 nie prosza juz autora
+  o wpisywanie flow key, endpointow, raw URL-i ani BCP-47 locale tekstem.
+  Wizard wybiera/paruje booking flow pickerem, Visual uzywa presetow jezyka,
+  swatch-only kolorow i page-first destination pickerow, a Advanced pokazuje
+  read-only route/security/runtime summaries. Domyslne style nie seeduja juz
+  CSS-tokenow do danych; runtime korzysta z theme fallbackow do czasu wyboru
+  konkretnych swatchy.
 - Remaining page-builder widgets covered by TASK-336-18 (`toggle-block`,
   `feature-grid`, `testimonials`, `pricing-plans`, `faq-accordion`,
   `cta-banner`, `logo-cloud`, `gallery-mosaic`, `rich-text-section`,

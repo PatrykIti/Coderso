@@ -57,6 +57,91 @@ vi.mock("@/components/ui/textarea", () => ({
   }) => <textarea value={value} onChange={onChange} rows={rows} {...props} />,
 }));
 
+vi.mock("@/components/ui/button", () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <button type="button" onClick={onClick} disabled={disabled} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    children,
+    disabled,
+  }: {
+    value?: string;
+    onValueChange?: (value: string) => void;
+    children?: React.ReactNode;
+    disabled?: boolean;
+  }) => (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {children}
+    </select>
+  ),
+  SelectTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectValue: () => null,
+  SelectContent: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({
+    value,
+    children,
+    disabled,
+  }: {
+    value: string;
+    children?: React.ReactNode;
+    disabled?: boolean;
+  }) => (
+    <option value={value} disabled={disabled}>
+      {children}
+    </option>
+  ),
+}));
+
+vi.mock("@/services/pagesClient", () => ({
+  listPagesCached: vi.fn(async () => [
+    {
+      id: "page-confirmed",
+      title: "Booking confirmed",
+      slug: "booking/confirmed",
+      status: "published",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-privacy",
+      title: "Privacy",
+      slug: "privacy",
+      status: "published",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "page-terms",
+      title: "Terms",
+      slug: "terms",
+      status: "published",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      author: null,
+    },
+  ]),
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -120,6 +205,9 @@ const findLabelSelect = (container: ParentNode, text: string) =>
     .find((label) => label.textContent?.includes(text))
     ?.querySelector("select");
 
+const findDestinationSelect = (container: ParentNode, fieldId: string) =>
+  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
+
 const findToggleByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll('input[type="checkbox"]')).find((element) =>
     element.parentElement?.textContent?.includes(text)
@@ -145,6 +233,13 @@ const clickButtonByText = (container: ParentNode, text: string, index = 0) => {
   }
   React.act(() => {
     button.click();
+  });
+};
+
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
@@ -177,6 +272,15 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
       error: " ",
     },
   };
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    bookingFlows: {
+      calendars: [
+        { blockId: "calendar-1", flowId: "booking-flow", label: "Primary calendar" },
+        { blockId: "calendar-2", flowId: "concierge-flow", label: "Concierge calendar" },
+      ],
+    },
+  };
 
   const Harness = () => {
     const [value, setValue] = useState<AppointmentFormData>(latestValue);
@@ -195,6 +299,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             latestVariant = next;
             setVariant(next);
           }}
+          context={context}
         />
         <AppointmentFormVisualEditor
           value={value}
@@ -208,6 +313,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             latestVariant = next;
             setVariant(next);
           }}
+          context={context}
         />
         <AppointmentFormAdvancedEditor
           value={value}
@@ -221,6 +327,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
             latestVariant = next;
             setVariant(next);
           }}
+          context={context}
         />
       </>
     );
@@ -229,14 +336,19 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
   const view = mount(<Harness />);
 
   try {
+    await flush();
     expect(
-      (findLabelInput(view.container, "Flow key") as HTMLInputElement | null | undefined)?.value
-    ).toBe("booking-flow");
+      (findLabelSelect(view.container, "Booking calendar") as HTMLSelectElement | null | undefined)
+        ?.value
+    ).toBe("calendar-1");
 
     setSelectValue(findLabelSelect(view.container, "Variant"), "sidebar");
-    setInputValue(findLabelInput(view.container, "Flow key"), "concierge-flow");
-    setInputValue(findLabelInput(view.container, "Locale override"), "pl-PL");
-    setInputValue(findLabelInput(view.container, "Success redirect URL"), "/booking/confirmed");
+    setSelectValue(findLabelSelect(view.container, "Booking calendar"), "calendar-2");
+    setSelectValue(findLabelSelect(view.container, "Form language"), "pl-PL");
+    setSelectValue(
+      findDestinationSelect(view.container, "appointment-form-success-destination"),
+      "page-confirmed"
+    );
     setInputValue(findLabelInput(view.container, "Title"), "Priority booking");
     setTextareaValue(findLabelTextarea(view.container, "Description"), "Reserve a selected slot.");
     setInputValue(findLabelInput(view.container, "Submit button"), "Reserve now");
@@ -273,10 +385,16 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
     setCheckboxValue(findToggleByText(view.container, "Show consent checkbox"), true);
     setInputValue(findLabelInput(view.container, "Consent label"), "I agree to the booking terms");
     setCheckboxValue(findToggleByText(view.container, "Require consent"), true);
-    setInputValue(findLabelInput(view.container, "Privacy URL"), "/privacy");
-    setInputValue(findLabelInput(view.container, "Terms URL"), "/terms");
-
-    setInputValue(findLabelInput(view.container, "Submission endpoint"), "/api/booking/custom");
+    await flush();
+    setSelectValue(
+      findDestinationSelect(view.container, "appointment-form-privacy-destination"),
+      "page-privacy"
+    );
+    setSelectValue(
+      findDestinationSelect(view.container, "appointment-form-terms-destination"),
+      "page-terms"
+    );
+    expect(findLabelInput(view.container, "Submission endpoint")).toBeUndefined();
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestVariant).toBe("sidebar");
@@ -320,7 +438,7 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
         privacyUrl: "/privacy",
         termsUrl: "/terms",
       },
-      submissionEndpoint: "/api/booking/custom",
+      submissionEndpoint: "/api/booking/reservations",
     });
     expect(view.container.textContent).toContain("Not injected in editor");
     expect(view.container.textContent).toContain("presence only and never the raw nonce");
@@ -372,10 +490,46 @@ test("AppointmentForm wizard shows same-surface booking flow pairing feedback", 
       view.container.querySelector('[data-appointment-flow-feedback="matched"]')?.textContent
     ).toContain("Primary calendar");
 
-    setInputValue(findLabelInput(view.container, "Flow key"), "missing-flow");
+    setSelectValue(findLabelSelect(view.container, "Booking calendar"), "calendar-2");
+    expect(latestValue.flowId).toBe("concierge-flow");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AppointmentForm wizard shows saved custom pairing without raw key authoring", async () => {
+  const { AppointmentFormWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
+
+  const context: WidgetEditorContext = {
+    surface: "page-builder",
+    bookingFlows: {
+      calendars: [
+        { blockId: "calendar-1", flowId: "booking-flow", label: "Primary calendar" },
+        { blockId: "calendar-2", flowId: "concierge-flow", label: "Concierge calendar" },
+      ],
+    },
+  };
+
+  const view = mount(
+    <AppointmentFormWizardEditor
+      value={{ flowId: "missing-flow" }}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+      context={context}
+    />
+  );
+
+  try {
+    expect(findLabelInput(view.container, "Flow key")).toBeUndefined();
     expect(
       view.container.querySelector('[data-appointment-flow-feedback="mismatch"]')?.textContent
-    ).toContain("booking-flow, concierge-flow");
+    ).toContain("saved custom pairing");
+    expect(
+      (findLabelSelect(view.container, "Booking calendar") as HTMLSelectElement | null | undefined)
+        ?.value
+    ).toBe("__coderso_booking_flow_saved__");
   } finally {
     view.cleanup();
   }

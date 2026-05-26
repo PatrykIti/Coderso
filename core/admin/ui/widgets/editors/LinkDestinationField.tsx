@@ -19,6 +19,7 @@ type LinkDestinationFieldProps = {
   label: string;
   value?: string;
   onChange: (next: string) => void;
+  controlPath?: string;
   disabled?: boolean;
   emptyLabel?: string;
   helpText?: string;
@@ -52,6 +53,7 @@ export function LinkDestinationField({
   label,
   value,
   onChange,
+  controlPath,
   disabled = false,
   emptyLabel = "No destination",
   helpText = "Choose an existing site page. Custom destinations stay read-only in Wizard and Visual modes.",
@@ -96,7 +98,13 @@ export function LinkDestinationField({
   };
 
   return (
-    <div className="space-y-2" data-link-destination-field={fieldId}>
+    <div
+      className="space-y-2"
+      data-link-destination-field={fieldId}
+      data-widget-control={fieldId}
+      data-widget-control-path={controlPath}
+      data-widget-control-ownership={controlPath ? "writable" : undefined}
+    >
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">{label}</p>
         {trimmedValue ? (

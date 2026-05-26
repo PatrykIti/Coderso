@@ -46,6 +46,17 @@ test("appointment form exposes a strict v2 editor contract", () => {
     "appointment-form.advanced.runtime-endpoint",
     "appointment-form.advanced.submission-security",
   ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .flatMap((section) => section.writablePaths)
+  ).toEqual([]);
+  expect(
+    widget.editorContract?.sections
+      .flatMap((section) => section.writablePaths)
+      .includes("customFields.id")
+  ).toBe(false);
+  expect(appointmentFormDefaults.style).toBeUndefined();
 });
 
 test("appointment form normalizes submission endpoint to a same-origin relative path", () => {
@@ -285,7 +296,7 @@ test("appointment form editors render expected sections", () => {
       variant="default"
     />
   );
-  expect(advanced).toContain("Runtime endpoint");
+  expect(advanced).toContain("Runtime route");
   expect(advanced).toContain("Injected by server");
   expect(advanced).toContain("booking_nonce_unavailable");
   expect(advanced).not.toContain("nonce-token");
