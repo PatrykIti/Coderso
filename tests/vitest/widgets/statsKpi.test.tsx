@@ -350,9 +350,10 @@ test("stats kpi advanced keeps technical-only scope", () => {
 
   expect(html).toContain("Runtime diagnostics");
   expect(html).toContain("Style diagnostics");
-  expect(html).toContain("Runtime payload");
+  expect(html).toContain("Runtime summary");
   expect(html).toContain('data-widget-editor-mode="advanced"');
   expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).not.toContain("<pre");
   expect(html).not.toContain("Technical spacing and alignment tokens");
   expect(html).not.toContain("Alignment token");
   expect(html).not.toContain("Metrics content and links");

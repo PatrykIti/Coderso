@@ -685,5 +685,6 @@ test("contact editor render smoke reflects the new IA", () => {
   );
 
   expect(advancedHtml).toContain("Normalization and fallback controls");
-  expect(advancedHtml).toContain("Runtime diagnostics snapshot");
+  expect(advancedHtml).toContain("Runtime diagnostics summary");
+  expect(advancedHtml).not.toContain("<pre");
 });

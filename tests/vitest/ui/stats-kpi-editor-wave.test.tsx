@@ -445,7 +445,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   try {
     expect(view.container.textContent).toContain("Layout seed");
     expect(view.container.textContent).toContain("Metrics content and links");
-    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Runtime summary");
     expect(
       view.container.querySelector('[data-widget-editor-section="stats-kpi.wizard.layout-seed"]')
     ).not.toBeNull();
@@ -695,7 +695,8 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
   try {
     expect(advancedHarness.container.textContent).toContain("Runtime diagnostics");
     expect(advancedHarness.container.textContent).toContain("Style diagnostics");
-    expect(advancedHarness.container.textContent).toContain("Runtime payload");
+    expect(advancedHarness.container.textContent).toContain("Runtime summary");
+    expect(advancedHarness.container.querySelector("pre")).toBeNull();
     expect(advancedHarness.container.textContent).toContain("Metric count");
     expect(getWritableControlPaths(advancedHarness.container)).toEqual([]);
     expect(
@@ -805,7 +806,8 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
   try {
     expect(advancedView.container.textContent).toContain("Runtime diagnostics");
     expect(advancedView.container.textContent).toContain("Style diagnostics");
-    expect(advancedView.container.textContent).toContain("Runtime payload");
+    expect(advancedView.container.textContent).toContain("Runtime summary");
+    expect(advancedView.container.querySelector("pre")).toBeNull();
     expect(getWritableControlPaths(advancedView.container)).toEqual([]);
     expect(advancedView.container.querySelectorAll("select")).toHaveLength(0);
     expect(advancedView.container.querySelectorAll("input")).toHaveLength(0);

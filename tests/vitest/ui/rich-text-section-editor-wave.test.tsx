@@ -806,9 +806,12 @@ test("RichTextSection advanced editor keeps source diagnostics read-only with co
   try {
     expect(view.container.textContent).toContain("Output mode and source diagnostics");
     expect(view.container.textContent).toContain("Sanitizer diagnostics");
+    expect(view.container.textContent).toContain("Saved content summary");
     expect(view.container.textContent).not.toContain("Technical typography tokens");
     expect(view.container.textContent).not.toContain("Raw HTML technical editor");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
     expect(view.container.textContent).not.toContain("Sanitize and apply");
+    expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
     expect(view.container.querySelectorAll("textarea")).toHaveLength(0);
 

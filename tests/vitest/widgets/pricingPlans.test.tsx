@@ -589,6 +589,8 @@ test("pricing plans advanced keeps technical-only scope", () => {
 
   expect(html).toContain("Visual-owned tokens");
   expect(html).toContain("Fix and reset");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Runtime summary");
+  expect(html).not.toContain("Raw payload snapshot");
+  expect(html).not.toContain("<pre");
   expect(html).not.toContain("Plans, features, and actions");
 });

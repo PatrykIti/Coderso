@@ -454,8 +454,8 @@ test("PostsFeed editors cover manual source truthfulness, section chrome, style 
     expect(view.container.textContent).toContain("Source setup");
     expect(view.container.textContent).toContain("Section header");
     expect(view.container.textContent).toContain("Runtime status");
-    expect(view.container.textContent).toContain("Runtime payload");
     expect(view.container.textContent).toContain("Contract summary");
+    expect(view.container.querySelector("pre")).toBeNull();
 
     expect(writablePathsForMode(view.container, "wizard")).toContain("source.mode");
     expect(writablePathsForMode(view.container, "wizard")).not.toContain("style.cardStyle");
@@ -552,7 +552,7 @@ test("PostsFeed editors cover manual source truthfulness, section chrome, style 
       })
     );
     expect(onVariantChangeSpy).toHaveBeenCalledWith("compact");
-    expect(view.container.textContent).toContain('"pageSize": 6');
+    expect(view.container.textContent).toContain("page size 6");
   } finally {
     view.cleanup();
   }

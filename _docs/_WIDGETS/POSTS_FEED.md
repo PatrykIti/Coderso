@@ -87,7 +87,8 @@ Render a ready-to-use feed of posts without building a custom listing query.
 ### Advanced
 
 - read-only resolved query summary, route/list-path capability, runtime
-  pagination/freshness status, normalized runtime payload, and contract summary.
+  pagination/freshness status, human runtime summary, and contract summary.
+- Advanced does not expose a raw resolved-query JSON snapshot.
 - Advanced has no writable Posts Feed controls.
 
 ## Manual Selection UX

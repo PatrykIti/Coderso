@@ -528,14 +528,6 @@ function applyVariantDataPatch(
   onVariantChange?.(nextVariant);
 }
 
-function DiagnosticsSnapshot({ value }: { value: StatsKpiData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function SpacingHelp({ spacing }: { spacing: StatsKpiSpacing | undefined }) {
   const activeOption = spacingOptions.find((option) => option.id === spacing) ?? spacingOptions[2]!;
   return (
@@ -1704,10 +1696,10 @@ export function StatsKpiAdvancedEditor({
       </EditorSection>
 
       <EditorSection
-        id="stats-kpi.advanced.payload"
+        id="stats-kpi.advanced.runtime-summary"
         mode="advanced"
         role="diagnostics"
-        title="Runtime payload"
+        title="Runtime summary"
         description="Inspect normalized output and run explicit repair actions when payloads need deterministic fallback values."
       >
         <ReadonlyWidgetSummaryRow
@@ -1744,14 +1736,14 @@ export function StatsKpiAdvancedEditor({
         </RepairActionRow>
         <ReadonlyWidgetSummaryRow
           id="stats-kpi.advanced.runtime.payload"
-          label="Normalized payload"
-          path="runtime.payload"
-          value={<DiagnosticsSnapshot value={normalized} />}
+          label="Runtime summary"
+          path="items"
+          value={`${items.length} KPI item${items.length === 1 ? "" : "s"} normalized; raw JSON is not shown in the editor.`}
         />
         <ReadonlyWidgetSummaryRow
           id="stats-kpi.advanced.contract"
           label="Contract summary"
-          path="runtime.payload"
+          path="items"
           value="Wizard seeds the initial KPI setup, Visual owns daily metric and presentation edits, Advanced is read-only diagnostics plus explicit repair actions."
         />
       </EditorSection>

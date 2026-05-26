@@ -23,7 +23,6 @@ import {
   contactDetailOptions,
   contactFieldOptions,
   contactRuntimeFieldTypeMap,
-  getContactDiagnosticsSnapshot,
   getContactMapUrlState,
   normalizeContactData,
   readContactMapLocation,
@@ -737,14 +736,6 @@ function ColorField({
       placeholder={placeholder}
       pickerFallback={pickerFallback}
     />
-  );
-}
-
-function DiagnosticsSnapshot({ value }: { value: ContactData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {getContactDiagnosticsSnapshot(value)}
-    </pre>
   );
 }
 
@@ -1861,6 +1852,12 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
   const mapLocation = readContactMapLocation(normalized.map?.embedUrl);
   const mapUrlState = getContactMapUrlState(normalized.map?.embedUrl);
   const hasMapSource = Boolean((normalized.map?.embedUrl ?? "").trim());
+  const visibleContactDetails = contactDetailOptions.filter(
+    (key) => typeof normalized.contact?.[key] === "string" && normalized.contact[key].trim()
+  ).length;
+  const visibleSocialLinks = (normalized.contact?.social ?? []).filter(
+    (item) => (item.href ?? "").trim().length > 0 || (item.label ?? "").trim().length > 0
+  ).length;
   const [normalizationMessage, setNormalizationMessage] = useState("");
   const [normalizationArmed, setNormalizationArmed] = useState(false);
 
@@ -1943,10 +1940,34 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
       </EditorSection>
 
       <EditorSection
-        title="Runtime diagnostics snapshot"
-        description="Read-only normalized payload for debugging and QA checks. Runtime nonces stay redacted."
+        title="Runtime diagnostics summary"
+        description="Read-only human summary for debugging and QA checks. Runtime nonces stay redacted."
       >
-        <DiagnosticsSnapshot value={normalized} />
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="contact-advanced-runtime-fields"
+            label="Form fields"
+            path="form.fields"
+            value={`${normalized.form?.fields?.length ?? 0} configured`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="contact-advanced-runtime-details"
+            label="Contact details"
+            path="contact.details"
+            value={`${visibleContactDetails} visible`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="contact-advanced-runtime-social"
+            label="Social links"
+            path="contact.social"
+            value={`${visibleSocialLinks} visible`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="contact-advanced-runtime-security"
+            label="Runtime security"
+            value="Submission nonce redacted; public payload not shown in editor."
+          />
+        </div>
       </EditorSection>
     </div>
   );

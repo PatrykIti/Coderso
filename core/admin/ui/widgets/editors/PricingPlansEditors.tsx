@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
   type PricingBillingCycle,
   type PricingFeatureIcon,
@@ -477,24 +478,6 @@ function alignPlanCountToVariant(
   count: number
 ) {
   updateValue(value, onChange, (current) => {
-    const authoredCount = Array.isArray(current.plans) ? current.plans.length : 0;
-    if (authoredCount > count) {
-      const hiddenTrimCount = authoredCount - count;
-      if (typeof window === "undefined" || typeof window.confirm !== "function") {
-        return current;
-      }
-
-      const confirmed = window.confirm(
-        `Trim ${hiddenTrimCount} preserved hidden plan${
-          hiddenTrimCount === 1 ? "" : "s"
-        } to match the current layout? This cannot be undone.`
-      );
-
-      if (!confirmed) {
-        return current;
-      }
-    }
-
     return {
       ...current,
       plans: normalizePricingPlans(current.plans, count),
@@ -720,14 +703,6 @@ function moveFeature(
   });
 }
 
-function DiagnosticsSnapshot({ value }: { value: PricingPlansData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 export function PricingPlansWizardEditor({
   value,
   onChange,
@@ -854,6 +829,7 @@ export function PricingPlansWizardEditor({
                 <LinkDestinationField
                   fieldId={`pricing-plans-wizard-plan-${plan.id ?? index}-cta`}
                   label="CTA destination"
+                  controlPath="plans.ctaHref"
                   value={plan.ctaHref}
                   onChange={(next) => updatePlan(value, onChange, index, { ctaHref: next })}
                   emptyLabel="No destination"
@@ -1358,6 +1334,7 @@ export function PricingPlansVisualEditor({
               <LinkDestinationField
                 fieldId={`pricing-plans-plan-${plan.id ?? planIndex}-cta`}
                 label="CTA destination"
+                controlPath="plans.ctaHref"
                 value={plan.ctaHref}
                 onChange={(next) => updatePlan(value, onChange, planIndex, { ctaHref: next })}
                 emptyLabel="No destination"
@@ -1806,6 +1783,12 @@ export function PricingPlansAdvancedEditor({
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
   const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
+  const [pendingSupportAction, setPendingSupportAction] = useState<
+    "align-plans" | "normalize" | null
+  >(null);
+  const planCount = normalized.plans?.length ?? 0;
+  const configuredPlanCount = normalized.plans?.filter(hasConfiguredPricingPlan).length ?? 0;
+  const hiddenPlanCount = Math.max(0, planCount - visibleCount);
 
   return (
     <div className="space-y-4">
@@ -1837,38 +1820,75 @@ export function PricingPlansAdvancedEditor({
 
       <EditorSection
         title="Fix and reset"
-        description="Use these controls when the current payload needs cleanup or a layout-safe reset. Aligning the plan list can remove preserved hidden plans after confirmation."
+        description="Support-only repair actions. Each change requires confirmation before the payload is rewritten."
       >
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
-            onClick={() =>
-              alignPlanCountToVariant(
-                value,
-                onChange,
-                resolvePricingPlanCountForVariant(resolvedVariant)
-              )
-            }
+            onClick={() => setPendingSupportAction("align-plans")}
           >
-            Align plan list to current layout count
+            Review plan alignment
           </Button>
           <Button
             type="button"
             variant="outline"
-            onClick={() => updateValue(value, onChange, (current) => current)}
+            onClick={() => setPendingSupportAction("normalize")}
           >
-            Clean payload and fill missing defaults
+            Review payload cleanup
           </Button>
         </div>
       </EditorSection>
 
       <EditorSection
-        title="Raw payload snapshot"
-        description="Current authored widget payload before cleanup or normalization."
+        title="Runtime summary"
+        description="Human diagnostics only. Advanced does not show raw pricing JSON."
       >
-        <DiagnosticsSnapshot value={value} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Configured plans</p>
+            <div className="rounded-md border px-3 py-2 text-sm">
+              {configuredPlanCount} of {planCount}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Hidden preserved plans</p>
+            <div className="rounded-md border px-3 py-2 text-sm">{hiddenPlanCount}</div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Billing toggle</p>
+            <div className="rounded-md border px-3 py-2 text-sm">
+              {normalized.billingToggle?.enabled ? "Enabled" : "Disabled"}
+            </div>
+          </div>
+        </div>
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingSupportAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingSupportAction(null);
+        }}
+        title={
+          pendingSupportAction === "align-plans"
+            ? "Align plans to current layout?"
+            : "Clean pricing payload?"
+        }
+        description={
+          pendingSupportAction === "align-plans"
+            ? `This rewrites the saved plan list to ${visibleCount} plan${visibleCount === 1 ? "" : "s"} for the current layout. Preserved hidden plans may be removed.`
+            : "This reapplies schema-owned defaults and removes unsupported pricing values without exposing raw JSON."
+        }
+        confirmLabel={pendingSupportAction === "align-plans" ? "Align plans" : "Clean payload"}
+        onConfirm={() => {
+          if (pendingSupportAction === "align-plans") {
+            alignPlanCountToVariant(value, onChange, visibleCount);
+          } else if (pendingSupportAction === "normalize") {
+            updateValue(value, onChange, (current) => current);
+          }
+          setPendingSupportAction(null);
+        }}
+      />
     </div>
   );
 }

@@ -889,18 +889,15 @@ export function HeroWizardEditor({
               />
             )}
           </WidgetControlRow>
-          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA destination">
-            {() => (
-              <LinkDestinationField
-                fieldId="hero-wizard-primary-cta-destination"
-                label="Destination page"
-                value={primary.href}
-                onChange={(next) => update({ primaryCta: { ...primary, href: next } })}
-                emptyLabel="No primary destination"
-                helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
-              />
-            )}
-          </WidgetControlRow>
+          <LinkDestinationField
+            fieldId="hero.primaryCta.href"
+            label="Primary CTA destination"
+            controlPath="primaryCta.href"
+            value={primary.href}
+            onChange={(next) => update({ primaryCta: { ...primary, href: next } })}
+            emptyLabel="No primary destination"
+            helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
+          />
         </div>
       </EditorSection>
     </div>
@@ -947,159 +944,6 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
     byName.set(name.toLowerCase(), preset);
   }
   return Array.from(byName.values()).slice(0, heroPresetLimit);
-};
-
-type HeroPresetImportResult =
-  | { ok: true; presets: HeroPresetSetting[]; warnings: string[] }
-  | { ok: false; error: string };
-
-const buildHeroPresetExportPayload = (presets: HeroPresetSetting[]) =>
-  JSON.stringify(
-    {
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      presets,
-    },
-    null,
-    2
-  );
-
-const collectPresetNormalizationPaths = (
-  source: unknown,
-  normalized: unknown,
-  path = ""
-): string[] => {
-  if (Array.isArray(source)) {
-    if (!Array.isArray(normalized)) {
-      return [path || "value"];
-    }
-    const next: string[] = [];
-    for (let index = 0; index < source.length; index += 1) {
-      next.push(
-        ...collectPresetNormalizationPaths(source[index], normalized[index], `${path}[${index}]`)
-      );
-    }
-    return next;
-  }
-
-  if (source && typeof source === "object") {
-    if (!normalized || typeof normalized !== "object" || Array.isArray(normalized)) {
-      return [path || "value"];
-    }
-    const next: string[] = [];
-    for (const [key, value] of Object.entries(source)) {
-      const childPath = path ? `${path}.${key}` : key;
-      if (!(key in (normalized as Record<string, unknown>))) {
-        next.push(childPath);
-        continue;
-      }
-      next.push(
-        ...collectPresetNormalizationPaths(
-          value,
-          (normalized as Record<string, unknown>)[key],
-          childPath
-        )
-      );
-    }
-    return next;
-  }
-
-  return source === normalized ? [] : [path || "value"];
-};
-
-const parseHeroPresetImportText = (
-  value: string,
-  existingPresets: HeroPresetSetting[]
-): HeroPresetImportResult => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { ok: false, error: "Preset import cannot be empty." };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(trimmed);
-  } catch {
-    return { ok: false, error: "Preset import must be valid JSON." };
-  }
-
-  const rawPresets = Array.isArray(parsed)
-    ? parsed
-    : parsed &&
-        typeof parsed === "object" &&
-        Array.isArray((parsed as { presets?: unknown[] }).presets)
-      ? (parsed as { presets: unknown[] }).presets
-      : null;
-
-  if (!Array.isArray(rawPresets)) {
-    return { ok: false, error: "Preset import must contain a presets array." };
-  }
-
-  if (rawPresets.length === 0) {
-    return { ok: false, error: "Preset import must include at least one preset." };
-  }
-
-  const seenExisting = new Set(existingPresets.map((preset) => preset.name.toLowerCase()));
-  const seenImported = new Set<string>();
-  const imported: HeroPresetSetting[] = [];
-  const warnings: string[] = [];
-
-  for (const entry of rawPresets) {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      return { ok: false, error: "Every imported preset must be an object." };
-    }
-    const candidate = entry as Partial<HeroPresetSetting>;
-    if (typeof candidate.name !== "string" || candidate.name.trim().length === 0) {
-      return { ok: false, error: "Every imported preset needs a name." };
-    }
-    if (typeof candidate.variant !== "string" || !isHeroVariant(candidate.variant)) {
-      return { ok: false, error: `Preset "${candidate.name.trim()}" has an invalid Hero variant.` };
-    }
-    if (!candidate.data || typeof candidate.data !== "object" || Array.isArray(candidate.data)) {
-      return { ok: false, error: `Preset "${candidate.name.trim()}" has invalid data.` };
-    }
-
-    const normalizedName = candidate.name.trim();
-    const dedupeKey = normalizedName.toLowerCase();
-    if (seenImported.has(dedupeKey) || seenExisting.has(dedupeKey)) {
-      return {
-        ok: false,
-        error: `Preset name "${normalizedName}" already exists. Remove duplicates before importing.`,
-      };
-    }
-
-    seenImported.add(dedupeKey);
-    const normalizedData = cloneHeroData(normalizeHeroData(candidate.data as HeroData)) as Record<
-      string,
-      unknown
-    >;
-    const normalizedPaths = collectPresetNormalizationPaths(candidate.data, normalizedData);
-    if (normalizedPaths.length > 0) {
-      warnings.push(
-        `Preset "${normalizedName}" normalized fields: ${normalizedPaths
-          .slice(0, 4)
-          .join(", ")}${normalizedPaths.length > 4 ? ", ..." : ""}.`
-      );
-    }
-    imported.push({
-      name: normalizedName,
-      variant: candidate.variant,
-      data: normalizedData,
-      updatedAt:
-        typeof candidate.updatedAt === "string" && candidate.updatedAt.trim()
-          ? candidate.updatedAt
-          : new Date().toISOString(),
-    });
-  }
-
-  if (existingPresets.length + imported.length > heroPresetLimit) {
-    return {
-      ok: false,
-      error: `Import would exceed the ${heroPresetLimit} preset limit.`,
-    };
-  }
-
-  return { ok: true, presets: [...existingPresets, ...imported], warnings };
 };
 
 const sortHeroPresets = (presets: HeroPresetSetting[], mode: "updated-desc" | "name-asc") => {
@@ -1535,12 +1379,9 @@ export function HeroVisualEditor({
   const [presetsError, setPresetsError] = useState<string | null>(null);
   const [presetNotice, setPresetNotice] = useState<string | null>(null);
   const [isPresetDialogOpen, setIsPresetDialogOpen] = useState(false);
-  const [isPresetImportDialogOpen, setIsPresetImportDialogOpen] = useState(false);
-  const [isPresetExportDialogOpen, setIsPresetExportDialogOpen] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [presetSearch, setPresetSearch] = useState("");
   const [presetSort, setPresetSort] = useState<"updated-desc" | "name-asc">("updated-desc");
-  const [presetImportValue, setPresetImportValue] = useState("");
   const [pendingDeletePreset, setPendingDeletePreset] = useState<HeroPresetSetting | null>(null);
   const [isPresetSaving, setIsPresetSaving] = useState(false);
   const [richHeadlineDiagnostics, setRichHeadlineDiagnostics] = useState<
@@ -1772,7 +1613,6 @@ export function HeroVisualEditor({
     ),
     presetSort
   );
-  const presetExportPayload = buildHeroPresetExportPayload(presets);
 
   useEffect(() => {
     let active = true;
@@ -1866,23 +1706,6 @@ export function HeroVisualEditor({
     setPendingDeletePreset(null);
   };
 
-  const handleImportPresets = async () => {
-    setPresetNotice(null);
-    const result = parseHeroPresetImportText(presetImportValue, presets);
-    if (!result.ok) {
-      setPresetsError(result.error);
-      return;
-    }
-    const saved = await persistPresets(result.presets);
-    if (!saved) return;
-    setPresetImportValue("");
-    setIsPresetImportDialogOpen(false);
-    const importSummary = `Imported ${result.presets.length - presets.length} presets.`;
-    setPresetNotice(
-      result.warnings.length > 0 ? `${importSummary} ${result.warnings.join(" ")}` : importSummary
-    );
-  };
-
   return (
     <div className="space-y-4">
       <EditorSection
@@ -1926,35 +1749,16 @@ export function HeroVisualEditor({
             </div>
           )}
         </WidgetControlRow>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div>
           <Button
             type="button"
             variant="outline"
-            className="w-full"
             onClick={() => {
               setPresetName(`${selectedVariant} preset`);
               setIsPresetDialogOpen(true);
             }}
           >
             Add variant preset
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setIsPresetExportDialogOpen(true)}
-            disabled={presetsLoading || presets.length === 0}
-          >
-            Export presets
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setIsPresetImportDialogOpen(true)}
-            disabled={presetsLoading}
-          >
-            Import presets
           </Button>
         </div>
         {!presetsLoading ? (
@@ -2076,18 +1880,15 @@ export function HeroVisualEditor({
                 />
               )}
             </WidgetControlRow>
-            <WidgetControlRow id="hero.badge.href" label="Badge destination">
-              {() => (
-                <LinkDestinationField
-                  fieldId="hero-badge-destination"
-                  label="Destination page"
-                  value={badge.href}
-                  onChange={(next) => updateBadge({ href: next })}
-                  emptyLabel="No badge destination"
-                  helpText="Pick a site page for the badge. Saved custom destinations stay replace-or-clear only."
-                />
-              )}
-            </WidgetControlRow>
+            <LinkDestinationField
+              fieldId="hero.badge.href"
+              label="Badge destination"
+              controlPath="badge.href"
+              value={badge.href}
+              onChange={(next) => updateBadge({ href: next })}
+              emptyLabel="No badge destination"
+              helpText="Pick a site page for the badge. Saved custom destinations stay replace-or-clear only."
+            />
             <div className="grid gap-3 md:grid-cols-2">
               <WidgetControlRow id="hero.badge.tone" label="Badge tone">
                 {(fieldProps) => (
@@ -2223,18 +2024,15 @@ export function HeroVisualEditor({
               />
             )}
           </WidgetControlRow>
-          <WidgetControlRow id="hero.primaryCta.href" label="Primary CTA destination">
-            {() => (
-              <LinkDestinationField
-                fieldId="hero-primary-cta-destination"
-                label="Destination page"
-                value={primary.href}
-                onChange={(next) => updatePrimary({ href: next })}
-                emptyLabel="No primary destination"
-                helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
-              />
-            )}
-          </WidgetControlRow>
+          <LinkDestinationField
+            fieldId="hero.primaryCta.href"
+            label="Primary CTA destination"
+            controlPath="primaryCta.href"
+            value={primary.href}
+            onChange={(next) => updatePrimary({ href: next })}
+            emptyLabel="No primary destination"
+            helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
+          />
           <WidgetControlRow id="hero.style.primaryButtonSize" label="Primary button size">
             {(fieldProps) => (
               <Select
@@ -2272,18 +2070,15 @@ export function HeroVisualEditor({
                   />
                 )}
               </WidgetControlRow>
-              <WidgetControlRow id="hero.secondaryCta.href" label="Secondary CTA destination">
-                {() => (
-                  <LinkDestinationField
-                    fieldId="hero-secondary-cta-destination"
-                    label="Destination page"
-                    value={secondary.href}
-                    onChange={(next) => updateSecondary({ href: next })}
-                    emptyLabel="No secondary destination"
-                    helpText="Pick an existing site page for the secondary Hero action. Saved custom destinations stay replace-or-clear only."
-                  />
-                )}
-              </WidgetControlRow>
+              <LinkDestinationField
+                fieldId="hero.secondaryCta.href"
+                label="Secondary CTA destination"
+                controlPath="secondaryCta.href"
+                value={secondary.href}
+                onChange={(next) => updateSecondary({ href: next })}
+                emptyLabel="No secondary destination"
+                helpText="Pick an existing site page for the secondary Hero action. Saved custom destinations stay replace-or-clear only."
+              />
               <WidgetControlRow id="hero.style.secondaryButtonSize" label="Secondary button size">
                 {(fieldProps) => (
                   <Select
@@ -3410,61 +3205,6 @@ export function HeroVisualEditor({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isPresetExportDialogOpen} onOpenChange={setIsPresetExportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Export Hero presets</DialogTitle>
-            <DialogDescription>
-              Copy the JSON below to move Hero presets between environments or teammates.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea readOnly value={presetExportPayload} className="min-h-64 font-mono text-xs" />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsPresetExportDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isPresetImportDialogOpen} onOpenChange={setIsPresetImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Hero presets</DialogTitle>
-            <DialogDescription>
-              Paste a preset export payload or a raw presets array. Duplicate names fail the whole
-              import.
-            </DialogDescription>
-          </DialogHeader>
-          <Textarea
-            value={presetImportValue}
-            onChange={(event) => setPresetImportValue(event.target.value)}
-            placeholder="Paste preset JSON"
-            className="min-h-64 font-mono text-xs"
-          />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsPresetImportDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void handleImportPresets()}
-              disabled={isPresetSaving}
-            >
-              Import presets
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <Dialog
         open={Boolean(pendingDeletePreset)}
         onOpenChange={(open) => {
@@ -3519,7 +3259,6 @@ export function HeroAdvancedEditor({ value, variant }: WidgetEditorProps<HeroDat
   const media = normalized.media ?? { type: "none", source: "external" };
   const background = normalized.background ?? {};
   const backgroundMedia = resolveBackgroundMedia(background);
-  const runtimePayload = JSON.stringify(normalized, null, 2);
   const videoDiagnostics =
     media.type === "video"
       ? media.title && media.description
@@ -3832,21 +3571,48 @@ export function HeroAdvancedEditor({ value, variant }: WidgetEditorProps<HeroDat
       </EditorSection>
 
       <EditorSection
-        id="hero.advanced.runtime-payload"
+        id="hero.advanced.runtime-summary"
         mode="advanced"
-        role="technical"
-        title="Runtime payload"
-        description="Normalized payload passed to the Hero renderer. This widget stores no secrets."
+        role="diagnostics"
+        title="Runtime summary"
+        description="Human diagnostics for the normalized Hero renderer input. Raw JSON is not shown in the editor."
       >
-        <ReadonlyWidgetSummaryRow
-          id="hero.advanced.runtime-json"
-          label="Normalized data"
-          value={
-            <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words text-xs">
-              {runtimePayload}
-            </pre>
-          }
-        />
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.runtime-variant"
+            label="Layout"
+            path="variant"
+            value={variantOptions.find((option) => option.id === variant)?.label ?? "Centered"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.runtime-cta"
+            label="CTA readiness"
+            path="primaryCta.href"
+            value={`Primary ${summarizeHeroHrefStatus(value.primaryCta)}; secondary ${summarizeHeroHrefStatus(value.secondaryCta).toLowerCase()}`}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.runtime-media"
+            label="Media readiness"
+            path="media.src"
+            value={
+              media.type === "none"
+                ? "No foreground media"
+                : media.source === "library"
+                  ? "Media Library foreground media"
+                  : "Saved external foreground media"
+            }
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.advanced.runtime-rich-copy"
+            label="Rich copy"
+            path="richBody"
+            value={
+              normalized.richHeadline || normalized.richBody
+                ? "Sanitized rich copy configured"
+                : "Plain copy renders"
+            }
+          />
+        </div>
       </EditorSection>
 
       <EditorSection

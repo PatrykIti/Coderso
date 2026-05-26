@@ -568,7 +568,8 @@ test("ContactAdvancedEditor reports normalization results and redacts diagnostic
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("[redacted]");
+    expect(view.container.textContent).toContain("Submission nonce redacted");
+    expect(view.container.textContent).not.toContain("secret-nonce");
     expect(findInputByPlaceholder(view.container, "https://maps.google.com/...")).toBeUndefined();
     clickButtonByText(view.container, "Review normalization");
     expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");

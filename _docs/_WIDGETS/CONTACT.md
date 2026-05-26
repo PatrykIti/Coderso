@@ -206,7 +206,7 @@ renderu zamiast udawac aktywna wysylke.
   `aria-labelledby` lub deterministic fallback `aria-label`.
 - Field controls maja stabilne `id`, `name`, explicit labels, placeholders,
   i `autocomplete`.
-- Runtime diagnostics snapshot redaguje transient nonce values:
+- Runtime diagnostics summary redaguje transient nonce values:
   `submissionNonce` nigdy nie powinien byc traktowany jako edytowalny payload.
 
 ## Clear Controls

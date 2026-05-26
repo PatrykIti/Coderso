@@ -438,14 +438,6 @@ function getBackgroundImageWarning(rawSrc: string | undefined) {
     : "Saved background image is not public-safe and will not render. Clear it or pick a Media Library image.";
 }
 
-function DiagnosticsSnapshot({ value }: { value: CtaBannerData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function ReadonlyDiagnosticRows({
   rows,
 }: {
@@ -524,6 +516,7 @@ function ActionFields({
       <LinkDestinationField
         fieldId={`cta-banner-${kind}-destination`}
         label="Destination"
+        controlPath={`actions.${kind}Cta.href`}
         value={resolvedAction.href ?? ""}
         disabled={showToggle && !isEnabled}
         onChange={(next) => onPatch({ href: next })}
@@ -738,6 +731,7 @@ export function CtaBannerWizardEditor({
         <LinkDestinationField
           fieldId="cta-banner-wizard-primary-destination"
           label="Primary CTA destination"
+          controlPath="actions.primaryCta.href"
           value={primary?.href ?? ""}
           onChange={(next) =>
             updateActions(value, onChange, {
@@ -786,6 +780,7 @@ export function CtaBannerWizardEditor({
             <LinkDestinationField
               fieldId="cta-banner-wizard-secondary-destination"
               label="Secondary CTA destination"
+              controlPath="actions.secondaryCta.href"
               value={secondary?.href ?? ""}
               onChange={(next) =>
                 updateActions(value, onChange, {
@@ -1255,7 +1250,11 @@ export function CtaBannerVisualEditor({
   );
 }
 
-export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<CtaBannerData>) {
+export function CtaBannerAdvancedEditor({
+  value,
+  onChange,
+  variant,
+}: WidgetEditorProps<CtaBannerData>) {
   const normalized = normalizeValue(value);
   const [pendingSupportAction, setPendingSupportAction] = useState<"normalize" | "reset" | null>(
     null
@@ -1269,6 +1268,27 @@ export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<C
     { label: "Border", value: normalized.style?.border },
     { label: "Primary button border", value: normalized.style?.primaryButtonBorder },
     { label: "Secondary button border", value: normalized.style?.secondaryButtonBorder },
+  ];
+  const configuredActionCount = [
+    normalized.actions?.primaryCta,
+    normalized.actions?.secondaryCta,
+    normalized.actions?.tertiaryCta,
+  ].filter(
+    (action) => action?.enabled !== false && (action?.label?.trim() || action?.href?.trim())
+  ).length;
+  const runtimeRows = [
+    { label: "Variant", value: resolveCtaBannerVariant(variant) },
+    { label: "Actions", value: `${configuredActionCount} configured` },
+    {
+      label: "Background media",
+      value:
+        normalized.background?.media?.type === "image"
+          ? normalized.background.media.source === "library"
+            ? "Media Library image"
+            : "Saved external image"
+          : "Not configured",
+    },
+    { label: "Motion", value: normalized.motion?.preset ?? "none" },
   ];
 
   return (
@@ -1298,8 +1318,11 @@ export function CtaBannerAdvancedEditor({ value, onChange }: WidgetEditorProps<C
         </div>
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        title="Runtime summary"
+        description="Human diagnostics only. Advanced does not show raw CTA banner JSON."
+      >
+        <ReadonlyDiagnosticRows rows={runtimeRows} />
       </EditorSection>
 
       <ConfirmActionDialog

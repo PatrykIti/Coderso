@@ -1083,6 +1083,21 @@ read-only diagnostics. It added these concrete cleanup requirements:
   reports no Wizard tab before re-entry, visible `Run setup again`, Visual
   raw technical inputs `0`, Advanced writable paths `0`, Advanced raw inputs
   `0`, Advanced `<pre>` payloads `0`, and missing metadata `0`.
+- In Progress (2026-05-26): fresh helper-agent audit reopened a raw Advanced
+  payload cluster in Contact, CTA Banner, Hero, Posts Feed, Pricing Plans,
+  Rich Text Section, and Stats KPI, plus Hero Visual preset JSON transfer.
+  The slice replaces visible raw JSON/payload snapshots with human runtime or
+  saved-content summaries, keeps Advanced support actions confirm/review
+  gated, removes Hero Visual JSON import/export from the normal editor
+  surface, and fixes newly exposed destination-picker metadata gaps in CTA
+  Banner, Hero, and Pricing Plans by adding explicit `controlPath` ownership.
+  Standard strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-raw-summary-*-2026-05-26.*`;
+  all seven reports show `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`. During validation, stale Vite
+  optimized dependencies produced `504 Outdated Optimize Dep` and empty admin
+  roots; clearing `core/node_modules/.vite` and restarting
+  `coderso-dev-core-host` fixed the false gaps before final smoke reruns.
 
 ## Files to Change
 

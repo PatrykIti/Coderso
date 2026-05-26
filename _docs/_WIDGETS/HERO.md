@@ -60,6 +60,8 @@ replace-or-clear compatible instead of editable raw URL text.
 
 Variant presets are persisted per user in `user_settings` key:
 `widgets.hero.presets`.
+The Visual preset UI supports local create/apply/update/delete plus search and
+sort. It does not expose JSON import/export in the normal editor surface.
 
 ### Advanced
 
@@ -68,7 +70,7 @@ Read-only diagnostics only:
 - resolved typography, color, button, border, and shadow token summaries
 - media/background media diagnostics
 - safe-link and accessibility diagnostics
-- sanitized runtime payload snapshot
+- human runtime summary without raw JSON snapshots
 - editor contract summary
 
 Advanced must not duplicate Visual as a second design panel.

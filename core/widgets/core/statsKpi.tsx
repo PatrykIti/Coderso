@@ -486,11 +486,11 @@ export const statsKpiEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "stats-kpi.advanced.payload",
-      title: "Runtime payload",
+      id: "stats-kpi.advanced.runtime-summary",
+      title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["runtime.payload", "runtime.animationPolicy", "runtime.safeLinks"],
+      readOnlyPaths: ["items", "runtime.animationPolicy", "runtime.safeLinks"],
     },
   ],
 };

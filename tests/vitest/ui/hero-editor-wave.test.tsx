@@ -570,7 +570,7 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
       );
       setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
       setSelectValue(
-        findLinkDestinationSelect(view.container, "hero-wizard-primary-cta-destination"),
+        findLinkDestinationSelect(view.container, "hero.primaryCta.href"),
         "hero-join-page"
       );
     });
@@ -1248,7 +1248,7 @@ test("HeroVisualEditor applies palettes without erasing content and keeps gradie
   }
 });
 
-test("HeroVisualEditor filters, sorts, and exports presets", async () => {
+test("HeroVisualEditor filters and sorts presets without raw JSON transfer controls", async () => {
   const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   heroState.presetValue = [
@@ -1298,123 +1298,9 @@ test("HeroVisualEditor filters, sorts, and exports presets", async () => {
     });
     expect(view.container.textContent).toContain("Alpha");
     expect(view.container.textContent).not.toContain("Zeta");
-
-    clickElement(findButtonsByText(view.container, "Export presets")[0]);
-    await flush();
-    const exportTextarea = view.container.querySelector(
-      "textarea[readonly]"
-    ) as HTMLTextAreaElement | null;
-    const exportValue = exportTextarea?.textContent;
-    expect(exportTextarea?.value).toContain('"presets"');
-    expect(exportTextarea?.value).toContain('"Alpha"');
-    expect(exportTextarea?.value).toContain('"Zeta"');
-    expect(exportValue ?? exportTextarea?.value ?? "").toContain("Alpha");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("HeroVisualEditor rejects duplicate preset imports and normalizes media-center imports", async () => {
-  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
-
-  heroState.presetValue = [
-    {
-      name: "Launch",
-      variant: "split",
-      data: {
-        headline: "Launch hero",
-      },
-      updatedAt: "2026-03-09T08:00:00.000Z",
-    },
-  ];
-  heroState.lastSavedValue = null;
-
-  const view = mount(
-    <HeroVisualEditor
-      value={{ headline: "Hero", primaryCta: { label: "Get started", href: "/signup" } }}
-      onChange={() => undefined}
-      variant="centered"
-      onVariantChange={() => undefined}
-    />
-  );
-
-  try {
-    await flush();
-
-    clickElement(findButtonsByText(view.container, "Import presets")[0]);
-    React.act(() => {
-      setTextareaValue(
-        findTextareaByPlaceholder(view.container, "Paste preset JSON"),
-        JSON.stringify({
-          presets: [
-            {
-              name: "Launch",
-              variant: "media-center",
-              data: { headline: "Duplicate" },
-            },
-          ],
-        })
-      );
-    });
-    clickElement(findButtonsByText(view.container, "Import presets")[1]);
-    expect(view.container.textContent).toContain('Preset name "Launch" already exists.');
-    expect(heroState.lastSavedValue).toBeNull();
-
-    React.act(() => {
-      setTextareaValue(
-        findTextareaByPlaceholder(view.container, "Paste preset JSON"),
-        JSON.stringify({
-          presets: [
-            {
-              name: "Imported media center",
-              variant: "media-center",
-              data: {
-                headline: "Imported hero",
-                layout: { height: "screen" },
-                style: {
-                  cardShadow: "invalid-token",
-                  headlineSize: "giant",
-                  bodyWeight: "bold",
-                },
-                extra: "drop-me",
-              },
-            },
-          ],
-        })
-      );
-    });
-    clickElement(findButtonsByText(view.container, "Import presets")[1]);
-    await flush();
-
-    expect(view.container.textContent).toContain(
-      'Preset "Imported media center" normalized fields:'
-    );
-
-    const savedPresets = heroState.lastSavedValue as Array<{
-      variant: string;
-      data: Record<string, unknown>;
-    }>;
-    const importedPreset = savedPresets.find((entry) => entry.variant === "media-center");
-
-    expect(importedPreset).toBeDefined();
-    expect(importedPreset?.data).toEqual(
-      expect.objectContaining({
-        headline: "Imported hero",
-        layout: expect.objectContaining({
-          align: "center",
-          maxWidth: "xl",
-          contentWidth: "lg",
-          height: "screen",
-          bleed: "contained",
-        }),
-        style: expect.objectContaining({
-          cardShadow: "none",
-          headlineSize: "3xl",
-          bodyWeight: "bold",
-        }),
-      })
-    );
-    expect(importedPreset?.data.extra).toBeUndefined();
+    expect(findButtonsByText(view.container, "Export presets")).toHaveLength(0);
+    expect(findButtonsByText(view.container, "Import presets")).toHaveLength(0);
+    expect(findTextareaByPlaceholder(view.container, "Paste preset JSON")).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -1516,12 +1402,12 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
     });
     React.act(() => {
       setSelectValue(
-        findLinkDestinationSelect(view.container, "hero-primary-cta-destination"),
+        findLinkDestinationSelect(view.container, "hero.primaryCta.href"),
         "hero-signup-page"
       );
       setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Read case study");
       setSelectValue(
-        findLinkDestinationSelect(view.container, "hero-secondary-cta-destination"),
+        findLinkDestinationSelect(view.container, "hero.secondaryCta.href"),
         "hero-case-study-page"
       );
     });
@@ -2114,7 +2000,7 @@ test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", a
       setInputValue(findInputByPlaceholder(view.container, "Now shipping"), "Launch week");
       setInputValue(findInputByPlaceholder(view.container, "New"), "New");
       setSelectValue(
-        findLinkDestinationSelect(view.container, "hero-badge-destination"),
+        findLinkDestinationSelect(view.container, "hero.badge.href"),
         "hero-launch-page"
       );
     });
@@ -2135,7 +2021,7 @@ test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", a
   }
 });
 
-test("HeroAdvancedEditor exposes read-only diagnostics and normalized runtime payload", async () => {
+test("HeroAdvancedEditor exposes read-only diagnostics and normalized runtime summary", async () => {
   const { HeroAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   const onChangeSpy = vi.fn();
@@ -2173,12 +2059,15 @@ test("HeroAdvancedEditor exposes read-only diagnostics and normalized runtime pa
     expect(view.container.textContent).toContain("Style token summary");
     expect(view.container.textContent).toContain("Media diagnostics");
     expect(view.container.textContent).toContain("Accessibility diagnostics");
-    expect(view.container.textContent).toContain("Runtime payload");
+    expect(view.container.textContent).toContain("Runtime summary");
     expect(view.container.textContent).toContain("Contract summary");
     expect(view.container.textContent).toContain("Rejected unsafe URL");
     expect(view.container.textContent).toContain("Video title or description missing");
     expect(view.container.textContent).toContain("Background video title or description missing");
-    expect(view.container.textContent).toContain('"src": "https://cdn.example.com/bg.mp4"');
+    expect(view.container.textContent).toContain("Saved external foreground media");
+    expect(view.container.textContent).toContain("Raw JSON is not shown");
+    expect(view.container.textContent).not.toContain('"src": "https://cdn.example.com/bg.mp4"');
+    expect(view.container.querySelector("pre")).toBeNull();
     expect(
       Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) =>
         section.getAttribute("data-widget-editor-mode")

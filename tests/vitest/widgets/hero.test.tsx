@@ -129,7 +129,7 @@ test("hero exposes a strict v2 editor ownership contract", () => {
     "hero.advanced.style-summary",
     "hero.advanced.media-diagnostics",
     "hero.advanced.accessibility-diagnostics",
-    "hero.advanced.runtime-payload",
+    "hero.advanced.runtime-summary",
     "hero.advanced.contract-summary",
   ]);
   expect(

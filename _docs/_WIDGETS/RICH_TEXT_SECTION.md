@@ -58,7 +58,8 @@ Visual is the primary authoring surface. It now owns:
 - Read-only output mode and rendered-source diagnostics
 - Read-only sanitizer diagnostics and sanitized preview
 - Confirm-gated normalization and reset support actions
-- Raw payload snapshot
+- Saved content summary for structured blocks, media/embed counts, and sanitized HTML source length.
+- Advanced does not expose raw JSON snapshots or raw HTML authoring.
 
 Advanced intentionally stays diagnostic. Variant selection, output-mode changes,
 style duplication, and raw HTML authoring do not live here anymore.

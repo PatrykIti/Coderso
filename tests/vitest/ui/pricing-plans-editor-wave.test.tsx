@@ -193,6 +193,36 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    onOpenChange,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void | Promise<void>;
+  }) =>
+    open ? (
+      <div data-pricing-confirm-dialog={title}>
+        <p>{title}</p>
+        <p>{description}</p>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void onConfirm()}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -283,6 +313,12 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
+
+const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
   );
 
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
@@ -677,12 +713,9 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       highlighted: false,
     });
 
-    const colorPickersBeforeUpdate = Array.from(
-      view.container.querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
-    setInputValue(colorPickersBeforeUpdate[0], "#112233");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "#223344");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-primary)"), "#334455");
+    setInputValue(findInputByAriaLabel(view.container, "Card surface swatch"), "#112233");
+    setInputValue(findInputByAriaLabel(view.container, "Card border swatch"), "#223344");
+    setInputValue(findInputByAriaLabel(view.container, "Highlight ring swatch"), "#334455");
     setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(view.container, ["bullet", "check", "status"]), "status");
@@ -773,16 +806,16 @@ test("PricingPlans advanced editor exposes diagnostics and clearer fix/reset act
   const view = mount(<Harness />);
 
   try {
-    const previewBeforeActions = view.container.querySelector("pre");
-    expect(previewBeforeActions?.textContent).toContain('"spacing": "bogus"');
-    expect(previewBeforeActions?.textContent).toContain('"radius": "bogus"');
-    expect(previewBeforeActions?.textContent).toContain('"id": "dup"');
     expect(view.container.textContent).toContain("Visual-owned tokens");
     expect(view.container.textContent).toContain("Fix and reset");
-    expect(view.container.textContent).toContain("Align plan list to current layout count");
-    expect(view.container.textContent).toContain("Clean payload and fill missing defaults");
+    expect(view.container.textContent).toContain("Review plan alignment");
+    expect(view.container.textContent).toContain("Review payload cleanup");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.querySelector("pre")).toBeNull();
 
-    clickButtonByText(view.container, "Clean payload and fill missing defaults");
+    clickButtonByText(view.container, "Review payload cleanup");
+    expect(view.container.textContent).toContain("Clean pricing payload?");
+    clickButtonByText(view.container, "Clean payload");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.header).toMatchObject({
@@ -812,7 +845,9 @@ test("PricingPlans advanced editor exposes diagnostics and clearer fix/reset act
       radius: "lg",
     });
 
-    clickButtonByText(view.container, "Align plan list to current layout count");
+    clickButtonByText(view.container, "Review plan alignment");
+    expect(view.container.textContent).toContain("Align plans to current layout?");
+    clickButtonByText(view.container, "Align plans");
 
     expect(latestValue.plans).toHaveLength(4);
     expect(latestValue.plans[3]).toMatchObject({
@@ -821,10 +856,8 @@ test("PricingPlans advanced editor exposes diagnostics and clearer fix/reset act
       price: "$199",
     });
 
-    const previewAfterActions = view.container.querySelector("pre");
-    expect(previewAfterActions?.textContent).toContain('"spacing": "md"');
-    expect(previewAfterActions?.textContent).toContain('"radius": "lg"');
-    expect(previewAfterActions?.textContent).toContain('"name": "Business"');
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("4 of 4");
   } finally {
     view.cleanup();
   }
@@ -1029,7 +1062,8 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
   try {
     expect(advancedView.container.textContent).toContain("Visual-owned tokens");
     expect(advancedView.container.textContent).toContain("Fix and reset");
-    expect(advancedView.container.textContent).toContain("Align plan list to current layout count");
+    expect(advancedView.container.textContent).toContain("Review plan alignment");
+    expect(advancedView.container.querySelector("pre")).toBeNull();
   } finally {
     advancedView.cleanup();
   }
@@ -1039,7 +1073,6 @@ test("PricingPlans advanced editor confirms before trimming preserved hidden pla
   const { PricingPlansAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
-  const originalConfirm = window.confirm;
   let latestValue: PricingPlansData = {
     plans: [
       { id: "starter", name: "Starter", price: "$19", features: ["Email support"] },
@@ -1064,41 +1097,24 @@ test("PricingPlans advanced editor confirms before trimming preserved hidden pla
     );
   };
 
+  const cancelView = mount(<Harness />);
   try {
-    Object.defineProperty(window, "confirm", {
-      value: vi.fn(() => false),
-      configurable: true,
-      writable: true,
-    });
-
-    const cancelView = mount(<Harness />);
-    try {
-      clickButtonByText(cancelView.container, "Align plan list to current layout count");
-      expect(latestValue.plans).toHaveLength(4);
-    } finally {
-      cancelView.cleanup();
-    }
-
-    Object.defineProperty(window, "confirm", {
-      value: vi.fn(() => true),
-      configurable: true,
-      writable: true,
-    });
-
-    const confirmView = mount(<Harness />);
-    try {
-      clickButtonByText(confirmView.container, "Align plan list to current layout count");
-      expect(latestValue.plans).toHaveLength(3);
-      expect(latestValue.plans[2]?.id).toBe("scale");
-    } finally {
-      confirmView.cleanup();
-    }
+    clickButtonByText(cancelView.container, "Review plan alignment");
+    expect(cancelView.container.textContent).toContain("Align plans to current layout?");
+    clickButtonByText(cancelView.container, "Cancel");
+    expect(latestValue.plans).toHaveLength(4);
   } finally {
-    Object.defineProperty(window, "confirm", {
-      value: originalConfirm,
-      configurable: true,
-      writable: true,
-    });
+    cancelView.cleanup();
+  }
+
+  const confirmView = mount(<Harness />);
+  try {
+    clickButtonByText(confirmView.container, "Review plan alignment");
+    clickButtonByText(confirmView.container, "Align plans");
+    expect(latestValue.plans).toHaveLength(3);
+    expect(latestValue.plans[2]?.id).toBe("scale");
+  } finally {
+    confirmView.cleanup();
   }
 });
 

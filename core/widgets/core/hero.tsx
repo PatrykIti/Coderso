@@ -1565,9 +1565,9 @@ export const heroEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "hero.advanced.runtime-payload",
-      title: "Runtime payload",
-      role: "technical",
+      id: "hero.advanced.runtime-summary",
+      title: "Runtime summary",
+      role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["runtime.normalizedData"],
     },

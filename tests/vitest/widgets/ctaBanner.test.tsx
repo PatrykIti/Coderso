@@ -390,7 +390,9 @@ test("cta banner advanced keeps diagnostics read-only", () => {
   expect(html).toContain("Style diagnostics");
   expect(html).toContain("Visual owns color editing");
   expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Runtime summary");
+  expect(html).not.toContain("Raw payload snapshot");
+  expect(html).not.toContain("<pre");
   expect(html).not.toContain('placeholder="background token"');
   expect(html).not.toContain('placeholder="text token"');
   expect(html).not.toContain('placeholder="border token"');

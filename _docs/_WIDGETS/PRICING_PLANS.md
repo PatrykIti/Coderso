@@ -174,5 +174,6 @@ Pricing table for plans, tiers, and comparison-style rows.
   page-first destination pickers, removed fake `href: "#"` defaults, hid raw
   color token textboxes behind swatch/clear controls, and corrected Wizard
   ownership so it no longer claims `header.description`.
-- Destructive align/reset and raw payload UX drift remains routed to
-  `TASK-336-19`.
+- TASK-336-19 also moved Advanced align/cleanup into review-first confirmed
+  support actions and replaced raw payload snapshots with human runtime
+  summaries.

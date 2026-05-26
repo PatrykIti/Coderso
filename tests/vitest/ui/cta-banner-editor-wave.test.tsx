@@ -797,21 +797,17 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
       },
     });
 
-    const snapshotAfterNormalize = container.querySelector("pre")?.textContent ?? "";
-    expect(snapshotAfterNormalize).toContain('"showDescription": false');
-    expect(snapshotAfterNormalize).toContain('"borderWidth": "1"');
-    expect(snapshotAfterNormalize).toContain(
-      '"secondaryButtonBorder": "var(--cta-secondary-border)"'
-    );
+    expect(container.querySelector("pre")).toBeNull();
+    expect(container.textContent).toContain("Runtime summary");
+    expect(container.textContent).toContain("Human diagnostics only");
+    expect(container.textContent).toContain("2 configured");
 
     clickButton(getButtonsByText(container, "Reset to defaults")[0]);
     expect(container.textContent).toContain("Reset CTA banner to defaults?");
     clickButton(getButtonsByText(container, "Reset to defaults").at(-1));
 
     expect(getLatestValue()).toEqual(ctaBannerDefaults);
-    const snapshotAfterReset = container.querySelector("pre")?.textContent ?? "";
-    expect(snapshotAfterReset).toContain('"label": "Contact sales"');
-    expect(snapshotAfterReset).toContain('"color": "var(--color-surface)"');
+    expect(container.querySelector("pre")).toBeNull();
   } finally {
     cleanup();
   }

@@ -648,7 +648,7 @@ test("posts feed exposes a strict source, visual, and readonly advanced editor c
     "posts-feed.visual.empty-state",
     "posts-feed.advanced.resolved-query",
     "posts-feed.advanced.runtime-status",
-    "posts-feed.advanced.runtime-payload",
+    "posts-feed.advanced.runtime-summary",
     "posts-feed.advanced.contract-summary",
   ]);
   expect(writableOwners.get("source.mode")).toBe("wizard");

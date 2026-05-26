@@ -415,8 +415,8 @@ export const richTextSectionEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "rich-text-section.advanced.runtime-payload",
-      title: "Runtime payload",
+      id: "rich-text-section.advanced.saved-content-summary",
+      title: "Saved content summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["runtime.normalizedData"],

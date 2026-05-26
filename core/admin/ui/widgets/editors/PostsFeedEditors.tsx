@@ -1872,31 +1872,6 @@ function ContractSummary() {
   );
 }
 
-function RuntimeSnapshot({
-  value,
-  context,
-}: {
-  value: PostsFeedData;
-  context?: WidgetEditorContext;
-}) {
-  const normalized = normalizePostsFeedData(value);
-  const resolved = resolvePreviewResolvedData(normalized, context?.previewState);
-
-  return (
-    <EditorSection
-      id="posts-feed.advanced.runtime-payload"
-      title="Runtime payload"
-      mode="advanced"
-      role="technical"
-      description="Read-only snapshot of resolved runtime data."
-    >
-      <pre className="max-h-64 overflow-auto rounded-md border border-border/70 bg-background/70 p-3 text-xs">
-        {JSON.stringify(resolved ?? {}, null, 2)}
-      </pre>
-    </EditorSection>
-  );
-}
-
 function PostsFeedWizardBody(props: WidgetEditorProps<PostsFeedData>) {
   return (
     <div className="space-y-4">
@@ -1930,7 +1905,6 @@ function PostsFeedAdvancedBody(props: WidgetEditorProps<PostsFeedData>) {
       <PostsFeedPreviewBridge value={props.value} context={props.context} />
       <ResolvedQueryDiagnostics value={props.value} context={props.context} />
       <RuntimeStatusCard value={props.value} context={props.context} />
-      <RuntimeSnapshot value={props.value} context={props.context} />
       <ContractSummary />
     </div>
   );

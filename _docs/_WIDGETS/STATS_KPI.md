@@ -46,7 +46,7 @@ Notes:
 ### Advanced (read-only diagnostics)
 - Runtime diagnostics: resolved variant, metric count, split-highlight secondary grid, and static-animation policy.
 - Style diagnostics: layout, typography, surface, and divider summaries derived from normalized data.
-- Runtime payload: safe-link status, normalized JSON snapshot, and contract summary.
+- Runtime summary: safe-link status, normalized item count, and contract summary without raw JSON snapshots.
 - Repair actions: `Normalize now` and `Reset to defaults` are explicit action controls with confirmation, not daily writable owners.
 
 Advanced has no writable metric, style, layout, header, or variant control paths.

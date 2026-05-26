@@ -1798,14 +1798,6 @@ export function RichTextSectionVisualEditor({
   );
 }
 
-function DiagnosticsSnapshot({ value }: { value: RichTextSectionData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 type RichTextSectionAdvancedEditorContentProps = {
   value: RichTextSectionData;
   onChange: WidgetEditorProps<RichTextSectionData>["onChange"];
@@ -1849,6 +1841,10 @@ function RichTextSectionAdvancedEditorContent({
 }: RichTextSectionAdvancedEditorContentProps) {
   const [pendingSupportAction, setPendingSupportAction] = useState<AdvancedSupportAction>(null);
   const htmlDiagnostics = sanitizeRichTextHtmlWithDiagnostics(normalized.body?.html ?? "");
+  const mediaBlockCount = blocks.filter(
+    (block) => block.kind === "image" || block.kind === "attachment"
+  ).length;
+  const embedBlockCount = blocks.filter((block) => block.kind === "embed").length;
   const supportActionDescription =
     pendingSupportAction === "reset"
       ? "Reset this rich text section to the default sample content? This replaces the current title, body, blocks, options, and style."
@@ -1929,8 +1925,26 @@ function RichTextSectionAdvancedEditorContent({
         </div>
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        title="Saved content summary"
+        description="Human diagnostics only. Advanced does not show raw rich-text JSON."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">Structured blocks</p>
+            <p className="mt-1 text-muted-foreground">
+              {blocks.length} total · {mediaBlockCount} media/attachment · {embedBlockCount} embed
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+            <p className="font-medium">HTML source</p>
+            <p className="mt-1 text-muted-foreground">
+              {htmlDiagnostics.html.length > 0
+                ? `${htmlDiagnostics.html.length} sanitized characters`
+                : "No rendered HTML source"}
+            </p>
+          </div>
+        </div>
       </EditorSection>
 
       <ConfirmActionDialog
