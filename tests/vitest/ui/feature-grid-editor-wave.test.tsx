@@ -394,7 +394,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FeatureGrid editors cover variant changes, card editing, style tokens, and advanced normalization", async () => {
+test("FeatureGrid editors cover variant changes, card editing, swatch colors, and read-only advanced summaries", async () => {
   const { FeatureGridAdvancedEditor, FeatureGridVisualEditor, FeatureGridWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
@@ -465,7 +465,9 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
 
   try {
     expect(view.container.textContent).toContain("Feature grid style");
-    expect(view.container.textContent).toContain("Raw payload snapshot");
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.textContent).not.toContain("Normalize full payload");
 
     const variantSelect = findSelectsByOptions(view.container, [
       "cards-3",
@@ -511,7 +513,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       view.container,
       "Section typography and container"
     );
-    const advancedSection = findSectionByTitle(view.container, "Layout diagnostics");
+    const advancedSection = findSectionByTitle(view.container, "Layout summary");
 
     expect(layoutSection).toBeTruthy();
     expect(headerSection).toBeTruthy();
@@ -678,14 +680,10 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     );
     setInputValue(colorInputs[0], "#111111");
     setInputValue(colorInputs[1], "#222222");
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)"),
-      "var(--surface-strong)"
-    );
-    setInputValue(
-      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)"),
-      "var(--border-strong)"
-    );
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
+    expect(
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
 
     const maxWidthSelect = findSelectsByOptions(sectionStyleSection as ParentNode, [
       "5xl",
@@ -712,13 +710,10 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     setSelectValue(headerSizeSelect, "lg");
     setSelectValue(cardTitleSizeSelect, "lg");
     setSelectValue(hoverEffectSelect, "lift");
-    setInputValue(
-      findInputByPlaceholder(sectionStyleSection as ParentNode, "var(--color-surface)"),
-      "var(--surface-subtle)"
+    const sectionColorInputs = Array.from(
+      (sectionStyleSection as ParentNode).querySelectorAll("input[type='color']")
     );
-
-    clickByText(view.container, "Normalize items to variant baseline");
-    clickByText(view.container, "Normalize full payload");
+    setInputValue(sectionColorInputs[0], "#333333");
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(currentVariant).toBe("highlight-first");
@@ -727,7 +722,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       title: "Feature grid overview",
       description: "Concise visual summary.",
     });
-    expect(latestValue.items).toHaveLength(4);
+    expect(latestValue.items).toHaveLength(6);
     expect(latestValue.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -754,20 +749,20 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       headerSize: "lg",
       cardTitleSize: "lg",
       hoverEffect: "lift",
-      surfaceColor: "var(--surface-strong)",
-      sectionBackground: "var(--surface-subtle)",
-      borderColor: "var(--border-strong)",
+      surfaceColor: "#111111",
+      sectionBackground: "#333333",
+      borderColor: "#222222",
     });
 
-    const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"eyebrow": "Why teams switch"');
-    expect(snapshot?.textContent).toContain('"title": "Feature grid overview"');
-    expect(snapshot?.textContent).toContain('"columns": "3"');
-    expect(snapshot?.textContent).toContain('"cardLayout": "horizontal"');
-    expect(snapshot?.textContent).toContain('"borderWidth": "3"');
-    expect(snapshot?.textContent).toContain('"hoverEffect": "lift"');
-    expect(snapshot?.textContent).toContain('"surfaceColor": "var(--surface-strong)"');
-    expect(snapshot?.textContent).toContain('"ctaHref": "/automation"');
+    const advancedWritablePaths = Array.from(
+      view.container.querySelectorAll(
+        '[data-widget-editor-section^="feature-grid.advanced"] [data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    );
+    expect(advancedWritablePaths).toHaveLength(0);
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain("Use Visual for card copy");
+    expect(view.container.textContent).toContain("6 cards");
   } finally {
     view.cleanup();
   }
@@ -949,22 +944,11 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
           | undefined
       )?.value
     ).toBe("");
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
     expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe(featureGridDefaults.style?.borderColor);
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
+    expect(colorsSection?.textContent).toContain("Theme default");
   } finally {
     visualView.cleanup();
   }
@@ -974,12 +958,14 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   );
 
   try {
-    const layoutSection = findSectionByTitle(advancedView.container, "Layout diagnostics");
-    expect(layoutSection?.textContent).toContain("Visual owns layout tokens");
-    expect(layoutSection?.textContent).toContain("Columns token:");
-    expect(layoutSection?.textContent).toContain("Gap token:");
-    expect(layoutSection?.textContent).toContain("Border width token:");
-    expect(layoutSection?.textContent).toContain("Radius token:");
+    const layoutSection = findSectionByTitle(advancedView.container, "Layout summary");
+    const presentationSection = findSectionByTitle(advancedView.container, "Presentation summary");
+    expect(layoutSection?.textContent).toContain("Desktop rhythm");
+    expect(layoutSection?.textContent).toContain("Card spacing");
+    expect(presentationSection?.textContent).toContain("Border");
+    expect(
+      advancedView.container.querySelector('[data-widget-control-ownership="writable"]')
+    ).toBeNull();
   } finally {
     advancedView.cleanup();
   }
@@ -1129,22 +1115,10 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
           | undefined
       )?.value
     ).toBe("");
+    expect(findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)")).toBeUndefined();
     expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)")
+    ).toBeUndefined();
     const colorInputs = Array.from(
       (colorsSection as ParentNode).querySelectorAll("input[type='color']")
     );
@@ -1163,11 +1137,14 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
   );
 
   try {
-    const advancedSection = findSectionByTitle(advancedView.container, "Layout diagnostics");
-    expect(advancedSection?.textContent).toContain("Columns token:");
-    expect(advancedSection?.textContent).toContain("Gap token:");
-    expect(advancedSection?.textContent).toContain("Border width token:");
-    expect(advancedSection?.textContent).toContain("Radius token:");
+    const advancedSection = findSectionByTitle(advancedView.container, "Layout summary");
+    const presentationSection = findSectionByTitle(advancedView.container, "Presentation summary");
+    expect(advancedSection?.textContent).toContain("Desktop rhythm");
+    expect(advancedSection?.textContent).toContain("Card spacing");
+    expect(presentationSection?.textContent).toContain("Border");
+    expect(
+      advancedView.container.querySelector('[data-widget-control-ownership="writable"]')
+    ).toBeNull();
   } finally {
     advancedView.cleanup();
     vi.doUnmock("../../../core/widgets/core/featureGrid");

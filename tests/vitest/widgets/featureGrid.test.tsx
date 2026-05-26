@@ -356,9 +356,8 @@ test("feature grid wizard renders onboarding fields", () => {
   expect(html).toContain("Section title");
   expect(html).toContain("Cards count");
   expect(html).toContain("Basic card labels");
-  expect(html).toContain(
-    "Use Visual for card descriptions, media, CTA links, layout, and styling."
-  );
+  expect(html).toContain("Wizard is one-time starter setup.");
+  expect(html).toContain("Use Visual for card descriptions, media, CTA links");
 });
 
 test("feature grid visual renders section-based IA", () => {
@@ -390,8 +389,13 @@ test("feature grid advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Layout diagnostics");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Layout summary");
+  expect(html).toContain("Content summary");
+  expect(html).toContain("Presentation summary");
+  expect(html).toContain("Authoring boundaries");
+  expect(html).not.toContain("Raw payload snapshot");
+  expect(html).not.toContain("Normalize full payload");
+  expect(html).not.toContain("<pre");
+  expect(html).not.toContain('data-widget-control-ownership="writable"');
   expect(html).not.toContain("Feature cards and actions");
 });

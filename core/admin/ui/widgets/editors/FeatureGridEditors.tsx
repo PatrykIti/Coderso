@@ -44,11 +44,15 @@ import {
   type FeatureGridVariantId,
 } from "../../../../widgets/core/featureGrid";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: FeatureGridVariantId;
@@ -187,18 +191,28 @@ const isValidFeatureGridCtaUrl = (value: string | undefined) =>
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -207,9 +221,11 @@ function EditorSection({
 function VariantCards({
   value,
   onChange,
+  controlPath = "variant",
 }: {
   value: FeatureGridVariantId;
   onChange?: (next: string) => void;
+  controlPath?: string;
 }) {
   const previewRows: Record<FeatureGridVariantId, number[]> = {
     "cards-3": [1, 1, 1],
@@ -225,7 +241,8 @@ function VariantCards({
           type="button"
           onClick={() => onChange?.(option.id)}
           data-widget-control={`feature-grid-variant-${option.id}`}
-          data-widget-control-ownership="action"
+          data-widget-control-path={controlPath}
+          data-widget-control-ownership={controlPath ? "writable" : "action"}
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
@@ -447,12 +464,51 @@ function applyVariantDataPatch(
   onVariantChange(nextVariant);
 }
 
-function DiagnosticsSnapshot({ value }: { value: FeatureGridData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
+const findOptionLabel = <T extends string>(
+  options: Array<{ id: T; label: string }>,
+  value: T | undefined,
+  fallback: string
+) => options.find((option) => option.id === value)?.label ?? fallback;
+
+const describeFeatureGridColor = (value: string | undefined) => {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed.length === 0) return "Theme default";
+  return /^#[0-9a-f]{3,8}$/i.test(trimmed) ? "Selected swatch" : "Saved custom color";
+};
+
+function summarizeFeatureGridMedia(items: FeatureGridItem[]) {
+  const imageCount = items.filter((item) => (item.image ?? "").trim().length > 0).length;
+  const invalidImageCount = items.filter(
+    (item) => (item.image ?? "").trim().length > 0 && !isValidFeatureGridImageUrl(item.image)
+  ).length;
+  const iconCount = items.filter((item) => (item.icon ?? "").trim().length > 0).length;
+
+  if (invalidImageCount > 0) {
+    return `${imageCount} cards use images; ${invalidImageCount} need Media Library replacement.`;
+  }
+
+  if (imageCount > 0) return `${imageCount} cards use Media Library or saved images.`;
+  if (iconCount > 0) return `${iconCount} cards use icon fallbacks.`;
+  return "Cards render without image or icon media.";
+}
+
+function summarizeFeatureGridCtas(items: FeatureGridItem[]) {
+  const enabledItems = items.filter(
+    (item) =>
+      item.ctaEnabled !== false &&
+      ((item.ctaLabel ?? "").trim().length > 0 || (item.ctaHref ?? "").trim().length > 0)
   );
+  const invalidDestinations = enabledItems.filter(
+    (item) => (item.ctaHref ?? "").trim().length > 0 && !isValidFeatureGridCtaUrl(item.ctaHref)
+  ).length;
+
+  if (invalidDestinations > 0) {
+    return `${enabledItems.length} card actions enabled; ${invalidDestinations} need destination review.`;
+  }
+
+  return enabledItems.length > 0
+    ? `${enabledItems.length} card actions enabled.`
+    : "No active card actions.";
 }
 
 export function FeatureGridWizardEditor({
@@ -474,7 +530,12 @@ export function FeatureGridWizardEditor({
       description="Pick the starting layout, headline, and starter card labels."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.wizard.variant"
+          data-widget-control-path="variant"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Feature grid style</p>
           <Select
             value={resolveFeatureGridVariant(variant)}
@@ -501,7 +562,12 @@ export function FeatureGridWizardEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.wizard.header.title"
+          data-widget-control-path="header.title"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Section title</p>
           <Input
             value={normalized.header?.title ?? ""}
@@ -510,7 +576,12 @@ export function FeatureGridWizardEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.wizard.header.description"
+          data-widget-control-path="header.description"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Section description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
@@ -519,7 +590,12 @@ export function FeatureGridWizardEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.wizard.items.count"
+          data-widget-control-path="items.count"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Cards count</p>
           <Select
             value={String(items.length)}
@@ -543,6 +619,9 @@ export function FeatureGridWizardEditor({
           {items.map((item, index) => (
             <div
               key={item.id ?? `wizard-item-${index + 1}`}
+              data-widget-control={`feature-grid.wizard.items.${index}.title`}
+              data-widget-control-path="items.title"
+              data-widget-control-ownership="writable"
               className="space-y-2 rounded-lg border p-3"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -560,7 +639,8 @@ export function FeatureGridWizardEditor({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Use Visual for card descriptions, media, CTA links, layout, and styling.
+          Wizard is one-time starter setup. Use Visual for card descriptions, media, CTA links,
+          layout, and styling.
         </p>
       </div>
     </WidgetEditorSection>
@@ -636,6 +716,9 @@ export function FeatureGridVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="feature-grid.visual.structure"
+        mode="visual"
+        role="layout"
         title="Variant and layout structure"
         description="Choose card arrangement and baseline density for runtime preview."
       >
@@ -653,7 +736,12 @@ export function FeatureGridVisualEditor({
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.columns"
+            data-widget-control-path="style.columns"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Columns</p>
             <Select
               value={
@@ -685,7 +773,12 @@ export function FeatureGridVisualEditor({
             ) : null}
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.gap"
+            data-widget-control-path="style.gap"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Card gap</p>
             <Select
               value={normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
@@ -707,7 +800,12 @@ export function FeatureGridVisualEditor({
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.visual.items.count"
+          data-widget-control-path="items.count"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Cards count</p>
           <Select
             value={String(items.length)}
@@ -728,10 +826,18 @@ export function FeatureGridVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="feature-grid.visual.header-copy"
+        mode="visual"
+        role="content"
         title="Header copy"
         description="Edit eyebrow, heading, and section description shown above cards."
       >
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.visual.header.eyebrow"
+          data-widget-control-path="header.eyebrow"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={normalized.header?.eyebrow ?? ""}
@@ -740,7 +846,12 @@ export function FeatureGridVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.visual.header.title"
+          data-widget-control-path="header.title"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Title</p>
           <Input
             value={normalized.header?.title ?? ""}
@@ -749,7 +860,12 @@ export function FeatureGridVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="feature-grid.visual.header.description"
+          data-widget-control-path="header.description"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={normalized.header?.description ?? ""}
@@ -760,6 +876,9 @@ export function FeatureGridVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="feature-grid.visual.cards"
+        mode="visual"
+        role="content"
         title="Feature cards and actions"
         description="Manage card content, visuals, CTA links, and ordering."
       >
@@ -824,18 +943,30 @@ export function FeatureGridVisualEditor({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
-                  <p className="text-sm font-medium">Title</p>
-                  <Input
-                    value={item.title ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { title: event.target.value })
-                    }
-                    placeholder={`Feature ${index + 1}`}
-                  />
+                  <div
+                    data-widget-control={`feature-grid.visual.items.${index}.title`}
+                    data-widget-control-path="items.title"
+                    data-widget-control-ownership="writable"
+                    className="space-y-2"
+                  >
+                    <p className="text-sm font-medium">Title</p>
+                    <Input
+                      value={item.title ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { title: event.target.value })
+                      }
+                      placeholder={`Feature ${index + 1}`}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-3">
+                  <div
+                    data-widget-control={`feature-grid.visual.items.${index}.description-mode`}
+                    data-widget-control-path="items.descriptionMode"
+                    data-widget-control-ownership="writable"
+                    className="flex items-center justify-between gap-3"
+                  >
                     <p className="text-sm font-medium">Description</p>
                     <Select
                       value={item.descriptionMode ?? "plain"}
@@ -857,27 +988,41 @@ export function FeatureGridVisualEditor({
                       </SelectContent>
                     </Select>
                   </div>
-                  {(item.descriptionMode ?? "plain") === "rich" ? (
-                    <PostRichTextAdapter
-                      value={item.description ?? ""}
-                      onChange={(next) => updateItem(value, onChange, index, { description: next })}
-                      toolbarProfile="paragraph"
-                      minHeightClassName="min-h-[8rem]"
-                      className="bg-muted/30"
-                      placeholder="Write concise rich card copy..."
-                    />
-                  ) : (
-                    <Textarea
-                      value={item.description ?? ""}
-                      onChange={(event) =>
-                        updateItem(value, onChange, index, { description: event.target.value })
-                      }
-                      placeholder="Describe this feature in one short paragraph."
-                    />
-                  )}
+                  <div
+                    data-widget-control={`feature-grid.visual.items.${index}.description`}
+                    data-widget-control-path="items.description"
+                    data-widget-control-ownership="writable"
+                    className="space-y-2"
+                  >
+                    {(item.descriptionMode ?? "plain") === "rich" ? (
+                      <PostRichTextAdapter
+                        value={item.description ?? ""}
+                        onChange={(next) =>
+                          updateItem(value, onChange, index, { description: next })
+                        }
+                        toolbarProfile="paragraph"
+                        minHeightClassName="min-h-[8rem]"
+                        className="bg-muted/30"
+                        placeholder="Write concise rich card copy..."
+                      />
+                    ) : (
+                      <Textarea
+                        value={item.description ?? ""}
+                        onChange={(event) =>
+                          updateItem(value, onChange, index, { description: event.target.value })
+                        }
+                        placeholder="Describe this feature in one short paragraph."
+                      />
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                <div
+                  data-widget-control={`feature-grid.visual.items.${index}.icon`}
+                  data-widget-control-path="items.icon"
+                  data-widget-control-ownership="writable"
+                  className="space-y-2"
+                >
                   <p className="text-sm font-medium">Icon</p>
                   <Input
                     value={item.icon ?? ""}
@@ -902,7 +1047,12 @@ export function FeatureGridVisualEditor({
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div
+                  data-widget-control={`feature-grid.visual.items.${index}.image`}
+                  data-widget-control-path="items.image"
+                  data-widget-control-ownership="writable"
+                  className="space-y-2"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium">Feature image</p>
                     <Button
@@ -949,20 +1099,32 @@ export function FeatureGridVisualEditor({
                   {mediaPickerError?.startsWith(`Card ${index + 1}:`) ? (
                     <p className="text-xs text-destructive">{mediaPickerError}</p>
                   ) : null}
-                  <Input
-                    value={item.imageAlt ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { imageAlt: event.target.value })
-                    }
-                    placeholder="Describe image for screen readers"
-                  />
+                  <div
+                    data-widget-control={`feature-grid.visual.items.${index}.image-alt`}
+                    data-widget-control-path="items.imageAlt"
+                    data-widget-control-ownership="writable"
+                    className="space-y-2"
+                  >
+                    <Input
+                      value={item.imageAlt ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { imageAlt: event.target.value })
+                      }
+                      placeholder="Describe image for screen readers"
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     If both image and icon are set, the image is used in preview and runtime.
                   </p>
                 </div>
 
                 <div className="space-y-3 sm:col-span-2">
-                  <div className="flex items-center justify-between gap-3">
+                  <div
+                    data-widget-control={`feature-grid.visual.items.${index}.cta-enabled`}
+                    data-widget-control-path="items.ctaEnabled"
+                    data-widget-control-ownership="writable"
+                    className="flex items-center justify-between gap-3"
+                  >
                     <p className="text-sm font-medium">Enable CTA</p>
                     <Switch
                       checked={item.ctaEnabled !== false}
@@ -972,7 +1134,12 @@ export function FeatureGridVisualEditor({
                     />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="space-y-2">
+                    <div
+                      data-widget-control={`feature-grid.visual.items.${index}.cta-label`}
+                      data-widget-control-path="items.ctaLabel"
+                      data-widget-control-ownership="writable"
+                      className="space-y-2"
+                    >
                       <p className="text-sm font-medium">CTA label</p>
                       <Input
                         value={item.ctaLabel ?? ""}
@@ -984,21 +1151,32 @@ export function FeatureGridVisualEditor({
                       />
                     </div>
 
-                    <LinkDestinationField
-                      fieldId={`feature-grid-card-${index + 1}-cta-destination`}
-                      label="CTA destination"
-                      value={item.ctaHref ?? ""}
-                      disabled={item.ctaEnabled === false}
-                      onChange={(next) => updateItem(value, onChange, index, { ctaHref: next })}
-                      feedback={
-                        (item.ctaHref ?? "").trim().length > 0 &&
-                        !isValidFeatureGridCtaUrl(item.ctaHref)
-                          ? "Saved destination is not public-safe and will not render publicly."
-                          : null
-                      }
-                    />
+                    <div
+                      data-widget-control={`feature-grid.visual.items.${index}.cta-href`}
+                      data-widget-control-path="items.ctaHref"
+                      data-widget-control-ownership="writable"
+                    >
+                      <LinkDestinationField
+                        fieldId={`feature-grid-card-${index + 1}-cta-destination`}
+                        label="CTA destination"
+                        value={item.ctaHref ?? ""}
+                        disabled={item.ctaEnabled === false}
+                        onChange={(next) => updateItem(value, onChange, index, { ctaHref: next })}
+                        feedback={
+                          (item.ctaHref ?? "").trim().length > 0 &&
+                          !isValidFeatureGridCtaUrl(item.ctaHref)
+                            ? "Saved destination is not public-safe and will not render publicly."
+                            : null
+                        }
+                      />
+                    </div>
 
-                    <div className="space-y-2">
+                    <div
+                      data-widget-control={`feature-grid.visual.items.${index}.cta-target`}
+                      data-widget-control-path="items.ctaTarget"
+                      data-widget-control-ownership="writable"
+                      className="space-y-2"
+                    >
                       <p className="text-sm font-medium">CTA target</p>
                       <Select
                         value={item.ctaTarget ?? "same-tab"}
@@ -1068,11 +1246,19 @@ export function FeatureGridVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="feature-grid.visual.card-layout"
+        mode="visual"
+        role="visual"
         title="Card layout and density"
         description="Control card alignment, padding, media sizing, and horizontal flow."
       >
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.card-layout"
+            data-widget-control-path="style.cardLayout"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Card layout</p>
             <Select
               value={
@@ -1095,7 +1281,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.text-align"
+            data-widget-control-path="style.textAlign"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Text align</p>
             <Select
               value={normalized.style?.textAlign ?? featureGridDefaults.style?.textAlign ?? "left"}
@@ -1116,7 +1307,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.card-padding"
+            data-widget-control-path="style.cardPadding"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Card padding</p>
             <Select
               value={
@@ -1139,7 +1335,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.media-size"
+            data-widget-control-path="style.mediaSize"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Media size</p>
             <Select
               value={normalized.style?.mediaSize ?? featureGridDefaults.style?.mediaSize ?? "md"}
@@ -1163,29 +1364,43 @@ export function FeatureGridVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="feature-grid.visual.colors"
+        mode="visual"
+        role="visual"
         title="Colors and borders"
         description="Customize card surface and border presentation."
       >
         <SharedColorControl
+          controlId="feature-grid.visual.surface-color"
+          controlPath="style.surfaceColor"
           label="Card background"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
 
         <SharedColorControl
+          controlId="feature-grid.visual.border-color"
+          controlPath="style.borderColor"
           label="Card border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
           onClear={() => clearStyleField(value, onChange, "borderColor")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          showValueInput={false}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.border-width"
+            data-widget-control-path="style.borderWidth"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Border width</p>
             <Select
               value={normalized.style?.borderWidth ?? featureGridDefaults.style?.borderWidth ?? "1"}
@@ -1206,7 +1421,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.radius"
+            data-widget-control-path="style.radius"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Corner radius</p>
             <Select
               value={normalized.style?.radius ?? featureGridDefaults.style?.radius ?? "lg"}
@@ -1230,20 +1450,31 @@ export function FeatureGridVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="feature-grid.visual.section-style"
+        mode="visual"
+        role="visual"
         title="Section typography and container"
         description="Tune section width, background, title scales, and card hover behavior."
       >
         <SharedColorControl
+          controlId="feature-grid.visual.section-background"
+          controlPath="style.sectionBackground"
           label="Section background"
           value={normalized.style?.sectionBackground}
           onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
           onClear={() => clearStyleField(value, onChange, "sectionBackground")}
           placeholder="var(--color-surface)"
           pickerFallback="#ffffff"
+          showValueInput={false}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.max-width"
+            data-widget-control-path="style.maxWidth"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Container width</p>
             <Select
               value={normalized.style?.maxWidth ?? featureGridDefaults.style?.maxWidth ?? "6xl"}
@@ -1264,7 +1495,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.header-size"
+            data-widget-control-path="style.headerSize"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Header size</p>
             <Select
               value={normalized.style?.headerSize ?? featureGridDefaults.style?.headerSize ?? "md"}
@@ -1285,7 +1521,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.card-title-size"
+            data-widget-control-path="style.cardTitleSize"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Card title size</p>
             <Select
               value={
@@ -1310,7 +1551,12 @@ export function FeatureGridVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div
+            data-widget-control="feature-grid.visual.hover-effect"
+            data-widget-control-path="style.hoverEffect"
+            data-widget-control-ownership="writable"
+            className="space-y-2"
+          >
             <p className="text-sm font-medium">Hover effect</p>
             <Select
               value={
@@ -1338,79 +1584,135 @@ export function FeatureGridVisualEditor({
   );
 }
 
-export function FeatureGridAdvancedEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<FeatureGridData>) {
+export function FeatureGridAdvancedEditor({ value, variant }: WidgetEditorProps<FeatureGridData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveFeatureGridVariant(variant);
+  const items = normalizeFeatureGridItems(normalized.items);
+  const style = normalized.style ?? featureGridDefaults.style ?? {};
+  const variantLabel = variantOptions.find((option) => option.id === resolvedVariant)?.label;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Layout diagnostics"
-        description="Visual owns layout tokens. Advanced keeps read-only diagnostics plus normalization actions."
+        id="feature-grid.advanced.layout-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Layout summary"
+        description="Read-only view of how this grid will render. Change layout in Visual."
       >
-        <div className="space-y-2 rounded-lg border p-3 text-sm text-muted-foreground">
-          <p>
-            Variant: <span className="font-medium text-foreground">{resolvedVariant}</span>
-          </p>
-          <p>
-            Columns token:{" "}
-            <span className="font-medium text-foreground">
-              {resolvedVariant === "highlight-first"
-                ? "Locked to shared spotlight layout"
-                : (normalized.style?.columns ?? featureGridDefaults.style?.columns ?? "3")}
-            </span>
-          </p>
-          <p>
-            Gap token:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.style?.gap ?? featureGridDefaults.style?.gap ?? "md"}
-            </span>
-          </p>
-          <p>
-            Border width token:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.style?.borderWidth ?? featureGridDefaults.style?.borderWidth ?? "1"}
-            </span>
-          </p>
-          <p>
-            Radius token:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.style?.radius ?? featureGridDefaults.style?.radius ?? "lg"}
-            </span>
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-variant"
+          label="Layout"
+          path="variant"
+          value={variantLabel ?? "Cards 3"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-cards-count"
+          label="Cards"
+          path="items.count"
+          value={`${items.length} ${items.length === 1 ? "card" : "cards"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-columns"
+          label="Desktop rhythm"
+          path="style.columns"
+          value={
+            resolvedVariant === "highlight-first"
+              ? "Spotlight layout with secondary cards"
+              : `${style.columns ?? "3"} column layout`
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-gap"
+          label="Card spacing"
+          path="style.gap"
+          value={findOptionLabel(gapOptions, style.gap, "Default")}
+        />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Apply deterministic item counts and model defaults for stable runtime output."
+        id="feature-grid.advanced.content-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Content summary"
+        description="Read-only health check for card copy, media, and destinations."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setItemsCount(value, onChange, resolveFeatureGridItemCountForVariant(resolvedVariant))
-            }
-          >
-            Normalize items to variant baseline
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => updateValue(value, onChange, (current) => current)}
-          >
-            Normalize full payload
-          </Button>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-header"
+          label="Header"
+          path="header"
+          value={normalized.header?.title ? "Configured" : "No section title"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-media"
+          label="Media"
+          path="items"
+          value={summarizeFeatureGridMedia(items)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-actions"
+          label="Card actions"
+          path="items"
+          value={summarizeFeatureGridCtas(items)}
+        />
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot" description="Current normalized widget payload.">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        id="feature-grid.advanced.presentation-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Presentation summary"
+        description="Read-only style state. Authors replace colors and spacing in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-card-layout"
+          label="Card layout"
+          path="style.cardLayout"
+          value={findOptionLabel(cardLayoutOptions, style.cardLayout, "Vertical")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-card-density"
+          label="Density"
+          path="style.cardPadding"
+          value={findOptionLabel(cardPaddingOptions, style.cardPadding, "Default")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-card-background"
+          label="Card background"
+          path="style.surfaceColor"
+          value={describeFeatureGridColor(style.surfaceColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-border"
+          label="Border"
+          path="style.borderColor"
+          value={`${findOptionLabel(borderWidthOptions, style.borderWidth, "1px")} border, ${findOptionLabel(radiusOptions, style.radius, "Large")} corners, ${describeFeatureGridColor(style.borderColor)}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-section-background"
+          label="Section background"
+          path="style.sectionBackground"
+          value={describeFeatureGridColor(style.sectionBackground)}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="feature-grid.advanced.authoring-boundaries"
+        mode="advanced"
+        role="summary"
+        title="Authoring boundaries"
+        description="This tab is intentionally read-only for authors."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-daily-owner"
+          label="Daily editing"
+          value="Use Visual for card copy, media, actions, layout, spacing, and colors."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid-advanced-setup-owner"
+          label="Starter setup"
+          value="Wizard is available only for first setup or explicit Run setup again."
+        />
       </EditorSection>
     </div>
   );

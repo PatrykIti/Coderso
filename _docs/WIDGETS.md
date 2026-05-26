@@ -214,6 +214,10 @@ Zasady:
   KPI runtime style summaries are read-only diagnostics in Advanced, while
   Visual uses swatch-only color controls plus clear actions where values are
   clearable.
+- Feature Grid follows the same TASK-336-19 contract: Wizard stays setup-only,
+  Visual owns card copy/media/actions/layout and swatch-only colors with
+  explicit control-path metadata, and Advanced shows read-only layout/content/
+  presentation summaries without raw JSON payloads or normalization actions.
 - Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
   are chosen from a Form picker, field mapping is selected from Form fields or
   shown as safe defaults, and older external signup-service metadata is

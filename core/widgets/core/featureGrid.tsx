@@ -274,28 +274,29 @@ export const featureGridDefaults: FeatureGridData = {
 const featureGridWizardVisualDuplicateAllowances = [
   {
     path: "variant",
-    reason: "Wizard seeds a starter card arrangement until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
+    reason:
+      "Wizard seeds a starter card arrangement only during first setup or explicit Run setup again.",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "header.title",
     reason: "Wizard seeds the section heading; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "header.description",
     reason: "Wizard seeds the section description; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "items.count",
     reason: "Wizard chooses the starter card count; Visual remains the daily structure owner.",
-    expiresWithTask: "TASK-336-16",
+    expiresWithTask: "TASK-336-19",
   },
   {
     path: "items.title",
     reason: "Wizard seeds card titles; Visual remains the daily card content owner.",
-    expiresWithTask: "TASK-336-16",
+    expiresWithTask: "TASK-336-19",
   },
 ] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
 
@@ -319,7 +320,7 @@ export const featureGridEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "feature-grid.visual.structure",
-      title: "Structure",
+      title: "Variant and layout structure",
       role: "layout",
       writablePaths: ["variant", "items.count", "style.columns", "style.gap"],
       allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
@@ -328,13 +329,20 @@ export const featureGridEditorContract: WidgetEditorContract = {
     },
     {
       mode: "visual",
-      id: "feature-grid.visual.header-cards",
-      title: "Header and cards",
+      id: "feature-grid.visual.header-copy",
+      title: "Header copy",
+      role: "content",
+      writablePaths: ["header.eyebrow", "header.title", "header.description"],
+      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
+        (allowance) => allowance.path === "header.title" || allowance.path === "header.description"
+      ),
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.cards",
+      title: "Feature cards and actions",
       role: "content",
       writablePaths: [
-        "header.eyebrow",
-        "header.title",
-        "header.description",
         "items.title",
         "items.description",
         "items.descriptionMode",
@@ -347,27 +355,40 @@ export const featureGridEditorContract: WidgetEditorContract = {
         "items.ctaTarget",
       ],
       allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
-        (allowance) =>
-          allowance.path === "header.title" ||
-          allowance.path === "header.description" ||
-          allowance.path === "items.title"
+        (allowance) => allowance.path === "items.title"
       ),
     },
     {
       mode: "visual",
-      id: "feature-grid.visual.presentation",
-      title: "Presentation",
+      id: "feature-grid.visual.card-layout",
+      title: "Card layout and density",
       role: "visual",
       writablePaths: [
-        "style.surfaceColor",
-        "style.sectionBackground",
-        "style.borderColor",
-        "style.borderWidth",
-        "style.radius",
         "style.textAlign",
         "style.cardPadding",
         "style.mediaSize",
         "style.cardLayout",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.colors",
+      title: "Colors and borders",
+      role: "visual",
+      writablePaths: [
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "feature-grid.visual.section-style",
+      title: "Section typography and container",
+      role: "visual",
+      writablePaths: [
+        "style.sectionBackground",
         "style.maxWidth",
         "style.headerSize",
         "style.cardTitleSize",
@@ -376,11 +397,43 @@ export const featureGridEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "feature-grid.advanced.runtime-summary",
-      title: "Runtime summary",
+      id: "feature-grid.advanced.layout-summary",
+      title: "Layout summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["variant", "header", "items", "style", "runtime.normalizedData"],
+      readOnlyPaths: ["variant", "items.count", "style.columns", "style.gap"],
+    },
+    {
+      mode: "advanced",
+      id: "feature-grid.advanced.content-summary",
+      title: "Content summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["header", "items"],
+    },
+    {
+      mode: "advanced",
+      id: "feature-grid.advanced.presentation-summary",
+      title: "Presentation summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: [
+        "style.cardLayout",
+        "style.cardPadding",
+        "style.surfaceColor",
+        "style.borderColor",
+        "style.borderWidth",
+        "style.radius",
+        "style.sectionBackground",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "feature-grid.advanced.authoring-boundaries",
+      title: "Authoring boundaries",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "header", "items", "style"],
     },
   ],
 };
@@ -572,10 +625,9 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
       sectionBackground: hasStyleObject
         ? resolveClearableStyleValue(data.style?.sectionBackground)
         : styleDefaults.sectionBackground,
-      borderColor: resolveString(
-        data.style?.borderColor,
-        styleDefaults.borderColor ?? "var(--color-border)"
-      ),
+      borderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.borderColor)
+        : styleDefaults.borderColor,
       borderWidth: resolveFeatureGridBorderWidth(data.style?.borderWidth),
       radius: resolveFeatureGridRadius(data.style?.radius),
       textAlign: resolveFeatureGridTextAlign(data.style?.textAlign),

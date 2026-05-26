@@ -524,4 +524,29 @@ Wszystkie trafiają do fallback który zwraca domyślną wartość, więc dział
 
 ---
 
+## Status po TASK-336-19 (2026-05-26)
+
+- Feature Grid został ponownie sprawdzony po cleanupie wspólnego kontraktu
+  Wizard/Visual/Advanced.
+- Wizard pozostaje setup-only i jest ukryty po ukończeniu konfiguracji; focused
+  probe potwierdził `wizardBeforeCount=0` oraz brak zakładki Wizard przed
+  kliknięciem `Run setup again`.
+- Visual jest dziennym właścicielem kart, mediów, CTA, layoutu i kolorów.
+  Kolory są swatch-only; focused probe potwierdził `Visual raw color text
+  inputs=0` i `controlsWithoutPath=0`.
+- Advanced nie renderuje już raw JSON payloadu, `<pre>`, token labels ani
+  mutujących normalizacji. Focused probe potwierdził `Advanced writable
+  paths=0`, `raw controls=0`, i brak raw technical text.
+- Strict Playwright CLI:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-2026-05-26.*`
+  raportuje `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  `metadataGaps=0`.
+- Focused Playwright CLI:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-focused-2026-05-26.*`
+  raportuje `passed=true`, setup-only Wizard paths limited to
+  `variant/header/items`, Visual raw color inputs `0`, Advanced writable paths
+  `0`, and Advanced raw controls `0`.
+
+---
+
 *Raport wygenerowany na podstawie analizy kodu i testów Playwright — 2026-05-16.*

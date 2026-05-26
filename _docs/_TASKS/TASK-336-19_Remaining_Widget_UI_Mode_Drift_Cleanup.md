@@ -961,6 +961,26 @@ read-only diagnostics. It added these concrete cleanup requirements:
   verifies completed widgets have no Wizard tab/root before explicit `Run setup
   again`, Visual style raw inputs `0`, Advanced writable paths `0`, Advanced
   raw controls `0`, Wizard writable paths `0`, and no raw technical text.
+- In Progress (2026-05-26): Feature Grid residual drift is superseded under
+  this task after helper-agent and Claude audits flagged Visual raw CSS/token
+  color inputs, raw Advanced normalized payload JSON, mutating Advanced
+  normalization actions, contract/section metadata drift, stale
+  Wizard/Visual duplicate allowance ownership, and stale tests/docs that
+  blessed the drift. Feature Grid now keeps Wizard setup-only, Visual as the
+  daily owner for card copy/media/actions/layout and swatch-only colors with
+  explicit control-path metadata, and Advanced as read-only layout/content/
+  presentation/authoring-boundary summaries with no raw JSON, token labels,
+  or normalization actions. Targeted Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/widgets/featureGrid.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 37/37 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-2026-05-26.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-focused-2026-05-26.*`
+  verifies completed widgets have no Wizard tab/root before explicit
+  `Run setup again`, Visual raw color inputs `0`, Advanced writable paths `0`,
+  Advanced raw controls `0`, Wizard writable paths limited to starter setup,
+  and missing metadata `0`.
 
 ## Files to Change
 

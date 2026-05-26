@@ -39,12 +39,15 @@ media-first cards, CTA actions, and bounded layout/style controls.
 - card layout, text alignment, padding, media sizing, and horizontal layout
 - surface/border colors
 - section background, width, header size, card title size, and hover behavior
+- color controls are swatch-only with saved-custom replace/clear state; authors
+  are not asked to type CSS variables or token strings
 
 ### Advanced
 
-- read-only layout diagnostics
-- normalization actions
-- raw normalized payload snapshot
+- read-only layout summary
+- read-only content/media/action health summary
+- read-only presentation summary with human color/density labels
+- authoring-boundary summary that points daily edits back to `Visual`
 
 ## Data Model
 
@@ -121,4 +124,18 @@ media-first cards, CTA actions, and bounded layout/style controls.
 - Contract target: Wizard seeds starter layout/count/copy; Visual owns daily
   card content, CTA, media, layout, and styling; Advanced is read-only runtime
   diagnostics.
-- Remaining normalization-action UX drift is routed to `TASK-336-19`.
+
+## TASK-336-19 Editor Drift Cleanup
+
+- Advanced no longer renders a raw normalized payload snapshot or mutating
+  normalization buttons.
+- Advanced summaries use human labels instead of token/raw enum wording and
+  expose no writable controls.
+- Visual color controls are swatch-only and carry explicit
+  `data-widget-control-path` metadata for the persisted style fields.
+- Wizard/Visual duplicate allowances now point at the active setup-only
+  cleanup policy because Wizard is only visible on first setup or explicit
+  `Run setup again`.
+- Validation evidence:
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-2026-05-26.*`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-feature-grid-focused-2026-05-26.*`
