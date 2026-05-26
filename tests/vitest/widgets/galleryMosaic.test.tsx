@@ -512,7 +512,7 @@ test("gallery mosaic visual renders section-based IA", () => {
   expect(html).toContain("Density and motion");
 });
 
-test("gallery mosaic advanced keeps technical-only scope", () => {
+test("gallery mosaic advanced keeps read-only diagnostics scope", () => {
   const html = renderToString(
     <GalleryMosaicAdvancedEditor
       value={galleryMosaicDefaults}
@@ -525,6 +525,7 @@ test("gallery mosaic advanced keeps technical-only scope", () => {
   expect(html).toContain("Technical ratio and layout tokens");
   expect(html).toContain("Configuration import and export");
   expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Runtime summary");
+  expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Media items and links");
 });

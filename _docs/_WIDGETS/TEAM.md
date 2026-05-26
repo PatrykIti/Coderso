@@ -54,17 +54,21 @@ Notes:
   Legacy custom social destinations remain clearable compatibility state
   instead of editable raw URL fields.
 - Color controls surface contrast advisories against the default theme text
-  color for Team-local presentation changes.
+  color for Team-local presentation changes and use swatch-only authoring
+  instead of editable raw CSS/token text fields.
 
 ### Advanced (technical-only)
-- Technical layout and presentation tokens
-- Normalization and reset utilities
-- Raw payload snapshot
+- Read-only layout summary
+- Read-only surface and content summaries
+- Confirm-gated normalization and reset utilities
 
 Notes:
-- Advanced exposes bounded token controls for `columns`, `gap`, `radius`,
-  `cardBorderWidth`, `compactMobileBio`, `sectionBackground`, `cardSurface`,
-  and `cardBorder`.
+- Advanced no longer duplicates Visual-owned layout/style controls and no
+  longer renders a raw payload snapshot. Support actions require confirmation
+  before they mutate the widget.
+- `teamEditorContract` declares Wizard as starter setup, Visual as daily
+  content/style authoring, and Advanced as diagnostics-only with no writable
+  paths.
 
 ## Runtime Behavior Notes
 
@@ -105,8 +109,9 @@ Notes:
 ## Clear Controls
 
 - `style.sectionBackground`, `style.cardSurface`, and `style.cardBorder` are
-  clearable from Visual and Advanced controls; clearing removes the configured
-  fields and the renderer omits the matching inline style keys.
+  clearable from Visual controls; clearing removes the configured fields and
+  the renderer omits the matching inline style keys. Advanced only summarizes
+  the saved color state.
 - Gap, radius, border width, header alignment, title size, and compact mobile
   bio remain bounded tokens rather than arbitrary CSS.
 

@@ -28,7 +28,8 @@ image and video assets and persists selected media as schema-owned public
 `header.description`; Visual owns supporting copy after setup.
 Wizard now also points authors toward the final flow: Visual owns per-item
 captions, destinations, alt text, posters, lightbox, density, and motion
-controls, while Advanced owns JSON import/export for the schema payload.
+controls, while Advanced owns confirm-gated support import/export for the
+schema payload.
 
 ### Visual (primary editing mode)
 Sections:
@@ -65,6 +66,9 @@ Notes:
   `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
   and Visual explains that the link must be cleared before that tile can open
   the lightbox.
+- Overlay color authoring uses a swatch-only control with clear/legacy-state
+  support and visible saved-opacity guidance instead of asking authors to type
+  raw `rgba(...)` or CSS token values.
 - Density and motion now stay in bounded product presets: `layoutDensity`
   (`auto`, `compact`, `balanced`, `dense`) changes responsive packing through
   static variant-owned class maps, and `motionPreset` (`none`, `fade`,
@@ -72,14 +76,15 @@ Notes:
 
 ### Advanced (technical-only)
 - Shared style ownership summary (read-only)
-- Configuration import and export
-- Normalization and safeguards
-- Raw payload snapshot
+- Configuration import/export with explicit confirmation before import
+- Confirm-gated normalization and reset support actions
+- Runtime summary rows for variant, media count, links, and interaction
 
 Advanced no longer duplicates the live shared style controls that Visual owns
-for ratio, gap, radius, caption position, and overlay. It now owns a bounded
-JSON import/export surface that validates unknown fields and invalid enum values
-before applying a config.
+for ratio, gap, radius, caption position, and overlay. It no longer renders a
+raw payload snapshot. The bounded JSON import/export surface validates unknown
+fields and invalid enum values first, then requires confirmation before applying
+the config.
 
 ## Runtime Behavior Notes
 
@@ -113,9 +118,10 @@ before applying a config.
   class maps for each variant.
 - Motion presets are opt-in and use static Tailwind `motion-safe:*` /
   `motion-reduce:*` classes. `none` remains the default.
-- Advanced import/export uses the normalized Gallery Mosaic payload only. Invalid
-  JSON, unknown nested fields, or invalid enum values are rejected
-  non-destructively with machine-readable error codes and paths.
+- Advanced import/export uses the normalized Gallery Mosaic payload only.
+  Invalid JSON, unknown nested fields, or invalid enum values are rejected
+  non-destructively with machine-readable error codes and paths. Valid imports
+  require explicit confirmation before mutation.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.

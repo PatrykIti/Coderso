@@ -72,6 +72,32 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    children,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description?: string;
+    children?: React.ReactNode;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-confirm-dialog="true">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        <div>{children}</div>
+        <button type="button" onClick={onConfirm}>
+          confirm-action
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("@/components/ui/input", () => ({
   Input: ({
     value,
@@ -587,18 +613,30 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
     expect(view.container.textContent).toContain("Links to selected site page: Careers.");
 
     const styleSection = findSectionByTitle(view.container, "Section and card style");
-    setInputValue(
-      findInputsByPlaceholder(styleSection as ParentNode, "var(--color-bg)")[0],
-      "#111827"
+    const sectionBackgroundSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Section background swatch"]'
     );
-    setInputValue(
-      findInputsByPlaceholder(styleSection as ParentNode, "var(--color-bg)")[1],
-      "#ffffff"
+    const cardBackgroundSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Card background swatch"]'
     );
-    setInputValue(
-      findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)"),
-      "#cbd5e1"
+    const cardBorderSwatch = (styleSection as ParentNode).querySelector(
+      'input[aria-label="Card border swatch"]'
     );
+    expect(sectionBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(cardBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(cardBorderSwatch).toBeInstanceOf(HTMLInputElement);
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Section background value"]')
+    ).toBeNull();
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Card background value"]')
+    ).toBeNull();
+    expect(
+      (styleSection as ParentNode).querySelector('input[aria-label="Card border value"]')
+    ).toBeNull();
+    setInputValue(sectionBackgroundSwatch, "#111827");
+    setInputValue(cardBackgroundSwatch, "#f8fafc");
+    setInputValue(cardBorderSwatch, "#cbd5e1");
     setSelectValue(findSelectByOptions(styleSection as ParentNode, ["0", "1", "2", "3"]), "3");
     setSelectValue(findSelectByOptions(styleSection as ParentNode, ["show", "hide"]), "hide");
 
@@ -607,7 +645,7 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
     expect(latestValue.cta?.label).toBe("Join us");
     expect(latestValue.cta?.url).toBe("/careers");
     expect(latestValue.style?.sectionBackground).toBe("#111827");
-    expect(latestValue.style?.cardSurface).toBe("#ffffff");
+    expect(latestValue.style?.cardSurface).toBe("#f8fafc");
     expect(latestValue.style?.cardBorder).toBe("#cbd5e1");
     expect(latestValue.style?.cardBorderWidth).toBe("3");
     expect(latestValue.style?.compactMobileBio).toBe("hide");
@@ -681,9 +719,10 @@ test("Team visual editor clears stale picked-media state when media resolution f
   }
 });
 
-test("Team advanced editor covers normalization safeguards, technical tokens, and reset", async () => {
+test("Team advanced editor keeps support actions confirm-gated and diagnostics read-only", async () => {
   const { TeamAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
+  const onChangeSpy = vi.fn();
   let latestValue: TeamData = {
     members: [
       {
@@ -720,6 +759,7 @@ test("Team advanced editor covers normalization safeguards, technical tokens, an
         value={value}
         onChange={(next) => {
           latestValue = next;
+          onChangeSpy(next);
           setValue(next);
         }}
         variant="cards"
@@ -731,37 +771,36 @@ test("Team advanced editor covers normalization safeguards, technical tokens, an
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Technical layout tokens");
-    expect(view.container.textContent).toContain("Border width token");
-    expect(view.container.textContent).toContain("Compact-list mobile bio token");
-    expect(view.container.textContent).toContain("Normalization and safeguards");
-    expect(view.container.textContent).toContain("Raw payload snapshot");
-
-    const initialSnapshot = view.container.querySelector("pre")?.textContent ?? "";
-    expect(initialSnapshot).toContain('"cardBorderWidth": "1"');
-    expect(initialSnapshot).toContain('"compactMobileBio": "show"');
-    expect(initialSnapshot).toContain('"id": "member-2"');
-
-    setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "2");
-    setSelectValue(findSelectByOptions(view.container, ["show", "hide"]), "hide");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "var(--panel)");
-    setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "var(--edge)");
-
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        cardBorderWidth: "2",
-        compactMobileBio: "hide",
-        sectionBackground: "var(--panel)",
-        cardBorder: "var(--edge)",
-      })
-    );
+    expect(view.container.textContent).toContain("Layout summary");
+    expect(view.container.textContent).toContain("Surface summary");
+    expect(view.container.textContent).toContain("Content summary");
+    expect(view.container.textContent).toContain("Support actions");
+    expect(view.container.textContent).toContain("Read-only layout state");
+    expect(view.container.textContent).not.toContain("Raw payload snapshot");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(view.container.querySelector('input[placeholder="var(--color-bg)"]')).toBeNull();
+    expect(view.container.querySelector('input[placeholder="var(--color-border)"]')).toBeNull();
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
 
     clickButtonByText(view.container, "Normalize now");
+    expect(view.container.textContent).toContain("Normalize Team widget?");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.header).toBeUndefined();
+    clickButtonByText(view.container, "confirm-action");
     expect(latestValue.header?.title).toBe(teamDefaults.header?.title);
-    expect(latestValue.style?.cardBorderWidth).toBe("2");
-    expect(latestValue.style?.compactMobileBio).toBe("hide");
+    expect(latestValue.style?.cardBorderWidth).toBe("1");
+    expect(latestValue.style?.compactMobileBio).toBe("show");
+    expect(latestValue.members?.[1]?.id).toBe("member-2");
 
     clickButtonByText(view.container, "Reset to defaults");
+    expect(view.container.textContent).toContain("Reset Team widget?");
+    expect(latestValue).not.toEqual(teamDefaults);
+    clickButtonByText(view.container, "confirm-action");
     expect(latestValue).toEqual(teamDefaults);
   } finally {
     view.cleanup();

@@ -38,6 +38,7 @@ import { sectionEditorContract } from "../../../core/widgets/core/section";
 import { spacerEditorContract } from "../../../core/widgets/core/spacer";
 import { splitLayoutEditorContract } from "../../../core/widgets/core/splitLayout";
 import { stackEditorContract } from "../../../core/widgets/core/stack";
+import { teamEditorContract } from "../../../core/widgets/core/team";
 import { testimonialsEditorContract } from "../../../core/widgets/core/testimonials";
 import { timelineEditorContract } from "../../../core/widgets/core/timeline";
 import { toggleBlockEditorContract } from "../../../core/widgets/core/toggleBlock";
@@ -506,6 +507,7 @@ describe("widget editor contract validation", () => {
       { type: "toggle-block", editorContract: toggleBlockEditorContract },
       { type: "feature-grid", editorContract: featureGridEditorContract },
       { type: "testimonials", editorContract: testimonialsEditorContract },
+      { type: "team", editorContract: teamEditorContract },
       { type: "pricing-plans", editorContract: pricingPlansEditorContract },
       { type: "faq-accordion", editorContract: faqAccordionEditorContract },
       { type: "cta-banner", editorContract: ctaBannerEditorContract },
@@ -523,7 +525,7 @@ describe("widget editor contract validation", () => {
       { type: "footer", editorContract: footerEditorContract },
     ];
 
-    expect(contracts).toHaveLength(18);
+    expect(contracts).toHaveLength(19);
 
     for (const definition of contracts) {
       const validation = validateWidgetEditorContract(definition, { requireContract: true });

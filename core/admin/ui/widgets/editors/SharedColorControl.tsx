@@ -35,6 +35,7 @@ export function SharedColorControl({
   const handleSwatchChange = onSwatchChange ?? onChange;
   const hasValue = hasClearableFieldValue(value);
   const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
+  const swatchColor = resolveColorSwatchValue(value, pickerFallback);
 
   return (
     <div
@@ -53,7 +54,7 @@ export function SharedColorControl({
         <Input
           aria-label={`${label} swatch`}
           type="color"
-          value={resolveColorSwatchValue(value, pickerFallback)}
+          value={swatchColor}
           onChange={(event) => handleSwatchChange(event.target.value)}
           className="h-9 w-10 p-1"
         />
@@ -66,6 +67,11 @@ export function SharedColorControl({
           />
         ) : (
           <div className="flex min-h-9 flex-wrap items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
+              style={{ backgroundColor: swatchColor }}
+            />
             <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
               {hasCustomValue
                 ? "Saved custom color"

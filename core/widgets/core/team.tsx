@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -239,6 +239,86 @@ export const teamDefaults: TeamData = {
     radius: "lg",
     compactMobileBio: "show",
   },
+};
+
+const teamWizardVisualDuplicateAllowances = [
+  {
+    path: "variant",
+    reason: "Wizard seeds the starter presentation; Visual remains the daily presentation owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "members.count",
+    reason: "Wizard seeds starter member count; Visual remains the daily member-list owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "members.*.name",
+    reason: "Wizard seeds primary member names; Visual remains the daily member content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+  {
+    path: "members.*.role",
+    reason: "Wizard seeds primary member roles; Visual remains the daily member content owner.",
+    expiresWithTask: "TASK-336-16",
+  },
+] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
+
+export const teamEditorContract: WidgetEditorContract = {
+  version: 2,
+  sections: [
+    {
+      mode: "wizard",
+      id: "team.wizard.starter-team",
+      title: "Starter team",
+      role: "setup",
+      writablePaths: ["variant", "members.count", "members.*.name", "members.*.role"],
+      allowedDuplicateWritablePaths: teamWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "team.visual.content",
+      title: "Team content",
+      role: "content",
+      writablePaths: [
+        "variant",
+        "header",
+        "members.count",
+        "members.*.name",
+        "members.*.role",
+        "members.*.bio",
+        "members.*.photo",
+        "members.*.socialLinks",
+        "spotlightLeadId",
+        "cta",
+      ],
+      allowedDuplicateWritablePaths: teamWizardVisualDuplicateAllowances,
+    },
+    {
+      mode: "visual",
+      id: "team.visual.style",
+      title: "Section and card style",
+      role: "visual",
+      writablePaths: [
+        "style.columns",
+        "style.gap",
+        "style.sectionBackground",
+        "style.cardSurface",
+        "style.cardBorder",
+        "style.cardBorderWidth",
+        "style.radius",
+        "style.compactMobileBio",
+      ],
+    },
+    {
+      mode: "advanced",
+      id: "team.advanced.summary",
+      title: "Team summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "header", "members", "spotlightLeadId", "cta", "style"],
+    },
+  ],
 };
 
 const createMemberId = (index: number) => `member-${index + 1}`;
@@ -831,6 +911,7 @@ export function createTeamWidget(editors: {
     schema: teamSchema,
     defaults: teamDefaults,
     editor: editors,
+    editorContract: teamEditorContract,
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },

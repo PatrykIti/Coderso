@@ -33,6 +33,32 @@ vi.mock("@/components/ui/button", () => ({
   ),
 }));
 
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    children,
+    onConfirm,
+  }: {
+    open: boolean;
+    title: string;
+    description?: string;
+    children?: React.ReactNode;
+    onConfirm: () => void;
+  }) =>
+    open ? (
+      <div data-confirm-dialog="true">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        <div>{children}</div>
+        <button type="button" onClick={onConfirm}>
+          confirm-action
+        </button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("@/components/ui/input", () => ({
   Input: ({
     value,
@@ -710,7 +736,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   }
 });
 
-test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownership while still supporting normalize and reset", async () => {
+test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gated support actions", async () => {
   const { GalleryMosaicAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -760,16 +786,20 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
 
   try {
     expect(view.container.textContent).toContain("Visual owns the current shared style fields.");
-    const preview = view.container.querySelector("pre");
-    expect(preview?.textContent).toContain('"ratio": "4:3"');
-    expect(preview?.textContent).toContain('"gap": "md"');
-    expect(preview?.textContent).toContain('"radius": "lg"');
-    expect(preview?.textContent).toContain('"captionPosition": "inside"');
-    expect(preview?.textContent).toContain('"layoutDensity": "auto"');
-    expect(preview?.textContent).toContain('"motionPreset": "none"');
-    expect(preview?.textContent).toContain('"id": "gallery-2"');
+    expect(view.container.textContent).toContain("Configuration import and export");
+    expect(view.container.textContent).toContain("Normalization and safeguards");
+    expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.querySelector("pre")).toBeNull();
+    expect(
+      view.container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).toHaveLength(0);
 
     clickElement(findButtonByText(view.container, "Normalize now"));
+    expect(view.container.textContent).toContain("Normalize Gallery Mosaic?");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    clickElement(findButtonByText(view.container, "confirm-action"));
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.header).toEqual(galleryMosaicDefaults.header);
     expect(latestValue.items).toEqual([
@@ -809,6 +839,9 @@ test("GalleryMosaic advanced editor keeps diagnostics-only shared style ownershi
     expect(view.container.querySelector('input[placeholder="rgba(15, 23, 42, 0.35)"]')).toBeNull();
 
     clickElement(findButtonByText(view.container, "Reset to defaults"));
+    expect(view.container.textContent).toContain("Reset Gallery Mosaic?");
+    expect(latestValue).not.toEqual(galleryMosaicDefaults);
+    clickElement(findButtonByText(view.container, "confirm-action"));
     expect(latestValue).toEqual(galleryMosaicDefaults);
   } finally {
     view.cleanup();
@@ -889,6 +922,7 @@ test("GalleryMosaic advanced editor exports current config and imports validated
     expect(view.container.textContent).toContain(
       "Import error: gallery_mosaic_import_unknown_field at items[0].privateToken"
     );
+    expect(onChangeSpy).not.toHaveBeenCalled();
     expect(latestValue.items[0]?.caption).toBe("Lead frame");
 
     setTextareaValue(
@@ -912,6 +946,12 @@ test("GalleryMosaic advanced editor exports current config and imports validated
       )
     );
     clickElement(findButtonByText(configSection ?? view.container, "Import config"));
+    expect(view.container.textContent).toContain(
+      "Validated Gallery Mosaic config. Confirm import to apply it."
+    );
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.items[0]?.caption).toBe("Lead frame");
+    clickElement(findButtonByText(view.container, "confirm-action"));
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.items[0]).toEqual(
       expect.objectContaining({
@@ -931,7 +971,7 @@ test("GalleryMosaic advanced editor exports current config and imports validated
   }
 });
 
-test("GalleryMosaic visual editor updates header title, media picker, move-down ordering, and raw overlay token without a variant handler", async () => {
+test("GalleryMosaic visual editor updates header title, media picker, ordering, and swatch-only overlay without a variant handler", async () => {
   const { GalleryMosaicVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -987,10 +1027,15 @@ test("GalleryMosaic visual editor updates header title, media picker, move-down 
     clickElement(findButtonsByText(mediaSection ?? view.container, "Move down")[0]);
 
     const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
-    setInputValue(
-      findInputByPlaceholder(overlaySection ?? view.container, "rgba(15, 23, 42, 0.35)"),
-      "var(--gallery-overlay)"
+    const overlaySwatch = (overlaySection ?? view.container).querySelector(
+      'input[aria-label="Overlay color swatch"]'
     );
+    expect(overlaySwatch).toBeInstanceOf(HTMLInputElement);
+    expect(overlaySection?.textContent).toContain("The default overlay strength is 35%.");
+    expect(findInputByPlaceholder(overlaySection ?? view.container, "rgba(15, 23, 42, 0.35)")).toBe(
+      undefined
+    );
+    setInputValue(overlaySwatch, "#112233");
 
     expect(latestValue.header).toEqual(
       expect.objectContaining({
@@ -1006,7 +1051,7 @@ test("GalleryMosaic visual editor updates header title, media picker, move-down 
     );
     expect(latestValue.style).toEqual(
       expect.objectContaining({
-        overlay: "var(--gallery-overlay)",
+        overlay: "rgba(17, 34, 51, 0.35)",
       })
     );
   } finally {

@@ -360,7 +360,7 @@ test("team visual renders section-based IA", () => {
   expect(html).toContain("Social links");
 });
 
-test("team advanced keeps technical-only scope", () => {
+test("team advanced keeps read-only diagnostics scope", () => {
   const html = renderToString(
     <TeamAdvancedEditor
       value={teamDefaults}
@@ -370,10 +370,11 @@ test("team advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Technical layout tokens");
-  expect(html).toContain("Border width token");
-  expect(html).toContain("Compact-list mobile bio token");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Layout summary");
+  expect(html).toContain("Surface summary");
+  expect(html).toContain("Content summary");
+  expect(html).toContain("Support actions");
+  expect(html).toContain("Card border width");
+  expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Members content and order");
 });

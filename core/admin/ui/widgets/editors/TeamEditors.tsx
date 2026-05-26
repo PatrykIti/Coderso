@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { cn } from "@/lib/utils";
@@ -39,10 +40,10 @@ import {
 } from "../../../../widgets/core/team";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader, resolveColorContrastAdvisory } from "./ClearableFields";
+import { resolveColorContrastAdvisory } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: TeamVariantId;
@@ -225,9 +226,20 @@ function ColorField({
       onClear={onClear}
       placeholder={placeholder}
       pickerFallback={pickerFallback}
+      showValueInput={false}
     />
   );
 }
+
+const describeTeamColor = (value: string | undefined) => {
+  const normalized = value?.trim();
+  if (!normalized) return "Theme default";
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) return "Selected swatch";
+  return "Saved custom color";
+};
+
+const countTeamSocialLinks = (members: TeamMember[]) =>
+  members.reduce((count, member) => count + normalizeTeamSocialLinks(member.socialLinks).length, 0);
 
 function updateValue(
   value: TeamData,
@@ -655,14 +667,6 @@ function moveMember(
       members: nextMembers,
     };
   });
-}
-
-function DiagnosticsSnapshot({ value }: { value: TeamData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
 }
 
 function resolveTeamPhotoState(
@@ -1697,170 +1701,157 @@ export function TeamVisualEditor({
   );
 }
 
-export function TeamAdvancedEditor({ value, onChange }: WidgetEditorProps<TeamData>) {
+export function TeamAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? teamDefaults.style!;
+  const members = normalizeTeamMembers(normalized.members);
+  const [pendingAction, setPendingAction] = useState<"normalize" | "reset" | null>(null);
+
+  const closePendingAction = () => setPendingAction(null);
+  const confirmPendingAction = () => {
+    if (pendingAction === "normalize") {
+      onChange(normalizeValue(value));
+    } else if (pendingAction === "reset") {
+      onChange(teamDefaults);
+    }
+    closePendingAction();
+  };
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Technical layout tokens"
-        description="Low-level layout and style token controls. Visual owns the member and CTA experience."
+        title="Layout summary"
+        description="Read-only layout state. Change member layout and card style in Visual."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Columns token</p>
-          <Select
-            value={style.columns}
-            onValueChange={(next) => updateStyle(value, onChange, { columns: next as TeamColumns })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select columns token" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnsOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap token</p>
-          <Select
-            value={style.gap}
-            onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap token" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Radius token</p>
-          <Select
-            value={style.radius}
-            onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select radius token" />
-            </SelectTrigger>
-            <SelectContent>
-              {radiusOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Border width token</p>
-          <Select
-            value={style.cardBorderWidth ?? "1"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { cardBorderWidth: next as TeamBorderWidth })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select border width token" />
-            </SelectTrigger>
-            <SelectContent>
-              {borderWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Compact-list mobile bio token</p>
-          <Select
-            value={resolveTeamCompactMobileBio(style.compactMobileBio)}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { compactMobileBio: next as TeamCompactMobileBio })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select compact mobile bio token" />
-            </SelectTrigger>
-            <SelectContent>
-              {compactMobileBioOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Section background token"
-            value={style.sectionBackground}
-            onClear={() => clearStyleField(value, onChange, "sectionBackground")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { sectionBackground: next })}
-          />
-          <Input
-            value={style.sectionBackground ?? ""}
-            onChange={(event) =>
-              updateStyle(value, onChange, { sectionBackground: event.target.value })
-            }
-            placeholder="var(--color-bg)"
-          />
-        </div>
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Card surface token"
-            value={style.cardSurface}
-            onClear={() => clearStyleField(value, onChange, "cardSurface")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { cardSurface: next })}
-          />
-          <Input
-            value={style.cardSurface ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { cardSurface: event.target.value })}
-            placeholder="var(--color-bg)"
-          />
-        </div>
-        <div className="space-y-2">
-          <ClearableFieldHeader
-            label="Card border token"
-            value={style.cardBorder}
-            onClear={() => clearStyleField(value, onChange, "cardBorder")}
-            onRestoreValue={(next) => updateStyle(value, onChange, { cardBorder: next })}
-          />
-          <Input
-            value={style.cardBorder ?? ""}
-            onChange={(event) => updateStyle(value, onChange, { cardBorder: event.target.value })}
-            placeholder="var(--color-border)"
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-variant"
+          label="Variant"
+          path="variant"
+          value={resolveTeamVariant(variant)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-columns"
+          label="Columns"
+          path="style.columns"
+          value={`${style.columns ?? "3"} ${style.columns === "1" ? "column" : "columns"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-gap"
+          label="Gap"
+          path="style.gap"
+          value={gapOptions.find((option) => option.id === style.gap)?.label ?? "Default"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-radius"
+          label="Card radius"
+          path="style.radius"
+          value={radiusOptions.find((option) => option.id === style.radius)?.label ?? "Large"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-border-width"
+          label="Card border width"
+          path="style.cardBorderWidth"
+          value={`${style.cardBorderWidth ?? "1"}px`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-mobile-bio"
+          label="Compact mobile bio"
+          path="style.compactMobileBio"
+          value={
+            resolveTeamCompactMobileBio(style.compactMobileBio) === "hide"
+              ? "Hidden visually on mobile"
+              : "Shown on mobile"
+          }
+        />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Apply deterministic fallback data and structure."
+        title="Surface summary"
+        description="Read-only color state. Change section and card colors in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-section-background"
+          label="Section background"
+          path="style.sectionBackground"
+          value={describeTeamColor(style.sectionBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-card-background"
+          label="Card background"
+          path="style.cardSurface"
+          value={describeTeamColor(style.cardSurface)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-card-border"
+          label="Card border"
+          path="style.cardBorder"
+          value={describeTeamColor(style.cardBorder)}
+        />
+      </EditorSection>
+
+      <EditorSection
+        title="Content summary"
+        description="Read-only team content state. Change members, photos, social links, and CTA in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-member-count"
+          label="Members"
+          path="members"
+          value={`${members.length} ${members.length === 1 ? "member" : "members"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-social-count"
+          label="Social links"
+          path="members.socialLinks"
+          value={`${countTeamSocialLinks(members)} configured`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-spotlight"
+          label="Spotlight lead"
+          path="spotlightLeadId"
+          value={normalized.spotlightLeadId ? "Configured" : "Uses first member"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-cta"
+          label="CTA"
+          path="cta"
+          value={normalized.cta?.label || normalized.cta?.url ? "Configured" : "Not configured"}
+        />
+      </EditorSection>
+
+      <EditorSection
+        title="Support actions"
+        description="Confirm-gated maintenance actions for support use. Daily authoring stays in Visual."
       >
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
+          <Button type="button" variant="outline" onClick={() => setPendingAction("normalize")}>
             Normalize now
           </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(teamDefaults)}>
+          <Button type="button" variant="outline" onClick={() => setPendingAction("reset")}>
             Reset to defaults
           </Button>
         </div>
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
-      </EditorSection>
+      <ConfirmActionDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) closePendingAction();
+        }}
+        title={pendingAction === "reset" ? "Reset Team widget?" : "Normalize Team widget?"}
+        description={
+          pendingAction === "reset"
+            ? "Reset Team to default members, copy, CTA, and style values."
+            : "Apply deterministic fallback values for member identities, social links, CTA, and style."
+        }
+        confirmLabel={pendingAction === "reset" ? "Reset Team" : "Normalize Team"}
+        tone={pendingAction === "reset" ? "destructive" : "warning"}
+        onConfirm={confirmPendingAction}
+      >
+        {pendingAction === "reset"
+          ? "This replaces the current Team configuration with defaults."
+          : "This preserves supported content while cleaning malformed structure."}
+      </ConfirmActionDialog>
     </div>
   );
 }

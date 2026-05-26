@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-336-18
-**Status:** In Progress (2026-05-25)
+**Status:** In Progress (2026-05-26)
 
 ---
 
@@ -1031,6 +1031,34 @@ read-only diagnostics. It added these concrete cleanup requirements:
   Advanced `<pre>` payloads `0`, Advanced writable paths `0`, `runtime.*`
   paths `0`, raw Advanced query/media copy matches `0`, and source/surface
   summaries present for both widgets.
+- In Progress (2026-05-26): Gallery Mosaic and Team residual editor drift is
+  addressed after fresh helper-agent and Claude read-only UX reviews. Gallery
+  Mosaic Advanced keeps JSON import/export as a support surface but now
+  confirms valid imports before mutation, confirms normalize/reset, replaces
+  raw payload output with human runtime summaries, and keeps Visual overlay
+  authoring swatch-only. Team now exports a strict `teamEditorContract`, keeps
+  Wizard as starter setup and Visual as daily member/content/style authoring,
+  converts Visual color fields to swatch-only controls, and replaces Advanced
+  token editors/raw payload output with read-only layout/surface/content
+  summaries plus confirm-gated support actions. Targeted Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/ui/gallery-mosaic-editor-wave.test.tsx tests/vitest/widgets/galleryMosaic.test.tsx tests/vitest/widgets/editorContract.test.ts`.
+  Claude post-implementation read-only UX audit reported no blockers and
+  recommended minor clarity polish; the implemented follow-up adds visible color
+  chips to swatch-only controls and explicit Gallery Mosaic overlay opacity
+  guidance. The `TASK-336-16` duplicate allowance references remain intentional
+  one-time Wizard lifecycle markers outside this residual cleanup scope.
+  Standard strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-gallery-mosaic-advanced-2026-05-26.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-team-advanced-2026-05-26.*`;
+  both report `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused UI probe in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-gallery-mosaic-team-focused-2026-05-26.*`
+  reports Visual raw color inputs `0`, Advanced writable paths `0`, Advanced
+  `<pre>` payloads `0`, and confirm dialogs present for both widgets. The first
+  smoke attempt exposed stale Vite optimized dependencies (`504 Outdated
+  Optimize Dep`); clearing `core/node_modules/.vite` and restarting
+  `coderso-dev-core-host` fixed the false fixture gap.
 
 ## Files to Change
 

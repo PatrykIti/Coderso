@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
@@ -42,7 +43,7 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: GalleryMosaicVariantId;
@@ -285,18 +286,26 @@ function ColorField({
   value,
   onChange,
   onPickerChange,
-  placeholder,
   pickerFallback,
+  helperText,
   onClear,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
   onPickerChange?: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
+  helperText?: string;
   onClear?: () => void;
 }) {
+  const normalizedValue = value?.trim();
+  const hasValue = Boolean(normalizedValue);
+  const hasCustomValue =
+    hasValue &&
+    !hexColorPattern.test(normalizedValue ?? "") &&
+    !rgbColorPattern.test(normalizedValue ?? "");
+  const swatchColor = resolvePickerColor(value, pickerFallback);
+
   return (
     <div className="space-y-2">
       <ClearableFieldHeader
@@ -307,17 +316,29 @@ function ColorField({
       />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
+          aria-label={`${label} swatch`}
           type="color"
-          value={resolvePickerColor(value, pickerFallback)}
+          value={swatchColor}
           onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
           className="h-9 w-10 p-1"
         />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
+        <div className="flex min-h-9 flex-wrap items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
+            style={{ backgroundColor: swatchColor }}
+          />
+          <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+            {hasCustomValue ? "Saved custom color" : hasValue ? "Selected color" : "Theme default"}
+          </span>
+        </div>
       </div>
+      {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
+      {hasCustomValue ? (
+        <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+          A saved custom color is configured. Pick a swatch to replace it, or clear the field.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -512,14 +533,6 @@ function moveItem(
       items: nextItems,
     };
   });
-}
-
-function DiagnosticsSnapshot({ value }: { value: GalleryMosaicData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
 }
 
 function GalleryItemPreview({ item }: { item: GalleryMosaicItem }) {
@@ -1393,8 +1406,10 @@ export function GalleryMosaicVisualEditor({
             })
           }
           onClear={() => clearStyleField(value, onChange, "overlay")}
-          placeholder="rgba(15, 23, 42, 0.35)"
           pickerFallback="#0f172a"
+          helperText={
+            "Swatch changes keep the saved overlay opacity when one exists. The default overlay strength is 35%."
+          }
         />
       </EditorSection>
 
@@ -1531,11 +1546,24 @@ export function GalleryMosaicVisualEditor({
 export function GalleryMosaicAdvancedEditor({
   value,
   onChange,
+  variant,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const [configDraft, setConfigDraft] = useState(() => exportGalleryMosaicConfig(normalized));
   const [configStatus, setConfigStatus] = useState<string | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<"import" | "normalize" | "reset" | null>(null);
+  const [pendingImportData, setPendingImportData] = useState<GalleryMosaicData | null>(null);
+  const normalizedItems = normalizeGalleryMosaicItems(normalized.items);
+  const linkedItems = normalizedItems.filter((item) => (item.href ?? "").trim().length > 0).length;
+  const mediaItems = normalizedItems.filter(
+    (item) => (item.image ?? "").trim().length > 0 || (item.video ?? "").trim().length > 0
+  ).length;
+
+  const closePendingAction = () => {
+    setPendingAction(null);
+    setPendingImportData(null);
+  };
 
   const handleExportConfig = () => {
     const nextDraft = exportGalleryMosaicConfig(normalizeValue(value));
@@ -1552,10 +1580,31 @@ export function GalleryMosaicAdvancedEditor({
       return;
     }
 
-    onChange(result.data);
-    setConfigDraft(exportGalleryMosaicConfig(result.data));
     setConfigError(null);
-    setConfigStatus("Imported Gallery Mosaic config.");
+    setConfigStatus("Validated Gallery Mosaic config. Confirm import to apply it.");
+    setPendingImportData(result.data);
+    setPendingAction("import");
+  };
+
+  const confirmPendingAction = () => {
+    if (pendingAction === "import" && pendingImportData) {
+      onChange(pendingImportData);
+      setConfigDraft(exportGalleryMosaicConfig(pendingImportData));
+      setConfigError(null);
+      setConfigStatus("Imported Gallery Mosaic config.");
+    } else if (pendingAction === "normalize") {
+      const next = normalizeValue(value);
+      onChange(next);
+      setConfigDraft(exportGalleryMosaicConfig(next));
+      setConfigError(null);
+      setConfigStatus("Normalized the current Gallery Mosaic config.");
+    } else if (pendingAction === "reset") {
+      onChange(galleryMosaicDefaults);
+      setConfigDraft(exportGalleryMosaicConfig(galleryMosaicDefaults));
+      setConfigError(null);
+      setConfigStatus("Reset Gallery Mosaic to defaults.");
+    }
+    closePendingAction();
   };
 
   return (
@@ -1598,37 +1647,90 @@ export function GalleryMosaicAdvancedEditor({
         description="Apply deterministic fallback data for media items and styles."
       >
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              const next = normalizeValue(value);
-              onChange(next);
-              setConfigDraft(exportGalleryMosaicConfig(next));
-              setConfigError(null);
-              setConfigStatus("Normalized the current Gallery Mosaic config.");
-            }}
-          >
+          <Button type="button" variant="outline" onClick={() => setPendingAction("normalize")}>
             Normalize now
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              onChange(galleryMosaicDefaults);
-              setConfigDraft(exportGalleryMosaicConfig(galleryMosaicDefaults));
-              setConfigError(null);
-              setConfigStatus("Reset Gallery Mosaic to defaults.");
-            }}
-          >
+          <Button type="button" variant="outline" onClick={() => setPendingAction("reset")}>
             Reset to defaults
           </Button>
         </div>
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        title="Runtime summary"
+        description="Read-only Gallery Mosaic state for support. Change content and presentation in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-variant"
+          label="Variant"
+          path="variant"
+          value={resolveGalleryMosaicVariant(variant)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-items"
+          label="Media items"
+          path="items"
+          value={`${normalizedItems.length} ${normalizedItems.length === 1 ? "item" : "items"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-media"
+          label="Configured media"
+          path="items"
+          value={`${mediaItems} ${mediaItems === 1 ? "item" : "items"} with media`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-links"
+          label="Linked items"
+          path="items.href"
+          value={`${linkedItems} ${linkedItems === 1 ? "destination" : "destinations"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-interaction"
+          label="Interaction"
+          path="interaction"
+          value={
+            normalized.interaction?.mode === "lightbox"
+              ? `Lightbox, ${normalized.interaction.zoom ?? "fit"} zoom`
+              : "Static tiles"
+          }
+        />
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingAction !== null}
+        onOpenChange={(open) => {
+          if (!open) closePendingAction();
+        }}
+        title={
+          pendingAction === "import"
+            ? "Import Gallery Mosaic config?"
+            : pendingAction === "reset"
+              ? "Reset Gallery Mosaic?"
+              : "Normalize Gallery Mosaic?"
+        }
+        description={
+          pendingAction === "import"
+            ? "Apply the validated Gallery Mosaic configuration from the support JSON field."
+            : pendingAction === "reset"
+              ? "Reset Gallery Mosaic to the default starter media, copy, interaction, and style."
+              : "Apply deterministic fallback values for Gallery Mosaic media, interaction, and style."
+        }
+        confirmLabel={
+          pendingAction === "import"
+            ? "Import config"
+            : pendingAction === "reset"
+              ? "Reset Gallery Mosaic"
+              : "Normalize Gallery Mosaic"
+        }
+        tone={pendingAction === "reset" ? "destructive" : "warning"}
+        onConfirm={confirmPendingAction}
+      >
+        {pendingAction === "import" && pendingImportData
+          ? `${normalizeGalleryMosaicItems(pendingImportData.items).length} media item${normalizeGalleryMosaicItems(pendingImportData.items).length === 1 ? "" : "s"} will be imported.`
+          : pendingAction === "reset"
+            ? "This replaces the current Gallery Mosaic configuration with defaults."
+            : "This preserves supported content while cleaning malformed structure."}
+      </ConfirmActionDialog>
     </div>
   );
 }
