@@ -529,6 +529,13 @@ describe("widget editor contract validation", () => {
       const validation = validateWidgetEditorContract(definition, { requireContract: true });
       expect(validation.errors).toEqual([]);
       expect(validation.valid).toBe(true);
+      if (definition.type === "product-gallery" || definition.type === "product-compare") {
+        const declaredPaths = definition.editorContract.sections.flatMap((section) => [
+          ...(section.writablePaths ?? []),
+          ...(section.readOnlyPaths ?? []),
+        ]);
+        expect(declaredPaths.filter((path) => path.startsWith("runtime."))).toEqual([]);
+      }
       expect(
         definition.editorContract.sections.filter(
           (section) => section.mode === "advanced" && section.role === "diagnostics"

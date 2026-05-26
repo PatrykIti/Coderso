@@ -10,6 +10,11 @@ import {
   productGalleryDefaults,
   type ProductGalleryData,
 } from "../../../../widgets/core/productGallery";
+import {
+  commerceSortFieldLabelMap,
+  type CommerceWidgetSortDirection,
+  type CommerceWidgetSortField,
+} from "../../../../widgets/core/commerceWidgetShared";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
@@ -19,8 +24,58 @@ import {
   CommerceToggleField,
   normalizeSourceForEditor,
 } from "./CommerceWidgetEditorShared";
-import { ClearableInputField } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
+
+const describeCommerceColor = (value: string | undefined) => {
+  if (!value?.trim()) return "Theme default";
+  if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
+  return "Saved custom color";
+};
+
+const summarizeCount = (count: number, singular: string, plural: string) =>
+  `${count} ${count === 1 ? singular : plural}`;
+
+const summarizeStatusFilters = (status: string[] | undefined) => {
+  const count = status?.length ?? 0;
+  if (count === 0) return "Public-ready default";
+  return summarizeCount(count, "status filter", "status filters") + " selected";
+};
+
+const summarizeCollectionFilters = (collectionIds: string[] | undefined) => {
+  const count = collectionIds?.length ?? 0;
+  if (count === 0) return "No collection filter";
+  return summarizeCount(count, "collection", "collections") + " selected";
+};
+
+const summarizeCommerceSort = (
+  field: CommerceWidgetSortField | undefined,
+  direction: CommerceWidgetSortDirection | undefined
+) => {
+  const resolvedField = field ?? "updatedAt";
+  const resolvedDirection = direction ?? "desc";
+
+  if (resolvedField === "pricing.amount") {
+    return resolvedDirection === "asc" ? "Price, low to high" : "Price, high to low";
+  }
+
+  if (resolvedField === "updatedAt") {
+    return resolvedDirection === "desc" ? "Recently updated first" : "Oldest updated first";
+  }
+
+  if (resolvedField === "createdAt") {
+    return resolvedDirection === "desc" ? "Newest first" : "Oldest first";
+  }
+
+  if (resolvedField === "publishedAt") {
+    return resolvedDirection === "desc" ? "Recently published first" : "Oldest published first";
+  }
+
+  const label =
+    resolvedField === "slug" ? "Product URL path" : commerceSortFieldLabelMap[resolvedField];
+  return `${label}, ${resolvedDirection === "asc" ? "A to Z" : "Z to A"}`;
+};
 
 const update = (
   value: ProductGalleryData,
@@ -170,33 +225,45 @@ function SurfaceFields({
 
   return (
     <CommerceEditorSection title="Surfaces" description="Card and empty state styling.">
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-gallery.visual.card-background"
+        controlPath="style.cardBackground"
         label="Card background"
         value={normalized.style?.cardBackground}
         onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
         onClear={() => clearStyle(value, onChange, "cardBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-gallery.visual.card-border"
+        controlPath="style.cardBorderColor"
         label="Card border"
         value={normalized.style?.cardBorderColor}
         onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "cardBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-gallery.visual.empty-background"
+        controlPath="style.emptyBackground"
         label="Empty background"
         value={normalized.style?.emptyBackground}
         onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onClear={() => clearStyle(value, onChange, "emptyBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-gallery.visual.empty-border"
+        controlPath="style.emptyBorderColor"
         label="Empty border"
         value={normalized.style?.emptyBorderColor}
         onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
       />
     </CommerceEditorSection>
   );
@@ -565,19 +632,6 @@ export function ProductGalleryVisualEditor({
             })
           }
         />
-        <CommerceToggleField
-          label="Show media hint"
-          description="Editor-only helper showing resolved primary media status in preview."
-          checked={normalized.fields?.showMediaHint === true}
-          onChange={(next) =>
-            update(normalized, onChange, {
-              fields: {
-                ...normalized.fields,
-                showMediaHint: next,
-              },
-            })
-          }
-        />
       </CommerceEditorSection>
 
       <CommerceEditorSection
@@ -746,20 +800,7 @@ export function ProductGalleryAdvancedEditor({
   const normalized = normalizeProductGalleryData(value);
   const previewResolved = resolvePreviewResolved(normalized, context?.previewState);
   const previewStatus = previewStatusLabel(context?.previewState, previewResolved);
-  const queryPreview = useMemo(() => {
-    if (normalized.curation?.mode === "manual") {
-      return JSON.stringify(
-        {
-          mode: "manual",
-          productIds: normalized.curation.productIds,
-          limit: normalized.source?.limit,
-        },
-        null,
-        2
-      );
-    }
-    return JSON.stringify(buildProductGalleryQueryInput(normalized), null, 2);
-  }, [normalized]);
+  const queryInput = buildProductGalleryQueryInput(normalized);
   const { refresh } = useProductGalleryPreview({
     value: normalized,
     blockId: context?.blockId,
@@ -776,49 +817,70 @@ export function ProductGalleryAdvancedEditor({
         title="Product behavior"
         description="Read-only source, curation, route, and pagination diagnostics."
       >
-        <div className="space-y-2 rounded-md border border-border/70 bg-background p-3 text-sm text-muted-foreground">
-          <p>
-            Source mode:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.curation?.mode === "manual" ? "Selected products" : "Query results"}
-            </span>
-            .
-          </p>
-          <p>
-            Selected products:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.curation?.productIds?.length ?? 0}
-            </span>
-            .
-          </p>
-          <p>
-            Card route:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.link?.basePath ? "Configured" : "Not configured"}
-            </span>
-            .
-          </p>
-          <p>
-            More products link:{" "}
-            <span className="font-medium text-foreground">
-              {normalized.pagination?.mode === "view-all" ? "Shown" : "Hidden"}
-            </span>
-            .
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-source-mode"
+          label="Source mode"
+          path="source"
+          value={normalized.curation?.mode === "manual" ? "Selected products" : "Query results"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-selected-products"
+          label="Selected products"
+          path="curation.productIds"
+          value={summarizeCount(
+            normalized.curation?.productIds?.length ?? 0,
+            "product",
+            "products"
+          )}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-card-route"
+          label="Card route"
+          path="link.basePath"
+          value={normalized.link?.basePath ? "Configured" : "Not configured"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-more-products"
+          label="More products link"
+          path="pagination"
+          value={normalized.pagination?.mode === "view-all" ? "Shown" : "Hidden"}
+        />
       </CommerceEditorSection>
 
       <CommerceEditorSection
-        title="Diagnostics"
-        description="Media IDs and preview payloads stay editor-only diagnostics."
+        title="Source summary"
+        description="Human-readable query state. Change product source and curation in Wizard or Visual."
       >
-        <div className="rounded-md border border-border/70 bg-background p-3 text-sm text-muted-foreground">
-          Media hint preview is{" "}
-          <span className="font-medium text-foreground">
-            {normalized.fields?.showMediaHint === true ? "enabled" : "disabled"}
-          </span>
-          . Visual owns whether product media hints are shown.
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-limit"
+          label="Product limit"
+          path="source.limit"
+          value={summarizeCount(queryInput.pagination.limit, "product", "products")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-search"
+          label="Search"
+          path="source.search"
+          value={normalized.source?.search?.trim() ? "Configured" : "None"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-collections"
+          label="Collections"
+          path="source.collectionIds"
+          value={summarizeCollectionFilters(normalized.source?.collectionIds)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-status"
+          label="Status filters"
+          path="source.status"
+          value={summarizeStatusFilters(normalized.source?.status)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-sort"
+          label="Sort"
+          path="source.sortField"
+          value={summarizeCommerceSort(normalized.source?.sortField, normalized.source?.sortDir)}
+        />
       </CommerceEditorSection>
 
       <CommerceEditorSection
@@ -859,12 +921,27 @@ export function ProductGalleryAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
-        title="Query preview"
-        description="Normalized Product Gallery payload sent to runtime or preview."
+        title="Surface summary"
+        description="Read-only color state. Change card and empty-state colors in Visual."
       >
-        <pre className="max-h-52 overflow-auto rounded-md border border-border/70 bg-background p-2 text-xs text-muted-foreground">
-          {queryPreview}
-        </pre>
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-card-background"
+          label="Card background"
+          path="style.cardBackground"
+          value={describeCommerceColor(normalized.style?.cardBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-card-border"
+          label="Card border"
+          path="style.cardBorderColor"
+          value={describeCommerceColor(normalized.style?.cardBorderColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-empty-state"
+          label="Empty state colors"
+          path="style"
+          value={`Background: ${describeCommerceColor(normalized.style?.emptyBackground)}, border: ${describeCommerceColor(normalized.style?.emptyBorderColor)}`}
+        />
       </CommerceEditorSection>
     </div>
   );

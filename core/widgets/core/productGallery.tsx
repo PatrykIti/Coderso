@@ -117,7 +117,6 @@ export const productGalleryDefaults: ProductGalleryData = {
     showPrice: true,
     showStock: true,
     showStatus: false,
-    showMediaHint: false,
   },
   emptyState: {
     title: "No products found",
@@ -126,10 +125,6 @@ export const productGalleryDefaults: ProductGalleryData = {
   style: {
     columns: "3",
     cardStyle: "outlined",
-    cardBackground: "var(--color-bg)",
-    cardBorderColor: "var(--color-border)",
-    emptyBackground: "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-    emptyBorderColor: "var(--color-border)",
   },
   resolved: {
     items: [],
@@ -169,7 +164,6 @@ export const productGalleryEditorContract: WidgetEditorContract = {
         "fields.showPrice",
         "fields.showStock",
         "fields.showStatus",
-        "fields.showMediaHint",
         "link.target",
         "link.ctaLabel",
         "link.ctaStyle",
@@ -199,25 +193,34 @@ export const productGalleryEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "product-gallery.advanced.source-diagnostics",
-      title: "Source diagnostics",
+      title: "Product behavior",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: [
-        "source",
-        "curation",
-        "link.basePath",
-        "pagination",
-        "resolved",
-        "runtime.queryInput",
-      ],
+      readOnlyPaths: ["source", "curation", "link.basePath", "pagination"],
     },
     {
       mode: "advanced",
-      id: "product-gallery.advanced.runtime-payload",
-      title: "Runtime payload",
+      id: "product-gallery.advanced.source-summary",
+      title: "Source summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["runtime.normalizedData"],
+      readOnlyPaths: ["source"],
+    },
+    {
+      mode: "advanced",
+      id: "product-gallery.advanced.preview-status",
+      title: "Preview status",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved"],
+    },
+    {
+      mode: "advanced",
+      id: "product-gallery.advanced.surface-summary",
+      title: "Surface summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["style"],
     },
   ],
 };
@@ -578,14 +581,7 @@ export const normalizeProductGalleryData = (value: ProductGalleryData): ProductG
         emptyBackground: resolveClearableStyleValue(value.style?.emptyBackground),
         emptyBorderColor: resolveClearableStyleValue(value.style?.emptyBorderColor),
       })
-    : compactObject({
-        cardBackground: resolveClearableStyleValue(productGalleryDefaults.style?.cardBackground),
-        cardBorderColor: resolveClearableStyleValue(productGalleryDefaults.style?.cardBorderColor),
-        emptyBackground: resolveClearableStyleValue(productGalleryDefaults.style?.emptyBackground),
-        emptyBorderColor: resolveClearableStyleValue(
-          productGalleryDefaults.style?.emptyBorderColor
-        ),
-      });
+    : undefined;
 
   return {
     source,
@@ -816,7 +812,7 @@ export function ProductGalleryBlock({
 
       {items.length === 0 ? (
         <div
-          className="rounded-xl border border-dashed px-4 py-6 text-center"
+          className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg)]/70 px-4 py-6 text-center"
           style={emptyStyle}
           role={isEditorPreview ? "status" : undefined}
           aria-live={isEditorPreview ? "polite" : undefined}
@@ -854,6 +850,8 @@ export function ProductGalleryBlock({
             const cardClassName = [
               variantCardClassMap[resolvedVariant],
               normalized.style?.cardStyle === "minimal" ? null : "border",
+              normalized.style?.cardStyle === "minimal" ? null : "border-[var(--color-border)]",
+              normalized.style?.cardBackground ? null : "bg-[var(--color-bg)]",
             ]
               .filter(Boolean)
               .join(" ");
@@ -872,14 +870,6 @@ export function ProductGalleryBlock({
                       className="h-full w-full object-cover"
                       loading="lazy"
                     />
-                  </div>
-                ) : null}
-
-                {normalized.fields?.showMediaHint && isEditorPreview ? (
-                  <div className="rounded-md border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-text)]/65">
-                    {item.primaryMediaId
-                      ? `Preview media id: ${item.primaryMediaId}`
-                      : "No primary media attached"}
                   </div>
                 ) : null}
 

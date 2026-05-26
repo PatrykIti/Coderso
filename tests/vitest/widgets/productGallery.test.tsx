@@ -258,7 +258,7 @@ test("product gallery query input adds bounded price filters and keeps shared so
   ]);
 });
 
-test("product gallery media diagnostics stay editor-only", () => {
+test("product gallery editor preview never exposes raw media IDs", () => {
   const data = normalizeProductGalleryData({
     ...productGalleryDefaults,
     fields: {
@@ -295,7 +295,8 @@ test("product gallery media diagnostics stay editor-only", () => {
   );
 
   expect(publicHtml).not.toContain("Preview media id");
-  expect(editorHtml).toContain("Preview media id: media-1");
+  expect(editorHtml).not.toContain("Preview media id");
+  expect(editorHtml).not.toContain("media-1");
   expect(editorHtml).toContain("Refreshing Product Gallery preview...");
 });
 
@@ -417,5 +418,8 @@ test("product gallery editors render expected panels", () => {
   );
   expect(advanced).toContain("Product behavior");
   expect(advanced).toContain("Preview status");
-  expect(advanced).toContain("Query preview");
+  expect(advanced).toContain("Source summary");
+  expect(advanced).toContain("Surface summary");
+  expect(advanced).not.toContain("Query preview");
+  expect(advanced).not.toContain("<pre");
 });

@@ -221,6 +221,11 @@ const findInputByLabel = (container: ParentNode, text: string) =>
     normalizeText(element.closest("label")?.textContent).startsWith(normalizeText(text))
   );
 
+const findInputByAriaLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => normalizeText(element.getAttribute("aria-label")) === normalizeText(text)
+  );
+
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
@@ -305,7 +310,7 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     );
     expect(
       (findInputByLabel(view.container, "Search") as HTMLInputElement | undefined)?.placeholder
-    ).toBe("product title or slug");
+    ).toBe("product name");
 
     await flush();
     toggleCheckbox(findInputByLabel(view.container, "Family Home"));
@@ -316,7 +321,7 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     setSelectValue(findSelectByLabel(view.container, "Sort direction"), "desc");
 
     toggleCheckbox(findInputByLabel(view.container, "Show price"));
-    toggleCheckbox(findInputByLabel(view.container, "Show slug"));
+    toggleCheckbox(findInputByLabel(view.container, "Show product URL path"));
     toggleCheckbox(findInputByLabel(view.container, "Show excerpt"));
 
     setInputValue(findInputByLabel(view.container, "Attribute column"), "Feature");
@@ -335,6 +340,9 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     setInputValue(findInputByLabel(view.container, "Description"), "Quick side-by-side overview.");
     setInputValue(findInputByLabel(view.container, "Table caption"), "Home comparison table");
     toggleCheckbox(findInputByLabel(view.container, "Hide caption visually"));
+    expect(findInputByAriaLabel(view.container, "Table background value")).toBeUndefined();
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText("var(--color"));
+    setInputValue(findInputByAriaLabel(view.container, "Table background swatch"), "#f8fafc");
 
     expect(latestValue.source?.productIds).toEqual(["product-3", "product-1"]);
     expect(latestValue.source?.limit).toBe(8);
@@ -359,6 +367,7 @@ test("ProductCompare editors preserve selected product ids and expose all visual
     expect(latestValue.section?.description).toBe("Quick side-by-side overview.");
     expect(latestValue.section?.caption).toBe("Home comparison table");
     expect(latestValue.section?.hideCaption).toBe(false);
+    expect(latestValue.style?.tableBackground).toBe("#f8fafc");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText(
         "Product links and CTAs use the enabled products detail route from Site Settings."
@@ -451,9 +460,13 @@ test("ProductCompare advanced editor keeps runtime diagnostics read-only and exp
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Runtime warning: commerce_runtime_warning")
     );
-    expect(normalizeText(view.container.textContent)).toContain(
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Source summary"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Surface summary"));
+    expect(normalizeText(view.container.textContent)).not.toContain(
       normalizeText("Show raw query JSON")
     );
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText('"limit"'));
+    expect(view.container.querySelector("pre")).toBeNull();
   } finally {
     view.cleanup();
   }

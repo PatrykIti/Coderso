@@ -20,6 +20,11 @@ import {
   type ProductCompareAttributeKey,
   type ProductCompareData,
 } from "../../../../widgets/core/productCompare";
+import {
+  commerceSortFieldLabelMap,
+  type CommerceWidgetSortDirection,
+  type CommerceWidgetSortField,
+} from "../../../../widgets/core/commerceWidgetShared";
 import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
 import {
   CommerceEditorSection,
@@ -31,13 +36,14 @@ import {
   normalizeSourceForEditor,
   type CommerceSourceFieldOptions,
 } from "./CommerceWidgetEditorShared";
-import { ClearableInputField } from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
+import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
 
 const productCompareSourceFieldOptions: CommerceSourceFieldOptions = {
   limitMax: 12,
   allowCollectionFallbackInput: false,
   copy: {
-    searchPlaceholder: "product title or slug",
+    searchPlaceholder: "product name",
     searchHelpText: "Use search to narrow Product Compare candidates before final curation.",
     statusHelpText:
       "Empty keeps the current runtime defaults. Use Published for public-ready comparisons.",
@@ -46,6 +52,62 @@ const productCompareSourceFieldOptions: CommerceSourceFieldOptions = {
 
 const normalizeText = (value: unknown) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : "";
+
+const describeCommerceColor = (value: string | undefined) => {
+  if (!value?.trim()) return "Theme default";
+  if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
+  return "Saved custom color";
+};
+
+const summarizeStatusFilters = (status: string[] | undefined) => {
+  const count = status?.length ?? 0;
+  if (count === 0) return "Public-ready default";
+  return `${count} ${count === 1 ? "status filter" : "status filters"} selected`;
+};
+
+const summarizeCollectionFilters = (collectionIds: string[] | undefined) => {
+  const count = collectionIds?.length ?? 0;
+  if (count === 0) return "No collection filter";
+  return `${count} ${count === 1 ? "collection" : "collections"} selected`;
+};
+
+const summarizeCommerceSort = (
+  field: CommerceWidgetSortField | undefined,
+  direction: CommerceWidgetSortDirection | undefined
+) => {
+  const resolvedField = field ?? "title";
+  const resolvedDirection = direction ?? "asc";
+
+  if (resolvedField === "pricing.amount") {
+    return resolvedDirection === "asc" ? "Price, low to high" : "Price, high to low";
+  }
+
+  if (resolvedField === "updatedAt") {
+    return resolvedDirection === "desc" ? "Recently updated first" : "Oldest updated first";
+  }
+
+  if (resolvedField === "createdAt") {
+    return resolvedDirection === "desc" ? "Newest first" : "Oldest first";
+  }
+
+  if (resolvedField === "publishedAt") {
+    return resolvedDirection === "desc" ? "Recently published first" : "Oldest published first";
+  }
+
+  const label =
+    resolvedField === "slug" ? "Product URL path" : commerceSortFieldLabelMap[resolvedField];
+  return `${label}, ${resolvedDirection === "asc" ? "A to Z" : "Z to A"}`;
+};
+
+const productCompareMoneyLocaleLabelMap: Record<
+  (typeof productCompareMoneyLocales)[number],
+  string
+> = {
+  "en-US": "English (United States)",
+  "pl-PL": "Polish (Poland)",
+  "de-DE": "German (Germany)",
+  "fr-FR": "French (France)",
+};
 
 const resolvePreviewErrorMessage = (error: unknown) => {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -88,7 +150,7 @@ const clearStyle = (
   const current = normalizeProductCompareData(value);
   const { [key]: _removed, ...nextStyle } = current.style ?? {};
   update(value, onChange, {
-    style: Object.keys(nextStyle).length > 0 ? nextStyle : {},
+    style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined,
   });
 };
 
@@ -185,40 +247,55 @@ function SurfaceFields({
 
   return (
     <CommerceEditorSection title="Surfaces" description="Comparison table and empty state colors.">
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.table-background"
+        controlPath="style.tableBackground"
         label="Table background"
         value={normalized.style?.tableBackground}
         onChange={(next) => updateStyle(value, onChange, { tableBackground: next })}
         onClear={() => clearStyle(value, onChange, "tableBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.table-border"
+        controlPath="style.tableBorderColor"
         label="Table border"
         value={normalized.style?.tableBorderColor}
         onChange={(next) => updateStyle(value, onChange, { tableBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "tableBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.header-background"
+        controlPath="style.headerBackground"
         label="Header background"
         value={normalized.style?.headerBackground}
         onChange={(next) => updateStyle(value, onChange, { headerBackground: next })}
         onClear={() => clearStyle(value, onChange, "headerBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.empty-background"
+        controlPath="style.emptyBackground"
         label="Empty background"
         value={normalized.style?.emptyBackground}
         onChange={(next) => updateStyle(value, onChange, { emptyBackground: next })}
         onClear={() => clearStyle(value, onChange, "emptyBackground")}
-        placeholder="var(--color-bg)"
+        pickerFallback="#ffffff"
+        showValueInput={false}
       />
-      <ClearableInputField
+      <SharedColorControl
+        controlId="product-compare.visual.empty-border"
+        controlPath="style.emptyBorderColor"
         label="Empty border"
         value={normalized.style?.emptyBorderColor}
         onChange={(next) => updateStyle(value, onChange, { emptyBorderColor: next })}
         onClear={() => clearStyle(value, onChange, "emptyBorderColor")}
-        placeholder="var(--color-border)"
+        pickerFallback="#e2e8f0"
+        showValueInput={false}
       />
     </CommerceEditorSection>
   );
@@ -313,37 +390,56 @@ function QuerySummarySection({ value }: { value: ProductCompareData }) {
   const normalized = normalizeProductCompareData(value);
   const query = buildProductCompareQueryInput(normalized);
   const selectedCount = normalized.source?.productIds?.length ?? 0;
-  const summaryLines =
-    selectedCount > 0
-      ? [
-          `Curated compare set: ${selectedCount} selected products in manual order.`,
-          "Search, collection, and status filters are ignored while selected products are present.",
-          `Runtime pagination limit: ${query.pagination.limit}`,
-        ]
-      : [
-          `Query limit: ${query.pagination.limit}`,
-          `Search: ${normalizeText(normalized.source?.search) || "None"}`,
-          `Collections: ${(normalized.source?.collectionIds ?? []).join(", ") || "None"}`,
-          `Status filters: ${(normalized.source?.status ?? []).join(", ") || "Runtime default"}`,
-          `Sort: ${normalized.source?.sortField ?? "title"} ${normalized.source?.sortDir ?? "asc"}`,
-        ];
 
   return (
     <CommerceEditorSection
-      title="Query preview"
-      description="Normalized backend query summary and optional raw payload."
+      title="Source summary"
+      description="Read-only summary of how products are resolved. Change source and curation in Wizard or Visual."
     >
-      <div className="space-y-1 rounded-md border border-border/70 bg-background p-3 text-xs text-muted-foreground">
-        {summaryLines.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </div>
-      <details className="rounded-md border border-border/70 bg-background p-3 text-xs text-muted-foreground">
-        <summary className="cursor-pointer font-medium text-foreground">
-          Show raw query JSON
-        </summary>
-        <pre className="mt-3 max-h-52 overflow-auto">{JSON.stringify(query, null, 2)}</pre>
-      </details>
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-source-mode"
+        label="Source mode"
+        path="source"
+        value={
+          selectedCount > 0
+            ? `${selectedCount} selected ${selectedCount === 1 ? "product" : "products"} in manual order`
+            : "Query results"
+        }
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-limit"
+        label="Product limit"
+        path="source.limit"
+        value={`${query.pagination.limit} ${query.pagination.limit === 1 ? "product" : "products"}`}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-search"
+        label="Search"
+        path="source.search"
+        value={normalizeText(normalized.source?.search) ? "Configured" : "None"}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-collections"
+        label="Collections"
+        path="source.collectionIds"
+        value={summarizeCollectionFilters(normalized.source?.collectionIds)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-status"
+        label="Status filters"
+        path="source.status"
+        value={summarizeStatusFilters(normalized.source?.status)}
+      />
+      <ReadonlyWidgetSummaryRow
+        id="product-compare-advanced-sort"
+        label="Sort"
+        path="source.sortField"
+        value={
+          selectedCount > 0
+            ? "Ignored while selected products are used"
+            : summarizeCommerceSort(normalized.source?.sortField, normalized.source?.sortDir)
+        }
+      />
     </CommerceEditorSection>
   );
 }
@@ -396,7 +492,7 @@ export function ProductCompareWizardEditor({
         />
         <p className="text-xs text-muted-foreground">
           Specific product curation is available in Visual as a product picker. Wizard keeps source
-          setup query-based.
+          setup filter-based.
         </p>
       </CommerceEditorSection>
 
@@ -546,7 +642,7 @@ export function ProductCompareVisualEditor({
           onChange={(next) => updateRowVisibility(value, onChange, "quantity", next)}
         />
         <CommerceToggleField
-          label="Show slug"
+          label="Show product URL path"
           checked={normalized.fields?.showSlug === true}
           onChange={(next) => updateRowVisibility(value, onChange, "slug", next)}
         />
@@ -694,7 +790,10 @@ export function ProductCompareVisualEditor({
         <ProductCompareSelectField
           label="Money locale"
           value={normalized.format?.moneyLocale ?? "en-US"}
-          options={productCompareMoneyLocales.map((locale) => ({ value: locale, label: locale }))}
+          options={productCompareMoneyLocales.map((locale) => ({
+            value: locale,
+            label: productCompareMoneyLocaleLabelMap[locale],
+          }))}
           onChange={(next) =>
             update(value, onChange, {
               format: {
@@ -814,7 +913,7 @@ export function ProductCompareAdvancedEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
-        title="Runtime payload"
+        title="Preview status"
         description="Read-only runtime diagnostics from SSR and admin preview refreshes."
       >
         <PreviewStatusCard
@@ -830,6 +929,36 @@ export function ProductCompareAdvancedEditor({
       </CommerceEditorSection>
 
       <QuerySummarySection value={value} />
+
+      <CommerceEditorSection
+        title="Surface summary"
+        description="Read-only color state. Change table and empty-state colors in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-table-background"
+          label="Table background"
+          path="style.tableBackground"
+          value={describeCommerceColor(normalized.style?.tableBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-table-border"
+          label="Table border"
+          path="style.tableBorderColor"
+          value={describeCommerceColor(normalized.style?.tableBorderColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-header-background"
+          label="Header background"
+          path="style.headerBackground"
+          value={describeCommerceColor(normalized.style?.headerBackground)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-empty-state"
+          label="Empty state colors"
+          path="style"
+          value={`Background: ${describeCommerceColor(normalized.style?.emptyBackground)}, border: ${describeCommerceColor(normalized.style?.emptyBorderColor)}`}
+        />
+      </CommerceEditorSection>
     </div>
   );
 }

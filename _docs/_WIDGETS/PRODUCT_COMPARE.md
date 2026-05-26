@@ -32,12 +32,12 @@ read-only runtime diagnostics.
 - money/quantity formatting
 - featured-product picker and sticky header
 - empty state
-- surfaces
+- swatch-only surfaces
 
 ### Advanced
 - read-only runtime preview status
 - read-only runtime warning copy
-- normalized query summary and raw JSON disclosure
+- read-only source and surface summaries
 
 ## Runtime Behavior Notes
 
@@ -60,6 +60,10 @@ read-only runtime diagnostics.
 - `style.headerBackground`
 - `style.emptyBackground`
 - `style.emptyBorderColor`
+
+Visual color authoring is swatch-only. Legacy saved CSS/token color values
+remain compatible as replace-or-clear saved custom colors, but fresh defaults
+do not seed raw CSS token strings.
 
 ## Data Model (summary)
 
@@ -119,13 +123,7 @@ read-only runtime diagnostics.
     "title": "No products to compare",
     "description": "Update source filters or publish products."
   },
-  "style": {
-    "tableBackground": "var(--color-bg)",
-    "tableBorderColor": "var(--color-border)",
-    "headerBackground": "color-mix(in srgb, var(--color-bg) 80%, transparent)",
-    "emptyBackground": "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-    "emptyBorderColor": "var(--color-border)"
-  }
+  "style": {}
 }
 ```
 
@@ -134,7 +132,10 @@ read-only runtime diagnostics.
 - Exports `productCompareEditorContract` with `version: 2`.
 - Contract target: Wizard seeds query-based source setup; Visual owns selected
   products, rows, labels, visible fields, header, empty state, format, layout,
-  and style; Advanced is read-only query/runtime diagnostics.
+  and swatch-only style; Advanced is read-only preview, source, and surface
+  diagnostics without raw JSON payloads.
 - `TASK-336-19` removes the temporary Wizard/Visual duplicate allowance for
   `source.productIds`. Product curation now uses Visual product pickers instead
   of raw ID text fields, while runtime still preserves exact manual order.
+- `TASK-336-19` also removes raw CSS/token color text inputs, phantom
+  `runtime.*` contract paths, and the Advanced raw query disclosure.

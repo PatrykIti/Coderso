@@ -1004,6 +1004,33 @@ read-only diagnostics. It added these concrete cleanup requirements:
   Advanced writable paths `0`, Advanced raw payload/pre matches `0`, and
   re-entered Wizard writable paths limited to `variant`, `header.title`,
   `logos.count`, and `logos.name`.
+- In Progress (2026-05-26): Product Gallery and Product Compare commerce
+  residual drift is superseded under this task after fresh helper-agent and
+  Claude read-only UX audits flagged Visual raw CSS/token color inputs,
+  Advanced raw query JSON, phantom `runtime.*` contract paths, default seeded
+  CSS token colors, Product Gallery raw media-ID hints, internal sort labels,
+  stale tests, and stale widget docs. Product Compare now keeps Wizard as
+  source/filter setup, Visual as the owner for selected products, copy, rows,
+  labels, product headers, formatting, layout, empty state, and swatch-only
+  surfaces, and Advanced as read-only preview/source/surface summaries without
+  raw query payloads. Product Gallery now keeps Wizard as bounded source/price
+  setup, Visual as the owner for header, card fields, product curation, links,
+  pagination, empty state, columns, and swatch-only surfaces, and Advanced as
+  read-only product-behavior/source/preview/surface summaries without raw query
+  payloads or raw media IDs. Targeted Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-gallery-editor-wave.test.tsx tests/vitest/ui/commerce-widget-editor-shared.test.tsx tests/vitest/ui/product-gallery-admin-preview.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/widgets/productGallery.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 55/55 tests. Strict Playwright evidence is stored under
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-compare-query-color-2026-05-26.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-product-gallery-query-color-2026-05-26.*`;
+  both report `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-commerce-query-color-focused-2026-05-26.*`
+  reports Product Compare/Product Gallery Visual raw color value inputs `0`,
+  Visual raw color token inputs `0`, Product Gallery media hint controls `0`,
+  Advanced `<pre>` payloads `0`, Advanced writable paths `0`, `runtime.*`
+  paths `0`, raw Advanced query/media copy matches `0`, and source/surface
+  summaries present for both widgets.
 
 ## Files to Change
 

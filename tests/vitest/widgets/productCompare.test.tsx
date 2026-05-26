@@ -319,6 +319,10 @@ test("product compare editors render expected panels", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(advanced).toContain("Runtime payload");
-  expect(advanced).toContain("Query preview");
+  expect(advanced).toContain("Preview status");
+  expect(advanced).toContain("Source summary");
+  expect(advanced).toContain("Surface summary");
+  expect(advanced).not.toContain("Runtime payload");
+  expect(advanced).not.toContain("Query preview");
+  expect(advanced).not.toContain("<pre");
 });

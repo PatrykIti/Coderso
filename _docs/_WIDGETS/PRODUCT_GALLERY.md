@@ -28,11 +28,11 @@ styling.
 - more-products page picker and link label
 - card density and presentation
 - empty state
-- surfaces
+- swatch-only surfaces
 
 ### Advanced
 - preview status and refresh
-- read-only source, curation, route, pagination, and query diagnostics
+- read-only product behavior, source, preview, and surface summaries
 
 ## Runtime Behavior Notes
 
@@ -46,11 +46,16 @@ styling.
   contract.
 - Admin preview resolves products through an internal `/admin/api/widgets/*`
   route and patches preview data through `WidgetPreviewState.dataPatch`.
+- Editor previews never render raw media IDs. Media diagnostics stay
+  backend/support-owned instead of becoming beginner-facing card controls.
 
 ## Clear Controls
 
 - `style.cardBackground`, `style.cardBorderColor`, `style.emptyBackground`, and
   `style.emptyBorderColor` are clearable.
+- Visual color authoring is swatch-only. Legacy saved CSS/token color values
+  remain compatible as replace-or-clear saved custom colors, but fresh defaults
+  do not seed raw CSS token strings.
 
 ## Data Model (summary)
 
@@ -89,8 +94,7 @@ styling.
     "showExcerpt": true,
     "showPrice": true,
     "showStock": true,
-    "showStatus": false,
-    "showMediaHint": false
+    "showStatus": false
   },
   "emptyState": {
     "title": "No products found",
@@ -98,11 +102,7 @@ styling.
   },
   "style": {
     "columns": "3",
-    "cardStyle": "outlined",
-    "cardBackground": "var(--color-bg)",
-    "cardBorderColor": "var(--color-border)",
-    "emptyBackground": "color-mix(in srgb, var(--color-bg) 70%, transparent)",
-    "emptyBorderColor": "var(--color-border)"
+    "cardStyle": "outlined"
   },
   "resolved": {
     "items": [],
@@ -117,7 +117,11 @@ styling.
 - Exports `productGalleryEditorContract` with `version: 2`.
 - Contract target: Wizard owns commerce source setup; Visual owns section
   header, card fields, selected-product curation, links, pagination, empty
-  state, columns, and style; Advanced is read-only query/runtime diagnostics.
+  state, columns, and swatch-only style; Advanced is read-only product
+  behavior, source, preview, and surface diagnostics without raw query payloads.
 - `TASK-336-19` removes beginner-mode raw product IDs, collection fallback IDs,
   route-prefix editing, and minor-unit price wording. Legacy saved product
   routes and curation stay backward-compatible and are summarized in Advanced.
+- `TASK-336-19` also removes raw CSS/token color text inputs, raw media-ID
+  preview hints, phantom `runtime.*` contract paths, and the Advanced raw query
+  disclosure.

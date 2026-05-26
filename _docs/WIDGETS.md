@@ -232,9 +232,10 @@ Zasady:
 - Commerce widget authoring follows the same picker-first rule. Product Gallery
   and Product Compare use collection/product/page pickers for normal
   Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
-  strings, and minor-unit price wording are not beginner-mode inputs. Existing
-  saved technical values remain backward-compatible and are summarized in
-  Advanced diagnostics.
+  strings, minor-unit price wording, raw color token inputs, raw media-ID
+  hints, and raw query JSON are not beginner-mode inputs. Existing saved
+  technical values remain backward-compatible and are summarized in Advanced
+  diagnostics.
 - Publiczny runtime nie moze ukrywac overflow globalnym clippingiem ani
   dowolnym `data-overflow-intentional`. Celowy poziomy scroll jest dozwolony
   tylko dla zatwierdzonych regionow produktowych z widoczna wskazowka,

@@ -251,6 +251,11 @@ const findLabeledField = (
 const findInputByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "input");
 
+const findInputByAriaLabel = (container: ParentNode, text: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) => normalizeText(element.getAttribute("aria-label")) === normalizeText(text)
+  );
+
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
@@ -357,6 +362,10 @@ test("ProductGallery editors update source, links, curation, and preview status"
     await flushPromises();
     setSelectValue(findSelectByOption(view.container, "Catalog"), "catalog-page");
     setInputValue(findInputByLabel(view.container, "Link label"), "Browse catalog");
+    expect(findInputByLabel(view.container, "Show media hint")).toBeUndefined();
+    expect(findInputByAriaLabel(view.container, "Card background value")).toBeUndefined();
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText("var(--color"));
+    setInputValue(findInputByAriaLabel(view.container, "Card background swatch"), "#f8fafc");
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Preview needs refresh")
     );
@@ -373,6 +382,7 @@ test("ProductGallery editors update source, links, curation, and preview status"
     expect(latestValue.style).toEqual(
       expect.objectContaining({
         columns: "4",
+        cardBackground: "#f8fafc",
       })
     );
     expect(latestValue.link).toEqual(
@@ -398,6 +408,11 @@ test("ProductGallery editors update source, links, curation, and preview status"
     const resolvedPreviewState = latestPreviewState as WidgetPreviewState | null;
     expect(resolvedPreviewState?.status).toBe("ready");
     expect(previewProductGalleryMock.mock.calls.length).toBe(2);
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Source summary"));
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Surface summary"));
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText("Query preview"));
+    expect(normalizeText(view.container.textContent)).not.toContain(normalizeText('"productIds"'));
+    expect(view.container.querySelector("pre")).toBeNull();
   } finally {
     view.cleanup();
   }
@@ -425,6 +440,11 @@ test("ProductGallery keeps daily presentation controls out of Wizard", async () 
   try {
     expect(findSelectByLabel(visualView.container, "Columns")).toBeInstanceOf(HTMLSelectElement);
     expect(findSelectByLabel(visualView.container, "Card style")).toBeInstanceOf(HTMLSelectElement);
+    expect(findInputByLabel(visualView.container, "Show media hint")).toBeUndefined();
+    expect(findInputByAriaLabel(visualView.container, "Card background swatch")).toBeInstanceOf(
+      HTMLInputElement
+    );
+    expect(findInputByAriaLabel(visualView.container, "Card background value")).toBeUndefined();
   } finally {
     visualView.cleanup();
   }
