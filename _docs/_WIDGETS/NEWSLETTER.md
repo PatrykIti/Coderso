@@ -21,8 +21,9 @@ Lead capture through a bounded newsletter signup surface that can either:
 
 ### Wizard
 
-- Read-only layout summary with a handoff to Visual for variant selection.
-- Title, description, button label, and baseline consent copy.
+- One-time read-only starter summary with a handoff to Visual for edits.
+- Current title, description, button label, consent, and layout are summarized
+  only; Wizard does not duplicate Visual controls after setup.
 - Minimal warning when description is hidden by the selected variant.
 
 ### Visual
@@ -45,20 +46,22 @@ Notes:
 - Visual does not ask authors to type persisted field-name keys, action URLs,
   methods, webhook IDs, or analytics event names. Static mode uses safe default
   field mapping; Forms-runtime mode maps fields through the selected Form's
-  field picker; external provider metadata is summarized read-only.
+  field picker; older external signup service metadata is summarized read-only.
+- Visual color fields are swatch-only with clear/saved-custom-color summaries;
+  authors are not asked to type CSS variables, tokens, or raw color strings.
 - Success preview is local UI state only and does not persist a fake submitted
   state into widget JSON.
 
 ### Advanced
 
-- Transport diagnostics
-- Read-only integration metadata summary
-- Confirm-gated normalization support action
+- Signup readiness
+- Authoring boundaries
 
-Advanced reports whether raw transport fields are configured without exposing
-or editing the stored action URL or webhook ID. Visual owns safe Forms-runtime
-binding and read-only connection status; external provider metadata remains a
-technical Advanced diagnostic/support concern.
+Advanced is read-only. It reports where visitor signups go, whether an older
+external connection is saved or needs support review, where authors should make
+changes, and whether saved data is still compatible. It does not expose or edit
+raw action URLs, webhook IDs, HTTP methods, JSON payloads, or normalization
+actions.
 
 ## Runtime Contract
 
@@ -221,14 +224,16 @@ The renderer emits bounded data markers including:
 ## TASK-336-18 Editor Contract
 
 - Exports `newsletterEditorContract` with `version: 2`.
-- Contract target: Wizard seeds signup copy, placeholder, consent, and submit
-  label; Visual owns field labels, state copy, submission behavior, opt-in, and
-  style; Advanced is read-only transport diagnostics.
-- TASK-336-19 converts Advanced raw action URL/webhook ID editing into
-  read-only configured/not-configured diagnostics plus a confirm-gated
-  normalization support action.
-- TASK-336-19 follow-up removes the remaining Visual raw integration and field
-  key authoring: field names are mapped through selected Form fields or shown
-  as safe read-only defaults, analytics event names are no longer edited in
-  Visual, and external provider action URL/method/webhook metadata is summarized
-  without exposing editable raw values.
+- Contract target: Wizard is one-time/read-only after setup; Visual owns
+  variant, copy, field labels/mapping, consent, state copy, submission
+  behavior, opt-in, and style; Advanced owns read-only signup readiness and
+  authoring-boundary summaries.
+- TASK-336-19 removes expired Wizard/Visual duplicate writable allowances,
+  removes the Advanced normalization support action, and converts Advanced raw
+  transport diagnostics into human support summaries.
+- TASK-336-19 follow-up removes remaining Visual raw integration, field-key,
+  analytics, and color-token authoring: field names are mapped through selected
+  Form fields or shown as safe read-only defaults, analytics event names are no
+  longer edited in Visual, older external signup service metadata is summarized
+  without exposing editable raw values, and colors use swatches plus
+  clear/saved-custom summaries.

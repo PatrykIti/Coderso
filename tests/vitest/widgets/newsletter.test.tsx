@@ -590,6 +590,10 @@ test("newsletter visual editor renders the expanded IA", () => {
   expect(html).toContain("Connection status");
   expect(html).toContain("Colors and emphasis");
   expect(html).toContain("Spacing and alignment");
+  expect(html).toContain('data-widget-editor-section="newsletter.visual.variant"');
+  expect(html).toContain('data-widget-control-path="style.background"');
+  expect(html).toContain("Theme default");
+  expect(html).not.toContain('placeholder="var(--color-text)"');
 });
 
 test("newsletter wizard and advanced editors reflect the new owner seams", () => {
@@ -610,11 +614,14 @@ test("newsletter wizard and advanced editors reflect the new owner seams", () =>
     />
   );
 
-  expect(wizardHtml).toContain("Change the variant in Visual.");
+  expect(wizardHtml).toContain("Wizard is a one-time orientation step.");
   expect(wizardHtml).toContain(
     "Description stays saved, but the Minimal variant does not render it."
   );
-  expect(advancedHtml).toContain("Transport diagnostics");
-  expect(advancedHtml).toContain("Integration metadata summary");
-  expect(advancedHtml).toContain("Normalize payload");
+  expect(wizardHtml).not.toContain("<input");
+  expect(advancedHtml).toContain("Signup readiness");
+  expect(advancedHtml).toContain("Authoring boundaries");
+  expect(advancedHtml).toContain("Use Visual for copy, Form selection");
+  expect(advancedHtml).not.toContain("Normalize payload");
+  expect(advancedHtml).not.toContain("HTTP method");
 });

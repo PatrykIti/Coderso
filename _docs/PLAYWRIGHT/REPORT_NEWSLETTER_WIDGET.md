@@ -395,9 +395,9 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
 
 | ID | Status | Owner | Notes |
 |---|---|---|---|
-| UX-01 | fixed | TASK-276-06 | Background color controls now explain that `transparent` is the saved value and `#ffffff` is only the picker fallback. |
+| UX-01 | fixed | TASK-276-06; refined TASK-336-19 | Background color controls now use swatch-only authoring with clear/saved-custom summaries; raw CSS/token text entry is no longer shown. |
 | UX-02 | fixed | TASK-276-04 | Wizard and Visual now warn that `minimal` keeps description saved but hidden. |
-| UX-03 | fixed | TASK-276-03 | Advanced now explains the active transport field, ignored metadata, method, and readiness. |
+| UX-03 | fixed | TASK-276-03; refined TASK-336-19 | Advanced now uses human signup-readiness and authoring-boundary summaries instead of raw transport fields, HTTP methods, payloads, or normalization actions. |
 | UX-04 | fixed | TASK-276-03 | Action URL validation now rejects bare domains, insecure/private/admin paths, and invalid relative routes. |
 | UX-05 | fixed | TASK-276-04 | Consent-required help text now states that unchecked consent blocks submit. |
 | UX-06 | fixed | TASK-276-04 | Visual now includes an explicit success-state preview affordance without persisting fake submit state. |
@@ -408,8 +408,8 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
 | ID | Status | Owner | Notes |
 |---|---|---|---|
 | BF-01 | fixed | TASK-276-01 | The renderer now emits a real email field name so payload submission works. |
-| BF-02 | fixed | TASK-276-06 | Newsletter now exposes bounded text color controls with local contrast guidance. |
-| BF-03 | fixed | TASK-276-06 | Newsletter now exposes bounded button background/text color controls. |
+| BF-02 | fixed | TASK-276-06; refined TASK-336-19 | Newsletter exposes bounded text color controls with local contrast guidance and swatch-only authoring. |
+| BF-03 | fixed | TASK-276-06; refined TASK-336-19 | Newsletter exposes bounded button background/text color controls with swatch-only authoring. |
 | BF-04 | fixed | TASK-276-01 | `form.emailFieldName` is now schema-owned and normalized through a safe field-name helper. |
 | BF-05 | fixed | TASK-276-05 | Newsletter now supports a bounded optional first-name field with stable metadata. |
 | BF-06 | fixed | TASK-276-06 | Section width now uses bounded `narrow | default | wide | full` options. |
@@ -461,3 +461,17 @@ Newsletter widget to formularz zapisu do newslettera z konfigurowalnymi polami t
   submission nonces` passed before later unrelated branch failures terminated
   the overall suite. A later isolated rerun timed out under the same unstable
   DB/runtime environment.
+
+### TASK-336-19 residual cleanup evidence
+
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/editorContract.test.ts` -
+  PASS (`35` tests) after the 2026-05-26 residual cleanup.
+- `bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-newsletter-final --widget newsletter --admin http://localhost:5173/admin --front http://localhost:3000 --output-json _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-2026-05-26.json --output-md _docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-2026-05-26.md --strict` -
+  PASS (`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`,
+  `metadataGaps=0`).
+- `bun .tmp/playwright-newsletter-focused-probe.ts` - PASS; focused evidence
+  is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-focused-2026-05-26.*`
+  and proves no Wizard tab/root before `Run setup again`, Visual raw style
+  inputs `0`, Advanced writable paths `0`, Advanced raw controls `0`, Wizard
+  writable paths `0`, and no raw technical text.

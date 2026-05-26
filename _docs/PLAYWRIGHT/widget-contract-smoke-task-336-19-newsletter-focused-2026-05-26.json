@@ -1,0 +1,74 @@
+{
+  "generatedAt": "2026-05-26T00:25:38.008Z",
+  "command": "bun .tmp/playwright-newsletter-focused-probe.ts",
+  "session": "task-336-19-newsletter-focused",
+  "probe": "newsletter one-time wizard, swatch-only visual colors, and read-only advanced summaries",
+  "passed": true,
+  "shell": {
+    "wizardBeforeCount": 0,
+    "wizardTabBeforeCount": 0,
+    "visualTabCount": 1,
+    "advancedTabCount": 1,
+    "wizardAdvancedTabCount": 0
+  },
+  "visual": {
+    "rootCount": 1,
+    "visibleSectionCount": 9,
+    "writablePaths": [
+      "variant",
+      "title",
+      "description",
+      "placeholder",
+      "form.emailLabel",
+      "form.showEmailLabel",
+      "form.firstName.enabled",
+      "consent.enabled",
+      "consent.label",
+      "consent.required",
+      "optIn.mode",
+      "submission.mode",
+      "stateCopy.loadingMessage",
+      "stateCopy.errorMessage",
+      "submit.label",
+      "stateCopy.successMessage",
+      "style.background",
+      "style.textColor",
+      "style.buttonBackground",
+      "style.buttonTextColor",
+      "style.spacing",
+      "style.alignment",
+      "style.width",
+      "layout.container",
+      "layout.padding.top",
+      "layout.padding.bottom",
+      "layout.margin.top",
+      "layout.margin.bottom",
+      "visibility.devices.desktop",
+      "visibility.devices.tablet",
+      "visibility.devices.mobile"
+    ],
+    "controlsWithoutPath": 0,
+    "styleRawInputCount": 0,
+    "rawText": false
+  },
+  "advanced": {
+    "rootCount": 1,
+    "visibleSectionCount": 4,
+    "writablePaths": [],
+    "controlsWithoutPath": 0,
+    "rawControlCount": 0,
+    "rawText": false
+  },
+  "wizard": {
+    "rootCount": 1,
+    "visibleSectionCount": 1,
+    "writablePaths": [],
+    "controlsWithoutPath": 0,
+    "rawControlCount": 0,
+    "rawText": false
+  },
+  "summary": {
+    "passed": true,
+    "status": "passed"
+  }
+}

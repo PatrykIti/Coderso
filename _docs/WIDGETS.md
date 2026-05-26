@@ -205,17 +205,21 @@ Zasady:
   replace/clear state, and Advanced reports map metadata read-only.
 - Advanced cleanup slices convert second-editor controls into diagnostics.
   FAQ Accordion Advanced is now read-only human runtime/style/saved-data
-  summaries with no raw payload snapshot or repair mutation. Newsletter keeps
-  only confirm-gated normalization support actions in Advanced until its slice
-  is revisited. Navigation layout/sticky/collapse controls live in Visual and
+  summaries with no raw payload snapshot or repair mutation. Newsletter Wizard
+  is now one-time/read-only after setup, Visual owns daily copy/Form/style
+  authoring with swatch-only colors, and Advanced reports human signup
+  readiness/authoring-boundary summaries with no payload normalization action.
+  Navigation layout/sticky/collapse controls live in Visual and
   Advanced reports summaries only. CTA Banner style-token controls and Stats
   KPI runtime style summaries are read-only diagnostics in Advanced, while
   Visual uses swatch-only color controls plus clear actions where values are
   clearable.
 - Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
   are chosen from a Form picker, field mapping is selected from Form fields or
-  shown as safe defaults, and external provider action URL/method/webhook
-  metadata is summarized rather than edited as raw technical text.
+  shown as safe defaults, and older external signup-service metadata is
+  summarized rather than edited as raw technical text. It also uses color
+  swatches plus clear/saved-custom summaries instead of raw CSS/token text
+  inputs.
 - Commerce widget authoring follows the same picker-first rule. Product Gallery
   and Product Compare use collection/product/page pickers for normal
   Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix

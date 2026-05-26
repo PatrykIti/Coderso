@@ -421,12 +421,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Newsletter wizard keeps variant ownership in Visual and updates copy fields", async () => {
+test("Newsletter wizard is a read-only one-time orientation surface", async () => {
   const { NewsletterWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const { cleanup, container, getLatestValue, onChangeSpy } = mountNewsletterHarness({
+  const { cleanup, container, onChangeSpy } = mountNewsletterHarness({
     initialValue: {
+      title: "Campaign updates",
+      description: "Saved setup copy",
       submit: { label: "" },
       consent: { enabled: true },
     },
@@ -435,38 +437,23 @@ test("Newsletter wizard keeps variant ownership in Visual and updates copy field
   });
 
   try {
-    expect(normalizeText(container.textContent)).toContain("change the variant in visual");
+    const setupSection = getSectionByTitle(container, "Starter summary");
+    expect(setupSection.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(setupSection.getAttribute("data-widget-editor-section-role")).toBe("setup");
+    expect(normalizeText(container.textContent)).toContain("wizard is a one-time orientation step");
     expect(normalizeText(container.textContent)).toContain(
       "description stays saved, but the minimal variant does not render it"
     );
-
-    setInputValue(getInputByPlaceholder(container, "Join our newsletter"), "Weekly dispatch");
-    setTextareaValue(
-      getTextareaByPlaceholder(container, "Short supporting line"),
-      "Product updates every Friday."
-    );
-    setInputValue(getInputByPlaceholder(container, "Subscribe"), "Join now");
-
-    const consentToggle = getCheckboxes(container)[0];
-    setCheckboxValue(consentToggle, false);
-    expect(findInputByPlaceholder(container, "I agree to receive updates.")).toBeUndefined();
-
-    setCheckboxValue(consentToggle, true);
-    setInputValue(
-      getInputByPlaceholder(container, "I agree to receive updates."),
-      "Send me product updates."
-    );
-
-    expect(getLatestValue()).toMatchObject({
-      title: "Weekly dispatch",
-      description: "Product updates every Friday.",
-      submit: { label: "Join now" },
-      consent: {
-        enabled: true,
-        label: "Send me product updates.",
-      },
-    });
-    expect(onChangeSpy).toHaveBeenCalled();
+    expect(container.querySelectorAll("input, textarea, select")).toHaveLength(0);
+    expect(normalizeText(container.textContent)).not.toContain("review normalization");
+    expect(
+      Array.from(
+        container.querySelectorAll(
+          '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+        )
+      ).map((element) => element.getAttribute("data-widget-control-path"))
+    ).toEqual([]);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     cleanup();
   }
@@ -581,6 +568,8 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
 
   try {
     const variantSection = getSectionByTitle(container, "Variant and form structure");
+    expect(variantSection.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(variantSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
     expect(normalizeText(variantSection.textContent)).toContain(
       "input and button share a row when possible. mobile layout still stacks"
     );
@@ -592,6 +581,7 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
     expect(getLatestVariant()).toBe("minimal");
 
     const semanticsSection = getSectionByTitle(container, "Form semantics and consent");
+    expect(semanticsSection.getAttribute("data-widget-editor-section-role")).toBe("content");
     setInputValue(getInputByPlaceholder(semanticsSection, "Email address"), "Work email");
     const showLabelToggle = getCheckboxes(semanticsSection)[0];
     setCheckboxValue(showLabelToggle, true);
@@ -615,10 +605,11 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
       "Please confirm from your inbox."
     );
     expect(normalizeText(semanticsSection.textContent)).toContain(
-      "double opt-in enforcement remains provider-owned"
+      "connected signup service handles the actual confirmation email"
     );
 
     const runtimeSection = getSectionByTitle(container, "Submission runtime");
+    expect(runtimeSection.getAttribute("data-widget-editor-section-role")).toBe("source");
     setSelectValue(
       getSelectByOptions(runtimeSection, ["static", "forms-runtime"]),
       "forms-runtime"
@@ -658,13 +649,18 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
     expect(normalizeText(integrationSection.textContent)).not.toContain("webhook id");
 
     const colorsSection = getSectionByTitle(container, "Colors and emphasis");
-    setInputValue(getInputByPlaceholder(colorsSection, "transparent"), "#f8fafc");
+    expect(colorsSection.getAttribute("data-widget-editor-section-role")).toBe("visual");
     const colorInputs = Array.from(colorsSection.querySelectorAll('input[type="color"]'));
-    setInputValue(colorInputs[1], "#111827");
+    expect(colorInputs).toHaveLength(4);
+    expect(colorsSection.querySelector('input[placeholder="var(--color-text)"]')).toBeNull();
+    expect(colorsSection.querySelector('input[placeholder="transparent"]')).toBeNull();
+    setInputValue(colorInputs[0], "#f8fafc");
+    setInputValue(colorInputs[1], "#0f172a");
     setInputValue(colorInputs[2], "#1d4ed8");
-    setInputValue(colorInputs[3], "#ffffff");
+    setInputValue(colorInputs[3], "#f8fafc");
 
     const spacingSection = getSectionByTitle(container, "Spacing and alignment");
+    expect(spacingSection.getAttribute("data-widget-editor-section-role")).toBe("layout");
     setSelectValue(getSelectByOptions(spacingSection, ["none", "sm", "md", "lg", "xl"]), "xl");
     setSelectValue(getSelectByOptions(spacingSection, ["start", "center", "end"]), "end");
     setSelectValue(
@@ -698,12 +694,59 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
         successMessage: "Joined!",
         errorMessage: "Retry later.",
       },
+      submit: {
+        successMessage: "Joined!",
+      },
       style: {
+        background: "#f8fafc",
+        textColor: "#0f172a",
+        buttonBackground: "#1d4ed8",
+        buttonTextColor: "#f8fafc",
         spacing: "xl",
         alignment: "end",
         width: "wide",
       },
     });
+    const writablePaths = Array.from(
+      container.querySelectorAll(
+        '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+      )
+    ).map((element) => element.getAttribute("data-widget-control-path"));
+    expect(writablePaths).toEqual(
+      expect.arrayContaining([
+        "variant",
+        "title",
+        "description",
+        "placeholder",
+        "form.emailLabel",
+        "form.showEmailLabel",
+        "form.emailFieldName",
+        "form.firstName.enabled",
+        "form.firstName.label",
+        "form.firstName.placeholder",
+        "form.firstName.fieldName",
+        "form.firstName.required",
+        "form.consentFieldName",
+        "consent.enabled",
+        "consent.label",
+        "consent.required",
+        "optIn.mode",
+        "optIn.confirmationCopy",
+        "submission.mode",
+        "submission.formId",
+        "stateCopy.loadingMessage",
+        "stateCopy.successMessage",
+        "stateCopy.errorMessage",
+        "submit.label",
+        "style.background",
+        "style.textColor",
+        "style.buttonBackground",
+        "style.buttonTextColor",
+        "style.spacing",
+        "style.alignment",
+        "style.width",
+      ])
+    );
     expect(onChangeSpy).toHaveBeenCalled();
   } finally {
     cleanup();
@@ -902,17 +945,17 @@ test("Newsletter visual editor publishes page-builder preview hydration for form
   }
 });
 
-test("Newsletter advanced editor summarizes the active transport and normalizes payload", async () => {
+test("Newsletter advanced editor is read-only and uses human support summaries", async () => {
   const { NewsletterAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
 
-  const { cleanup, container, getLatestValue, onChangeSpy } = mountNewsletterHarness({
+  const { cleanup, container, onChangeSpy } = mountNewsletterHarness({
     initialValue: {
       integration: {
         mode: "action-url",
         method: "get",
         actionUrl: "example.com",
-        webhookId: "legacy-webhook",
+        webhookId: "",
       },
       submission: {
         mode: "static",
@@ -926,28 +969,41 @@ test("Newsletter advanced editor summarizes the active transport and normalizes 
   });
 
   try {
-    const diagnosticsText = normalizeText(container.textContent);
-    expect(diagnosticsText).toContain("active integration field: action url");
-    expect(normalizeText(container.textContent)).toContain("action status: invalid");
-    expect(diagnosticsText).toContain("ignored field: webhook id");
-    expect(diagnosticsText).not.toContain("active integration field: actionurl");
-    expect(diagnosticsText).not.toContain("ignored field: webhookid");
+    const readinessSection = getSectionByTitle(container, "Signup readiness");
+    expect(readinessSection.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(readinessSection.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(normalizeText(readinessSection.textContent)).toContain(
+      "saved external connection needs review"
+    );
+    expect(normalizeText(readinessSection.textContent)).toContain(
+      "switch to a coderso form in visual or ask support to review it"
+    );
 
-    const metadataSection = getSectionByTitle(container, "Integration metadata summary");
-    expect(metadataSection.textContent).toContain("Configured");
-    expect(() => getInputByPlaceholder(metadataSection, "https://example.com/subscribe")).toThrow();
-    expect(() => getInputByPlaceholder(metadataSection, "webhook_newsletter_signup")).toThrow();
+    const boundariesSection = getSectionByTitle(container, "Authoring boundaries");
+    expect(boundariesSection.getAttribute("data-widget-editor-section-role")).toBe("summary");
+    expect(normalizeText(boundariesSection.textContent)).toContain(
+      "use visual for copy, form selection, field mapping, colors, spacing"
+    );
+    expect(normalizeText(boundariesSection.textContent)).toContain(
+      "not used in single opt-in mode"
+    );
 
-    clickButton(getButtonsByText(container, "Review normalization")[0]);
-    expect(container.textContent).toContain("Review diagnostics, then confirm normalization.");
-    clickButton(getButtonsByText(container, "Confirm normalization")[0]);
-    expect(getLatestValue()).toMatchObject({
-      integration: {
-        actionUrl: "example.com",
-        webhookId: "legacy-webhook",
-      },
-    });
-    expect(onChangeSpy).toHaveBeenCalled();
+    const advancedText = normalizeText(container.textContent);
+    expect(advancedText).not.toContain("action url");
+    expect(advancedText).not.toContain("webhook");
+    expect(advancedText).not.toContain("http method");
+    expect(advancedText).not.toContain("payload");
+    expect(advancedText).not.toContain("normalize");
+    expect(container.querySelectorAll("input, textarea, select, pre")).toHaveLength(0);
+    expect(container.querySelector('[data-widget-control-ownership="action"]')).toBeNull();
+    expect(
+      Array.from(
+        container.querySelectorAll(
+          '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
+        )
+      ).map((element) => element.getAttribute("data-widget-control-path"))
+    ).toEqual([]);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     cleanup();
   }
@@ -980,12 +1036,15 @@ test("Newsletter advanced editor explains that forms-runtime owns submit", async
 
   try {
     const diagnosticsText = normalizeText(view.container.textContent);
-    expect(diagnosticsText).toContain("active integration field: bound forms record");
+    expect(diagnosticsText).toContain("connected to a coderso form");
     expect(diagnosticsText).toContain(
-      "ignored field: the action url and webhook id stay inactive while the bound form owns submit."
+      "coderso handles submit, loading, success, errors, spam protection, and after-signup pages"
     );
-    expect(diagnosticsText).not.toContain("active integration field: formid");
-    expect(diagnosticsText).not.toContain("ignored field: actionurl and webhookid");
+    expect(diagnosticsText).toContain("not used while a coderso form is selected");
+    expect(diagnosticsText).not.toContain("action url");
+    expect(diagnosticsText).not.toContain("webhook");
+    expect(diagnosticsText).not.toContain("http method");
+    expect(diagnosticsText).not.toContain("payload");
   } finally {
     view.cleanup();
   }

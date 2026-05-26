@@ -943,6 +943,24 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `passed=true`, Visual style raw inputs `0`, Advanced writable paths `0`,
   Advanced raw technical controls `0`, and Wizard writable paths limited to
   `formId`.
+- In Progress (2026-05-26): Newsletter residual drift is superseded under this
+  task after helper-agent and Claude audits flagged Visual raw CSS/token color
+  inputs, false-green metadata, expired Wizard/Visual duplicate allowances,
+  Advanced technical transport copy, and the mutating `Normalize payload`
+  action. Newsletter now keeps Wizard as a one-time read-only starter summary,
+  Visual as the sole daily owner for copy, Form selection, field mapping,
+  visitor states, swatch-only colors, spacing, and layout, and Advanced as
+  read-only signup-readiness/authoring-boundary summaries with no action URL,
+  webhook, HTTP-method, JSON payload, or normalization controls. Targeted
+  Vitest evidence passes `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx tests/vitest/widgets/newsletter.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 35/35 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-2026-05-26.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-focused-2026-05-26.*`
+  verifies completed widgets have no Wizard tab/root before explicit `Run setup
+  again`, Visual style raw inputs `0`, Advanced writable paths `0`, Advanced
+  raw controls `0`, Wizard writable paths `0`, and no raw technical text.
 
 ## Files to Change
 

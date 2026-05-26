@@ -20,7 +20,6 @@ import {
   getExpectedNewsletterRuntimeFields,
   getNewsletterFormsRuntimeCompatibility,
   newsletterDefaults,
-  normalizeNewsletterActionUrl,
   normalizeNewsletterData,
   resolveNewsletterTransport,
   resolveNewsletterVariant,
@@ -32,7 +31,12 @@ import {
   type NewsletterVariantId,
   type NewsletterWidth,
 } from "../../../../widgets/core/newsletter";
-import type { WidgetEditorProps, WidgetPreviewState } from "../../../../widgets/types";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+  WidgetPreviewState,
+} from "../../../../widgets/types";
 import { resolveColorContrastAdvisory, resolveColorPickerValue } from "./ClearableFields";
 import { SharedColorControl } from "./SharedColorControl";
 import {
@@ -236,18 +240,28 @@ function useNewsletterAdminPreview({
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -454,7 +468,7 @@ function RuntimeBindingSummary({ value }: { value: NormalizedNewsletterData }) {
   return (
     <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
       <p>Newsletter needs these fields from the selected Form: {requiredFieldText || "none"}.</p>
-      <p>Published public Forms reuse the shared secure submit flow automatically.</p>
+      <p>Coderso automatically handles submit, success, errors, and spam protection.</p>
     </div>
   );
 }
@@ -610,8 +624,89 @@ function resolveFieldBindingStatus(
   };
 }
 
+function hasSavedExternalConnection(
+  transport: ReturnType<typeof resolveNewsletterTransport>
+): boolean {
+  return transport.actionStatus === "valid" || transport.webhookId.length > 0;
+}
+
+function describeSignupDestination(
+  normalized: NormalizedNewsletterData,
+  transport: ReturnType<typeof resolveNewsletterTransport>
+): string {
+  if (normalized.submission.mode === "forms-runtime") {
+    return normalized.submission.formId.trim().length > 0
+      ? "Connected to a Coderso Form"
+      : "Choose a Coderso Form in Visual";
+  }
+
+  if (hasSavedExternalConnection(transport)) return "External signup service saved";
+  if (transport.actionStatus === "invalid") return "Saved external connection needs review";
+  return "Not connected yet";
+}
+
+function describeVisitorSubmitPath(
+  normalized: NormalizedNewsletterData,
+  transport: ReturnType<typeof resolveNewsletterTransport>
+): string {
+  if (normalized.submission.mode === "forms-runtime") {
+    return normalized.submission.formId.trim().length > 0
+      ? "Coderso handles submit, loading, success, errors, spam protection, and after-signup pages."
+      : "Visitors cannot sign up until a public Form is selected.";
+  }
+
+  if (hasSavedExternalConnection(transport)) {
+    return "Visitors are sent to the saved external signup service.";
+  }
+
+  if (transport.actionStatus === "invalid") {
+    return "The saved external connection is incomplete; switch to a Coderso Form in Visual or ask support to review it.";
+  }
+
+  return "Visitors cannot sign up until a destination is selected.";
+}
+
+function describeSavedExternalConnection(
+  normalized: NormalizedNewsletterData,
+  transport: ReturnType<typeof resolveNewsletterTransport>
+): string {
+  if (normalized.submission.mode === "forms-runtime") {
+    return "Not used while a Coderso Form is selected";
+  }
+
+  if (hasSavedExternalConnection(transport)) return "Configured";
+  if (transport.actionStatus === "invalid") return "Needs support review";
+  return "Not configured";
+}
+
+function describeOptInSummary(normalized: NormalizedNewsletterData): string {
+  return normalized.optIn.mode === "double"
+    ? "Confirmation copy is enabled; delivery is handled by the connected signup service."
+    : "Visitors are added after one signup step.";
+}
+
+function describeSuccessBehavior(normalized: NormalizedNewsletterData): string {
+  switch (normalized.submission.successBehavior) {
+    case "show-message-reset-form":
+      return "Shows the success message and clears the fields.";
+    case "show-message-keep-form":
+      return "Shows the success message and keeps the form visible.";
+    case "show-message-hide-form":
+    default:
+      return "Shows the success message after signup.";
+  }
+}
+
+function describeConfirmationOwner(normalized: NormalizedNewsletterData): string {
+  return normalized.optIn.mode === "double"
+    ? "The connected signup service sends confirmation emails."
+    : "Not used in single opt-in mode.";
+}
+
 function ColorField({
   label,
+  controlId,
+  controlPath,
   value,
   onChange,
   placeholder,
@@ -619,6 +714,8 @@ function ColorField({
   onClear,
 }: {
   label: string;
+  controlId: string;
+  controlPath: string;
   value: string | undefined;
   onChange: (next: string) => void;
   placeholder: string;
@@ -628,20 +725,19 @@ function ColorField({
   return (
     <SharedColorControl
       label={label}
+      controlId={controlId}
+      controlPath={controlPath}
       value={value}
       onChange={onChange}
       onClear={onClear}
       placeholder={placeholder}
       pickerFallback={pickerFallback}
+      showValueInput={false}
     />
   );
 }
 
-export function NewsletterWizardEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<NewsletterData>) {
+export function NewsletterWizardEditor({ value, variant }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeNewsletterData(value);
   const consent = normalized.consent ?? newsletterDefaults.consent!;
   const submit = normalized.submit ?? newsletterDefaults.submit!;
@@ -650,68 +746,52 @@ export function NewsletterWizardEditor({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border p-3">
-        <p className="text-sm font-medium">Newsletter layout</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {variantCopy?.description ?? "Layout is configured in Visual."}
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Change the variant in Visual. Wizard only shows the current selection.
-        </p>
-      </div>
-
-      <MinimalDescriptionNotice variant={resolvedVariant} />
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Title</p>
-        <Input
-          value={normalized.title}
-          onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
-          placeholder="Join our newsletter"
+      <EditorSection
+        id="newsletter.wizard.starter-summary"
+        mode="wizard"
+        role="setup"
+        title="Starter summary"
+        description="Wizard is a one-time orientation step. Use Visual for editable copy, consent, Form setup, and styling."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-wizard-layout"
+          label="Layout"
+          path="variant"
+          value={variantCopy?.label ?? "Inline"}
+          help={variantCopy?.description ?? "Layout is configured in Visual."}
         />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Description</p>
-        <Textarea
-          value={normalized.description}
-          onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
-          placeholder="Short supporting line"
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-wizard-title"
+          label="Title"
+          path="title"
+          value={normalized.title || "Join our newsletter"}
         />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Button label</p>
-        <Input
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-wizard-description"
+          label="Description"
+          path="description"
+          value={
+            resolvedVariant === "minimal"
+              ? `Hidden in Minimal layout; saved text: ${
+                  normalized.description || "Not configured"
+                }`
+              : normalized.description
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-wizard-button"
+          label="Button label"
+          path="submit.label"
           value={submit.label}
-          onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
-          placeholder="Subscribe"
         />
-      </div>
-
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <p className="text-sm font-medium">Consent checkbox</p>
-          <p className="text-xs text-muted-foreground">
-            Ask visitors to confirm marketing consent before submitting.
-          </p>
-        </div>
-        <Switch
-          checked={consent.enabled}
-          onCheckedChange={(checked) => updateConsent(value, onChange, { enabled: checked })}
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-wizard-consent"
+          label="Consent"
+          path="consent.enabled"
+          value={consent.enabled ? consent.label || "Enabled" : "Not shown"}
         />
-      </div>
-
-      {consent.enabled ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Consent label</p>
-          <Input
-            value={consent.label}
-            onChange={(event) => updateConsent(value, onChange, { label: event.target.value })}
-            placeholder="I agree to receive updates."
-          />
-        </div>
-      ) : null}
+        <MinimalDescriptionNotice variant={resolvedVariant} />
+      </EditorSection>
     </div>
   );
 }
@@ -769,46 +849,63 @@ export function NewsletterVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="newsletter.visual.variant"
+        mode="visual"
+        role="visual"
         title="Variant and form structure"
         description="Pick the layout here. Mobile behavior is documented directly on each card."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <WidgetControlRow id="newsletter-variant" label="Layout" path="variant">
+          {() => <VariantCards value={resolvedVariant} onChange={onVariantChange} />}
+        </WidgetControlRow>
         <MinimalDescriptionNotice variant={resolvedVariant} />
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.copy"
+        mode="visual"
+        role="content"
         title="Content and copy"
         description="Edit visible copy for the heading, description, and email placeholder."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={normalized.title}
-            onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
-            placeholder="Join our newsletter"
-          />
-        </div>
+        <WidgetControlRow id="newsletter-title" label="Title" path="title">
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.title}
+              onChange={(event) => updateRoot(value, onChange, { title: event.target.value })}
+              placeholder="Join our newsletter"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={normalized.description}
-            onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
-            placeholder="Short supporting line"
-          />
-        </div>
+        <WidgetControlRow id="newsletter-description" label="Description" path="description">
+          {(fieldProps) => (
+            <Textarea
+              {...fieldProps}
+              value={normalized.description}
+              onChange={(event) => updateRoot(value, onChange, { description: event.target.value })}
+              placeholder="Short supporting line"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Email placeholder</p>
-          <Input
-            value={normalized.placeholder}
-            onChange={(event) => updateRoot(value, onChange, { placeholder: event.target.value })}
-            placeholder="you@example.com"
-          />
-        </div>
+        <WidgetControlRow id="newsletter-placeholder" label="Email placeholder" path="placeholder">
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.placeholder}
+              onChange={(event) => updateRoot(value, onChange, { placeholder: event.target.value })}
+              placeholder="you@example.com"
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.form-semantics"
+        mode="visual"
+        role="content"
         title="Form semantics and consent"
         description="Keep visible labels, consent, and Form field mapping explicit without asking authors to type runtime keys."
       >
@@ -817,27 +914,34 @@ export function NewsletterVisualEditor({
           selected, choose fields from that Form instead of typing technical field names.
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Email label</p>
-          <Input
-            value={normalized.form.emailLabel}
-            onChange={(event) => updateForm(value, onChange, { emailLabel: event.target.value })}
-            placeholder="Email address"
-          />
-        </div>
+        <WidgetControlRow id="newsletter-email-label" label="Email label" path="form.emailLabel">
+          {(fieldProps) => (
+            <Input
+              {...fieldProps}
+              value={normalized.form.emailLabel}
+              onChange={(event) => updateForm(value, onChange, { emailLabel: event.target.value })}
+              placeholder="Email address"
+            />
+          )}
+        </WidgetControlRow>
 
-        <div className="flex items-center justify-between rounded-md border p-2">
-          <div>
-            <p className="text-sm font-medium">Show visible email label</p>
-            <p className="text-xs text-muted-foreground">
-              Leave this off to keep the label accessible but visually hidden.
-            </p>
-          </div>
-          <Switch
-            checked={normalized.form.showEmailLabel}
-            onCheckedChange={(checked) => updateForm(value, onChange, { showEmailLabel: checked })}
-          />
-        </div>
+        <WidgetControlRow
+          id="newsletter-show-email-label"
+          label="Show visible email label"
+          path="form.showEmailLabel"
+          help="Leave this off to keep the label accessible but visually hidden."
+          className="rounded-md border p-2"
+        >
+          {(fieldProps) => (
+            <Switch
+              {...fieldProps}
+              checked={normalized.form.showEmailLabel}
+              onCheckedChange={(checked) =>
+                updateForm(value, onChange, { showEmailLabel: checked })
+              }
+            />
+          )}
+        </WidgetControlRow>
 
         {normalized.submission.mode === "forms-runtime" ? (
           <FormFieldMappingSelect
@@ -862,44 +966,58 @@ export function NewsletterVisualEditor({
           />
         )}
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">First name field</p>
-            <p className="text-xs text-muted-foreground">
-              Keep Newsletter bounded: email stays required, first name stays optional unless you
-              explicitly require it.
-            </p>
-          </div>
-          <Switch
-            checked={normalized.form.firstName.enabled}
-            onCheckedChange={(checked) =>
-              updateFirstNameField(value, onChange, { enabled: checked })
-            }
-          />
-        </div>
+        <WidgetControlRow
+          id="newsletter-first-name-enabled"
+          label="First name field"
+          path="form.firstName.enabled"
+          help="Email stays required. First name stays optional unless you explicitly require it."
+          className="rounded-lg border p-3"
+        >
+          {(fieldProps) => (
+            <Switch
+              {...fieldProps}
+              checked={normalized.form.firstName.enabled}
+              onCheckedChange={(checked) =>
+                updateFirstNameField(value, onChange, { enabled: checked })
+              }
+            />
+          )}
+        </WidgetControlRow>
 
         {normalized.form.firstName.enabled ? (
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">First name label</p>
-              <Input
-                value={normalized.form.firstName.label}
-                onChange={(event) =>
-                  updateFirstNameField(value, onChange, { label: event.target.value })
-                }
-                placeholder="First name"
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">First name placeholder</p>
-              <Input
-                value={normalized.form.firstName.placeholder}
-                onChange={(event) =>
-                  updateFirstNameField(value, onChange, { placeholder: event.target.value })
-                }
-                placeholder="Your first name"
-              />
-            </div>
+            <WidgetControlRow
+              id="newsletter-first-name-label"
+              label="First name label"
+              path="form.firstName.label"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={normalized.form.firstName.label}
+                  onChange={(event) =>
+                    updateFirstNameField(value, onChange, { label: event.target.value })
+                  }
+                  placeholder="First name"
+                />
+              )}
+            </WidgetControlRow>
+            <WidgetControlRow
+              id="newsletter-first-name-placeholder"
+              label="First name placeholder"
+              path="form.firstName.placeholder"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={normalized.form.firstName.placeholder}
+                  onChange={(event) =>
+                    updateFirstNameField(value, onChange, { placeholder: event.target.value })
+                  }
+                  placeholder="Your first name"
+                />
+              )}
+            </WidgetControlRow>
             {normalized.submission.mode === "forms-runtime" ? (
               <FormFieldMappingSelect
                 label="First name Form field"
@@ -926,46 +1044,60 @@ export function NewsletterVisualEditor({
                 )}
               />
             )}
-            <div className="flex items-center justify-between rounded-md border p-2">
-              <div>
-                <p className="text-sm font-medium">First name required</p>
-                <p className="text-xs text-muted-foreground">
-                  Enable this only when the target flow truly requires first name.
-                </p>
-              </div>
-              <Switch
-                checked={normalized.form.firstName.required}
-                onCheckedChange={(checked) =>
-                  updateFirstNameField(value, onChange, { required: checked })
-                }
-              />
-            </div>
+            <WidgetControlRow
+              id="newsletter-first-name-required"
+              label="First name required"
+              path="form.firstName.required"
+              help="Enable this only when the target flow truly requires first name."
+              className="rounded-md border p-2"
+            >
+              {(fieldProps) => (
+                <Switch
+                  {...fieldProps}
+                  checked={normalized.form.firstName.required}
+                  onCheckedChange={(checked) =>
+                    updateFirstNameField(value, onChange, { required: checked })
+                  }
+                />
+              )}
+            </WidgetControlRow>
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Consent checkbox</p>
-            <p className="text-xs text-muted-foreground">
-              Render consent inside the form so browser validation and submitted values stay real.
-            </p>
-          </div>
-          <Switch
-            checked={consent.enabled}
-            onCheckedChange={(checked) => updateConsent(value, onChange, { enabled: checked })}
-          />
-        </div>
+        <WidgetControlRow
+          id="newsletter-consent-enabled"
+          label="Consent checkbox"
+          path="consent.enabled"
+          help="Render consent inside the form so browser validation and submitted values stay real."
+          className="rounded-lg border p-3"
+        >
+          {(fieldProps) => (
+            <Switch
+              {...fieldProps}
+              checked={consent.enabled}
+              onCheckedChange={(checked) => updateConsent(value, onChange, { enabled: checked })}
+            />
+          )}
+        </WidgetControlRow>
 
         {consent.enabled ? (
           <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Consent label</p>
-              <Input
-                value={consent.label}
-                onChange={(event) => updateConsent(value, onChange, { label: event.target.value })}
-                placeholder="I agree to receive updates."
-              />
-            </div>
+            <WidgetControlRow
+              id="newsletter-consent-label"
+              label="Consent label"
+              path="consent.label"
+            >
+              {(fieldProps) => (
+                <Input
+                  {...fieldProps}
+                  value={consent.label}
+                  onChange={(event) =>
+                    updateConsent(value, onChange, { label: event.target.value })
+                  }
+                  placeholder="I agree to receive updates."
+                />
+              )}
+            </WidgetControlRow>
 
             {normalized.submission.mode === "forms-runtime" ? (
               <FormFieldMappingSelect
@@ -990,131 +1122,156 @@ export function NewsletterVisualEditor({
               />
             )}
 
-            <div className="flex items-center justify-between rounded-md border p-2">
-              <div>
-                <p className="text-sm font-medium">Consent required</p>
-                <p className="text-xs text-muted-foreground">
-                  Unchecked consent blocks submit when this switch is on.
-                </p>
-              </div>
-              <Switch
-                checked={consent.required}
-                onCheckedChange={(checked) => updateConsent(value, onChange, { required: checked })}
-              />
-            </div>
+            <WidgetControlRow
+              id="newsletter-consent-required"
+              label="Consent required"
+              path="consent.required"
+              help="Unchecked consent blocks submit when this switch is on."
+              className="rounded-md border p-2"
+            >
+              {(fieldProps) => (
+                <Switch
+                  {...fieldProps}
+                  checked={consent.required}
+                  onCheckedChange={(checked) =>
+                    updateConsent(value, onChange, { required: checked })
+                  }
+                />
+              )}
+            </WidgetControlRow>
           </>
         ) : null}
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Opt-in mode</p>
-          <Select
-            value={normalized.optIn.mode}
-            onValueChange={(next) =>
-              updateOptIn(value, onChange, { mode: next as NewsletterOptInMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select opt-in mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {optInModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="newsletter-opt-in-mode" label="Opt-in mode" path="optIn.mode">
+          {(fieldProps) => (
+            <Select
+              value={normalized.optIn.mode}
+              onValueChange={(next) =>
+                updateOptIn(value, onChange, { mode: next as NewsletterOptInMode })
+              }
+            >
+              <SelectTrigger {...fieldProps}>
+                <SelectValue placeholder="Select opt-in mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {optInModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         {normalized.optIn.mode === "double" ? (
           <>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Confirmation copy</p>
-              <Textarea
-                value={normalized.optIn.confirmationCopy}
-                onChange={(event) =>
-                  updateOptIn(value, onChange, { confirmationCopy: event.target.value })
-                }
-                placeholder="Please check your inbox to confirm your subscription."
-              />
-            </div>
+            <WidgetControlRow
+              id="newsletter-confirmation-copy"
+              label="Confirmation copy"
+              path="optIn.confirmationCopy"
+            >
+              {(fieldProps) => (
+                <Textarea
+                  {...fieldProps}
+                  value={normalized.optIn.confirmationCopy}
+                  onChange={(event) =>
+                    updateOptIn(value, onChange, { confirmationCopy: event.target.value })
+                  }
+                  placeholder="Please check your inbox to confirm your subscription."
+                />
+              )}
+            </WidgetControlRow>
 
             <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-              Newsletter exposes confirmation copy only in this leaf. Double opt-in enforcement
-              remains provider-owned until a dedicated backend owner lands.
+              This editor controls the confirmation message shown to visitors. The connected signup
+              service handles the actual confirmation email.
             </div>
           </>
         ) : null}
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.submission-runtime"
+        mode="visual"
+        role="source"
         title="Submission runtime"
         description="Choose whether newsletter signups are connected to a Coderso Form."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Submission mode</p>
-          <Select
-            value={normalized.submission.mode}
-            onValueChange={(next) =>
-              updateSubmission(value, onChange, { mode: next as NewsletterSubmissionMode })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select submission mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {submissionModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="newsletter-submission-mode"
+          label="Submission mode"
+          path="submission.mode"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.submission.mode}
+              onValueChange={(next) =>
+                updateSubmission(value, onChange, { mode: next as NewsletterSubmissionMode })
+              }
+            >
+              <SelectTrigger {...fieldProps}>
+                <SelectValue placeholder="Select submission mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {submissionModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         {normalized.submission.mode === "forms-runtime" ? (
           <>
             <RuntimeBindingSummary value={normalized} />
 
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Bound form</p>
-              <Select
-                value={selectedForm ? selectedForm.id : NO_FORM_VALUE}
-                onValueChange={(next) =>
-                  updateSubmission(value, onChange, {
-                    formId: next === NO_FORM_VALUE ? "" : next,
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={formsLoading ? "Loading forms..." : "Select form"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedForm === null ? (
-                    <SelectItem value={NO_FORM_VALUE} disabled>
-                      {forms.length === 0
-                        ? formsLoading
-                          ? "Loading forms..."
-                          : "No forms found"
-                        : "Select form"}
-                    </SelectItem>
-                  ) : null}
-                  {formOptions.map((form) => (
-                    <SelectItem key={form.id} value={form.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{form.name}</span>
-                        <Badge variant={form.status === "published" ? "default" : "outline"}>
-                          {form.status}
-                        </Badge>
-                        {form.submissionAccess === "internal" ? (
-                          <Badge variant="outline">Internal</Badge>
-                        ) : null}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <WidgetControlRow
+              id="newsletter-bound-form"
+              label="Bound form"
+              path="submission.formId"
+            >
+              {(fieldProps) => (
+                <Select
+                  value={selectedForm ? selectedForm.id : NO_FORM_VALUE}
+                  onValueChange={(next) =>
+                    updateSubmission(value, onChange, {
+                      formId: next === NO_FORM_VALUE ? "" : next,
+                    })
+                  }
+                >
+                  <SelectTrigger {...fieldProps}>
+                    <SelectValue placeholder={formsLoading ? "Loading forms..." : "Select form"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedForm === null ? (
+                      <SelectItem value={NO_FORM_VALUE} disabled>
+                        {forms.length === 0
+                          ? formsLoading
+                            ? "Loading forms..."
+                            : "No forms found"
+                          : "Select form"}
+                      </SelectItem>
+                    ) : null}
+                    {formOptions.map((form) => (
+                      <SelectItem key={form.id} value={form.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{form.name}</span>
+                          <Badge variant={form.status === "published" ? "default" : "outline"}>
+                            {form.status}
+                          </Badge>
+                          {form.submissionAccess === "internal" ? (
+                            <Badge variant="outline">Internal</Badge>
+                          ) : null}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </WidgetControlRow>
 
             {selectedForm?.submissionAccess === "internal" ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -1180,83 +1337,110 @@ export function NewsletterVisualEditor({
         )}
 
         <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Loading message</p>
+          <WidgetControlRow
+            id="newsletter-loading-message"
+            label="Loading message"
+            path="stateCopy.loadingMessage"
+          >
+            {(fieldProps) => (
+              <Input
+                {...fieldProps}
+                value={stateCopy.loadingMessage}
+                onChange={(event) =>
+                  updateStateCopy(value, onChange, { loadingMessage: event.target.value })
+                }
+                placeholder="Sending..."
+              />
+            )}
+          </WidgetControlRow>
+
+          <WidgetControlRow
+            id="newsletter-error-message"
+            label="Error message"
+            path="stateCopy.errorMessage"
+          >
+            {(fieldProps) => (
+              <Input
+                {...fieldProps}
+                value={stateCopy.errorMessage}
+                onChange={(event) =>
+                  updateStateCopy(value, onChange, { errorMessage: event.target.value })
+                }
+                placeholder="Unable to submit the form. Please try again."
+              />
+            )}
+          </WidgetControlRow>
+        </div>
+
+        <WidgetControlRow id="newsletter-button-label" label="Button label" path="submit.label">
+          {(fieldProps) => (
             <Input
-              value={stateCopy.loadingMessage}
-              onChange={(event) =>
-                updateStateCopy(value, onChange, { loadingMessage: event.target.value })
-              }
-              placeholder="Sending..."
+              {...fieldProps}
+              value={submit.label}
+              onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
+              placeholder="Subscribe"
             />
-          </div>
+          )}
+        </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Error message</p>
+        <WidgetControlRow
+          id="newsletter-success-message"
+          label="Success message"
+          path="stateCopy.successMessage"
+        >
+          {(fieldProps) => (
             <Input
-              value={stateCopy.errorMessage}
+              {...fieldProps}
+              value={stateCopy.successMessage}
               onChange={(event) =>
-                updateStateCopy(value, onChange, { errorMessage: event.target.value })
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  stateCopy: {
+                    ...current.stateCopy,
+                    successMessage: event.target.value,
+                  },
+                  submit: {
+                    ...current.submit,
+                    successMessage: event.target.value,
+                  },
+                }))
               }
-              placeholder="Unable to submit the form. Please try again."
+              placeholder="Thanks for joining!"
             />
-          </div>
-        </div>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Button label</p>
-          <Input
-            value={submit.label}
-            onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
-            placeholder="Subscribe"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Success message</p>
-          <Input
-            value={stateCopy.successMessage}
-            onChange={(event) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                stateCopy: {
-                  ...current.stateCopy,
-                  successMessage: event.target.value,
-                },
-                submit: {
-                  ...current.submit,
-                  successMessage: event.target.value,
-                },
-              }))
-            }
-            placeholder="Thanks for joining!"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={previewState === "form" ? "default" : "outline"}
-              onClick={() => setPreviewState("form")}
-            >
-              Form state
-            </Button>
-            <Button
-              type="button"
-              variant={previewState === "success" ? "default" : "outline"}
-              onClick={() => setPreviewState("success")}
-            >
-              Success state
-            </Button>
-          </div>
-          <SuccessPreviewCard state={previewState} successMessage={stateCopy.successMessage} />
-        </div>
+        <WidgetControlRow id="newsletter-preview-state" label="Preview state" ownership="preview">
+          {() => (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={previewState === "form" ? "default" : "outline"}
+                  onClick={() => setPreviewState("form")}
+                >
+                  Form state
+                </Button>
+                <Button
+                  type="button"
+                  variant={previewState === "success" ? "default" : "outline"}
+                  onClick={() => setPreviewState("success")}
+                >
+                  Success state
+                </Button>
+              </div>
+              <SuccessPreviewCard state={previewState} successMessage={stateCopy.successMessage} />
+            </div>
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.connection-status"
+        mode="visual"
+        role="diagnostics"
         title="Connection status"
-        description="Show where signups go without exposing provider connection details in the daily editor."
+        description="Show where signups go without exposing saved connection details in the daily editor."
       >
         <ReadonlyWidgetSummaryRow
           id="newsletter-visual-connection-owner"
@@ -1267,19 +1451,9 @@ export function NewsletterVisualEditor({
                 ? `Coderso Form: ${selectedForm.name}`
                 : "Choose a Coderso Form"
               : transport.actionStatus === "valid" || transport.webhookId
-                ? "External provider configured"
+                ? "External signup service saved"
                 : "Not connected yet"
           }
-        />
-        <ReadonlyWidgetSummaryRow
-          id="newsletter-visual-external-provider"
-          label="External provider"
-          value={
-            transport.actionStatus === "valid" || transport.webhookId
-              ? "Configured in technical settings"
-              : "Not configured"
-          }
-          help="External provider connection details stay out of the daily editor. Advanced reports the saved metadata read-only."
         />
         <ReadonlyWidgetSummaryRow
           id="newsletter-visual-tracking"
@@ -1294,11 +1468,16 @@ export function NewsletterVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.colors"
+        mode="visual"
+        role="visual"
         title="Colors and emphasis"
         description="Keep the section readable with bounded widget-local colors and advisory contrast checks."
       >
         <ColorField
           label="Background color"
+          controlId="newsletter-style-background"
+          controlPath="style.background"
           value={normalized.style.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
           onClear={() => clearStyleField(value, onChange, "background")}
@@ -1306,12 +1485,14 @@ export function NewsletterVisualEditor({
           pickerFallback="#ffffff"
         />
         <p className="text-xs text-muted-foreground">
-          Transparent stays the saved default. The color picker fallback only controls the swatch UI
-          when no hex color is stored.
+          Transparent stays the saved default. When no color is saved, the picker shows a default
+          starting color.
         </p>
 
         <ColorField
           label="Text color"
+          controlId="newsletter-style-text-color"
+          controlPath="style.textColor"
           value={normalized.style.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
           onClear={() => clearStyleField(value, onChange, "textColor")}
@@ -1323,6 +1504,8 @@ export function NewsletterVisualEditor({
         <div className="grid gap-3 md:grid-cols-2">
           <ColorField
             label="Button background"
+            controlId="newsletter-style-button-background"
+            controlPath="style.buttonBackground"
             value={normalized.style.buttonBackground}
             onChange={(next) => updateStyle(value, onChange, { buttonBackground: next })}
             onClear={() => clearStyleField(value, onChange, "buttonBackground")}
@@ -1331,6 +1514,8 @@ export function NewsletterVisualEditor({
           />
           <ColorField
             label="Button text"
+            controlId="newsletter-style-button-text"
+            controlPath="style.buttonTextColor"
             value={normalized.style.buttonTextColor}
             onChange={(next) => updateStyle(value, onChange, { buttonTextColor: next })}
             onClear={() => clearStyleField(value, onChange, "buttonTextColor")}
@@ -1342,208 +1527,174 @@ export function NewsletterVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="newsletter.visual.spacing"
+        mode="visual"
+        role="layout"
         title="Spacing and alignment"
         description="Keep width and spacing bounded to the Newsletter-local contract."
       >
         <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Spacing</p>
-            <Select
-              value={normalized.style.spacing}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { spacing: next as NewsletterSpacing })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="newsletter-spacing" label="Spacing" path="style.spacing">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style.spacing}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { spacing: next as NewsletterSpacing })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Spacing" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Alignment</p>
-            <Select
-              value={normalized.style.alignment}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  alignment: next as StyleData["alignment"],
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Alignment" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignmentOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="newsletter-alignment" label="Alignment" path="style.alignment">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style.alignment}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    alignment: next as StyleData["alignment"],
+                  })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {alignmentOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Width</p>
-            <Select
-              value={normalized.style.width}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { width: next as NewsletterWidth })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Width" />
-              </SelectTrigger>
-              <SelectContent>
-                {widthOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="newsletter-width" label="Width" path="style.width">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style.width}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { width: next as NewsletterWidth })
+                }
+              >
+                <SelectTrigger {...fieldProps}>
+                  <SelectValue placeholder="Width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {widthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
     </div>
   );
 }
 
-export function NewsletterAdvancedEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<NewsletterData>) {
+export function NewsletterAdvancedEditor({ value, variant }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeNewsletterData(value);
   const transport = resolveNewsletterTransport(normalized.integration);
-  const action = normalizeNewsletterActionUrl(normalized.integration.actionUrl);
-  const formsRuntimeActive = normalized.submission.mode === "forms-runtime";
-  const actionTargetsSharedFormsRoute =
-    action.status === "valid" && normalized.integration.actionUrl.trim().startsWith("/forms/");
-  const [normalizationArmed, setNormalizationArmed] = useState(false);
-  const [normalizationMessage, setNormalizationMessage] = useState("");
+  const resolvedVariant =
+    variantOptions.find((option) => option.id === resolveNewsletterVariant(variant))?.label ??
+    "Inline";
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Transport diagnostics"
-        description="Technical summary for the active submit path and ignored metadata."
-      >
-        <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          <p>Resolved variant: {resolveNewsletterVariant(variant)}.</p>
-          <p>Submission mode: {normalized.submission.mode}.</p>
-          <p>
-            Active integration field:{" "}
-            {formsRuntimeActive
-              ? "bound Forms record"
-              : transport.activeField === "actionUrl"
-                ? "action URL"
-                : "webhook ID"}
-            .
-          </p>
-          <p>Action status: {formsRuntimeActive ? "runtime-owned" : action.status}.</p>
-          <p>Method: {formsRuntimeActive ? "post via shared runtime" : transport.method}.</p>
-          <p>
-            Submit readiness:{" "}
-            {formsRuntimeActive
-              ? normalized.submission.formId.trim().length > 0
-                ? "waiting for runtime hydration"
-                : "missing bound form"
-              : action.status === "valid" && !actionTargetsSharedFormsRoute
-                ? "ready"
-                : actionTargetsSharedFormsRoute
-                  ? "switch submission mode to forms-runtime"
-                  : "not ready"}
-            .
-          </p>
-          <p>
-            Ignored field:{" "}
-            {formsRuntimeActive
-              ? "the action URL and webhook ID stay inactive while the bound Form owns submit."
-              : transport.activeField === "actionUrl"
-                ? "webhook ID"
-                : "action URL"}
-            .
-          </p>
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Integration metadata summary"
-        description="Read-only transport metadata. Visual owns integration setup."
+        id="newsletter.advanced.signup-readiness"
+        mode="advanced"
+        role="diagnostics"
+        title="Signup readiness"
+        description="Read-only support view for where visitor signups go and what needs attention."
       >
         <ReadonlyWidgetSummaryRow
-          id="newsletter-advanced-integration-mode"
-          label="Integration mode"
+          id="newsletter-advanced-signup-destination"
+          label="Signup destination"
+          path="submission.mode"
+          value={describeSignupDestination(normalized, transport)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-submit-path"
+          label="Visitor submit path"
+          path="submission.formId"
+          value={describeVisitorSubmitPath(normalized, transport)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-saved-external-connection"
+          label="Saved external connection"
           path="integration.mode"
-          value={normalized.integration.mode}
+          value={describeSavedExternalConnection(normalized, transport)}
+          help="External signup settings from older content stay saved. We recommend choosing a Coderso Form in Visual instead."
         />
         <ReadonlyWidgetSummaryRow
-          id="newsletter-advanced-action-status"
-          label="Action status"
-          path="integration.actionUrl"
-          value={formsRuntimeActive ? "Runtime-owned" : action.status}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="newsletter-advanced-webhook"
-          label="Webhook"
-          path="integration.webhookId"
-          value={normalized.integration.webhookId ? "Configured" : "Not configured"}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="newsletter-advanced-method"
-          label="HTTP method"
-          path="integration.method"
-          value={formsRuntimeActive ? "POST via shared runtime" : transport.method}
+          id="newsletter-advanced-tracking"
+          label="Signup tracking"
+          path="submission.analyticsEvent"
+          value={
+            normalized.submission.analyticsEvent
+              ? "Custom tracking configured"
+              : "No custom tracking"
+          }
         />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and fallback"
-        description="Confirmed support action for deterministic payload cleanup."
+        id="newsletter.advanced.authoring-boundaries"
+        mode="advanced"
+        role="summary"
+        title="Authoring boundaries"
+        description="What is intentionally edited elsewhere so Advanced does not become a second setup flow."
       >
-        <WidgetControlRow
-          id="newsletter-advanced-normalize-action"
-          label="Normalize payload"
-          ownership="action"
-          help="This support action rewrites fallback values after explicit confirmation."
-        >
-          {() => (
-            <Button
-              type="button"
-              variant={normalizationArmed ? "default" : "outline"}
-              onClick={() => {
-                if (!normalizationArmed) {
-                  setNormalizationArmed(true);
-                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
-                  return;
-                }
-
-                const before = JSON.stringify(value);
-                const after = JSON.stringify(normalized);
-                onChange(normalized);
-                setNormalizationArmed(false);
-                setNormalizationMessage(
-                  before === after ? "Already normalized." : "Payload normalized."
-                );
-              }}
-            >
-              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
-            </Button>
-          )}
-        </WidgetControlRow>
-        {normalizationMessage ? (
-          <p className="text-xs text-muted-foreground" role="status">
-            {normalizationMessage}
-          </p>
-        ) : null}
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-layout-summary"
+          label="Layout choice"
+          value={resolvedVariant}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-opt-in"
+          label="Opt-in behavior"
+          path="optIn.mode"
+          value={describeOptInSummary(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-confirmation-owner"
+          label="Confirmation email owner"
+          path="optIn.enforcement"
+          value={describeConfirmationOwner(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-success-behavior"
+          label="After signup display"
+          path="submission.successBehavior"
+          value={describeSuccessBehavior(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-edit-owner"
+          label="Where to make changes"
+          value="Use Visual for copy, Form selection, field mapping, colors, spacing, and visitor-facing states."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="newsletter-advanced-data-health"
+          label="Saved data compatibility"
+          path="resolved"
+          value="Current editor can read this block safely; defaults are applied automatically when older content is missing newer settings."
+        />
       </EditorSection>
     </div>
   );

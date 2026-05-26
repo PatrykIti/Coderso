@@ -719,6 +719,20 @@ Visual drift found after Advanced was made read-only.
   and `metadataGaps=0`.
 - Claude read-only UI/UX retry returned `NO BLOCKERS` for P1/P2 beginner-mode
   technical authoring drift in the current diff.
+- 2026-05-26 follow-up: Newsletter residual drift was revisited after the
+  stricter FAQ/Form Embed cleanup. Wizard is now a one-time read-only starter
+  summary, Visual owns daily copy/Form mapping/visitor states/swatch-only
+  colors/layout with complete control metadata, and Advanced is read-only
+  signup-readiness/authoring-boundary summaries without raw action URL,
+  webhook, HTTP-method, payload, or normalization controls. Targeted
+  Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-2026-05-26.*`
+  and
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-newsletter-focused-2026-05-26.*`.
+  The strict smoke reports `adminFailures=0`, `publicFailures=0`,
+  `fixtureGaps=0`, and `metadataGaps=0`; the focused probe reports Wizard
+  before re-entry `0`, Visual raw style inputs `0`, Advanced writable paths `0`,
+  Advanced raw controls `0`, and Wizard writable paths `0`.
 
 ## TASK-336-19 Commerce Source Authoring Evidence (2026-05-24)
 
