@@ -981,6 +981,29 @@ read-only diagnostics. It added these concrete cleanup requirements:
   `Run setup again`, Visual raw color inputs `0`, Advanced writable paths `0`,
   Advanced raw controls `0`, Wizard writable paths limited to starter setup,
   and missing metadata `0`.
+- In Progress (2026-05-26): Logo Cloud residual drift is superseded under this
+  task after helper-agent and Claude read-only UX audits flagged Visual raw
+  CSS/token color inputs, raw Advanced payload JSON, Advanced normalize/reset
+  mutations, stale `TASK-336-16` duplicate allowances, fake default
+  destinations, and Wizard/Visual logo-detail overlap. Logo Cloud now keeps
+  Wizard to one-time starter layout/title/count/logo-name setup, moves daily
+  images, accessible descriptions, destinations, CTA, motion, tile
+  presentation, and swatch-only colors to Visual, and keeps Advanced as
+  read-only layout/content/presentation/authoring-boundary summaries with no
+  raw payload or mutation actions. Default logo links are absent and the
+  default CTA `href` is empty until an author picks a destination. Targeted
+  Vitest evidence passes
+  `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  with 46/46 tests. Strict Playwright evidence is stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-logo-cloud-2026-05-26.*`
+  and reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`. A focused Playwright probe stored in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-logo-cloud-focused-2026-05-26.*`
+  verifies completed widgets have no Wizard tab/root before explicit
+  `Run setup again`, Visual raw color inputs `0`, Visual metadata gaps `0`,
+  Advanced writable paths `0`, Advanced raw payload/pre matches `0`, and
+  re-entered Wizard writable paths limited to `variant`, `header.title`,
+  `logos.count`, and `logos.name`.
 
 ## Files to Change
 

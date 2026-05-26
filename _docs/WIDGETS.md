@@ -218,6 +218,11 @@ Zasady:
   Visual owns card copy/media/actions/layout and swatch-only colors with
   explicit control-path metadata, and Advanced shows read-only layout/content/
   presentation summaries without raw JSON payloads or normalization actions.
+- Logo Cloud follows the same TASK-336-19 contract: Wizard seeds only layout,
+  section title, logo count, and starter logo names; Visual owns logo images,
+  accessible descriptions, destinations, CTA, motion, tile presentation, and
+  swatch-only colors; Advanced shows read-only human diagnostics without raw
+  JSON payloads, CSS-token text inputs, or normalize/reset mutations.
 - Newsletter Visual follows the beginner-safe integration rule: Coderso Forms
   are chosen from a Form picker, field mapping is selected from Form fields or
   shown as safe defaults, and older external signup-service metadata is

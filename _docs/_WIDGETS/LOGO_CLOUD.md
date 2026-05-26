@@ -14,24 +14,25 @@ Trust-focused section that displays partner/client logos with optional links.
 - `strip`: horizontal wrapped strip
 - `dense`: high-density logo matrix
 
-## Editor Modes (current after TASK-050-13-01)
+## Editor Modes (current after TASK-336-19)
 
-### Wizard (minimal onboarding)
+### Wizard (one-time starter setup)
 - Logo cloud layout variant
 - Section title
 - Logo count
-- Compact starter-logo rows with Name, Media Library image picking, Alt text,
-  published-page destination picking, and bounded preview for the visible
-  wizard count
+- Compact starter-logo rows with logo names only
 
 The wizard count selector and rendered logo-name inputs must stay synchronized.
+Images, accessible descriptions, logo destinations, CTA, and presentation
+styling belong to Visual after first setup or an explicit `Run setup again`.
 
 ### Visual (primary editing mode)
 Sections:
 1. Variant and layout structure
 2. Header copy
 3. Logos list and links
-4. Display style
+4. Section CTA
+5. Display style
 
 Notes:
 - Logo Cloud owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -43,8 +44,8 @@ Notes:
 - `Display style` now includes `Section background`, `Header alignment`, and
   `Header size` controls.
 - Visual repeated-logo cards now expose bounded previews, Media Library image
-  picking, explicit `Alt text`, and read-only replace/clear guidance for legacy
-  invalid/broken image URLs.
+  picking, explicit accessible descriptions, and read-only replace/clear
+  guidance for legacy invalid/broken image URLs.
 - Visual repeated-logo cards now support drag-handle reorder plus inline Undo
   after removal, while retaining Move up / Move down as deterministic fallback
   controls.
@@ -54,15 +55,20 @@ Notes:
   toggle, label, published-page destination, and target controls.
 - `Display style` now also owns bounded `Tile radius`, `Tile border width`, and
   one global `Open logo links in new tab` toggle for logo tiles.
+- Section, tile, and tile-border colors use swatch-only controls in Visual.
+  Saved legacy custom colors are summarized as replace/clear state instead of
+  asking authors to type raw CSS variables or color tokens.
 
-### Advanced (technical-only)
-- Technical layout diagnostics
-- Normalization and safeguards
-- Raw payload snapshot
+### Advanced (read-only diagnostics)
+- Layout summary
+- Content summary
+- Presentation summary
+- Authoring boundaries
 
-Advanced does not duplicate live Logo Cloud style controls. It exposes a
-read-only summary of the shared `logoHeight`, `gap`, and `alignment` tokens,
-plus normalize/reset and raw payload diagnostics.
+Advanced does not duplicate live Logo Cloud style controls. It exposes human
+read-only summaries for layout, logo/media/link readiness, CTA state, visual
+presentation, and the Wizard/Visual ownership boundary. It does not render raw
+JSON payloads and it does not expose normalize/reset mutations.
 
 ## Runtime Behavior Notes
 
@@ -123,7 +129,7 @@ plus normalize/reset and raw payload diagnostics.
   "cta": {
     "enabled": false,
     "label": "Get started",
-    "href": "#",
+    "href": "",
     "target": "same-tab"
   },
   "logos": [
@@ -154,9 +160,13 @@ plus normalize/reset and raw payload diagnostics.
 }
 ```
 
-## TASK-336-18 Editor Contract
+## TASK-336-19 Editor Contract
 
 - Exports `logoCloudEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter logos and copy; Visual owns logo list,
-  links, CTA, motion, and style; Advanced is read-only runtime diagnostics.
-- Remaining reset/normalize support actions are routed to `TASK-336-19`.
+- Contract target: Wizard seeds only starter layout/title/count/logo names;
+  Visual owns logo images, accessible descriptions, destinations, CTA, motion,
+  swatch-only color controls, and style; Advanced is read-only human
+  diagnostics.
+- Duplicate allowances are reduced to the one-time Wizard lifecycle
+  (`variant`, `header.title`, `logos.count`, `logos.name`) and point to
+  `TASK-336-19`.

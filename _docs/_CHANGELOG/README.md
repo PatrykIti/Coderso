@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 965 | 2026-05-26 | Logo Cloud editor drift cleanup | CMS Widgets/Admin UI/Trust/Contracts/QA/Docs |
 | 964 | 2026-05-26 | Feature Grid editor drift cleanup | CMS Widgets/Admin UI/Marketing/Contracts/QA/Docs |
 | 963 | 2026-05-26 | Newsletter editor drift cleanup | CMS Widgets/Admin UI/Forms/Contracts/QA/Docs |
 | 962 | 2026-05-25 | FAQ Accordion editor drift cleanup | CMS Widgets/Admin UI/FAQ/Contracts/QA/Docs |

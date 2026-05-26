@@ -443,12 +443,14 @@ test("logo cloud wizard renders onboarding fields", () => {
     />
   );
 
+  expect(html).toContain("Starter setup");
   expect(html).toContain("Logo cloud layout");
   expect(html).toContain("Section title");
-  expect(html).toContain("Starter logos");
-  expect(html).toContain("Current image");
-  expect(html).toContain("Alt text");
-  expect(html).toContain("Media library");
+  expect(html).toContain("Starter logo names");
+  expect(html).not.toContain("Current image");
+  expect(html).not.toContain("Alt text");
+  expect(html).not.toContain("Media library");
+  expect(html).not.toContain("Logo destination");
 });
 
 test("logo cloud visual renders section-based IA", () => {
@@ -481,10 +483,14 @@ test("logo cloud advanced keeps technical-only scope", () => {
     />
   );
 
-  expect(html).toContain("Technical layout diagnostics");
-  expect(html).toContain("Normalization and safeguards");
-  expect(html).toContain("Raw payload snapshot");
+  expect(html).toContain("Layout summary");
+  expect(html).toContain("Content summary");
+  expect(html).toContain("Presentation summary");
+  expect(html).toContain("Authoring boundaries");
   expect(html).toContain("Logo height");
   expect(html).toContain("Alignment");
+  expect(html).not.toContain("Raw payload snapshot");
+  expect(html).not.toContain("Normalize now");
+  expect(html).not.toContain("Reset to defaults");
   expect(html).not.toContain("Logos list and links");
 });

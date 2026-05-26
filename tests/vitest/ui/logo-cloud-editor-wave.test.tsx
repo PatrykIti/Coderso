@@ -555,16 +555,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("LogoCloud wizard covers variant fallback, logo count changes, and starter asset authoring", async () => {
+test("LogoCloud wizard covers one-time starter setup without daily logo details", async () => {
   const { LogoCloudWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
   const initialValue: LogoCloudData = {
     logos: [
-      { id: "same", name: "", href: "#" },
-      { id: "same", name: "North Labs", href: "#" },
-      { id: "logo-3", name: "Orbit", href: "#" },
-      { id: "logo-4", name: "Pixel Forge", href: "#" },
+      { id: "same", name: "" },
+      { id: "same", name: "North Labs" },
+      { id: "logo-3", name: "Orbit" },
+      { id: "logo-4", name: "Pixel Forge" },
     ],
   };
 
@@ -598,31 +598,18 @@ test("LogoCloud wizard covers variant fallback, logo count changes, and starter 
   expect(getLatestValue().logos[0]?.id).toBe("same");
   expect(getLatestValue().logos[1]?.id).toBe("logo-2");
   expect(getLogoNameInputs(container)).toHaveLength(2);
-  expect(getMediaPickers(container)).toHaveLength(2);
+  expect(getMediaPickers(container)).toHaveLength(0);
 
   setInputValue(getInputByPlaceholder(container, "Logo 2"), "North Ridge");
-  setInputValue(getInputsByPlaceholder(container, "Accessible logo name")[1]!, "North Ridge logo");
-  await flushPromises();
-  setSelectValue(
-    getDestinationSelect(container, "logo-cloud-logo-2-destination"),
-    "page-north-ridge"
-  );
 
   expect(getLatestValue().logos[1]?.name).toBe("North Ridge");
-  expect(getLatestValue().logos[1]?.alt).toBe("North Ridge logo");
+  expect(queryInputsByPlaceholder(container, "Accessible logo name")).toHaveLength(0);
   expect(queryInputsByPlaceholder(container, "https://cdn.example.com/logo.svg")).toHaveLength(0);
-  expect(getLatestValue().logos[1]?.href).toBe("/partners/north-ridge");
-
-  clickButton(getButtonsByText(getMediaPickers(container)[1]!, "pick-secondary-media")[0]!);
-  await flushPromises();
-
-  expect(getLatestValue().logos[1]?.image).toBe("/media/north.png");
-  expect(getLatestValue().logos[1]?.alt).toBe("North Ridge logo");
-
-  clickButton(getButtonsByText(getMediaPickers(container)[1]!, "clear-media")[0]!);
-  await flushPromises();
-
-  expect(getLatestValue().logos[1]?.image).toBe("");
+  expect(container.textContent).not.toContain("Media library");
+  expect(container.textContent).not.toContain("Logo destination");
+  expect(getLatestValue().logos[1]?.href).toBeUndefined();
+  expect(getLatestValue().logos[1]?.image).toBeUndefined();
+  expect(getLatestValue().logos[1]?.alt).toBeUndefined();
   expect(onChangeSpy).toHaveBeenCalled();
 
   cleanup();
@@ -900,10 +887,15 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   setSelectValue(styleSelects[2]!, "end");
   setSelectValue(styleSelects[3]!, "start");
   setSelectValue(styleSelects[4]!, "lg");
-  setInputValue(getInputByPlaceholder(styleSection, "var(--color-surface)"), "#f8fafc");
+  const sectionBackgroundSwatch = styleSection.querySelector(
+    'input[aria-label="Section background swatch"]'
+  );
+  expect(sectionBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+  setInputValue(sectionBackgroundSwatch as HTMLInputElement, "#f8fafc");
   expect(getLatestValue().style?.sectionBackground).toBe("#f8fafc");
   clickButton(getButtonsByText(styleSection, "Clear")[0]!);
   expect(getLatestValue().style?.sectionBackground).toBeUndefined();
+  expect(queryInputsByPlaceholder(styleSection, "var(--color-surface)")).toHaveLength(0);
 
   const switches = getCheckboxes(styleSection);
   expect(switches).toHaveLength(3);
@@ -1080,7 +1072,7 @@ test("LogoCloud visual controls tile shape, global new-tab links, and section CT
   cleanup();
 });
 
-test("LogoCloud advanced covers normalization defaults, technical tokens, and reset safeguards", async () => {
+test("LogoCloud advanced renders read-only human summaries without raw payload controls", async () => {
   const { LogoCloudAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
 
@@ -1097,31 +1089,30 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
     render: (props) => <LogoCloudAdvancedEditor {...props} />,
   });
 
-  const technicalSection = getSectionByTitle(container, "Technical layout diagnostics");
-  const safeguardsSection = getSectionByTitle(container, "Normalization and safeguards");
-  const snapshot = container.querySelector("pre");
+  const layoutSection = getSectionByTitle(container, "Layout summary");
+  const contentSection = getSectionByTitle(container, "Content summary");
+  const presentationSection = getSectionByTitle(container, "Presentation summary");
+  const boundarySection = getSectionByTitle(container, "Authoring boundaries");
 
-  expect(snapshot?.textContent).toContain('"logoHeight": "md"');
-  expect(snapshot?.textContent).toContain('"gap": "md"');
-  expect(snapshot?.textContent).toContain('"alignment": "center"');
-  expect(snapshot?.textContent).toContain('"id": "same"');
-  expect(snapshot?.textContent).toContain('"id": "logo-2"');
-  expect(snapshot?.textContent).toContain('"name": "Acme"');
-  expect(snapshot?.textContent).toContain('"name": "North Labs"');
-  expect(technicalSection.textContent).toContain("Logo height");
-  expect(technicalSection.textContent).toContain("md");
-  expect(getSelects(technicalSection)).toHaveLength(0);
+  expect(layoutSection.textContent).toContain("Dense");
+  expect(layoutSection.textContent).toContain("Medium");
+  expect(layoutSection.textContent).toContain("Default");
+  expect(contentSection.textContent).toContain("1 of 2 logos have images");
+  expect(contentSection.textContent).toContain("1 logo link opens in the same tab");
+  expect(presentationSection.textContent).toContain("Center");
+  expect(boundarySection.textContent).toContain("Use Visual for logos");
+  expect(container.textContent).not.toContain("Raw payload");
+  expect(container.textContent).not.toContain("Normalize now");
+  expect(container.textContent).not.toContain("Reset to defaults");
+  expect(container.querySelector("pre")).toBeNull();
+  expect(getSelects(container)).toHaveLength(0);
+  expect(getLatestValue()).toBe(initialValue);
+  expect(onChangeSpy).not.toHaveBeenCalled();
 
-  clickButton(getButtonsByText(safeguardsSection, "Normalize now")[0]);
-  expect(getLatestValue().header?.title).toBe(logoCloudDefaults.header?.title);
-  expect(getLatestValue().header?.description).toBe(logoCloudDefaults.header?.description);
-  expect(getLatestValue().style).toEqual(logoCloudDefaults.style);
-  expect(getLatestValue().logos[1]?.id).toBe("logo-2");
-  expect(getLatestValue().logos[0]?.name).toBe("Acme");
-
-  clickButton(getButtonsByText(safeguardsSection, "Reset to defaults")[0]);
-  expect(getLatestValue()).toEqual(logoCloudDefaults);
-  expect(onChangeSpy).toHaveBeenCalled();
+  const writableAdvancedControls = Array.from(
+    container.querySelectorAll('[data-widget-control-ownership="writable"]')
+  );
+  expect(writableAdvancedControls).toHaveLength(0);
 
   cleanup();
 });
@@ -1182,7 +1173,14 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
     expect(selects[2]?.value).toBe("center");
     expect(selects[3]?.value).toBe("center");
     expect(selects[4]?.value).toBe("md");
-    expect(getInputByPlaceholder(visualHarness.container, "var(--color-surface)").value).toBe("");
+    expect(queryInputsByPlaceholder(visualHarness.container, "var(--color-surface)")).toHaveLength(
+      0
+    );
+    const sectionBackgroundSwatch = styleSection.querySelector(
+      'input[aria-label="Section background swatch"]'
+    );
+    expect(sectionBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
+    expect((sectionBackgroundSwatch as HTMLInputElement).value).toBe("#ffffff");
 
     const switches = getCheckboxes(styleSection);
     expect(switches[0]?.checked).toBe(false);
@@ -1199,14 +1197,11 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
   });
 
   try {
-    const technicalSection = getSectionByTitle(
-      advancedHarness.container,
-      "Technical layout diagnostics"
-    );
-    expect(technicalSection.textContent).toContain("Logo height");
-    expect(technicalSection.textContent).toContain("md");
-    expect(technicalSection.textContent).toContain("center");
-    expect(getSelects(technicalSection)).toHaveLength(0);
+    const layoutSection = getSectionByTitle(advancedHarness.container, "Layout summary");
+    expect(layoutSection.textContent).toContain("Logo height");
+    expect(layoutSection.textContent).toContain("Medium");
+    expect(getSelects(layoutSection)).toHaveLength(0);
+    expect(advancedHarness.container.querySelector("pre")).toBeNull();
   } finally {
     advancedHarness.cleanup();
   }
@@ -1270,6 +1265,18 @@ test("LogoCloud visual editor classifies non-persisted DOM controls", async () =
     });
 
     expect(unclassifiedControls).toHaveLength(0);
+
+    const editableControlsWithoutPath = Array.from(
+      view.container.querySelectorAll("input, textarea, select")
+    ).filter((control) => {
+      const wrapper = control.closest("[data-widget-control]");
+      if (!(wrapper instanceof HTMLElement)) return true;
+      return (
+        wrapper.getAttribute("data-widget-control-ownership") === "writable" &&
+        !wrapper.hasAttribute("data-widget-control-path")
+      );
+    });
+    expect(editableControlsWithoutPath).toHaveLength(0);
   } finally {
     view.cleanup();
   }
@@ -1358,14 +1365,11 @@ test("LogoCloud editors fall back when normalized header and style are omitted",
   );
 
   try {
-    const technicalSection = getSectionByTitle(
-      advancedView.container,
-      "Technical layout diagnostics"
-    );
-    expect(technicalSection.textContent).toContain("Logo height");
-    expect(technicalSection.textContent).toContain("md");
-    expect(technicalSection.textContent).toContain("center");
-    expect(getSelects(technicalSection)).toHaveLength(0);
+    const layoutSection = getSectionByTitle(advancedView.container, "Layout summary");
+    expect(layoutSection.textContent).toContain("Logo height");
+    expect(layoutSection.textContent).toContain("Medium");
+    expect(getSelects(layoutSection)).toHaveLength(0);
+    expect(advancedView.container.querySelector("pre")).toBeNull();
   } finally {
     advancedView.cleanup();
     vi.doUnmock("../../../core/widgets/core/logoCloud");

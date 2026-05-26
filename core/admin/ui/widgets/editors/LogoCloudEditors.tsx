@@ -37,10 +37,14 @@ import {
   type LogoCloudVariantId,
 } from "../../../../widgets/core/logoCloud";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { WidgetEditorSection } from "./WidgetEditorControls";
-import { ClearableInputField } from "./ClearableFields";
+import type {
+  EditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 
 const variantOptions: Array<{
   id: LogoCloudVariantId;
@@ -206,18 +210,28 @@ async function resolveLogoMediaAsset(assetId: string) {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: EditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -226,9 +240,11 @@ function EditorSection({
 function VariantCards({
   value,
   onChange,
+  controlPath = "variant",
 }: {
   value: LogoCloudVariantId;
   onChange?: (next: string) => void;
+  controlPath?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -237,6 +253,9 @@ function VariantCards({
           key={option.id}
           type="button"
           onClick={() => onChange?.(option.id)}
+          data-widget-control={`logo-cloud-variant-${option.id}`}
+          data-widget-control-path={controlPath}
+          data-widget-control-ownership={controlPath ? "writable" : "action"}
           className={cn(
             "w-full rounded-lg border p-3 text-left transition",
             value === option.id
@@ -374,14 +393,6 @@ function moveLogoInData(current: LogoCloudData, fromIndex: number, toIndex: numb
   };
 }
 
-function DiagnosticsSnapshot({ value }: { value: LogoCloudData }) {
-  return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}
-
 function getLogoCloudLinkFeedback(value: string | undefined) {
   if (!value?.trim()) return null;
   const safeHref = normalizeWidgetSafeHref(value, {
@@ -397,6 +408,44 @@ function getLogoCloudImageFeedback(value: string | undefined) {
   if (!value?.trim()) return null;
   if (isValidLogoCloudImageUrl(value)) return null;
   return "Use a relative path or http/https image URL. Invalid values do not render a logo preview.";
+}
+
+function findOptionLabel<T extends string>(
+  options: Array<{ id: T; label: string }>,
+  value: T | undefined,
+  fallback: string
+) {
+  return options.find((option) => option.id === value)?.label ?? fallback;
+}
+
+function describeLogoCloudColor(value: string | undefined) {
+  if (!value?.trim()) return "Theme default";
+  if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
+  return "Saved custom color";
+}
+
+function summarizeLogoCloudImages(logos: LogoCloudLogo[]) {
+  const imageCount = logos.filter((logo) => (logo.image ?? "").trim().length > 0).length;
+  if (imageCount === 0) return "No logo images selected yet";
+  if (imageCount === logos.length) return "Every logo has an image";
+  return `${imageCount} of ${logos.length} logos have images`;
+}
+
+function summarizeLogoCloudLinks(logos: LogoCloudLogo[], openInNewTab: boolean | undefined) {
+  const linkCount = logos.filter((logo) => (logo.href ?? "").trim().length > 0).length;
+  if (linkCount === 0) return "Logo tiles are not linked";
+  const targetLabel = openInNewTab ? "new tabs" : "the same tab";
+  return linkCount === 1
+    ? `1 logo link opens in ${targetLabel}`
+    : `${linkCount} logos link to ${targetLabel}`;
+}
+
+function summarizeLogoCloudCta(cta: CtaData) {
+  if (!cta.enabled) return "Hidden";
+  if (!(cta.label ?? "").trim() || !(cta.href ?? "").trim()) {
+    return "Enabled but missing a label or destination";
+  }
+  return `Visible, opens in ${cta.target === "new-tab" ? "a new tab" : "the same tab"}`;
 }
 
 function useLogoMediaSelection({
@@ -758,7 +807,12 @@ function LogoImageControl({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
+      <div
+        data-widget-control={`logo-cloud.logo-${index + 1}.name`}
+        data-widget-control-path="logos.name"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium">Name</p>
         <Input
           value={logo.name ?? ""}
@@ -769,7 +823,12 @@ function LogoImageControl({
 
       <LogoCloudImagePreview logo={logo} index={index} />
 
-      <div className="space-y-2">
+      <div
+        data-widget-control={`logo-cloud.logo-${index + 1}.image`}
+        data-widget-control-path="logos.image"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">Media library</p>
           <Button
@@ -800,7 +859,12 @@ function LogoImageControl({
         {mediaError ? <p className="text-xs text-destructive">{mediaError}</p> : null}
       </div>
 
-      <div className="space-y-2">
+      <div
+        data-widget-control={`logo-cloud.logo-${index + 1}.image-status`}
+        data-widget-control-path="logos.image"
+        data-widget-control-ownership="readonly"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium">Current image</p>
         {(logo.image ?? "").trim().length > 0 ? (
           <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
@@ -819,8 +883,13 @@ function LogoImageControl({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Alt text</p>
+      <div
+        data-widget-control={`logo-cloud.logo-${index + 1}.alt`}
+        data-widget-control-path="logos.alt"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
+        <p className="text-sm font-medium">Accessible description</p>
         <Input
           value={logo.alt ?? ""}
           onChange={(event) => mediaSelection.commitLogoPatch(index, { alt: event.target.value })}
@@ -828,13 +897,19 @@ function LogoImageControl({
         />
       </div>
 
-      <LinkDestinationField
-        fieldId={`logo-cloud-logo-${index + 1}-destination`}
-        label="Logo destination"
-        value={logo.href ?? ""}
-        onChange={(next) => mediaSelection.commitLogoPatch(index, { href: next })}
-        feedback={linkFeedback}
-      />
+      <div
+        data-widget-control={`logo-cloud.logo-${index + 1}.href`}
+        data-widget-control-path="logos.href"
+        data-widget-control-ownership="writable"
+      >
+        <LinkDestinationField
+          fieldId={`logo-cloud-logo-${index + 1}-destination`}
+          label="Logo destination"
+          value={logo.href ?? ""}
+          onChange={(next) => mediaSelection.commitLogoPatch(index, { href: next })}
+          feedback={linkFeedback}
+        />
+      </div>
     </div>
   );
 }
@@ -881,14 +956,25 @@ export function LogoCloudWizardEditor({
   const normalized = normalizeValue(value);
   const header = normalized.header ?? logoCloudDefaults.header!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
-  const { commitLogoMutation, mediaSelection } = useLogoCloudEditCoordinator({
+  const { commitLogoMutation } = useLogoCloudEditCoordinator({
     value,
     onChange,
   });
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <WidgetEditorSection
+      id="logo-cloud.wizard.starter-setup"
+      mode="wizard"
+      role="setup"
+      title="Starter setup"
+      description="Pick a starting layout, title, count, and simple logo names. Use Visual for images, links, CTA, and style."
+    >
+      <div
+        data-widget-control="logo-cloud.wizard.variant"
+        data-widget-control-path="variant"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium">Logo cloud layout</p>
         <Select
           value={resolveLogoCloudVariant(variant)}
@@ -907,7 +993,12 @@ export function LogoCloudWizardEditor({
         </Select>
       </div>
 
-      <div className="space-y-2">
+      <div
+        data-widget-control="logo-cloud.wizard.header.title"
+        data-widget-control-path="header.title"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium">Section title</p>
         <Input
           value={header.title}
@@ -916,7 +1007,12 @@ export function LogoCloudWizardEditor({
         />
       </div>
 
-      <div className="space-y-2">
+      <div
+        data-widget-control="logo-cloud.wizard.logos.count"
+        data-widget-control-path="logos.count"
+        data-widget-control-ownership="writable"
+        className="space-y-2"
+      >
         <p className="text-sm font-medium">Logo count</p>
         <Select
           value={String(logos.length)}
@@ -939,17 +1035,32 @@ export function LogoCloudWizardEditor({
         </Select>
       </div>
 
-      <EditorSection
-        title="Starter logos"
-        description="Seed names, image sources, alt text, and basic links without leaving the wizard."
-      >
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium">Starter logo names</p>
+          <p className="text-xs text-muted-foreground">
+            Add recognizable labels now. Images, accessible descriptions, and links are edited in
+            Visual after setup.
+          </p>
+        </div>
         {logos.map((logo, index) => (
           <div
             key={logo.id ?? `wizard-logo-${index + 1}`}
+            data-widget-control={`logo-cloud.wizard.logos.${index}.name`}
+            data-widget-control-path="logos.name"
+            data-widget-control-ownership="writable"
             className="space-y-3 rounded-lg border p-3"
           >
             <p className="text-sm font-semibold">Logo {index + 1}</p>
-            <LogoImageControl logo={logo} index={index} mediaSelection={mediaSelection} />
+            <Input
+              value={logo.name ?? ""}
+              onChange={(event) =>
+                commitLogoMutation((current) =>
+                  patchLogoCloudLogo(current, index, { name: event.target.value })
+                )
+              }
+              placeholder={`Logo ${index + 1}`}
+            />
           </div>
         ))}
 
@@ -963,8 +1074,8 @@ export function LogoCloudWizardEditor({
         >
           Add logo
         </Button>
-      </EditorSection>
-    </div>
+      </div>
+    </WidgetEditorSection>
   );
 }
 
@@ -1001,12 +1112,20 @@ export function LogoCloudVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="logo-cloud.visual.structure"
+        mode="visual"
+        role="layout"
         title="Variant and layout structure"
         description="Choose logo cloud presentation and deterministic logo count."
       >
         <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.logos.count"
+          data-widget-control-path="logos.count"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Logo count</p>
           <Select
             value={String(logos.length)}
@@ -1031,10 +1150,18 @@ export function LogoCloudVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="logo-cloud.visual.header"
+        mode="visual"
+        role="content"
         title="Header copy"
         description="Edit section title and optional helper description."
       >
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.header.eyebrow"
+          data-widget-control-path="header.eyebrow"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Eyebrow</p>
           <Input
             value={header.eyebrow ?? ""}
@@ -1042,7 +1169,12 @@ export function LogoCloudVisualEditor({
             placeholder="Our partners"
           />
         </div>
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.header.title"
+          data-widget-control-path="header.title"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Title</p>
           <Input
             value={header.title}
@@ -1050,7 +1182,12 @@ export function LogoCloudVisualEditor({
             placeholder="Trusted by teams worldwide"
           />
         </div>
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.header.description"
+          data-widget-control-path="header.description"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Description</p>
           <Textarea
             value={header.description}
@@ -1061,8 +1198,11 @@ export function LogoCloudVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="logo-cloud.visual.logos"
+        mode="visual"
+        role="content"
         title="Logos list and links"
-        description="Manage logo names, image sources, alt text, and optional target links."
+        description="Manage logo names, image sources, accessible descriptions, and optional target links."
       >
         <LogoRemovalUndoNotice
           pendingRemoval={pendingRemoval}
@@ -1156,6 +1296,8 @@ export function LogoCloudVisualEditor({
         <Button
           type="button"
           variant="outline"
+          data-widget-control="logo-cloud.visual.add-logo"
+          data-widget-control-ownership="action"
           onClick={() =>
             commitLogoMutation((current) => addLogoToData(current), { structural: true })
           }
@@ -1166,10 +1308,18 @@ export function LogoCloudVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="logo-cloud.visual.cta"
+        mode="visual"
+        role="content"
         title="Section CTA"
         description="Optionally render one safe CTA below the logo list."
       >
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+        <div
+          data-widget-control="logo-cloud.visual.cta.enabled"
+          data-widget-control-path="cta.enabled"
+          data-widget-control-ownership="writable"
+          className="flex items-center justify-between rounded-md border px-3 py-2"
+        >
           <div>
             <p className="text-sm font-medium">Enable CTA</p>
             <p className="text-xs text-muted-foreground">
@@ -1182,7 +1332,12 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.cta.label"
+          data-widget-control-path="cta.label"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">CTA label</p>
           <Input
             value={cta.label ?? ""}
@@ -1191,16 +1346,27 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <LinkDestinationField
-          fieldId="logo-cloud-cta-destination"
-          label="CTA destination"
-          value={cta.href ?? ""}
-          disabled={!cta.enabled}
-          onChange={(next) => updateCta(value, onChange, { href: next })}
-          feedback={getLogoCloudLinkFeedback(cta.href ?? undefined)}
-        />
+        <div
+          data-widget-control="logo-cloud.visual.cta.href"
+          data-widget-control-path="cta.href"
+          data-widget-control-ownership="writable"
+        >
+          <LinkDestinationField
+            fieldId="logo-cloud-cta-destination"
+            label="CTA destination"
+            value={cta.href ?? ""}
+            disabled={!cta.enabled}
+            onChange={(next) => updateCta(value, onChange, { href: next })}
+            feedback={getLogoCloudLinkFeedback(cta.href ?? undefined)}
+          />
+        </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.cta.target"
+          data-widget-control-path="cta.target"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">CTA target</p>
           <Select
             value={cta.target}
@@ -1223,10 +1389,18 @@ export function LogoCloudVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="logo-cloud.visual.display-style"
+        mode="visual"
+        role="visual"
         title="Display style"
         description="Control logo sizing, spacing, alignment, and hover behavior."
       >
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.logo-height"
+          data-widget-control-path="style.logoHeight"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Logo height</p>
           <Select
             value={style.logoHeight}
@@ -1247,7 +1421,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.gap"
+          data-widget-control-path="style.gap"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Gap</p>
           <Select
             value={style.gap}
@@ -1266,7 +1445,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.alignment"
+          data-widget-control-path="style.alignment"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Alignment</p>
           <Select
             value={style.alignment}
@@ -1287,7 +1471,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.header-align"
+          data-widget-control-path="style.headerAlign"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Header alignment</p>
           <Select
             value={style.headerAlign}
@@ -1308,7 +1497,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.header-size"
+          data-widget-control-path="style.headerSize"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Header size</p>
           <Select
             value={style.headerSize}
@@ -1329,7 +1523,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.row-mode"
+          data-widget-control-path="style.rowMode"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Strip row behavior</p>
           <Select
             value={style.rowMode}
@@ -1358,7 +1557,12 @@ export function LogoCloudVisualEditor({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.motion-mode"
+          data-widget-control-path="style.motionMode"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Strip motion</p>
           <Select
             value={style.motionMode}
@@ -1385,7 +1589,12 @@ export function LogoCloudVisualEditor({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.tile-radius"
+          data-widget-control-path="style.tileRadius"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Tile radius</p>
           <Select
             value={style.tileRadius}
@@ -1406,7 +1615,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
+        <div
+          data-widget-control="logo-cloud.visual.tile-border-width"
+          data-widget-control-path="style.tileBorderWidth"
+          data-widget-control-ownership="writable"
+          className="space-y-2"
+        >
           <p className="text-sm font-medium">Tile border width</p>
           <Select
             value={style.tileBorderWidth}
@@ -1427,7 +1641,12 @@ export function LogoCloudVisualEditor({
           </Select>
         </div>
 
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+        <div
+          data-widget-control="logo-cloud.visual.open-links-new-tab"
+          data-widget-control-path="style.openLinksInNewTab"
+          data-widget-control-ownership="writable"
+          className="flex items-center justify-between rounded-md border px-3 py-2"
+        >
           <div>
             <p className="text-sm font-medium">Open logo links in new tab</p>
             <p className="text-xs text-muted-foreground">
@@ -1442,7 +1661,12 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+        <div
+          data-widget-control="logo-cloud.visual.grayscale"
+          data-widget-control-path="style.grayscale"
+          data-widget-control-ownership="writable"
+          className="flex items-center justify-between rounded-md border px-3 py-2"
+        >
           <div>
             <p className="text-sm font-medium">Grayscale logos</p>
             <p className="text-xs text-muted-foreground">
@@ -1457,7 +1681,12 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-md border px-3 py-2">
+        <div
+          data-widget-control="logo-cloud.visual.hover-color"
+          data-widget-control-path="style.hoverColor"
+          data-widget-control-ownership="writable"
+          className="flex items-center justify-between rounded-md border px-3 py-2"
+        >
           <div>
             <p className="text-sm font-medium">Colorize on hover</p>
             <p className="text-xs text-muted-foreground">
@@ -1475,82 +1704,190 @@ export function LogoCloudVisualEditor({
           />
         </div>
 
-        <ClearableInputField
+        <SharedColorControl
+          controlId="logo-cloud.visual.section-background"
+          controlPath="style.sectionBackground"
           label="Section background"
           value={style.sectionBackground}
           onChange={(next) => updateStyle(value, onChange, { sectionBackground: next })}
           onClear={() => clearStyle(value, onChange, "sectionBackground")}
           placeholder="var(--color-surface)"
+          pickerFallback="#ffffff"
+          showValueInput={false}
         />
 
-        <ClearableInputField
+        <SharedColorControl
+          controlId="logo-cloud.visual.tile-background"
+          controlPath="style.tileBackground"
           label="Tile background"
           value={style.tileBackground}
           onChange={(next) => updateStyle(value, onChange, { tileBackground: next })}
           onClear={() => clearStyle(value, onChange, "tileBackground")}
           placeholder="var(--color-bg)"
+          pickerFallback="#ffffff"
+          showValueInput={false}
         />
 
-        <ClearableInputField
+        <SharedColorControl
+          controlId="logo-cloud.visual.tile-border"
+          controlPath="style.tileBorderColor"
           label="Tile border"
           value={style.tileBorderColor}
           onChange={(next) => updateStyle(value, onChange, { tileBorderColor: next })}
           onClear={() => clearStyle(value, onChange, "tileBorderColor")}
           placeholder="var(--color-border)"
+          pickerFallback="#e2e8f0"
+          showValueInput={false}
         />
       </EditorSection>
     </div>
   );
 }
 
-export function LogoCloudAdvancedEditor({ value, onChange }: WidgetEditorProps<LogoCloudData>) {
+export function LogoCloudAdvancedEditor({ value, variant }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
+  const resolvedVariant = resolveLogoCloudVariant(variant);
+  const variantLabel = variantOptions.find((option) => option.id === resolvedVariant)?.label;
+  const logos = normalizeLogoCloudLogos(normalized.logos);
+  const cta = normalized.cta ?? logoCloudDefaults.cta!;
   const style = normalized.style ?? logoCloudDefaults.style!;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Technical layout diagnostics"
-        description="Read-only summary of shared Logo Cloud tokens and normalization state."
+        id="logo-cloud.advanced.layout-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Layout summary"
+        description="Read-only view of how this logo cloud will render. Change layout in Visual."
       >
-        <dl className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-md border px-3 py-2">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Logo height
-            </dt>
-            <dd className="mt-1 text-sm">{style.logoHeight}</dd>
-          </div>
-          <div className="rounded-md border px-3 py-2">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Gap
-            </dt>
-            <dd className="mt-1 text-sm">{style.gap}</dd>
-          </div>
-          <div className="rounded-md border px-3 py-2">
-            <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Alignment
-            </dt>
-            <dd className="mt-1 text-sm">{style.alignment}</dd>
-          </div>
-        </dl>
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-variant"
+          label="Layout"
+          path="variant"
+          value={variantLabel ?? "Grid"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-logos-count"
+          label="Logos"
+          path="logos.count"
+          value={`${logos.length} ${logos.length === 1 ? "logo" : "logos"}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-logo-height"
+          label="Logo height"
+          path="style.logoHeight"
+          value={findOptionLabel(logoHeightOptions, style.logoHeight, "Medium")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-spacing"
+          label="Spacing"
+          path="style.gap"
+          value={findOptionLabel(gapOptions, style.gap, "Default")}
+        />
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Apply deterministic fallback names/IDs and style defaults."
+        id="logo-cloud.advanced.content-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Content summary"
+        description="Read-only health check for logo media, destinations, and the optional CTA."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => onChange(normalizeValue(value))}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onChange(logoCloudDefaults)}>
-            Reset to defaults
-          </Button>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-header"
+          label="Header"
+          path="header"
+          value={normalized.header?.title?.trim() ? "Configured" : "No section title"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-images"
+          label="Logo images"
+          path="logos"
+          value={summarizeLogoCloudImages(logos)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-links"
+          label="Logo destinations"
+          path="logos"
+          value={summarizeLogoCloudLinks(logos, style.openLinksInNewTab)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-cta"
+          label="Section CTA"
+          path="cta"
+          value={summarizeLogoCloudCta(cta)}
+        />
       </EditorSection>
 
-      <EditorSection title="Raw payload snapshot">
-        <DiagnosticsSnapshot value={normalized} />
+      <EditorSection
+        id="logo-cloud.advanced.presentation-summary"
+        mode="advanced"
+        role="diagnostics"
+        title="Presentation summary"
+        description="Read-only style state. Authors replace spacing, motion, and colors in Visual."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-alignment"
+          label="Alignment"
+          path="style.alignment"
+          value={findOptionLabel(alignmentOptions, style.alignment, "Center")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-header-style"
+          label="Header style"
+          path="style.headerAlign"
+          value={`${findOptionLabel(headerAlignOptions, style.headerAlign, "Center")} / ${findOptionLabel(headerSizeOptions, style.headerSize, "Medium")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-strip-behavior"
+          label="Strip behavior"
+          path="style.rowMode"
+          value={`${findOptionLabel(rowModeOptions, style.rowMode, "Wrapped rows")} / ${findOptionLabel(motionModeOptions, style.motionMode, "Static")}`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-tile-shape"
+          label="Tile shape"
+          path="style.tileRadius"
+          value={`${findOptionLabel(tileRadiusOptions, style.tileRadius, "Large")} corners, ${findOptionLabel(tileBorderWidthOptions, style.tileBorderWidth, "Standard")} border`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-logo-filter"
+          label="Logo filter"
+          path="style.grayscale"
+          value={
+            style.grayscale
+              ? style.hoverColor
+                ? "Grayscale with color on hover"
+                : "Grayscale"
+              : "Full color"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-colors"
+          label="Colors"
+          path="style"
+          value={`Section: ${describeLogoCloudColor(style.sectionBackground)}, tile: ${describeLogoCloudColor(style.tileBackground)}, border: ${describeLogoCloudColor(style.tileBorderColor)}`}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="logo-cloud.advanced.authoring-boundaries"
+        mode="advanced"
+        role="summary"
+        title="Authoring boundaries"
+        description="This tab is intentionally read-only for authors."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-daily-owner"
+          label="Daily editing"
+          value="Use Visual for logos, images, destinations, CTA, layout, motion, and colors."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="logo-cloud-advanced-setup-owner"
+          label="Starter setup"
+          value="Wizard is available only for first setup or explicit Run setup again."
+        />
       </EditorSection>
     </div>
   );

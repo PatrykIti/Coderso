@@ -114,6 +114,35 @@ checkout has moved since then:
   overclaimed here.
 - `BF-06` remains not applicable and `A7` remains current-state OK.
 
+### Editor drift cleanup note — 2026-05-26 (`TASK-336-19`)
+
+- Logo Cloud was re-audited with a helper agent and Claude read-only UX pass.
+  Both flagged the same blockers: Visual raw CSS-token color inputs, Advanced
+  raw payload JSON, mutating Advanced normalize/reset actions, stale
+  `TASK-336-16` duplicate allowances, and Wizard/Visual logo-detail overlap.
+- The current editor contract is now stricter: Wizard is one-time starter setup
+  only; Visual owns daily logo images, accessible descriptions, destinations,
+  CTA, motion, tile presentation, and swatch-only color controls; Advanced is
+  read-only human diagnostics with no raw JSON payload, no `<pre>` dump, and no
+  normalize/reset mutation.
+- Default fake destinations were removed from new Logo Cloud defaults: default
+  logo links are absent and the default CTA `href` is empty until the author
+  chooses a destination.
+- Validation evidence:
+  `bun run test:vitest -- tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/widgets/logoCloud.test.tsx tests/vitest/widgets/editorContract.test.ts`
+  passed with 46/46 tests on 2026-05-26.
+- Strict Playwright evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-logo-cloud-2026-05-26.*`
+  reports `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+- Focused Playwright evidence:
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-336-19-logo-cloud-focused-2026-05-26.*`
+  verifies completed widgets expose no Wizard tab/root before `Run setup
+  again`, Visual raw color text inputs `0`, Visual metadata gaps `0`, Advanced
+  writable paths `0`, Advanced raw payload/pre matches `0`, and re-entered
+  Wizard writable paths are limited to `variant`, `header.title`,
+  `logos.count`, and `logos.name`.
+
 
 
 ### Historical baseline note — 2026-05-19
@@ -495,5 +524,5 @@ Logo Cloud widget służy do prezentacji logotypów partnerów i klientów w cel
 ---
 
 *Raport bazuje na oryginalnej analizie kodu i sesji Playwright z 2026-05-16;
-closure notes above were refreshed for the 2026-05-19 task closeout and the
-2026-05-21 audit pass.*
+closure notes above were refreshed for the 2026-05-19 task closeout, the
+2026-05-21 audit pass, and the 2026-05-26 TASK-336-19 editor drift cleanup.*
