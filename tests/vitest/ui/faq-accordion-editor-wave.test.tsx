@@ -218,6 +218,16 @@ vi.mock("../../../core/admin/ui/shared/ConfirmActionDialog", () => ({
     ) : null,
 }));
 
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    Array.from(section.querySelectorAll("h3, p")).some(
+      (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
+    )
+  );
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -432,7 +442,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FaqAccordion wizard editor stays read-only for layout and item count", async () => {
+test("FaqAccordion wizard editor seeds layout and starter question count", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: faqAccordionDefaults,
@@ -440,7 +450,6 @@ test("FaqAccordion wizard editor stays read-only for layout and item count", asy
   });
 
   try {
-    expect(view.container.querySelector("select")).toBeNull();
     expect(findInputByPlaceholder(view.container, "Frequently asked questions")).toBeUndefined();
     expect(
       findTextareaByPlaceholder(view.container, "Address objections with short and clear answers.")
@@ -452,9 +461,21 @@ test("FaqAccordion wizard editor stays read-only for layout and item count", asy
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.getValue().items).toHaveLength(faqAccordionDefaults.items.length);
     expect(view.container.textContent).toContain("Single Column");
+    expect(view.container.textContent).toContain("Two Column");
+    expect(view.container.textContent).toContain("Compact");
     expect(view.container.textContent).toContain(
-      "Use Visual to write the section heading, questions, answers, answer format, icons, default-open behavior, style, search visibility, and question count."
+      "Use Visual to write the section heading, questions, answers, answer format, icons, default-open behavior, style, and search visibility after this starter setup."
     );
+
+    clickElement(findButtonByText(view.container, "Two Column"));
+    expect(view.getVariant()).toBe("two-column");
+    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("two-column");
+
+    setSelectValue(
+      findSelectByOptions(view.container, ["1", "2", "3", String(faqAccordionItemMax)]),
+      "5"
+    );
+    expect(view.getValue().items).toHaveLength(5);
   } finally {
     view.cleanup();
   }
@@ -514,6 +535,43 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
   });
 
   try {
+    const variantSection = findSectionByTitle(view.container, "Variant and layout structure");
+    expect(variantSection?.getAttribute("data-widget-editor-section")).toBe(
+      "faq-accordion.visual.variant-layout"
+    );
+    expect(
+      findSectionByTitle(view.container, "Header copy")?.getAttribute("data-widget-editor-section")
+    ).toBe("faq-accordion.visual.header-copy");
+    expect(
+      findSectionByTitle(view.container, "Questions and answers")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.questions");
+    expect(
+      findSectionByTitle(view.container, "Display behavior")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.display-behavior");
+    expect(
+      findSectionByTitle(view.container, "Layout and typography")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.layout-typography");
+    expect(
+      findSectionByTitle(view.container, "Colors and panel style")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.colors-panel-style");
+    expect(
+      findSectionByTitle(view.container, "Search visibility")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.visual.search-visibility");
+    const colorsSection = findSectionByTitle(view.container, "Colors and panel style");
+    expect(colorsSection?.textContent).toContain("FAQ palettes");
+    expect(colorsSection?.textContent).toContain("Contrast guidance");
+    expect(colorsSection?.textContent).not.toContain("Spacing");
+
     const colorInputs = Array.from(view.container.querySelectorAll("input[type='color']"));
     expect((colorInputs[0] as HTMLInputElement | null | undefined)?.value).toBe("#ffffff");
     expect((colorInputs[1] as HTMLInputElement | null | undefined)?.value).toBe("#e2e8f0");
@@ -522,6 +580,19 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
     expect(findInputByPlaceholder(view.container, "var(--color-bg)")).toBeUndefined();
     expect(findAllInputsByPlaceholder(view.container, "var(--color-border)")).toHaveLength(0);
     expect(findAllInputsByPlaceholder(view.container, "var(--color-text)")).toHaveLength(0);
+
+    clickElement(findButtonByText(view.container, "Dark"));
+    expect(view.getValue().style).toEqual(
+      expect.objectContaining({
+        surface: "#0f172a",
+        border: "#334155",
+        divider: "#1e293b",
+        questionTextColor: "#f8fafc",
+        answerTextColor: "#cbd5e1",
+        headerTitleColor: "#f8fafc",
+        headerDescriptionColor: "#cbd5e1",
+      })
+    );
 
     clickElement(findButtonByText(view.container, "Two Column"));
     expect(view.getVariant()).toBe("two-column");
@@ -745,14 +816,49 @@ test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates
 
   try {
     expect(view.container.querySelector("pre")).toBeNull();
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing FAQ copy, layout, behavior, colors, and search visibility changes."
+    );
     expect(view.container.textContent).toContain("Runtime summary");
     expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Contract summary");
     expect(view.container.textContent).toContain("Saved data status");
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Style summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.style-summary");
+    expect(
+      findSectionByTitle(view.container, "Saved data status")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.normalization-support");
+    expect(
+      findSectionByTitle(view.container, "Accessibility diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.accessibility-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("faq-accordion.advanced.contract-summary");
     expect(view.container.textContent).toContain("Default open item");
     expect(view.container.textContent).toContain("Item 2: Keep this");
     expect(view.container.textContent).toContain("Questions");
     expect(view.container.textContent).toContain("2/12 questions configured");
     expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).toContain("Header title");
+    expect(view.container.textContent).toContain("Header description");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
     expect(view.container.textContent).toContain(
       "Saved FAQ data will be repaired automatically when the page is saved."
     );

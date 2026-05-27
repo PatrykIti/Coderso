@@ -137,6 +137,48 @@ const motionOptions: Array<{ id: FaqAccordionMotion; label: string }> = [
   { id: "smooth", label: "Smooth" },
 ];
 
+const faqPalettePresets = [
+  {
+    id: "light",
+    label: "Light",
+    style: {
+      surface: "#ffffff",
+      border: "#e2e8f0",
+      divider: "#e2e8f0",
+      questionTextColor: "#0f172a",
+      answerTextColor: "#334155",
+      headerTitleColor: "#0f172a",
+      headerDescriptionColor: "#475569",
+    },
+  },
+  {
+    id: "dark",
+    label: "Dark",
+    style: {
+      surface: "#0f172a",
+      border: "#334155",
+      divider: "#1e293b",
+      questionTextColor: "#f8fafc",
+      answerTextColor: "#cbd5e1",
+      headerTitleColor: "#f8fafc",
+      headerDescriptionColor: "#cbd5e1",
+    },
+  },
+  {
+    id: "brand",
+    label: "Brand",
+    style: {
+      surface: "#eff6ff",
+      border: "#93c5fd",
+      divider: "#bfdbfe",
+      questionTextColor: "#1e3a8a",
+      answerTextColor: "#1d4ed8",
+      headerTitleColor: "#1e40af",
+      headerDescriptionColor: "#1d4ed8",
+    },
+  },
+] as const;
+
 const itemCountOptions = Array.from({ length: faqAccordionItemMax }, (_, index) =>
   String(index + 1)
 );
@@ -144,6 +186,24 @@ const itemCountOptions = Array.from({ length: faqAccordionItemMax }, (_, index) 
 type HeaderData = NonNullable<FaqAccordionData["header"]>;
 type OptionsData = NonNullable<FaqAccordionData["options"]>;
 type StyleData = NonNullable<FaqAccordionData["style"]>;
+type FaqColorStyleKey =
+  | "surface"
+  | "border"
+  | "divider"
+  | "questionTextColor"
+  | "answerTextColor"
+  | "headerTitleColor"
+  | "headerDescriptionColor";
+
+const faqThemeDefaultStyleValues: Record<FaqColorStyleKey, string[]> = {
+  surface: ["var(--color-bg)"],
+  border: ["var(--color-border)"],
+  divider: ["var(--color-border)"],
+  questionTextColor: ["var(--color-text)"],
+  answerTextColor: ["var(--color-text)"],
+  headerTitleColor: ["var(--color-text)"],
+  headerDescriptionColor: ["var(--color-text)"],
+};
 
 function normalizeValue(value: FaqAccordionData): FaqAccordionData {
   return normalizeFaqAccordionData(value);
@@ -237,6 +297,7 @@ function ColorField({
   onChange,
   pickerFallback,
   onClear,
+  treatAsThemeDefaultValues,
 }: {
   id: string;
   label: string;
@@ -244,9 +305,18 @@ function ColorField({
   onChange: (next: string) => void;
   pickerFallback: string;
   onClear?: () => void;
+  treatAsThemeDefaultValues?: string[];
 }) {
+  const normalizedValue = value?.trim();
   const hasValue = hasClearableFieldValue(value);
-  const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+  );
+  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
+  const hasCustomValue =
+    hasValue && !isThemeDefaultValue && !isPickerRepresentableColorValue(value);
   const pickerValue = resolveColorPickerValue(value, pickerFallback);
 
   return (
@@ -256,7 +326,13 @@ function ColorField({
       path={id.replace("faq-accordion.", "")}
       actions={
         onClear ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            disabled={!hasValue || isThemeDefaultValue}
+          >
             Clear
           </Button>
         ) : null
@@ -278,7 +354,7 @@ function ColorField({
               <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
                 {hasCustomValue
                   ? "Saved custom color"
-                  : hasValue
+                  : hasValue && !isThemeDefaultValue
                     ? "Selected color"
                     : "Theme default"}
               </span>
@@ -487,6 +563,13 @@ function findOptionLabel(options: ReadonlyArray<{ id: string; label: string }>, 
 
 function describeColorValue(value: string | undefined) {
   if (!hasClearableFieldValue(value)) return "Theme default";
+  const normalizedValue = value?.trim();
+  if (
+    normalizedValue &&
+    Object.values(faqThemeDefaultStyleValues).some((entries) => entries.includes(normalizedValue))
+  ) {
+    return "Theme default";
+  }
   return isPickerRepresentableColorValue(value) ? "Selected color" : "Saved custom color";
 }
 
@@ -548,7 +631,29 @@ function describeFaqSavedData(value: FaqAccordionData) {
     : "Saved FAQ data is already clean.";
 }
 
-export function FaqAccordionWizardEditor({ value, variant }: WidgetEditorProps<FaqAccordionData>) {
+function describeFaqHeaderStatus(value: FaqAccordionData) {
+  const title = normalizeValue(value).header?.title?.trim();
+  return title && title.length > 0 ? title : "Missing section heading";
+}
+
+function describeFaqDescriptionStatus(value: FaqAccordionData) {
+  return normalizeValue(value).header?.description?.trim()
+    ? "Helper description is configured."
+    : "No helper description configured.";
+}
+
+function describeFaqRichAnswerState(items: FaqAccordionItem[]) {
+  return items.some((item) => (item.answerFormat ?? "plain") === "markdown")
+    ? "Markdown answers enabled"
+    : "Plain text only";
+}
+
+export function FaqAccordionWizardEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+}: WidgetEditorProps<FaqAccordionData>) {
   const normalized = normalizeValue(value);
   const items = normalizeFaqAccordionItems(normalized.items);
 
@@ -557,30 +662,43 @@ export function FaqAccordionWizardEditor({ value, variant }: WidgetEditorProps<F
       id="faq-accordion.wizard.starter-questions"
       mode="wizard"
       role="setup"
-      title="Starter questions"
-      description="Review the FAQ layout and question count. Daily copy, answers, and layout changes live in Visual."
+      title="FAQ layout"
+      description="Seed the initial FAQ layout and starting question count. Daily copy, answers, and layout changes live in Visual."
     >
       <div className="space-y-4">
-        <ReadonlyWidgetSummaryRow
-          id="faq-accordion.wizard.variant"
-          label="FAQ layout"
-          path="variant"
-          value={
-            variantOptions.find((option) => option.id === resolveFaqAccordionVariant(variant))
-              ?.label ?? "Single Column"
-          }
-        />
+        <VariantCards value={resolveFaqAccordionVariant(variant)} onChange={onVariantChange} />
 
-        <ReadonlyWidgetSummaryRow
+        <WidgetControlRow
           id="faq-accordion.wizard.items.count"
           label="Questions count"
           path="items.count"
-          value={`${items.length} question${items.length === 1 ? "" : "s"}`}
-        />
+        >
+          {(fieldProps) => (
+            <Select
+              value={String(items.length)}
+              onValueChange={(next) => setItemCount(value, onChange, Number(next))}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
           Use Visual to write the section heading, questions, answers, answer format, icons,
-          default-open behavior, style, search visibility, and question count.
+          default-open behavior, style, and search visibility after this starter setup.
         </div>
       </div>
     </WidgetEditorSection>
@@ -624,6 +742,9 @@ export function FaqAccordionVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="faq-accordion.visual.variant-layout"
+        mode="visual"
+        role="visual"
         title="Variant and layout structure"
         description="Choose FAQ layout and manage deterministic item count."
       >
@@ -655,6 +776,9 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.header-copy"
+        mode="visual"
+        role="content"
         title="Header copy"
         description="Edit title and short helper description above the FAQ list."
       >
@@ -678,6 +802,9 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.questions"
+        mode="visual"
+        role="content"
         title="Questions and answers"
         description="Manage order and content of FAQ rows."
       >
@@ -830,6 +957,9 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.display-behavior"
+        mode="visual"
+        role="content"
         title="Display behavior"
         description="Control default open item and multiple-open behavior."
       >
@@ -872,6 +1002,9 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.layout-typography"
+        mode="visual"
+        role="layout"
         title="Layout and typography"
         description="Control FAQ width, header alignment, spacing, title scale, and motion."
       >
@@ -1015,9 +1148,33 @@ export function FaqAccordionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.colors-panel-style"
+        mode="visual"
+        role="visual"
         title="Colors and panel style"
         description="Set FAQ card colors, border style, and text emphasis."
       >
+        <div className="space-y-2 rounded-md border border-border/70 p-3">
+          <p className="text-sm font-medium">FAQ palettes</p>
+          <div className="flex flex-wrap gap-2">
+            {faqPalettePresets.map((preset) => (
+              <Button
+                key={preset.id}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => updateStyle(value, onChange, preset.style)}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Applying a palette writes explicit FAQ colors. You can still override each field
+            afterwards.
+          </p>
+        </div>
+
         <ColorField
           id="faq-accordion.style.surface"
           label="Panel surface"
@@ -1025,6 +1182,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { surface: next })}
           onClear={() => clearStyleField(value, onChange, "surface")}
           pickerFallback="#ffffff"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.surface}
         />
 
         <ColorField
@@ -1034,6 +1192,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { border: next })}
           onClear={() => clearStyleField(value, onChange, "border")}
           pickerFallback="#e2e8f0"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.border}
         />
 
         <ColorField
@@ -1043,6 +1202,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { divider: next })}
           onClear={() => clearStyleField(value, onChange, "divider")}
           pickerFallback="#e2e8f0"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.divider}
         />
 
         <ColorField
@@ -1052,6 +1212,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { questionTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "questionTextColor")}
           pickerFallback="#0f172a"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.questionTextColor}
         />
 
         <ColorField
@@ -1061,6 +1222,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { answerTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "answerTextColor")}
           pickerFallback="#0f172a"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.answerTextColor}
         />
 
         <ColorField
@@ -1070,6 +1232,7 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { headerTitleColor: next })}
           onClear={() => clearStyleField(value, onChange, "headerTitleColor")}
           pickerFallback="#0f172a"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.headerTitleColor}
         />
 
         <ColorField
@@ -1079,79 +1242,84 @@ export function FaqAccordionVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { headerDescriptionColor: next })}
           onClear={() => clearStyleField(value, onChange, "headerDescriptionColor")}
           pickerFallback="#0f172a"
+          treatAsThemeDefaultValues={faqThemeDefaultStyleValues.headerDescriptionColor}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Spacing</p>
-            <Select
-              value={normalized.style?.spacing ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  spacing: next as FaqAccordionSpacing,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <WidgetControlRow id="faq-accordion.style.panelRadius" label="Panel radius">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.panelRadius ?? "lg"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    panelRadius: next as FaqAccordionPanelRadius,
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select panel radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {panelRadiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Panel radius</p>
-            <Select
-              value={normalized.style?.panelRadius ?? "lg"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  panelRadius: next as FaqAccordionPanelRadius,
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select panel radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {panelRadiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="faq-accordion.style.borderWidth" label="Border width">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.borderWidth ?? "1"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { borderWidth: next as FaqAccordionBorderWidth })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select border width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Border width</p>
-          <Select
-            value={normalized.style?.borderWidth ?? "1"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { borderWidth: next as FaqAccordionBorderWidth })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select border width" />
-            </SelectTrigger>
-            <SelectContent>
-              {borderWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Contrast guidance</p>
+          <p className="mt-1">
+            Header: check title and helper copy against the FAQ section surface.
+          </p>
+          <p className="mt-1">
+            Questions and answers: confirm both text roles stay readable inside each panel.
+          </p>
+          <p className="mt-1">
+            Panel styling: verify borders and dividers remain visible without overpowering the
+            content.
+          </p>
         </div>
       </EditorSection>
 
       <EditorSection
+        id="faq-accordion.visual.search-visibility"
+        mode="visual"
+        role="visual"
         title="Search visibility"
         description="Optionally let search engines understand the published FAQ answers."
       >
@@ -1227,6 +1395,11 @@ export function FaqAccordionAdvancedEditor({ value }: WidgetEditorProps<FaqAccor
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Visual for public-facing FAQ copy, layout, behavior, colors,
+        and search visibility changes.
+      </p>
+
       <EditorSection
         id="faq-accordion.advanced.runtime-summary"
         mode="advanced"
@@ -1304,6 +1477,18 @@ export function FaqAccordionAdvancedEditor({ value }: WidgetEditorProps<FaqAccor
           value={describeColorValue(normalized.style?.answerTextColor)}
         />
         <ReadonlyWidgetSummaryRow
+          id="faq-advanced-header-title-color"
+          label="Header title"
+          path="style.headerTitleColor"
+          value={describeColorValue(normalized.style?.headerTitleColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-header-description-color"
+          label="Header description"
+          path="style.headerDescriptionColor"
+          value={describeColorValue(normalized.style?.headerDescriptionColor)}
+        />
+        <ReadonlyWidgetSummaryRow
           id="faq-advanced-layout-summary"
           label="Layout"
           path="style"
@@ -1314,6 +1499,66 @@ export function FaqAccordionAdvancedEditor({ value }: WidgetEditorProps<FaqAccor
           label="Panel style"
           path="style"
           value={describeFaqPanelStyle(normalized)}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="faq-accordion.advanced.accessibility-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Accessibility diagnostics"
+        description="Read-only copy and disclosure checks for the published FAQ."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-heading-status"
+          label="Section heading"
+          path="header.title"
+          value={describeFaqHeaderStatus(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-description-status"
+          label="Helper copy"
+          path="header.description"
+          value={describeFaqDescriptionStatus(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-answer-rendering"
+          label="Answer rendering"
+          path="items.answerFormat"
+          value={describeFaqRichAnswerState(items)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-disclosure-pattern"
+          label="Disclosure pattern"
+          path="items"
+          value="Native summary/details disclosure"
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="faq-accordion.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the FAQ v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-wizard-owns"
+          label="Wizard owns"
+          path="variant"
+          value="One-time layout seed and starting question count."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-visual-owns"
+          label="Visual owns"
+          path="header"
+          value="Header copy, FAQ items, open behavior, layout, colors, and search visibility."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="faq-advanced-advanced-owns"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only diagnostics, style summaries, contract ownership, and saved-data status."
         />
       </EditorSection>
 

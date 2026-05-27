@@ -18,8 +18,9 @@ FAQ structured data.
 ## Editor Modes
 
 ### Wizard (minimal onboarding)
-- read-only FAQ layout summary
-- read-only questions count summary
+- one-time FAQ layout seed
+- one-time starter questions count seed
+- shared Wizard-only live preview
 
 ### Visual (primary editing mode)
 Sections:
@@ -40,12 +41,20 @@ Notes:
   - remove confirmation,
   - native drag/drop reorder with Move Up/Down fallback,
   - bounded bulk delete that keeps the min-one-item guard.
+- Colors and panel style now keep Hero-style ownership boundaries:
+  - `Spacing` stays in `Layout and typography`,
+  - palettes write explicit FAQ colors,
+  - theme tokens render as `Theme default` instead of faux custom-color state,
+  - contrast guidance stays visible next to the FAQ color controls.
 
 ### Advanced
 - Read-only runtime summary for open behavior, question count, answer formats,
   and FAQ search enhancement
 - Read-only style summary that describes theme/default/custom color state
   without exposing raw token strings
+- Read-only accessibility diagnostics for section heading, helper copy,
+  answer rendering mode, and disclosure pattern
+- Read-only contract summary for Wizard / Visual / Advanced ownership
 - Read-only saved-data status for legacy compatibility cleanup
 
 Advanced does not duplicate Visual's open-state, spacing, or color controls.
@@ -91,14 +100,18 @@ normalization/repair actions.
 
 - Visual color authoring uses swatch pickers and clear actions instead of raw
   CSS token text fields.
+- Built-in theme tokens such as `var(--color-bg)`, `var(--color-border)`, and
+  `var(--color-text)` render as `Theme default`.
+- `Colors and panel style` includes FAQ palette presets plus read-only
+  contrast guidance to keep section/header/panel readability aligned with the
+  Hero UX pattern.
 - `style.surface`, `style.border`, `style.divider`, `style.questionTextColor`,
   `style.answerTextColor`, `style.headerTitleColor`, and
   `style.headerDescriptionColor` are clearable.
 - Clearing a field removes the persisted token instead of forcing an empty
   string.
-- Existing theme tokens, rgba values, and other custom strings remain
-  compatible as saved custom color state that can be replaced or cleared
-  without typing CSS.
+- Existing rgba values and other custom strings remain compatible as saved
+  custom color state that can be replaced or cleared without typing CSS.
 
 ## Data Model (summary)
 

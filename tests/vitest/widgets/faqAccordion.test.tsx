@@ -269,7 +269,7 @@ test("faq accordion validator rejects unsupported variant", () => {
   ).toThrow("widget_invalid_variant");
 });
 
-test("faq accordion wizard renders onboarding fields", () => {
+test("faq accordion wizard renders starter seed controls", () => {
   const html = renderToString(
     <FaqAccordionWizardEditor
       value={faqAccordionDefaults}
@@ -281,8 +281,11 @@ test("faq accordion wizard renders onboarding fields", () => {
 
   expect(html).toContain("FAQ layout");
   expect(html).toContain("Questions count");
+  expect(html).toContain("Single Column");
+  expect(html).toContain('data-widget-control="faq-accordion.wizard.items.count"');
   expect(html).toContain("Use Visual to write the section heading");
-  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).not.toContain('data-widget-control-readonly="true"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.wizard.starter-questions"');
 });
 
 test("faq accordion visual renders section-based IA", () => {
@@ -298,9 +301,19 @@ test("faq accordion visual renders section-based IA", () => {
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Header copy");
   expect(html).toContain("Questions and answers");
+  expect(html).toContain("Display behavior");
   expect(html).toContain("Layout and typography");
   expect(html).toContain("Colors and panel style");
+  expect(html).toContain("FAQ palettes");
+  expect(html).toContain("Contrast guidance");
   expect(html).toContain("Search visibility");
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.variant-layout"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.header-copy"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.questions"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.display-behavior"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.layout-typography"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.colors-panel-style"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.visual.search-visibility"');
 });
 
 test("faq accordion visual keeps custom color tokens behind swatch-only controls", () => {
@@ -310,7 +323,7 @@ test("faq accordion visual keeps custom color tokens behind swatch-only controls
         ...faqAccordionDefaults,
         style: {
           ...faqAccordionDefaults.style,
-          surface: "var(--color-bg)",
+          surface: "surface-token",
           border: "rgba(15, 23, 42, 0.18)",
           questionTextColor: "brand-text-token",
         },
@@ -322,6 +335,7 @@ test("faq accordion visual keeps custom color tokens behind swatch-only controls
   );
 
   expect(html).toContain("Saved custom color");
+  expect(html).toContain("Theme default");
   expect(html).toContain('data-widget-control="faq-accordion.style.surface"');
   expect(html).toContain('input type="color"');
   expect(html).not.toContain('placeholder="var(--color-bg)"');
@@ -344,7 +358,18 @@ test("faq accordion advanced keeps technical-only scope", () => {
 
   expect(html).toContain("Runtime summary");
   expect(html).toContain("Style summary");
+  expect(html).toContain("Accessibility diagnostics");
+  expect(html).toContain("Contract summary");
   expect(html).toContain("Saved data status");
+  expect(html).toContain('data-widget-editor-section="faq-accordion.advanced.runtime-summary"');
+  expect(html).toContain('data-widget-editor-section="faq-accordion.advanced.style-summary"');
+  expect(html).toContain(
+    'data-widget-editor-section="faq-accordion.advanced.accessibility-diagnostics"'
+  );
+  expect(html).toContain('data-widget-editor-section="faq-accordion.advanced.contract-summary"');
+  expect(html).toContain(
+    'data-widget-editor-section="faq-accordion.advanced.normalization-support"'
+  );
   expect(html).toContain("Default open item");
   expect(html).not.toContain("Review repair");
   expect(html).not.toContain("Confirm repair");

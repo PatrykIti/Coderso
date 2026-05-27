@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -22,6 +22,10 @@ ships.
   `Visual=7` while the contract still declares `Visual=2`.
 - The current UI already separates layout, display behavior, color, and search
   visibility concerns more clearly than the stale contract suggests.
+- Playwright review evidence showed default FAQ theme tokens surfacing as
+  `Saved custom color` instead of `Theme default`.
+- Playwright review evidence also showed the color section still duplicating
+  `Spacing`, plus missing Hero-style palettes and contrast guidance.
 
 ## Sub-Tasks
 
@@ -55,6 +59,11 @@ Data flow:
 
 - Preserve the existing richer UI.
 - Align the contract and stable DOM metadata to that UI.
+- Keep the richer UI, but also remove Hero-parity drift discovered during the
+  browser review pass:
+  - theme-token colors must read as theme defaults,
+  - `Spacing` stays owned by `Layout and typography`,
+  - `Colors and panel style` gets palette and contrast guidance affordances.
 
 Error handling:
 
@@ -85,6 +94,27 @@ No API routes are added.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Update `_docs/_WIDGETS/FAQ.md`.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Codex aligned `faqAccordionEditorContract` with the rendered
+  FAQ section inventory and wired matching canonical section ids into the live
+  editor DOM metadata.
+- 2026-05-27: FAQ color authoring now treats shared theme tokens as
+  `Theme default`, adds FAQ palettes plus contrast guidance, and removes the
+  duplicated `Spacing` control from the colors section so ownership stays
+  aligned with `Layout and typography`.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- 2026-05-27: Fresh Playwright evidence confirms:
+  - Visual now shows `FAQ palettes`, `Contrast guidance`, and no duplicate
+    `Spacing` inside `Colors and panel style`.
+  - Advanced now reports default FAQ theme tokens as `Theme default` and
+    includes header color summaries.
+- 2026-05-27: Claude Playwright snapshot review returned `VERDICT: NO BLOCKERS`
+  after the final Wizard seed and Advanced diagnostics parity pass.
 
 ## Acceptance Criteria
 
