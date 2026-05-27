@@ -99,7 +99,7 @@ frontend via Playwright.
 
 - [x] TASK-339-01: Shared Block Settings Daily Live Preview Surface
 - [x] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
-- [ ] TASK-339-03: Contact Hero Color Parity
+- [x] TASK-339-03: Contact Hero Color Parity
 - [ ] TASK-339-04: CTA Banner Hero Section Parity
 - [ ] TASK-339-05: Testimonials Contract Truthfulness
 - [ ] TASK-339-06: Pricing Plans Contract Truthfulness
@@ -269,3 +269,8 @@ User-requested validation boundary:
   Claude Playwright review returned `NO BLOCKERS` after an explicit
   hero-vs-navigation snapshot comparison rejected a false-positive
   accessibility-tree reading of `input[type=color]`.
+- Done (2026-05-27): `TASK-339-03` expanded Contact beyond swatch-only parity
+  into a true hero-like style surface: palettes, heading/supporting-text/button
+  colors, bounded card/button radius controls, corrected theme-default clear
+  states, truthful runtime style ownership, and final Claude Playwright review
+  with `NO BLOCKERS`.

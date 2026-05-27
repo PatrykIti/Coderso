@@ -40,6 +40,7 @@ import {
   type ContactMapHeight,
   type ContactMaxWidth,
   type ContactPaddingX,
+  type ContactRadius,
   type ContactSocialPlatform,
   type ContactSpacing,
   type ContactVariantId,
@@ -49,7 +50,11 @@ import type {
   WidgetEditorSectionRole,
   WidgetEditorMode,
 } from "../../../../widgets/types";
-import { SharedColorControl } from "./SharedColorControl";
+import {
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorPickerValue,
+} from "./ClearableFields";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -92,10 +97,18 @@ const columnOptions: Array<{ id: ContactColumns; label: string }> = [
 ];
 
 const borderWidthOptions: Array<{ id: ContactBorderWidth; label: string }> = [
-  { id: "0", label: "0px" },
-  { id: "1", label: "1px" },
-  { id: "2", label: "2px" },
-  { id: "3", label: "3px" },
+  { id: "0", label: "0" },
+  { id: "1", label: "1" },
+  { id: "2", label: "2" },
+  { id: "3", label: "3" },
+];
+
+const radiusOptions: Array<{ id: ContactRadius; label: string }> = [
+  { id: "sm", label: "sm" },
+  { id: "md", label: "md" },
+  { id: "lg", label: "lg" },
+  { id: "xl", label: "xl" },
+  { id: "full", label: "full" },
 ];
 
 const fieldLayoutOptions: Array<{ id: ContactFieldLayout; label: string }> = [
@@ -139,6 +152,51 @@ const paddingXOptions: Array<{ id: ContactPaddingX; label: string }> = [
   { id: "md", label: "Default" },
   { id: "lg", label: "Roomy" },
 ];
+
+const contactPalettePresets = [
+  {
+    id: "light",
+    label: "Light",
+    style: {
+      background: "transparent",
+      surfaceColor: "#ffffff",
+      borderColor: "#e2e8f0",
+      textColor: "#0f172a",
+      mutedTextColor: "#475569",
+      buttonBackgroundColor: "#2563eb",
+      buttonTextColor: "#ffffff",
+      buttonBorderColor: "#2563eb",
+    },
+  },
+  {
+    id: "dark",
+    label: "Dark",
+    style: {
+      background: "#0f172a",
+      surfaceColor: "#111827",
+      borderColor: "#334155",
+      textColor: "#f8fafc",
+      mutedTextColor: "#cbd5e1",
+      buttonBackgroundColor: "#38bdf8",
+      buttonTextColor: "#082f49",
+      buttonBorderColor: "#38bdf8",
+    },
+  },
+  {
+    id: "brand",
+    label: "Brand",
+    style: {
+      background: "#eff6ff",
+      surfaceColor: "#ffffff",
+      borderColor: "#93c5fd",
+      textColor: "#1e3a8a",
+      mutedTextColor: "#1d4ed8",
+      buttonBackgroundColor: "#1d4ed8",
+      buttonTextColor: "#eff6ff",
+      buttonBorderColor: "#1d4ed8",
+    },
+  },
+] as const;
 
 const socialPlatformOptions: Array<{
   id: Exclude<ContactSocialPlatform, "custom">;
@@ -727,29 +785,97 @@ function FieldOrderList({
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback,
   onClear,
+  allowTransparent = false,
+  treatAsThemeDefaultValues,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
+  allowTransparent?: boolean;
+  treatAsThemeDefaultValues?: string[];
 }) {
+  const normalizedValue = value?.trim();
+  const isTransparent = normalizedValue === "transparent";
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+  );
+  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
+  const hasCustomValue =
+    hasClearableFieldValue(value) &&
+    !isTransparent &&
+    !isThemeDefaultValue &&
+    !isPickerRepresentableColorValue(value);
+  const pickerValue = resolveColorPickerValue(value, pickerFallback);
+
   return (
-    <SharedColorControl
+    <WidgetControlRow
+      id={id}
       label={label}
-      value={value}
-      onChange={onChange}
-      onClear={onClear}
-      placeholder={placeholder}
-      pickerFallback={pickerFallback}
-    />
+      actions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={!hasClearableFieldValue(value) || isThemeDefaultValue}
+        >
+          Clear
+        </Button>
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={pickerValue}
+              onChange={(event) => onChange(event.target.value)}
+              className="h-10 w-11 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-10 flex-wrap items-center gap-2">
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {isTransparent
+                  ? "Transparent"
+                  : hasCustomValue
+                    ? "Saved custom color"
+                    : hasClearableFieldValue(value) && !isThemeDefaultValue
+                      ? "Selected color"
+                      : "Theme default"}
+              </span>
+              {allowTransparent ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onChange("transparent")}
+                >
+                  Use transparent
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {hasCustomValue ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -1684,48 +1810,180 @@ export function ContactVisualEditor({
         title="Colors, borders, and surface styling"
         description="Configure section background and card surfaces shown in runtime output."
       >
+        <div className="space-y-2 rounded-md border border-border/70 p-3">
+          <p className="text-sm font-medium">Contact palettes</p>
+          <div className="flex flex-wrap gap-2">
+            {contactPalettePresets.map((preset) => (
+              <Button
+                key={preset.id}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => updateStyle(value, onChange, preset.style)}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Applying a palette writes explicit Contact colors for surfaces, text, and the submit
+            button. You can still override each field afterwards.
+          </p>
+        </div>
         <ColorField
+          id="contact.style.background"
           label="Section background"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
           onClear={() => clearStyleField(value, onChange, "background")}
-          placeholder="transparent or #f8fafc"
           pickerFallback="#ffffff"
+          allowTransparent
         />
         <ColorField
+          id="contact.style.surfaceColor"
           label="Card surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
-          placeholder="var(--color-bg) or #ffffff"
           pickerFallback="#ffffff"
+          treatAsThemeDefaultValues={["var(--color-bg)"]}
         />
         <ColorField
+          id="contact.style.borderColor"
           label="Card border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
-          placeholder="var(--color-border) or #e2e8f0"
+          onClear={() => clearStyleField(value, onChange, "borderColor")}
           pickerFallback="#e2e8f0"
+          treatAsThemeDefaultValues={["var(--color-border)"]}
         />
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Card border width</p>
-          <Select
-            value={normalized.style?.borderWidth ?? "1"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { borderWidth: next as ContactBorderWidth })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select border width" />
-            </SelectTrigger>
-            <SelectContent>
-              {borderWidthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <ColorField
+          id="contact.style.textColor"
+          label="Heading color"
+          value={normalized.style?.textColor}
+          onChange={(next) => updateStyle(value, onChange, { textColor: next })}
+          onClear={() => clearStyleField(value, onChange, "textColor")}
+          pickerFallback="#0f172a"
+          treatAsThemeDefaultValues={["var(--color-text)"]}
+        />
+        <ColorField
+          id="contact.style.mutedTextColor"
+          label="Supporting text color"
+          value={normalized.style?.mutedTextColor}
+          onChange={(next) => updateStyle(value, onChange, { mutedTextColor: next })}
+          onClear={() => clearStyleField(value, onChange, "mutedTextColor")}
+          pickerFallback="#475569"
+        />
+        <ColorField
+          id="contact.style.buttonBackgroundColor"
+          label="Submit button background"
+          value={normalized.style?.buttonBackgroundColor}
+          onChange={(next) => updateStyle(value, onChange, { buttonBackgroundColor: next })}
+          onClear={() => clearStyleField(value, onChange, "buttonBackgroundColor")}
+          pickerFallback="#2563eb"
+          allowTransparent
+          treatAsThemeDefaultValues={["var(--color-primary)"]}
+        />
+        <ColorField
+          id="contact.style.buttonTextColor"
+          label="Submit button text"
+          value={normalized.style?.buttonTextColor}
+          onChange={(next) => updateStyle(value, onChange, { buttonTextColor: next })}
+          onClear={() => clearStyleField(value, onChange, "buttonTextColor")}
+          pickerFallback="#ffffff"
+          treatAsThemeDefaultValues={["var(--color-bg)"]}
+        />
+        <ColorField
+          id="contact.style.buttonBorderColor"
+          label="Submit button border"
+          value={normalized.style?.buttonBorderColor}
+          onChange={(next) => updateStyle(value, onChange, { buttonBorderColor: next })}
+          onClear={() => clearStyleField(value, onChange, "buttonBorderColor")}
+          pickerFallback="#2563eb"
+          allowTransparent
+        />
+        <WidgetControlRow id="contact.style.borderWidth" label="Card border width">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.borderWidth ?? "1"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { borderWidth: next as ContactBorderWidth })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select border width" />
+              </SelectTrigger>
+              <SelectContent>
+                {borderWidthOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="contact.style.panelRadius" label="Card radius">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.panelRadius ?? "xl"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { panelRadius: next as ContactRadius })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select card radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="contact.style.buttonRadius" label="Submit button radius">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.buttonRadius ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { buttonRadius: next as ContactRadius })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select button radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+        <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Contrast guidance</p>
+          <p className="mt-1">Heading: check section titles against the card surface.</p>
+          <p className="mt-1">Supporting text: check helper copy, details, and map text.</p>
+          <p className="mt-1">
+            Submit button: verify button text stays readable on its background.
+          </p>
         </div>
       </EditorSection>
 

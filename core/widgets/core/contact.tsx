@@ -23,6 +23,7 @@ export type ContactSubmissionMode = "static" | "forms-runtime";
 export type ContactMapHeight = "sm" | "md" | "lg" | "xl";
 export type ContactMaxWidth = "none" | "md" | "lg" | "xl" | "2xl";
 export type ContactPaddingX = "none" | "sm" | "md" | "lg";
+export type ContactRadius = "sm" | "md" | "lg" | "xl" | "full";
 export type ContactSocialPlatform =
   | "x"
   | "linkedin"
@@ -108,8 +109,15 @@ export type ContactData = {
     surfaceColor?: string;
     borderColor?: string;
     borderWidth?: ContactBorderWidth;
+    textColor?: string;
+    mutedTextColor?: string;
+    buttonBackgroundColor?: string;
+    buttonTextColor?: string;
+    buttonBorderColor?: string;
     maxWidth?: ContactMaxWidth;
     paddingX?: ContactPaddingX;
+    panelRadius?: ContactRadius;
+    buttonRadius?: ContactRadius;
   };
   resolved?: ContactResolvedRuntimeData;
 };
@@ -184,6 +192,14 @@ const paddingXClassMap: Record<ContactPaddingX, string> = {
   sm: "px-2",
   md: "px-4",
   lg: "px-6",
+};
+
+const radiusClassMap: Record<ContactRadius, string> = {
+  sm: "rounded-sm",
+  md: "rounded-md",
+  lg: "rounded-lg",
+  xl: "rounded-xl",
+  full: "rounded-full",
 };
 
 const mapHeightClassMap: Record<ContactMapHeight, string> = {
@@ -268,6 +284,13 @@ const resolveContactMaxWidth = (value: string | undefined): ContactMaxWidth => {
 
 const resolveContactPaddingX = (value: string | undefined): ContactPaddingX => {
   if (value === "none" || value === "sm" || value === "md" || value === "lg") return value;
+  return "md";
+};
+
+const resolveContactRadius = (value: string | undefined): ContactRadius => {
+  if (value === "sm" || value === "md" || value === "lg" || value === "xl" || value === "full") {
+    return value;
+  }
   return "md";
 };
 
@@ -698,8 +721,15 @@ export const contactSchema = {
         surfaceColor: { type: "string" },
         borderColor: { type: "string" },
         borderWidth: { enum: ["0", "1", "2", "3"] },
+        textColor: { type: "string" },
+        mutedTextColor: { type: "string" },
+        buttonBackgroundColor: { type: "string" },
+        buttonTextColor: { type: "string" },
+        buttonBorderColor: { type: "string" },
         maxWidth: { enum: ["none", "md", "lg", "xl", "2xl"] },
         paddingX: { enum: ["none", "sm", "md", "lg"] },
+        panelRadius: { enum: ["sm", "md", "lg", "xl", "full"] },
+        buttonRadius: { enum: ["sm", "md", "lg", "xl", "full"] },
       },
     },
     resolved: {
@@ -809,13 +839,20 @@ export const contactDefaults: ContactData = {
   },
   style: {
     spacing: "md",
-    background: "transparent",
+    background: undefined,
     columns: "two",
     surfaceColor: "var(--color-bg)",
     borderColor: "var(--color-border)",
     borderWidth: "1",
+    textColor: undefined,
+    mutedTextColor: undefined,
+    buttonBackgroundColor: undefined,
+    buttonTextColor: undefined,
+    buttonBorderColor: undefined,
     maxWidth: "xl",
     paddingX: "md",
+    panelRadius: "xl",
+    buttonRadius: "md",
   },
 };
 
@@ -912,6 +949,13 @@ export const contactEditorContract: WidgetEditorContract = {
         "style.background",
         "style.borderColor",
         "style.borderWidth",
+        "style.textColor",
+        "style.mutedTextColor",
+        "style.buttonBackgroundColor",
+        "style.buttonTextColor",
+        "style.buttonBorderColor",
+        "style.panelRadius",
+        "style.buttonRadius",
       ],
     },
     {
@@ -1042,8 +1086,29 @@ export function normalizeContactData(data: ContactData): ContactData {
         styleDefaults.borderColor ?? "var(--color-border)"
       ),
       borderWidth: resolveContactBorderWidth(data.style?.borderWidth),
+      textColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.textColor)
+        : styleDefaults.textColor,
+      mutedTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.mutedTextColor)
+        : styleDefaults.mutedTextColor,
+      buttonBackgroundColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.buttonBackgroundColor)
+        : styleDefaults.buttonBackgroundColor,
+      buttonTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.buttonTextColor)
+        : styleDefaults.buttonTextColor,
+      buttonBorderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.buttonBorderColor)
+        : styleDefaults.buttonBorderColor,
       maxWidth: resolveContactMaxWidth(data.style?.maxWidth),
       paddingX: resolveContactPaddingX(data.style?.paddingX),
+      panelRadius: data.style?.panelRadius
+        ? resolveContactRadius(data.style?.panelRadius)
+        : (styleDefaults.panelRadius ?? "xl"),
+      buttonRadius: data.style?.buttonRadius
+        ? resolveContactRadius(data.style?.buttonRadius)
+        : (styleDefaults.buttonRadius ?? "md"),
     },
   };
 }
@@ -1153,6 +1218,8 @@ type ContactFieldControlProps = {
   required: boolean;
   name?: string;
   twoColumn: boolean;
+  textStyle?: CSSProperties;
+  fieldBorderStyle?: CSSProperties;
 };
 
 function ContactFieldControl({
@@ -1162,6 +1229,8 @@ function ContactFieldControl({
   required,
   name,
   twoColumn,
+  textStyle,
+  fieldBorderStyle,
 }: ContactFieldControlProps) {
   const fieldId = `${idBase}-${field}`;
   const fieldName = name ?? field;
@@ -1170,7 +1239,11 @@ function ContactFieldControl({
 
   return (
     <div className={wrapperClassName}>
-      <label htmlFor={fieldId} className="block text-sm font-medium text-[var(--color-text)]">
+      <label
+        htmlFor={fieldId}
+        className="block text-sm font-medium text-[var(--color-text)]"
+        style={textStyle}
+      >
         {settings.label}
       </label>
       {field === "message" ? (
@@ -1183,6 +1256,7 @@ function ContactFieldControl({
           className="h-28 w-full rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
           placeholder={settings.placeholder}
           data-contact-field={field}
+          style={fieldBorderStyle}
         />
       ) : (
         <input
@@ -1194,6 +1268,7 @@ function ContactFieldControl({
           className="w-full rounded-md border border-[var(--color-border)] px-3 py-2 text-sm"
           placeholder={settings.placeholder}
           data-contact-field={field}
+          style={fieldBorderStyle}
         />
       )}
     </div>
@@ -1326,6 +1401,8 @@ export function ContactBlock({
     }) ?? {};
 
   const panelBorderWidth = style.borderWidth ?? "1";
+  const panelRadius = style.panelRadius ?? "xl";
+  const buttonRadius = style.buttonRadius ?? "md";
   const panelStyle: CSSProperties =
     compactStyle({
       backgroundColor: resolveClearableStyleValue(style.surfaceColor),
@@ -1333,6 +1410,22 @@ export function ContactBlock({
       borderStyle: "solid",
       borderWidth: `${panelBorderWidth}px`,
     }) ?? {};
+  const headingTextStyle = compactStyle({
+    color: resolveClearableStyleValue(style.textColor),
+  });
+  const bodyTextStyle = compactStyle({
+    color: resolveClearableStyleValue(style.mutedTextColor),
+  });
+  const fieldBorderStyle = compactStyle({
+    borderColor: style.borderColor ?? "var(--color-border)",
+  });
+  const submitButtonStyle = compactStyle({
+    backgroundColor: resolveClearableStyleValue(style.buttonBackgroundColor),
+    color: resolveClearableStyleValue(style.buttonTextColor),
+    borderColor: resolveClearableStyleValue(style.buttonBorderColor) ?? "transparent",
+    borderStyle: "solid",
+    borderWidth: "1px",
+  });
 
   const contactIdBase = blockId ?? "contact";
   const sectionTitleId = normalizedData.title ? `${contactIdBase}-title` : undefined;
@@ -1398,7 +1491,11 @@ export function ContactBlock({
       {normalizedData.title || normalizedData.description ? (
         <div className={showForm ? "md:col-span-2" : undefined}>
           {normalizedData.title ? (
-            <h2 id={sectionTitleId} className="text-2xl font-semibold text-[var(--color-text)]">
+            <h2
+              id={sectionTitleId}
+              className="text-2xl font-semibold text-[var(--color-text)]"
+              style={headingTextStyle}
+            >
               {normalizedData.title}
             </h2>
           ) : null}
@@ -1409,6 +1506,7 @@ export function ContactBlock({
                 "text-sm text-[var(--color-text)]/75",
                 normalizedData.title ? "mt-2" : undefined
               )}
+              style={bodyTextStyle}
             >
               {normalizedData.description}
             </p>
@@ -1418,7 +1516,7 @@ export function ContactBlock({
 
       {showForm ? (
         <div
-          className={joinClasses("space-y-4 rounded-xl p-4", formOrderClass)}
+          className={joinClasses("space-y-4 p-4", radiusClassMap[panelRadius], formOrderClass)}
           style={panelStyle}
           role="group"
           aria-labelledby={formTitleId}
@@ -1426,7 +1524,11 @@ export function ContactBlock({
           data-contact-form-mode={form.submission?.mode ?? "static"}
         >
           {form.title ? (
-            <h3 id={formTitleId} className="text-lg font-semibold text-[var(--color-text)]">
+            <h3
+              id={formTitleId}
+              className="text-lg font-semibold text-[var(--color-text)]"
+              style={headingTextStyle}
+            >
               {form.title}
             </h3>
           ) : null}
@@ -1459,6 +1561,8 @@ export function ContactBlock({
                     required={formField.required}
                     name={formField.name}
                     twoColumn={twoColumnFields}
+                    textStyle={headingTextStyle}
+                    fieldBorderStyle={fieldBorderStyle}
                   />
                 ))}
               </div>
@@ -1470,13 +1574,18 @@ export function ContactBlock({
                   type="submit"
                   data-form-submit="1"
                   aria-busy="false"
-                  className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+                  className={joinClasses(
+                    "border bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]",
+                    radiusClassMap[buttonRadius]
+                  )}
+                  style={submitButtonStyle}
                 >
                   {form.submitLabel}
                 </button>
                 <p
                   className="hidden text-xs text-[var(--color-text)]/65"
                   data-form-embed-success="true"
+                  style={bodyTextStyle}
                 >
                   {formSuccessMessage}
                 </p>
@@ -1503,6 +1612,8 @@ export function ContactBlock({
                     }
                     required={requiredFields.has(field)}
                     twoColumn={twoColumnFields}
+                    textStyle={headingTextStyle}
+                    fieldBorderStyle={fieldBorderStyle}
                   />
                 ))}
               </div>
@@ -1511,12 +1622,20 @@ export function ContactBlock({
                   type="button"
                   data-form-submit="1"
                   aria-busy="false"
-                  className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+                  className={joinClasses(
+                    "border bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]",
+                    radiusClassMap[buttonRadius]
+                  )}
+                  style={submitButtonStyle}
                 >
                   {form.submitLabel}
                 </button>
                 {staticMessage.length > 0 ? (
-                  <p className="text-xs text-[var(--color-text)]/65" role="status">
+                  <p
+                    className="text-xs text-[var(--color-text)]/65"
+                    role="status"
+                    style={bodyTextStyle}
+                  >
                     {staticMessage}
                   </p>
                 ) : null}
@@ -1531,7 +1650,8 @@ export function ContactBlock({
 
       <div
         className={joinClasses(
-          "space-y-4 rounded-xl p-4 text-sm text-[var(--color-text)]/75",
+          "space-y-4 p-4 text-sm text-[var(--color-text)]/75",
+          radiusClassMap[panelRadius],
           detailsOrderClass
         )}
         style={panelStyle}
@@ -1541,7 +1661,11 @@ export function ContactBlock({
         data-contact-social-count={String(socialLinks.length)}
       >
         {contact.title ? (
-          <h3 id={detailsTitleId} className="text-lg font-semibold text-[var(--color-text)]">
+          <h3
+            id={detailsTitleId}
+            className="text-lg font-semibold text-[var(--color-text)]"
+            style={headingTextStyle}
+          >
             {contact.title}
           </h3>
         ) : null}
@@ -1551,11 +1675,14 @@ export function ContactBlock({
             <dl className="space-y-3">
               {details.map((detail) => (
                 <div key={detail.key} className="space-y-1">
-                  <dt className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65">
+                  <dt
+                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-text)]/65"
+                    style={bodyTextStyle}
+                  >
                     <ContactIcon icon={detail.icon} />
                     <span>{detail.label}</span>
                   </dt>
-                  <dd className="text-sm text-[var(--color-text)]/85">
+                  <dd className="text-sm text-[var(--color-text)]/85" style={bodyTextStyle}>
                     {formatDetailValue(detail.key, detail.value, detail.href)}
                   </dd>
                 </div>
@@ -1570,7 +1697,14 @@ export function ContactBlock({
               <li key={link.id}>
                 <a
                   {...link.linkAttrs}
-                  className="inline-flex rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--color-text)]/80 transition hover:border-[var(--color-primary)] hover:text-[var(--color-text)]"
+                  className={joinClasses(
+                    "inline-flex border border-[var(--color-border)] px-2 py-1 text-[var(--color-text)]/80 transition hover:border-[var(--color-primary)] hover:text-[var(--color-text)]",
+                    radiusClassMap[buttonRadius]
+                  )}
+                  style={{
+                    ...fieldBorderStyle,
+                    ...bodyTextStyle,
+                  }}
                 >
                   {link.label}
                 </a>
@@ -1582,15 +1716,27 @@ export function ContactBlock({
         {map.title || map.description || map.enabled ? (
           <div className="space-y-2">
             {map.title ? (
-              <h3 id={mapTitleId} className="text-base font-semibold text-[var(--color-text)]">
+              <h3
+                id={mapTitleId}
+                className="text-base font-semibold text-[var(--color-text)]"
+                style={headingTextStyle}
+              >
                 {map.title}
               </h3>
             ) : null}
             {map.description ? (
-              <p className="text-sm text-[var(--color-text)]/75">{map.description}</p>
+              <p className="text-sm text-[var(--color-text)]/75" style={bodyTextStyle}>
+                {map.description}
+              </p>
             ) : null}
             {showMap ? (
-              <div className="overflow-hidden rounded-md border border-[var(--color-border)]">
+              <div
+                className={joinClasses(
+                  "overflow-hidden border border-[var(--color-border)]",
+                  radiusClassMap[panelRadius]
+                )}
+                style={fieldBorderStyle}
+              >
                 <iframe
                   src={mapUrlState.safeUrl}
                   title={map.title || "Contact map"}
@@ -1605,6 +1751,7 @@ export function ContactBlock({
               <p
                 className="rounded-md border border-dashed px-3 py-2 text-xs text-[var(--color-text)]/65"
                 role="status"
+                style={bodyTextStyle}
               >
                 {map.fallbackCopy || "Map is unavailable."}
               </p>

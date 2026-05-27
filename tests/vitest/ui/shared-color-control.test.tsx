@@ -182,6 +182,51 @@ test("can hide the technical text input while keeping swatch overrides", () => {
   }
 });
 
+test("can treat known token values as theme defaults in swatch-only mode", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Surface"
+      value="var(--color-bg)"
+      onChange={onChange}
+      pickerFallback="#ffffff"
+      showValueInput={false}
+      treatAsThemeDefaultValues={["var(--color-bg)"]}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Theme default");
+    expect(view.container.textContent).not.toContain("Saved custom color");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("can expose a transparent shortcut in swatch-only mode", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Overlay"
+      value="transparent"
+      onChange={onChange}
+      pickerFallback="#ffffff"
+      showValueInput={false}
+      allowTransparent
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Transparent");
+    const transparentButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Use transparent")
+    );
+    expect(transparentButton).toBeTruthy();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("clear stays disabled when only fallback swatch state exists", () => {
   const onChange = vi.fn();
   const onClear = vi.fn();

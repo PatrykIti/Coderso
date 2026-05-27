@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Medium
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -93,3 +93,25 @@ No API routes are added.
 - Contact no longer exposes raw daily color value inputs.
 - Contact keeps the current richer section IA.
 - Contact color behavior matches the `hero` swatch-first daily-authoring model.
+
+## Completion Notes (2026-05-27)
+
+- Contact now uses hero-style daily color authoring:
+  - swatch-first color rows without raw value inputs,
+  - Light/Dark/Brand palette quick-apply,
+  - explicit heading/supporting-text/submit-button color ownership,
+  - bounded card/button radius controls,
+  - disabled `Clear` for theme-default states,
+  - `Use transparent` only where it matches the current hero-like behavior.
+- `core/widgets/core/contact.tsx` now owns the expanded runtime style contract
+  for text, button, and radius fields, so the Visual editor changes actually
+  render on the frontend.
+- Advanced remains read-only diagnostics with no live preview row and no Visual
+  duplication.
+- Claude Playwright snapshot review final result: `NO BLOCKERS`.
+- The temporary local reviewer admin used to unblock Playwright login was
+  removed from the local database after the review run.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/contact-editor-wave.test.tsx tests/vitest/widgets/contact.test.tsx tests/vitest/ui/shared-color-control.test.tsx`

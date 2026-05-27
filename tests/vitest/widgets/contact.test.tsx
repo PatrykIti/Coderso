@@ -70,6 +70,16 @@ test("contact renders semantic details, static form metadata, and enhanced map/s
           description: "Main office location.",
           height: "lg",
         },
+        style: {
+          ...contactDefaults.style,
+          textColor: "#112233",
+          mutedTextColor: "#334455",
+          buttonBackgroundColor: "#2563eb",
+          buttonTextColor: "#ffffff",
+          buttonBorderColor: "#1d4ed8",
+          panelRadius: "lg",
+          buttonRadius: "full",
+        },
       }}
       variant="form-right"
     />
@@ -99,6 +109,12 @@ test("contact renders semantic details, static form metadata, and enhanced map/s
   expect(html).toContain('data-contact-map="true"');
   expect(html).toContain('data-contact-max-width="xl"');
   expect(html).toContain('data-contact-padding-x="md"');
+  expect(html).toContain("#112233");
+  expect(html).toContain("#334455");
+  expect(html).toContain("#2563eb");
+  expect(html).toContain("#1d4ed8");
+  expect(html).toContain("rounded-lg");
+  expect(html).toContain("rounded-full");
   expect(html).toContain("Find us");
   expect(html).toContain("Main office location.");
 });
@@ -495,8 +511,15 @@ test("contact normalization keeps bounded defaults, field metadata, and static s
     spacing: "md",
     columns: "two",
     borderWidth: "1",
+    textColor: undefined,
+    mutedTextColor: undefined,
+    buttonBackgroundColor: undefined,
+    buttonTextColor: undefined,
+    buttonBorderColor: undefined,
     maxWidth: "xl",
     paddingX: "md",
+    panelRadius: "xl",
+    buttonRadius: "md",
   });
 });
 
@@ -597,8 +620,15 @@ test("contact validator accepts expanded schema and rejects unsupported nested k
           surfaceColor: "#ffffff",
           borderColor: "#cbd5e1",
           borderWidth: "2",
+          textColor: "#112233",
+          mutedTextColor: "#334455",
+          buttonBackgroundColor: "#2563eb",
+          buttonTextColor: "#ffffff",
+          buttonBorderColor: "#1d4ed8",
           maxWidth: "2xl",
           paddingX: "lg",
+          panelRadius: "lg",
+          buttonRadius: "full",
         },
       },
     })
@@ -708,6 +738,14 @@ test("contact editor render smoke reflects the new IA", () => {
   expect(visualHtml).toContain("Field labels, placeholders, and layout");
   expect(visualHtml).toContain("Section layout and spacing");
   expect(visualHtml).toContain("Social links");
+  expect(visualHtml).toContain("Contact palettes");
+  expect(visualHtml).toContain("Contrast guidance");
+  expect(visualHtml).toContain("Heading color");
+  expect(visualHtml).toContain("Supporting text color");
+  expect(visualHtml).toContain("Submit button background");
+  expect(visualHtml).toContain("Submit button radius");
+  expect(visualHtml).toContain('data-widget-control="contact.style.background"');
+  expect(visualHtml).toContain('data-widget-control="contact.style.textColor"');
 
   const advancedHtml = renderToString(
     <ContactAdvancedEditor

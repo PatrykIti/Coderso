@@ -295,6 +295,15 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
+  );
+
+const findColorInputByControl = (container: ParentNode, controlId: string) =>
+  container.querySelector(`[data-widget-control="${controlId}"] input[type="color"]`);
+
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
@@ -514,8 +523,50 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     setSelectValue(maxWidthSelect, "2xl");
     const paddingSelect = findSelectByOptions(view.container, ["none", "sm", "md", "lg"]);
     setSelectValue(paddingSelect, "lg");
+    const surfaceSection = findSection(view.container, "Colors, borders, and surface styling");
+
+    expect(surfaceSection?.textContent).toContain("Contact palettes");
+    expect(surfaceSection?.textContent).toContain("Contrast guidance");
+    expect(surfaceSection?.textContent).toContain("Heading color");
+    expect(surfaceSection?.textContent).toContain("Supporting text color");
+    expect(surfaceSection?.textContent).toContain("Submit button background");
+    expect(surfaceSection?.textContent).toContain("Submit button text");
+    expect(surfaceSection?.textContent).toContain("Submit button border");
+    expect(surfaceSection?.textContent).toContain("Card radius");
+    expect(surfaceSection?.textContent).toContain("Submit button radius");
+    expect(
+      findColorInputByControl(surfaceSection ?? view.container, "contact.style.background")
+    ).toBeTruthy();
+    expect(
+      findColorInputByControl(surfaceSection ?? view.container, "contact.style.surfaceColor")
+    ).toBeTruthy();
+    expect(
+      findColorInputByControl(surfaceSection ?? view.container, "contact.style.borderColor")
+    ).toBeTruthy();
+    expect(surfaceSection?.textContent).toContain("Use transparent");
+    setInputValue(
+      findColorInputByControl(surfaceSection ?? view.container, "contact.style.background"),
+      "#f8fafc"
+    );
+    expect(latestValue.style?.background).toBe("#f8fafc");
+    setInputValue(
+      findColorInputByControl(surfaceSection ?? view.container, "contact.style.textColor"),
+      "#112233"
+    );
+    setInputValue(
+      findColorInputByControl(
+        surfaceSection ?? view.container,
+        "contact.style.buttonBackgroundColor"
+      ),
+      "#1d4ed8"
+    );
+    expect(latestValue.style?.textColor).toBe("#112233");
+    expect(latestValue.style?.buttonBackgroundColor).toBe("#1d4ed8");
 
     expect(latestValue.style).toMatchObject({
+      background: "#f8fafc",
+      textColor: "#112233",
+      buttonBackgroundColor: "#1d4ed8",
       maxWidth: "2xl",
       paddingX: "lg",
     });

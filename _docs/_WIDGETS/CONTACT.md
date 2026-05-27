@@ -43,7 +43,8 @@ Glowny tryb codziennej edycji obejmuje:
 3. submission runtime binding do istniejącego Forms record
 4. contact details, labels, ikony, social links przez platform + profile name
 5. map location + display controls; editor buduje `map.embedUrl`
-6. colors, borders, width, padding, spacing, columns
+6. palettes, text colors, submit button colors, card/button radius, borders,
+   width, padding, spacing, columns
 
 `minimal` ukrywa form-field controls i pokazuje user-facing copy, zamiast
 pozostawiac mylace ustawienia formularza.
@@ -128,13 +129,20 @@ Advanced zostaje techniczny i Contact-local:
   },
   "style": {
     "spacing": "md",
-    "background": "transparent",
+    "background": "",
     "columns": "two",
     "surfaceColor": "var(--color-bg)",
     "borderColor": "var(--color-border)",
     "borderWidth": "1",
+    "textColor": "",
+    "mutedTextColor": "",
+    "buttonBackgroundColor": "",
+    "buttonTextColor": "",
+    "buttonBorderColor": "",
     "maxWidth": "xl",
-    "paddingX": "md"
+    "paddingX": "md",
+    "panelRadius": "xl",
+    "buttonRadius": "md"
   }
 }
 ```
@@ -216,8 +224,10 @@ renderu zamiast udawac aktywna wysylke.
 
 - `style.background` i `style.surfaceColor` sa clearable i usuwaja wymuszone
   style tła.
-- `borderColor` clear pozostaje shared owner scope z TASK-256-02; Contact tylko
-  konsumuje wynikowy shared contract.
+- `style.borderColor`, `style.textColor`, `style.mutedTextColor`,
+  `style.buttonBackgroundColor`, `style.buttonTextColor`, i
+  `style.buttonBorderColor` sa clearable z disabled-state gdy Contact jest w
+  stanie theme-default, zgodnie z hero-like daily authoring.
 
 ## Normalization Rules
 
