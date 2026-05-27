@@ -370,9 +370,16 @@ test("cta banner visual renders section-based IA", () => {
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Content copy");
   expect(html).toContain("Actions");
-  expect(html).toContain("Colors and button styles");
+  expect(html).toContain("Colors and Borders");
+  expect(html).toContain("CTA Banner palettes");
+  expect(html).toContain("Contrast guidance");
+  expect(html).toContain('data-widget-editor-section="cta-banner.visual.variant-layout"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.visual.content-copy"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.visual.actions"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.visual.colors-borders"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.visual.background-motion"');
   expect(html).toContain("Background and motion");
-  expect(html).toContain("Saved custom color");
+  expect(html).toContain("Theme default");
   expect(html).not.toContain('placeholder="var(--color-text)"');
   expect(html).not.toContain('placeholder="var(--color-primary)"');
   expect(html).not.toContain('placeholder="var(--color-bg)"');
@@ -394,6 +401,9 @@ test("cta banner advanced keeps diagnostics read-only", () => {
   expect(html).toContain("Visual owns color editing");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Runtime summary");
+  expect(html).toContain('data-widget-editor-section="cta-banner.advanced.style-diagnostics"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.advanced.authoring-boundaries"');
+  expect(html).toContain('data-widget-editor-section="cta-banner.advanced.runtime-summary"');
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("<pre");
   expect(html).not.toContain('placeholder="background token"');

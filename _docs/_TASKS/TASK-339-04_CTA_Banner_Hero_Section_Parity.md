@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01, TASK-336-19
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -98,3 +98,21 @@ No API routes are added.
 - CTA Banner no longer uses the coarse `Visual=2`, `Advanced=1` daily IA.
 - CTA Banner daily editing feels sectioned like `hero`, not bucketed.
 - Rendered section metadata and `editorContract` stay truthful.
+
+## Completion Notes (2026-05-27)
+
+- CTA Banner now exposes its already-rich daily UI through truthful section
+  owners instead of two coarse buckets. Visual owns:
+  `Variant and layout structure`, `Content copy`, `Actions`,
+  `Colors and Borders`, and `Background and motion`.
+- The `Colors and Borders` section now follows the practical Hero pattern:
+  palette presets, theme-default state handling, transparent affordances where
+  relevant, bounded border/radius controls, and contrast guidance.
+- `Advanced` stays read-only and truthfully split into `Style diagnostics`,
+  `Normalization and safeguards`, and `Runtime summary`, with the existing
+  block-layout and visibility summaries from the shared builder shell.
+- Claude snapshot review final result: `NO BLOCKERS`.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/widgets/ctaBanner.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`

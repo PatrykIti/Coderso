@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 976 | 2026-05-27 | CTA Banner hero section parity | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
 | 975 | 2026-05-27 | Contact hero color parity | CMS Widgets/Admin UI/Forms/Contracts/Playwright/QA/Docs |
 | 974 | 2026-05-27 | Navigation hero parity and contract truthfulness | CMS Widgets/Admin UI/Navigation/Contracts/Playwright/QA/Docs |
 | 973 | 2026-05-27 | Widget daily live preview surface | CMS Widgets/Admin UI/Builder/Preview/QA/Docs |

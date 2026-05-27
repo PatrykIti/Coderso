@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 23 tasks
+- **To Do:** 22 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1943 tasks
+- **Done:** 1944 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
-| TASK-339-04 | CTA Banner Hero Section Parity | High | Large | Replace coarse `Visual=2` / `Advanced=1` CTA Banner daily IA with a hero-like section split |
 | TASK-339-05 | Testimonials Contract Truthfulness | High | Large | Promote the richer rendered Testimonials UI into truthful contract ids/titles/roles |
 | TASK-339-06 | Pricing Plans Contract Truthfulness | High | Large | Promote the richer rendered Pricing Plans UI into truthful contract ids/titles/roles |
 | TASK-339-07 | FAQ Accordion Contract Truthfulness | High | Large | Promote the richer rendered FAQ Accordion UI into truthful contract ids/titles/roles |
@@ -78,6 +77,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-339-04 | CTA Banner Hero Section Parity | High | Large | Done (2026-05-27): CTA Banner now uses truthful hero-style section owners plus palette/default/contrast behavior in its daily color region, and Claude review found no blockers. |
 | TASK-339-03 | Contact Hero Color Parity | High | Medium | Done (2026-05-27): Contact now has hero-style swatch-first palettes, text/button/radius ownership, truthful runtime style fields, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
 | TASK-338 | Widget Contract Vitest Expectation Drift Repair | High | Medium | Done (2026-05-27): full `bun run test:vitest` is green again after aligning stale widget expectations with the current editor-ownership and runtime contract. |
 | TASK-339-02 | Navigation Hero Parity and Contract Truthfulness | High | Large | Done (2026-05-27): Navigation now uses seven hero-style daily sections, swatch-first colors, a truthful `editorContract`, and passed targeted lint/typecheck/Vitest plus Claude Playwright review with no blockers. |

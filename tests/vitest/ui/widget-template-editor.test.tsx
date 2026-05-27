@@ -677,7 +677,7 @@ test("widget template block settings render cta banner visual sections", () => {
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Content copy");
   expect(html).toContain("Actions");
-  expect(html).toContain("Colors and button styles");
+  expect(html).toContain("Colors and Borders");
 });
 
 test("widget template block settings render logo cloud visual sections", () => {

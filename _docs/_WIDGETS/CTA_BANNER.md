@@ -28,9 +28,8 @@ Sections:
 1. Variant and layout structure
 2. Content copy
 3. Actions
-4. Colors and button styles
-5. Border and spacing
-6. Background and motion
+4. Colors and Borders
+5. Background and motion
 
 Notes:
 
@@ -45,6 +44,9 @@ Notes:
   picker in Wizard/Visual. Legacy custom/hash/external `href` values stay
   backward-compatible as read-only replace/clear state instead of raw URL text
   inputs.
+- Colors now follow the same practical Hero model: palette presets, swatch-only
+  field editing, theme-default states, bounded radius controls, transparent
+  affordances where relevant, and a contrast guidance block.
 
 ### Advanced
 

@@ -563,12 +563,15 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     await flush();
     const layoutSection = getSectionByTitle(container, "Variant and layout structure");
     const actionsSection = getSectionByTitle(container, "Actions");
-    const colorsSection = getSectionByTitle(container, "Colors and button styles");
+    const colorsSection = getSectionByTitle(container, "Colors and Borders");
     const backgroundSection = getSectionByTitle(container, "Background and motion");
 
     expect(getButtonsByText(layoutSection, "Selected")).toHaveLength(1);
-    expect(colorsSection.textContent).toContain("Saved custom color");
+    expect(colorsSection.textContent).toContain("CTA Banner palettes");
+    expect(colorsSection.textContent).toContain("Contrast guidance");
+    expect(colorsSection.textContent).toContain("Theme default");
     expect(backgroundSection.textContent).toContain("Saved custom color");
+    expect(layoutSection.textContent).toContain("Padding");
     expect(findInputsByPlaceholder(colorsSection, "var(--color-text)")).toHaveLength(0);
     expect(findInputsByPlaceholder(colorsSection, "var(--color-primary)")).toHaveLength(0);
     expect(findInputsByPlaceholder(colorsSection, "var(--color-bg)")).toHaveLength(0);

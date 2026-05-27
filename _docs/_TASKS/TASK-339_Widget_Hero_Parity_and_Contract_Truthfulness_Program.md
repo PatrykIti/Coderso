@@ -100,7 +100,7 @@ frontend via Playwright.
 - [x] TASK-339-01: Shared Block Settings Daily Live Preview Surface
 - [x] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
 - [x] TASK-339-03: Contact Hero Color Parity
-- [ ] TASK-339-04: CTA Banner Hero Section Parity
+- [x] TASK-339-04: CTA Banner Hero Section Parity
 - [ ] TASK-339-05: Testimonials Contract Truthfulness
 - [ ] TASK-339-06: Pricing Plans Contract Truthfulness
 - [ ] TASK-339-07: FAQ Accordion Contract Truthfulness
@@ -274,3 +274,7 @@ User-requested validation boundary:
   colors, bounded card/button radius controls, corrected theme-default clear
   states, truthful runtime style ownership, and final Claude Playwright review
   with `NO BLOCKERS`.
+- Done (2026-05-27): `TASK-339-04` removed the last CTA Banner drift against
+  Hero by promoting its real section owners into the contract and aligning the
+  daily color/border region to the same palette/default/contrast shape.
+  Claude snapshot review returned `NO BLOCKERS`.
