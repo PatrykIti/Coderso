@@ -18,6 +18,8 @@ type SharedColorControlProps = {
   placeholder?: string;
   pickerFallback?: string;
   showValueInput?: boolean;
+  allowTransparent?: boolean;
+  treatAsThemeDefaultValues?: string[];
 };
 
 export function SharedColorControl({
@@ -31,10 +33,21 @@ export function SharedColorControl({
   placeholder,
   pickerFallback,
   showValueInput = true,
+  allowTransparent = false,
+  treatAsThemeDefaultValues,
 }: SharedColorControlProps) {
   const handleSwatchChange = onSwatchChange ?? onChange;
+  const normalizedValue = value?.trim();
   const hasValue = hasClearableFieldValue(value);
-  const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
+  const isTransparent = normalizedValue === "transparent";
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+  );
+  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
+  const hasCustomValue =
+    hasValue && !isTransparent && !isThemeDefaultValue && !isPickerRepresentableColorValue(value);
   const swatchColor = resolveColorSwatchValue(value, pickerFallback);
 
   return (
@@ -73,12 +86,23 @@ export function SharedColorControl({
               style={{ backgroundColor: swatchColor }}
             />
             <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-              {hasCustomValue
-                ? "Saved custom color"
-                : hasValue
-                  ? "Selected color"
-                  : "Theme default"}
+              {isTransparent
+                ? "Transparent"
+                : hasCustomValue
+                  ? "Saved custom color"
+                  : hasValue && !isThemeDefaultValue
+                    ? "Selected color"
+                    : "Theme default"}
             </span>
+            {allowTransparent ? (
+              <button
+                type="button"
+                className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground transition hover:bg-muted/50"
+                onClick={() => onChange("transparent")}
+              >
+                Use transparent
+              </button>
+            ) : null}
           </div>
         )}
       </div>
