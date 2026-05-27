@@ -50,8 +50,8 @@ test("content list exposes a strict v2 editor contract", () => {
     "content-list.visual.surface-colors",
     "content-list.visual.empty-state",
     "content-list.advanced.source-summary",
-    "content-list.advanced.runtime-summary",
     "content-list.advanced.style-summary",
+    "content-list.advanced.runtime-summary",
   ]);
   expect(
     widget.editorContract?.sections

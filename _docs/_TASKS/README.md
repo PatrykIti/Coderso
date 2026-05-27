@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 9 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1958 tasks
+- **Done:** 1959 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-340 | Widget Contract Bun Expectation Drift Repair | High | Small | Done (2026-05-27): full `bun run test:bun` is green again after aligning stale `content-list` and `posts-feed` Bun expectations with the current TASK-339 editor-contract order and read-only Advanced diagnostics. |
 | TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | Done (2026-05-27): the full widget wave is closed with shared live-preview removal, hero-parity color/section alignment across the dedicated leaves, residual contract sweep cleanup, and recorded Claude Playwright evidence per widget slice. |
 | TASK-339-16 | Report Docs Changelog and Closure | High | Medium | Done (2026-05-27): umbrella docs, task board, changelog indexes, and final evidence notes are synchronized for the full TASK-339 family, with broader security/perf scans explicitly left to the user. |
 | TASK-339-15 | Residual Minor Contract Truthfulness Sweep | Medium | Large | Done (2026-05-27): minor contract title/order/runtime-summary drift is closed across the remaining low-risk widgets without introducing fresh UI surfaces, and targeted residual suites plus quick admin passes are green. |
