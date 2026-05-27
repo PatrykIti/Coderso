@@ -2109,7 +2109,7 @@ export function EntryTeaserWizardEditor({
               updateSourceDataMode(value, onChange, next as EntryTeaserDataSourceMode)
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Source type">
               <SelectValue placeholder="Select data source mode" />
             </SelectTrigger>
             <SelectContent>
@@ -2140,7 +2140,7 @@ export function EntryTeaserWizardEditor({
                 }))
               }
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Mode">
                 <SelectValue placeholder="Select source mode" />
               </SelectTrigger>
               <SelectContent>
@@ -2183,7 +2183,7 @@ export function EntryTeaserVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        id="entry-teaser.visual.content-display"
+        id="entry-teaser.visual.variant-structure"
         mode="visual"
         role="content"
         title="Variant and structure"
@@ -2213,6 +2213,7 @@ export function EntryTeaserVisualEditor({
             <span className="text-sm">Show image</span>
             <Switch
               checked={normalized.fields?.showImage ?? true}
+              aria-label="Show image"
               onCheckedChange={(checked) => updateFields(value, onChange, { showImage: checked })}
             />
           </label>
@@ -2223,6 +2224,7 @@ export function EntryTeaserVisualEditor({
             <span className="text-sm">Show excerpt</span>
             <Switch
               checked={normalized.fields?.showExcerpt ?? true}
+              aria-label="Show excerpt"
               onCheckedChange={(checked) => updateFields(value, onChange, { showExcerpt: checked })}
             />
           </label>
@@ -2233,6 +2235,7 @@ export function EntryTeaserVisualEditor({
             <span className="text-sm">Show meta</span>
             <Switch
               checked={normalized.fields?.showMeta ?? true}
+              aria-label="Show meta"
               onCheckedChange={(checked) => updateFields(value, onChange, { showMeta: checked })}
             />
           </label>
@@ -2243,6 +2246,7 @@ export function EntryTeaserVisualEditor({
             <span className="text-sm">Show tags</span>
             <Switch
               checked={normalized.fields?.showTags ?? true}
+              aria-label="Show tags"
               onCheckedChange={(checked) => updateFields(value, onChange, { showTags: checked })}
             />
           </label>
@@ -2258,7 +2262,7 @@ export function EntryTeaserVisualEditor({
               updateFields(value, onChange, { tagLimit: Number.parseInt(next, 10) })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Tag limit">
               <SelectValue placeholder="Select tag limit" />
             </SelectTrigger>
             <SelectContent>
@@ -2288,7 +2292,7 @@ export function EntryTeaserVisualEditor({
       />
 
       <EditorSection
-        id="entry-teaser.visual.fallback"
+        id="entry-teaser.visual.fallback-state"
         mode="visual"
         role="content"
         title="Fallback state"
@@ -2304,6 +2308,7 @@ export function EntryTeaserVisualEditor({
             onChange={(event) => updateFallback(value, onChange, { title: event.target.value })}
             placeholder="No entry selected"
             maxLength={60}
+            aria-label="Fallback title"
           />
         </div>
         <div
@@ -2319,6 +2324,7 @@ export function EntryTeaserVisualEditor({
             rows={3}
             placeholder="Choose a source mode and content type."
             maxLength={200}
+            aria-label="Fallback description"
           />
         </div>
         <label
@@ -2331,6 +2337,7 @@ export function EntryTeaserVisualEditor({
           <span className="text-sm">Fallback to latest when featured is missing</span>
           <Switch
             checked={normalized.fallback?.fallbackToLatest ?? true}
+            aria-label="Fallback to latest when featured is missing"
             onCheckedChange={(checked) =>
               updateFallback(value, onChange, { fallbackToLatest: checked })
             }
@@ -2356,9 +2363,39 @@ export function EntryTeaserAdvancedEditor({
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Visual for public-facing teaser copy, layout, media, CTA,
+        fallback state, and style changes.
+      </p>
       <SourceDiagnosticsSection value={normalized} context={context} />
       <PresentationDiagnosticsSection value={normalized} variant={variant} />
       <RuntimeSnapshotSection value={value} context={context} />
+      <EditorSection
+        id="entry-teaser.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Entry Teaser v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="entry-teaser.advanced.contract.wizard"
+          label="Wizard owns"
+          path="source"
+          value="One-time source selection and setup."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="entry-teaser.advanced.contract.visual"
+          label="Visual owns"
+          path="variant"
+          value="Variant, section context, read-only source summary, teaser fields, layout/media, style, CTA, and fallback state."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="entry-teaser.advanced.contract.advanced"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only source diagnostics, presentation diagnostics, runtime summaries, and contract ownership."
+        />
+      </EditorSection>
     </div>
   );
 }

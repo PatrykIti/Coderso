@@ -663,6 +663,17 @@ test("EntryTeaser visual editor owns layout/media/style while advanced stays rea
       }
       expect(section.querySelector("input, select, textarea, button")).toBeNull();
     }
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing teaser copy, layout, media, CTA, fallback state, and style changes."
+    );
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("entry-teaser.advanced.contract-summary");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
     expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.textContent).toContain("Pending runtime resolution");
   } finally {

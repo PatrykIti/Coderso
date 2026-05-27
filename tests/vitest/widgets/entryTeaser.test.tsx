@@ -335,6 +335,11 @@ test("entry teaser editors render expected sections", () => {
   expect(advancedHtml).toContain("Source diagnostics");
   expect(advancedHtml).toContain("Presentation diagnostics");
   expect(advancedHtml).toContain("Runtime summary");
+  expect(advancedHtml).toContain("Contract summary");
+  expect(advancedHtml).toContain("Advanced mode is read-only.");
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="entry-teaser.advanced.contract-summary"'
+  );
   expect(advancedHtml).not.toContain("<select");
   expect(advancedHtml).not.toContain("<input");
   expect(advancedHtml).not.toContain("<textarea");

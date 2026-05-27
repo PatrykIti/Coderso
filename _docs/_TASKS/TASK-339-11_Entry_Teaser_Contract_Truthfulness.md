@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -23,6 +23,8 @@ ships.
 - The current UI already separates section context, source summary, teaser
   content, layout/media, CTA behavior, and fallback state; the contract lags
   behind that truth.
+- Browser review also confirmed the old Advanced flow drifted from Hero because
+  it lacked the top-level read-only banner and explicit contract summary.
 
 ## Sub-Tasks
 
@@ -56,11 +58,17 @@ Data flow:
 
 - Preserve the current richer UI and source/runtime behavior.
 - Align the contract and stable DOM metadata to that UI.
+- Keep Hero-style ownership boundaries:
+  - Wizard owns source selection only,
+  - Visual owns daily teaser presentation,
+  - Advanced stays read-only diagnostics only.
 
 Error handling:
 
 - Keep Advanced read-only.
 - Do not collapse the UI back to `Content display / Presentation`.
+- Do not let Advanced drift into a secondary daily-edit surface once the
+  Hero-style diagnostics framing lands.
 
 ## Security Contract
 
@@ -86,6 +94,23 @@ No API routes are added.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Update `_docs/_WIDGETS/ENTRY_TEASER.md`.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Entry Teaser now exports truthful Visual section ids/titles for
+  variant/structure, section context, source summary, teaser fields,
+  layout/media, style, CTA, and fallback state.
+- 2026-05-27: Advanced now includes the Hero-style read-only banner plus a
+  contract summary section, while remaining fully diagnostics-only.
+- 2026-05-27: Wizard and Visual source/presentation controls now expose stable
+  accessible names for the main select/input/switch fields used in browser
+  review.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/widgets/entryTeaser.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/ui/link-destination-field.test.tsx`
+- 2026-05-27: Final Claude Playwright snapshot review returned
+  `VERDICT: NO BLOCKERS`.
 
 ## Acceptance Criteria
 

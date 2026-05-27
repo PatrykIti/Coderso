@@ -74,6 +74,14 @@ Sections:
 1. Source diagnostics
 2. Presentation diagnostics
 3. Runtime summary
+4. Contract summary
+
+Notes:
+
+- Advanced now opens with an explicit read-only banner, matching the Hero
+  daily-tab pattern.
+- Wizard/Visual/Advanced ownership is also restated inside a read-only
+  contract summary instead of leaving that split implicit.
 
 ## Runtime Behavior
 
