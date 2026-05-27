@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 980 | 2026-05-27 | Gallery Mosaic contract truthfulness | CMS Widgets/Admin UI/Media/Contracts/Playwright/QA/Docs |
 | 979 | 2026-05-27 | FAQ Accordion contract truthfulness | CMS Widgets/Admin UI/FAQ/Contracts/Playwright/QA/Docs |
 | 978 | 2026-05-27 | Pricing Plans contract truthfulness | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
 | 977 | 2026-05-27 | Testimonials contract truthfulness | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |

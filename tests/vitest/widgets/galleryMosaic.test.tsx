@@ -477,7 +477,7 @@ test("gallery mosaic hover captions stay keyboard reachable for linked and stati
   expect(html).toContain('aria-label="Static frame"');
 });
 
-test("gallery mosaic wizard renders onboarding fields", () => {
+test("gallery mosaic wizard renders starter seed controls", () => {
   const html = renderToString(
     <GalleryMosaicWizardEditor
       value={galleryMosaicDefaults}
@@ -487,11 +487,14 @@ test("gallery mosaic wizard renders onboarding fields", () => {
     />
   );
 
-  expect(html).toContain("Gallery layout");
+  expect(html).toContain("Mosaic");
+  expect(html).toContain("Uniform Grid");
+  expect(html).toContain("Feature Left");
   expect(html).toContain("Section title");
   expect(html).toContain("Initial media count");
   expect(html).toContain("Configured media");
-  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).toContain('data-widget-control="gallery-mosaic.wizard.items.count"');
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.wizard.starter-media"');
   expect(html).not.toContain("Media library");
 });
 
@@ -512,6 +515,17 @@ test("gallery mosaic visual renders section-based IA", () => {
   expect(html).toContain("Overlay and caption controls");
   expect(html).toContain("Layout style");
   expect(html).toContain("Density and motion");
+  expect(html).toContain(
+    'data-widget-editor-section="gallery-mosaic.visual.variant-media-structure"'
+  );
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.visual.header-copy"');
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.visual.media-items-links"');
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.visual.interaction"');
+  expect(html).toContain(
+    'data-widget-editor-section="gallery-mosaic.visual.overlay-caption-controls"'
+  );
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.visual.layout-style"');
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.visual.density-motion"');
 });
 
 test("gallery mosaic advanced keeps read-only diagnostics scope", () => {
@@ -524,10 +538,19 @@ test("gallery mosaic advanced keeps read-only diagnostics scope", () => {
     />
   );
 
-  expect(html).toContain("Technical ratio and layout tokens");
-  expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Runtime summary");
-  expect(html).toContain("Authoring boundaries");
+  expect(html).toContain("Style summary");
+  expect(html).toContain("Accessibility diagnostics");
+  expect(html).toContain("Contract summary");
+  expect(html).toContain("Advanced mode is read-only.");
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.advanced.runtime-summary"');
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.advanced.style-summary"');
+  expect(html).toContain(
+    'data-widget-editor-section="gallery-mosaic.advanced.accessibility-diagnostics"'
+  );
+  expect(html).toContain('data-widget-editor-section="gallery-mosaic.advanced.contract-summary"');
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Media items and links");
+  expect(html).not.toContain("Normalize now");
+  expect(html).not.toContain("Reset to defaults");
 });

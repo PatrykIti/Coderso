@@ -17,16 +17,15 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 ## Editor Modes (current after TASK-050-13-02)
 
 ### Wizard (minimal onboarding)
-- read-only gallery layout summary
+- one-time gallery layout seed
 - read-only section title summary
-- read-only initial media count summary
+- one-time initial media count seed
 - read-only configured-media summary
 
 Wizard does not seed `header.description`; Visual owns supporting copy after
 setup. Wizard now points authors toward the final flow: Visual owns per-item
-captions, destinations, alt text, posters, lightbox, density, and motion
-controls, while Advanced owns confirm-gated support import/export for the
-schema payload.
+captions, destinations, alt text, posters, lightbox, overlay, density, and
+motion controls.
 
 ### Visual (primary editing mode)
 Sections:
@@ -59,6 +58,9 @@ Notes:
   Published pages are selectable, while older hand-typed/hash/external
   destinations stay visible as replace-or-clear compatibility state instead of
   editable raw URL fields.
+- Visual textboxes and comboboxes now use the same shared labeled-field
+  contract as Hero, including Gallery-local rows and the shared destination
+  picker.
 - Interaction controls now include an opt-in lightbox mode plus bounded
   `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
   and Visual explains that the link must be cleared before that tile can open
@@ -72,16 +74,15 @@ Notes:
   `slide-up`) stays reduced-motion safe.
 
 ### Advanced (technical-only)
-- Shared style ownership summary (read-only)
-- Configuration import/export with explicit confirmation before import
-- Confirm-gated normalization and reset support actions
 - Runtime summary rows for variant, media count, links, and interaction
+- Read-only style summary for ratio, gap, radius, overlay, density, and motion
+- Read-only accessibility diagnostics for heading/copy, alt coverage, poster
+  coverage, and link/lightbox behavior
+- Read-only contract summary for Wizard / Visual / Advanced ownership
 
 Advanced no longer duplicates the live shared style controls that Visual owns
 for ratio, gap, radius, caption position, and overlay. It no longer renders a
-raw payload snapshot. The bounded JSON import/export surface validates unknown
-fields and invalid enum values first, then requires confirmation before applying
-the config.
+raw payload snapshot or mutating support actions in the daily tab flow.
 
 ## Runtime Behavior Notes
 
@@ -115,10 +116,6 @@ the config.
   class maps for each variant.
 - Motion presets are opt-in and use static Tailwind `motion-safe:*` /
   `motion-reduce:*` classes. `none` remains the default.
-- Advanced import/export uses the normalized Gallery Mosaic payload only.
-  Invalid JSON, unknown nested fields, or invalid enum values are rejected
-  non-destructively with machine-readable error codes and paths. Valid imports
-  require explicit confirmation before mutation.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.
@@ -174,11 +171,10 @@ the config.
 
 - Exports `galleryMosaicEditorContract` with `version: 2`.
 - Contract target: Wizard is a read-only starter summary; Visual owns media,
-  captions, links, lightbox, density, and motion; Advanced is read-only runtime
-  diagnostics.
+  captions, links, lightbox, density, and motion; Advanced is read-only
+  runtime/style/accessibility/ownership diagnostics.
 - TASK-336-19 removed raw image/video/link/poster URL authoring from normal
   Visual flows. The contract still stores runtime-safe string paths, but the
   beginner UI uses media and page pickers plus read-only legacy state.
-- The Wizard contract now matches the current summary-only flow: layout, title,
-  count, and configured media are shown as read-only context before Visual
-  editing.
+- The Wizard contract now seeds layout and item count while keeping title and
+  configured-media summaries read-only before Visual editing.

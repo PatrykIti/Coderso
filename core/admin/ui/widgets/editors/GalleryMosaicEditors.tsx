@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
@@ -19,7 +18,6 @@ import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
-  galleryMosaicDefaults,
   galleryMosaicItemMax,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItems,
@@ -38,10 +36,13 @@ import {
   type GalleryMosaicRatio,
   type GalleryMosaicVariantId,
 } from "../../../../widgets/core/galleryMosaic";
-import type { WidgetEditorProps } from "../../../../widgets/types";
-import { ClearableFieldHeader } from "./ClearableFields";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: GalleryMosaicVariantId;
@@ -228,18 +229,28 @@ function resolveGalleryItemPreview(item: GalleryMosaicItem): GalleryItemPreviewS
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -280,6 +291,7 @@ function VariantCards({
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
@@ -288,6 +300,7 @@ function ColorField({
   helperText,
   onClear,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -305,39 +318,54 @@ function ColorField({
   const swatchColor = resolvePickerColor(value, pickerFallback);
 
   return (
-    <div className="space-y-2">
-      <ClearableFieldHeader
-        label={label}
-        value={value}
-        onClear={onClear}
-        onRestoreValue={onChange}
-      />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          aria-label={`${label} swatch`}
-          type="color"
-          value={swatchColor}
-          onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <div className="flex min-h-9 flex-wrap items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
-            style={{ backgroundColor: swatchColor }}
-          />
-          <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-            {hasCustomValue ? "Saved custom color" : hasValue ? "Selected color" : "Theme default"}
-          </span>
+    <WidgetControlRow
+      id={id}
+      label={label}
+      help={helperText}
+      path={id.replace("gallery-mosaic.", "")}
+      actions={
+        onClear ? (
+          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
+            Clear
+          </Button>
+        ) : null
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.5rem_1fr] gap-2">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={swatchColor}
+              onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
+              className="h-9 w-10 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-9 flex-wrap items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
+                style={{ backgroundColor: swatchColor }}
+              />
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {hasCustomValue
+                  ? "Saved custom color"
+                  : hasValue
+                    ? "Selected color"
+                    : "Theme default"}
+              </span>
+            </div>
+          </div>
+          {hasCustomValue ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
+              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
+            </p>
+          ) : null}
         </div>
-      </div>
-      {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
-      {hasCustomValue ? (
-        <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-          A saved custom color is configured. Pick a swatch to replace it, or clear the field.
-        </p>
-      ) : null}
-    </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -428,6 +456,62 @@ function applyColorWithExistingAlpha(currentValue: string | undefined, nextHex: 
   const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
   const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function describeGalleryHeadingStatus(value: GalleryMosaicData) {
+  const title = normalizeValue(value).header?.title?.trim();
+  return title && title.length > 0 ? title : "Missing section heading";
+}
+
+function describeGalleryDescriptionStatus(value: GalleryMosaicData) {
+  return normalizeValue(value).header?.description?.trim()
+    ? "Helper description is configured."
+    : "No helper description configured.";
+}
+
+function describeGalleryAltCoverage(items: GalleryMosaicItem[]) {
+  const itemsWithMedia = items.filter((item) => item.image?.trim() || item.video?.trim());
+  if (itemsWithMedia.length === 0) return "No configured media yet";
+  const withAlt = itemsWithMedia.filter((item) => item.alt?.trim()).length;
+  return `${withAlt}/${itemsWithMedia.length} media item${
+    itemsWithMedia.length === 1 ? "" : "s"
+  } have custom alt text`;
+}
+
+function describeGalleryPosterCoverage(items: GalleryMosaicItem[]) {
+  const videoItems = items.filter((item) => item.video?.trim());
+  if (videoItems.length === 0) return "No video items configured";
+  const withPoster = videoItems.filter((item) => item.poster?.trim()).length;
+  return `${withPoster}/${videoItems.length} video item${
+    videoItems.length === 1 ? "" : "s"
+  } have poster frames`;
+}
+
+function describeGalleryInteractionSummary(value: GalleryMosaicData, items: GalleryMosaicItem[]) {
+  const normalized = normalizeValue(value);
+  if ((normalized.interaction?.mode ?? "none") !== "lightbox") {
+    return "Static tiles";
+  }
+  const linkedItems = items.filter((item) => item.href?.trim()).length;
+  return linkedItems > 0
+    ? `Lightbox on unlinked items; ${linkedItems} linked item${
+        linkedItems === 1 ? "" : "s"
+      } keep navigation`
+    : `Lightbox, ${normalized.interaction?.zoom ?? "fit"} zoom`;
+}
+
+function describeGalleryStyleSummary(value: GalleryMosaicData) {
+  const normalized = normalizeValue(value);
+  return [
+    normalized.style?.ratio ?? "4:3",
+    normalized.style?.gap ?? "md",
+    normalized.style?.radius ?? "lg",
+  ].join(" · ");
+}
+
+function describeGalleryOverlaySummary(value: GalleryMosaicData) {
+  const normalized = normalizeValue(value);
+  return normalized.style?.overlay?.trim() ? "Overlay configured" : "Overlay cleared";
 }
 
 function updateItem(
@@ -580,57 +664,11 @@ function GalleryItemPreview({ item }: { item: GalleryMosaicItem }) {
   );
 }
 
-function TechnicalStyleSummary({ value }: { value: GalleryMosaicData }) {
-  const normalized = normalizeValue(value);
-  const style = normalized.style ?? galleryMosaicDefaults.style;
-
-  return (
-    <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-      <div className="space-y-1">
-        <p className="text-sm font-medium">Visual owns the current shared style fields.</p>
-        <p className="text-xs text-muted-foreground">
-          Ratio, gap, radius, caption position, and overlay stay editable in Visual for Gallery
-          Mosaic. Advanced remains diagnostic-only so shared fields do not have two competing
-          editors.
-        </p>
-      </div>
-      <dl className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-        <div>
-          <dt className="font-medium text-foreground">Ratio</dt>
-          <dd>{style?.ratio ?? "4:3"}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-foreground">Gap</dt>
-          <dd>{style?.gap ?? "md"}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-foreground">Radius</dt>
-          <dd>{style?.radius ?? "lg"}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-foreground">Caption</dt>
-          <dd>{style?.captionPosition ?? "inside"}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-foreground">Density</dt>
-          <dd>{style?.layoutDensity ?? "auto"}</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-foreground">Motion</dt>
-          <dd>{style?.motionPreset ?? "none"}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="font-medium text-foreground">Overlay</dt>
-          <dd>{style?.overlay ?? "cleared"}</dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
 export function GalleryMosaicWizardEditor({
   value,
+  onChange,
   variant,
+  onVariantChange,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
@@ -643,15 +681,10 @@ export function GalleryMosaicWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter media"
-      description="Review the current gallery layout and item count. Daily media content lives in Visual."
+      description="Seed the gallery layout and starter item count. Daily media content lives in Visual."
     >
       <div className="space-y-4">
-        <ReadonlyWidgetSummaryRow
-          id="gallery-mosaic.wizard.variant"
-          label="Gallery layout"
-          path="variant"
-          value={variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Mosaic"}
-        />
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
         <ReadonlyWidgetSummaryRow
           id="gallery-mosaic.wizard.header.title"
@@ -660,12 +693,33 @@ export function GalleryMosaicWizardEditor({
           value={normalized.header?.title ?? "No section title yet"}
         />
 
-        <ReadonlyWidgetSummaryRow
+        <WidgetControlRow
           id="gallery-mosaic.wizard.items.count"
           label="Initial media count"
           path="items.count"
-          value={`${items.length} item${items.length === 1 ? "" : "s"}`}
-        />
+        >
+          {(fieldProps) => (
+            <Select
+              value={String(items.length)}
+              onValueChange={(next) => setItemCount(value, onChange, Number(next))}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         <ReadonlyWidgetSummaryRow
           id="gallery-mosaic.wizard.items.media"
@@ -675,7 +729,7 @@ export function GalleryMosaicWizardEditor({
         />
         <p className="text-xs text-muted-foreground">
           After Wizard, use Visual for section title, media selection, captions, destinations, alt
-          text, posters, lightbox, density, and motion controls.
+          text, posters, lightbox, overlay, density, and motion controls.
         </p>
       </div>
     </WidgetEditorSection>
@@ -923,30 +977,39 @@ export function GalleryMosaicVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="gallery-mosaic.visual.variant-media-structure"
+        mode="visual"
+        role="visual"
         title="Variant and media structure"
         description="Choose gallery arrangement and deterministic item count."
       >
         <VariantCards value={resolveGalleryMosaicVariant(variant)} onChange={onVariantChange} />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Items count</p>
-          <Select value={String(items.length)} onValueChange={handleCountChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Item count grows or trims from the end. Use Add item and Remove for intentional per-item
-            edits.
-          </p>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.items.count"
+          label="Items count"
+          path="items.count"
+          help="Item count grows or trims from the end. Use Add item and Remove for intentional per-item edits."
+        >
+          {(fieldProps) => (
+            <Select value={String(items.length)} onValueChange={handleCountChange}>
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select count" />
+              </SelectTrigger>
+              <SelectContent>
+                {itemCountOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
         {featureLeftWarning ? (
           <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             {featureLeftWarning}
@@ -955,28 +1018,48 @@ export function GalleryMosaicVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.header-copy"
+        mode="visual"
+        role="content"
         title="Header copy"
         description="Edit section title and supporting description."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Gallery highlights"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={normalized.header?.description ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Visual storytelling block with media tiles."
-          />
-        </div>
+        <WidgetControlRow id="gallery-mosaic.header.title" label="Title" path="header.title">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={normalized.header?.title ?? ""}
+              onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+              placeholder="Gallery highlights"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="gallery-mosaic.header.description"
+          label="Description"
+          path="header.description"
+        >
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={normalized.header?.description ?? ""}
+              onChange={(event) =>
+                updateHeader(value, onChange, { description: event.target.value })
+              }
+              placeholder="Visual storytelling block with media tiles."
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.media-items-links"
+        mode="visual"
+        role="content"
         title="Media items and links"
         description="Choose gallery assets, captions, poster frames, and page destinations."
       >
@@ -1089,26 +1172,42 @@ export function GalleryMosaicVisualEditor({
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Caption</p>
-                  <Input
-                    value={item.caption ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { caption: event.target.value })
-                    }
-                    placeholder={`Media ${index + 1}`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Alt text</p>
-                  <Input
-                    value={item.alt ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { alt: event.target.value })
-                    }
-                    placeholder={`Gallery item ${index + 1}`}
-                  />
-                </div>
+                <WidgetControlRow
+                  id={`gallery-mosaic.items.${stableItemId}.caption`}
+                  label="Caption"
+                  path="items.caption"
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.caption ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { caption: event.target.value })
+                      }
+                      placeholder={`Media ${index + 1}`}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`gallery-mosaic.items.${stableItemId}.alt`}
+                  label="Alt text"
+                  path="items.alt"
+                >
+                  {(fieldProps) => (
+                    <Input
+                      id={fieldProps.id}
+                      value={item.alt ?? ""}
+                      onChange={(event) =>
+                        updateItem(value, onChange, index, { alt: event.target.value })
+                      }
+                      placeholder={`Gallery item ${index + 1}`}
+                      aria-labelledby={fieldProps["aria-labelledby"]}
+                      aria-describedby={fieldProps["aria-describedby"]}
+                    />
+                  )}
+                </WidgetControlRow>
                 <LinkDestinationField
                   fieldId={`gallery-mosaic-item-${stableItemId}-destination`}
                   label="Destination page"
@@ -1160,50 +1259,71 @@ export function GalleryMosaicVisualEditor({
                     ) : null}
                   </div>
                 ) : null}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Focus point</p>
-                  <Select
-                    value={item.objectPosition ?? "center"}
-                    onValueChange={(next) =>
-                      updateItem(value, onChange, index, {
-                        objectPosition: next as GalleryMosaicObjectPosition,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select focus point" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {objectPositionOptions.map((option) => (
-                        <SelectItem key={`gallery-object-position-${option.id}`} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Item ratio</p>
-                  <Select
-                    value={item.ratio ?? "inherit"}
-                    onValueChange={(next) =>
-                      updateItem(value, onChange, index, {
-                        ratio: next as GalleryMosaicItemRatio,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select item ratio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {itemRatioOptions.map((option) => (
-                        <SelectItem key={`gallery-item-ratio-${option.id}`} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <WidgetControlRow
+                  id={`gallery-mosaic.items.${stableItemId}.objectPosition`}
+                  label="Focus point"
+                  path="items.objectPosition"
+                >
+                  {(fieldProps) => (
+                    <Select
+                      value={item.objectPosition ?? "center"}
+                      onValueChange={(next) =>
+                        updateItem(value, onChange, index, {
+                          objectPosition: next as GalleryMosaicObjectPosition,
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                      >
+                        <SelectValue placeholder="Select focus point" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {objectPositionOptions.map((option) => (
+                          <SelectItem
+                            key={`gallery-object-position-${option.id}`}
+                            value={option.id}
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </WidgetControlRow>
+                <WidgetControlRow
+                  id={`gallery-mosaic.items.${stableItemId}.ratio`}
+                  label="Item ratio"
+                  path="items.ratio"
+                >
+                  {(fieldProps) => (
+                    <Select
+                      value={item.ratio ?? "inherit"}
+                      onValueChange={(next) =>
+                        updateItem(value, onChange, index, {
+                          ratio: next as GalleryMosaicItemRatio,
+                        })
+                      }
+                    >
+                      <SelectTrigger
+                        id={fieldProps.id}
+                        aria-labelledby={fieldProps["aria-labelledby"]}
+                        aria-describedby={fieldProps["aria-describedby"]}
+                      >
+                        <SelectValue placeholder="Select item ratio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {itemRatioOptions.map((option) => (
+                          <SelectItem key={`gallery-item-ratio-${option.id}`} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </WidgetControlRow>
               </div>
               {showDropAfter ? <div className="h-0.5 rounded bg-primary" /> : null}
             </div>
@@ -1221,59 +1341,77 @@ export function GalleryMosaicVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.interaction"
+        mode="visual"
+        role="content"
         title="Interaction"
         description="Choose whether gallery items stay static or open a widget-local lightbox."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Interaction mode</p>
-          <Select
-            value={interactionMode}
-            onValueChange={(next) =>
-              updateInteraction(value, onChange, {
-                mode: next as GalleryMosaicInteractionMode,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select interaction mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {interactionModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.interaction.mode"
+          label="Interaction mode"
+          path="interaction.mode"
+        >
+          {(fieldProps) => (
+            <Select
+              value={interactionMode}
+              onValueChange={(next) =>
+                updateInteraction(value, onChange, {
+                  mode: next as GalleryMosaicInteractionMode,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select interaction mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {interactionModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Lightbox zoom</p>
-          <Select
-            value={normalized.interaction?.zoom ?? "fit"}
-            onValueChange={(next) =>
-              updateInteraction(value, onChange, {
-                zoom: next as GalleryMosaicLightboxZoom,
-              })
-            }
-            disabled={interactionMode !== "lightbox"}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select lightbox zoom" />
-            </SelectTrigger>
-            <SelectContent>
-              {interactionZoomOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Lightbox stays off by default so existing gallery payloads keep the current click
-            behavior.
-          </p>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.interaction.zoom"
+          label="Lightbox zoom"
+          path="interaction.zoom"
+          help="Lightbox stays off by default so existing gallery payloads keep the current click behavior."
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.interaction?.zoom ?? "fit"}
+              onValueChange={(next) =>
+                updateInteraction(value, onChange, {
+                  zoom: next as GalleryMosaicLightboxZoom,
+                })
+              }
+              disabled={interactionMode !== "lightbox"}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select lightbox zoom" />
+              </SelectTrigger>
+              <SelectContent>
+                {interactionZoomOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         {linkedLightboxItems > 0 ? (
           <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -1284,33 +1422,46 @@ export function GalleryMosaicVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.overlay-caption-controls"
+        mode="visual"
+        role="visual"
         title="Overlay and caption controls"
         description="Adjust caption placement and overlay color for readability."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Caption position</p>
-          <Select
-            value={normalized.style?.captionPosition ?? "inside"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                captionPosition: next as GalleryMosaicCaptionPosition,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select caption position" />
-            </SelectTrigger>
-            <SelectContent>
-              {captionPositionOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.style.captionPosition"
+          label="Caption position"
+          path="style.captionPosition"
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.captionPosition ?? "inside"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  captionPosition: next as GalleryMosaicCaptionPosition,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select caption position" />
+              </SelectTrigger>
+              <SelectContent>
+                {captionPositionOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         <ColorField
+          id="gallery-mosaic.style.overlay"
           label="Overlay color"
           value={normalized.style?.overlay}
           onChange={(next) => updateStyle(value, onChange, { overlay: next })}
@@ -1328,130 +1479,163 @@ export function GalleryMosaicVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.layout-style"
+        mode="visual"
+        role="layout"
         title="Layout style"
         description="Set ratio, spacing, and corner radius for gallery tiles."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Ratio</p>
-          <Select
-            value={normalized.style?.ratio ?? "4:3"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { ratio: next as GalleryMosaicRatio })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select ratio" />
-            </SelectTrigger>
-            <SelectContent>
-              {ratioOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="gallery-mosaic.style.ratio" label="Ratio" path="style.ratio">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.ratio ?? "4:3"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { ratio: next as GalleryMosaicRatio })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select ratio" />
+              </SelectTrigger>
+              <SelectContent>
+                {ratioOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gap</p>
-          <Select
-            value={normalized.style?.gap ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { gap: next as GalleryMosaicGap })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gap" />
-            </SelectTrigger>
-            <SelectContent>
-              {gapOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="gallery-mosaic.style.gap" label="Gap" path="style.gap">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.gap ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { gap: next as GalleryMosaicGap })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select gap" />
+              </SelectTrigger>
+              <SelectContent>
+                {gapOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Radius</p>
-          <Select
-            value={normalized.style?.radius ?? "lg"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { radius: next as GalleryMosaicRadius })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select radius" />
-            </SelectTrigger>
-            <SelectContent>
-              {radiusOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="gallery-mosaic.style.radius" label="Radius" path="style.radius">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.radius ?? "lg"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { radius: next as GalleryMosaicRadius })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select radius" />
+              </SelectTrigger>
+              <SelectContent>
+                {radiusOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="gallery-mosaic.visual.density-motion"
+        mode="visual"
+        role="visual"
         title="Density and motion"
         description="Choose bounded responsive density presets and reduced-motion-safe entrances."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Layout density</p>
-          <Select
-            value={normalized.style?.layoutDensity ?? "auto"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                layoutDensity: next as GalleryMosaicLayoutDensity,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select density" />
-            </SelectTrigger>
-            <SelectContent>
-              {layoutDensityOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Density stays bounded to product presets. Gallery Mosaic does not accept raw
-            per-breakpoint column maps in widget data.
-          </p>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.style.layoutDensity"
+          label="Layout density"
+          path="style.layoutDensity"
+          help="Density stays bounded to product presets. Gallery Mosaic does not accept raw per-breakpoint column maps in widget data."
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.layoutDensity ?? "auto"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  layoutDensity: next as GalleryMosaicLayoutDensity,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select density" />
+              </SelectTrigger>
+              <SelectContent>
+                {layoutDensityOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Motion preset</p>
-          <Select
-            value={normalized.style?.motionPreset ?? "none"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                motionPreset: next as GalleryMosaicMotionPreset,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select motion" />
-            </SelectTrigger>
-            <SelectContent>
-              {motionPresetOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Motion presets respect reduced-motion preferences and stay off by default for backward
-            compatibility.
-          </p>
-        </div>
+        <WidgetControlRow
+          id="gallery-mosaic.style.motionPreset"
+          label="Motion preset"
+          path="style.motionPreset"
+          help="Motion presets respect reduced-motion preferences and stay off by default for backward compatibility."
+        >
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.motionPreset ?? "none"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  motionPreset: next as GalleryMosaicMotionPreset,
+                })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select motion" />
+              </SelectTrigger>
+              <SelectContent>
+                {motionPresetOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
       </EditorSection>
     </div>
   );
@@ -1459,51 +1643,26 @@ export function GalleryMosaicVisualEditor({
 
 export function GalleryMosaicAdvancedEditor({
   value,
-  onChange,
   variant,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
-  const [pendingAction, setPendingAction] = useState<"normalize" | "reset" | null>(null);
   const normalizedItems = normalizeGalleryMosaicItems(normalized.items);
   const linkedItems = normalizedItems.filter((item) => (item.href ?? "").trim().length > 0).length;
   const mediaItems = normalizedItems.filter(
     (item) => (item.image ?? "").trim().length > 0 || (item.video ?? "").trim().length > 0
   ).length;
 
-  const confirmPendingAction = () => {
-    if (pendingAction === "normalize") {
-      const next = normalizeValue(value);
-      onChange(next);
-    } else if (pendingAction === "reset") {
-      onChange(galleryMosaicDefaults);
-    }
-    setPendingAction(null);
-  };
-
   return (
     <div className="space-y-4">
-      <EditorSection
-        title="Technical ratio and layout tokens"
-        description="Visual owns the live shared style fields for Gallery Mosaic. Advanced stays diagnostic-only."
-      >
-        <TechnicalStyleSummary value={value} />
-      </EditorSection>
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Visual for public-facing Gallery Mosaic media, captions,
+        links, interaction, overlay, density, and layout changes.
+      </p>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Use confirm-gated support actions for deterministic fallback repair."
-      >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => setPendingAction("normalize")}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setPendingAction("reset")}>
-            Reset to defaults
-          </Button>
-        </div>
-      </EditorSection>
-
-      <EditorSection
+        id="gallery-mosaic.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime summary"
         description="Read-only Gallery Mosaic state for support. Change content and presentation in Visual."
       >
@@ -1535,51 +1694,114 @@ export function GalleryMosaicAdvancedEditor({
           id="gallery-mosaic-advanced-interaction"
           label="Interaction"
           path="interaction"
-          value={
-            normalized.interaction?.mode === "lightbox"
-              ? `Lightbox, ${normalized.interaction.zoom ?? "fit"} zoom`
-              : "Static tiles"
-          }
+          value={describeGalleryInteractionSummary(normalized, normalizedItems)}
         />
       </EditorSection>
 
       <EditorSection
-        title="Authoring boundaries"
-        description="This tab is intentionally read-only for authors."
+        id="gallery-mosaic.advanced.style-summary"
+        mode="advanced"
+        role="summary"
+        title="Style summary"
+        description="Read-only style summary for the current gallery presentation."
       >
         <ReadonlyWidgetSummaryRow
-          id="gallery-mosaic-advanced-daily-owner"
-          label="Daily editing"
-          value="Use Visual for captions, destinations, alt text, posters, lightbox, density, and motion."
+          id="gallery-mosaic-advanced-style"
+          label="Layout style"
+          path="style"
+          value={describeGalleryStyleSummary(normalized)}
         />
         <ReadonlyWidgetSummaryRow
-          id="gallery-mosaic-advanced-setup-owner"
-          label="Starter setup"
-          value="Wizard is only for first setup or an explicit Run setup again action."
+          id="gallery-mosaic-advanced-caption-position"
+          label="Caption position"
+          path="style.captionPosition"
+          value={normalized.style?.captionPosition ?? "inside"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-overlay"
+          label="Overlay"
+          path="style.overlay"
+          value={describeGalleryOverlaySummary(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-density"
+          label="Density"
+          path="style.layoutDensity"
+          value={normalized.style?.layoutDensity ?? "auto"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-motion"
+          label="Motion"
+          path="style.motionPreset"
+          value={normalized.style?.motionPreset ?? "none"}
         />
       </EditorSection>
 
-      <ConfirmActionDialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
-        }}
-        title={pendingAction === "reset" ? "Reset Gallery Mosaic?" : "Normalize Gallery Mosaic?"}
-        description={
-          pendingAction === "reset"
-            ? "Reset Gallery Mosaic to the default starter media, copy, interaction, and style."
-            : "Apply deterministic fallback values for Gallery Mosaic media, interaction, and style."
-        }
-        confirmLabel={
-          pendingAction === "reset" ? "Reset Gallery Mosaic" : "Normalize Gallery Mosaic"
-        }
-        tone={pendingAction === "reset" ? "destructive" : "warning"}
-        onConfirm={confirmPendingAction}
+      <EditorSection
+        id="gallery-mosaic.advanced.accessibility-diagnostics"
+        mode="advanced"
+        role="diagnostics"
+        title="Accessibility diagnostics"
+        description="Read-only copy and media diagnostics for the published gallery."
       >
-        {pendingAction === "reset"
-          ? "This replaces the current Gallery Mosaic configuration with defaults."
-          : "This preserves supported content while cleaning malformed structure."}
-      </ConfirmActionDialog>
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-heading-status"
+          label="Section heading"
+          path="header.title"
+          value={describeGalleryHeadingStatus(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-description-status"
+          label="Helper copy"
+          path="header.description"
+          value={describeGalleryDescriptionStatus(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-alt-coverage"
+          label="Alt text coverage"
+          path="items.alt"
+          value={describeGalleryAltCoverage(normalizedItems)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-poster-coverage"
+          label="Poster coverage"
+          path="items.poster"
+          value={describeGalleryPosterCoverage(normalizedItems)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-link-lightbox"
+          label="Link and lightbox behavior"
+          path="interaction"
+          value={describeGalleryInteractionSummary(normalized, normalizedItems)}
+        />
+      </EditorSection>
+
+      <EditorSection
+        id="gallery-mosaic.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Gallery Mosaic v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-setup-owner"
+          label="Wizard owns"
+          path="variant"
+          value="One-time layout seed and starter item count."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-visual-owner"
+          label="Visual owns"
+          path="header"
+          value="Header copy, media items, links, interaction, overlay, layout style, density, and motion."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-advanced-owner"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only runtime diagnostics, style summaries, accessibility checks, and contract ownership."
+        />
+      </EditorSection>
     </div>
   );
 }

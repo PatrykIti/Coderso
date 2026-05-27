@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/select";
 import { listPagesCached, type PageSummary } from "@/services/pagesClient";
 
+import { WidgetControlRow } from "./WidgetEditorControls";
+
 const EMPTY_DESTINATION_VALUE = "__coderso_link_empty__";
 const CUSTOM_DESTINATION_VALUE = "__coderso_link_custom__";
 const NO_PAGES_VALUE = "__coderso_link_no_pages__";
@@ -98,51 +100,55 @@ export function LinkDestinationField({
   };
 
   return (
-    <div
-      className="space-y-2"
-      data-link-destination-field={fieldId}
-      data-widget-control={fieldId}
-      data-widget-control-path={controlPath}
-      data-widget-control-ownership={controlPath ? "writable" : undefined}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium">{label}</p>
-        {trimmedValue ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            onClick={() => onChange("")}
-          >
-            Clear destination
-          </Button>
-        ) : null}
-      </div>
-
-      <Select value={selectedValue} disabled={disabled} onValueChange={handleSelectionChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Choose page" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={EMPTY_DESTINATION_VALUE}>{emptyLabel}</SelectItem>
-          {pages.length === 0 ? (
-            <SelectItem value={NO_PAGES_VALUE} disabled>
-              No pages available
-            </SelectItem>
-          ) : null}
-          {pages.map((page) => (
-            <SelectItem key={page.id} value={page.id}>
-              {page.title}
-            </SelectItem>
-          ))}
-          {trimmedValue && !selectedPage ? (
-            <SelectItem value={CUSTOM_DESTINATION_VALUE} disabled>
-              Saved custom destination
-            </SelectItem>
-          ) : null}
-        </SelectContent>
-      </Select>
+    <div className="space-y-2" data-link-destination-field={fieldId}>
+      <WidgetControlRow
+        id={fieldId}
+        label={label}
+        path={controlPath}
+        actions={
+          trimmedValue ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={() => onChange("")}
+            >
+              Clear destination
+            </Button>
+          ) : null
+        }
+      >
+        {(fieldProps) => (
+          <Select value={selectedValue} disabled={disabled} onValueChange={handleSelectionChange}>
+            <SelectTrigger
+              id={fieldProps.id}
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            >
+              <SelectValue placeholder="Choose page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={EMPTY_DESTINATION_VALUE}>{emptyLabel}</SelectItem>
+              {pages.length === 0 ? (
+                <SelectItem value={NO_PAGES_VALUE} disabled>
+                  No pages available
+                </SelectItem>
+              ) : null}
+              {pages.map((page) => (
+                <SelectItem key={page.id} value={page.id}>
+                  {page.title}
+                </SelectItem>
+              ))}
+              {trimmedValue && !selectedPage ? (
+                <SelectItem value={CUSTOM_DESTINATION_VALUE} disabled>
+                  Saved custom destination
+                </SelectItem>
+              ) : null}
+            </SelectContent>
+          </Select>
+        )}
+      </WidgetControlRow>
 
       {selectedPage ? (
         <p className="text-xs text-muted-foreground">

@@ -402,7 +402,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("GalleryMosaic wizard normalizes the variant selector and seeds deterministic item growth", async () => {
+test("GalleryMosaic wizard seeds layout selection and deterministic item growth", async () => {
   const { GalleryMosaicWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
@@ -441,23 +441,33 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
   const view = mount(<Harness />);
 
   try {
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(0);
-    expect(view.container.textContent).toContain("Gallery layout");
+    expect(
+      findSectionByTitle(view.container, "Starter media")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.wizard.starter-media");
     expect(view.container.textContent).toContain("Mosaic");
+    expect(view.container.textContent).toContain("Uniform Grid");
+    expect(view.container.textContent).toContain("Feature Left");
     expect(view.container.textContent).toContain("1 item");
-    expect(onVariantChangeSpy).not.toHaveBeenCalled();
-    expect(onChangeSpy).not.toHaveBeenCalled();
     expect(latestValue.header).toEqual({});
     expect(latestValue.items).toHaveLength(1);
     expect(latestValue.items.map((item) => item.id)).toEqual(["custom-1"]);
     expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead story"]);
     expect(view.container.textContent).toContain("Configured media");
     expect(view.container.textContent).toContain(
-      "After Wizard, use Visual for section title, media selection, captions, destinations, alt text, posters, lightbox, density, and motion controls."
+      "After Wizard, use Visual for section title, media selection, captions, destinations, alt text, posters, lightbox, overlay, density, and motion controls."
     );
     expect(findInputByPlaceholder(view.container, "Gallery highlights")).toBeUndefined();
     expect(findButtonByText(view.container, "pick-video-media")).toBeUndefined();
+
+    clickElement(findButtonByText(view.container, "Feature Left"));
+    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
+
+    const countSelect = view.container.querySelector("select");
+    setSelectValue(countSelect, "4");
+    expect(onChangeSpy).toHaveBeenCalled();
+    expect(latestValue.items).toHaveLength(4);
   } finally {
     view.cleanup();
   }
@@ -526,6 +536,35 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   const view = mount(<Harness />);
 
   try {
+    expect(
+      findSectionByTitle(view.container, "Variant and media structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.variant-media-structure");
+    expect(
+      findSectionByTitle(view.container, "Header copy")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.header-copy");
+    expect(
+      findSectionByTitle(view.container, "Media items and links")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.media-items-links");
+    expect(
+      findSectionByTitle(view.container, "Interaction")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.interaction");
+    expect(
+      findSectionByTitle(view.container, "Overlay and caption controls")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.overlay-caption-controls");
+    expect(
+      findSectionByTitle(view.container, "Layout style")?.getAttribute("data-widget-editor-section")
+    ).toBe("gallery-mosaic.visual.layout-style");
+    expect(
+      findSectionByTitle(view.container, "Density and motion")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.visual.density-motion");
     expect(view.container.textContent).toContain("Current media: Image");
     expect(view.container.textContent).toContain("Current media: Placeholder");
     expect(view.container.textContent).toContain("Image preview");
@@ -713,11 +752,10 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
   }
 });
 
-test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gated support actions", async () => {
+test("GalleryMosaic advanced editor keeps diagnostics read-only with truthful summary sections", async () => {
   const { GalleryMosaicAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
 
-  const onChangeSpy = vi.fn();
   let latestValue = {
     items: [
       {
@@ -743,16 +781,13 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gat
   const Harness = () => {
     const [value, setValue] = useState<GalleryMosaicData>(latestValue);
 
-    const handleChange = (next: GalleryMosaicData) => {
-      latestValue = next;
-      onChangeSpy(next);
-      setValue(next);
-    };
-
     return (
       <GalleryMosaicAdvancedEditor
         value={value}
-        onChange={handleChange}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
         variant="mosaic"
         onVariantChange={() => undefined}
       />
@@ -762,67 +797,58 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gat
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Visual owns the current shared style fields.");
-    expect(view.container.textContent).toContain("Normalization and safeguards");
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing Gallery Mosaic media, captions, links, interaction, overlay, density, and layout changes."
+    );
     expect(view.container.textContent).toContain("Runtime summary");
-    expect(view.container.textContent).toContain("Authoring boundaries");
+    expect(view.container.textContent).toContain("Style summary");
+    expect(view.container.textContent).toContain("Accessibility diagnostics");
+    expect(view.container.textContent).toContain("Contract summary");
     expect(view.container.querySelector("pre")).toBeNull();
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Style summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.style-summary");
+    expect(
+      findSectionByTitle(view.container, "Accessibility diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.accessibility-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("gallery-mosaic.advanced.contract-summary");
     expect(
       view.container.querySelectorAll(
         '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
       )
     ).toHaveLength(0);
-
-    clickElement(findButtonByText(view.container, "Normalize now"));
-    expect(view.container.textContent).toContain("Normalize Gallery Mosaic?");
-    expect(onChangeSpy).not.toHaveBeenCalled();
-    clickElement(findButtonByText(view.container, "confirm-action"));
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.header).toEqual(galleryMosaicDefaults.header);
-    expect(latestValue.items).toEqual([
-      {
-        id: "duplicate",
-        image: "/lead.jpg",
-        video: undefined,
-        alt: undefined,
-        poster: undefined,
-        caption: "Media highlight",
-        href: undefined,
-        objectPosition: "center",
-        ratio: "inherit",
-      },
-      {
-        id: "gallery-2",
-        image: undefined,
-        video: undefined,
-        alt: undefined,
-        poster: undefined,
-        caption: "Visual detail",
-        href: undefined,
-        objectPosition: "center",
-        ratio: "inherit",
-      },
-    ]);
-    expect(latestValue.style).toEqual({
-      ratio: "4:3",
-      gap: "md",
-      radius: "lg",
-      overlay: undefined,
-      captionPosition: "inside",
-      layoutDensity: "auto",
-      motionPreset: "none",
-    });
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
-    expect(view.container.querySelector('input[placeholder="rgba(15, 23, 42, 0.35)"]')).toBeNull();
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Section heading");
+    expect(view.container.textContent).toContain("Helper copy");
+    expect(view.container.textContent).toContain("Alt text coverage");
+    expect(view.container.textContent).toContain("Poster coverage");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
     expect(view.container.textContent).toContain(
-      "Use Visual for captions, destinations, alt text, posters, lightbox, density, and motion."
+      "Read-only runtime diagnostics, style summaries, accessibility checks, and contract ownership."
     );
-
-    clickElement(findButtonByText(view.container, "Reset to defaults"));
-    expect(view.container.textContent).toContain("Reset Gallery Mosaic?");
-    expect(latestValue).not.toEqual(galleryMosaicDefaults);
-    clickElement(findButtonByText(view.container, "confirm-action"));
-    expect(latestValue).toEqual(galleryMosaicDefaults);
+    expect(latestValue).toEqual(
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ id: "duplicate", image: "/lead.jpg" }),
+        ]),
+      })
+    );
   } finally {
     view.cleanup();
   }
@@ -885,7 +911,7 @@ test("GalleryMosaic visual editor updates header title, media picker, ordering, 
 
     const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
     const overlaySwatch = (overlaySection ?? view.container).querySelector(
-      'input[aria-label="Overlay color swatch"]'
+      '[data-widget-control="gallery-mosaic.style.overlay"] input[type="color"]'
     );
     expect(overlaySwatch).toBeInstanceOf(HTMLInputElement);
     expect(overlaySection?.textContent).toContain("The default overlay strength is 35%.");
