@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 26 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1940 tasks
 
 ---
@@ -40,6 +40,22 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
+| TASK-339-01 | Shared Block Settings Daily Live Preview Surface | High | Medium | Remove the shared live preview row from daily `Visual` / `Advanced` tabs while keeping unfinished Wizard preview support |
+| TASK-339-02 | Navigation Hero Parity and Contract Truthfulness | High | Large | Expand coarse Navigation daily IA and remove raw daily color value inputs |
+| TASK-339-03 | Contact Hero Color Parity | High | Medium | Keep Contact IA, but remove the remaining raw daily color value inputs |
+| TASK-339-04 | CTA Banner Hero Section Parity | High | Large | Replace coarse `Visual=2` / `Advanced=1` CTA Banner daily IA with a hero-like section split |
+| TASK-339-05 | Testimonials Contract Truthfulness | High | Large | Promote the richer rendered Testimonials UI into truthful contract ids/titles/roles |
+| TASK-339-06 | Pricing Plans Contract Truthfulness | High | Large | Promote the richer rendered Pricing Plans UI into truthful contract ids/titles/roles |
+| TASK-339-07 | FAQ Accordion Contract Truthfulness | High | Large | Promote the richer rendered FAQ Accordion UI into truthful contract ids/titles/roles |
+| TASK-339-08 | Gallery Mosaic Contract Truthfulness | High | Large | Promote the richer rendered Gallery Mosaic UI into truthful contract ids/titles/roles |
+| TASK-339-09 | Team Contract Truthfulness | High | Large | Promote the richer rendered Team UI into truthful contract ids/titles/roles |
+| TASK-339-10 | Rich Text Section Contract Truthfulness | High | Large | Promote the richer rendered Rich Text Section UI into truthful contract ids/titles/roles |
+| TASK-339-11 | Entry Teaser Contract Truthfulness | High | Large | Promote the richer rendered Entry Teaser UI into truthful contract ids/titles/roles |
+| TASK-339-12 | Product Gallery Contract Truthfulness | High | Large | Align Product Gallery Wizard / Visual / Advanced contracts with the current richer UI |
+| TASK-339-13 | Product Compare Contract Truthfulness | High | Large | Align Product Compare Wizard / Visual / Advanced contracts with the current richer UI |
+| TASK-339-14 | Timeline Contract Truthfulness | High | Large | Restore Timeline Wizard metadata and align the richer daily IA with the contract owner |
+| TASK-339-15 | Residual Minor Contract Truthfulness Sweep | Medium | Large | Close lower-risk title/order/runtime-summary drift after the larger hero-parity leaves settle |
+| TASK-339-16 | Report Docs Changelog and Closure | High | Medium | Final board/docs/changelog/evidence closure for the TASK-339 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -58,6 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
+| TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | In progress (2026-05-27): audit confirms shared daily live-preview drift, raw color-value drift in Contact/Navigation, and substantive contract truthfulness drift in Navigation, CTA Banner, Testimonials, Pricing Plans, FAQ Accordion, Gallery Mosaic, Team, Rich Text Section, Entry Teaser, Product Gallery, Product Compare, and Timeline |
 ---
 
 ## Done
