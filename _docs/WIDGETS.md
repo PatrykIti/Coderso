@@ -225,8 +225,8 @@ Zasady:
   Visual owns card copy/media/actions/layout and swatch-only colors with
   explicit control-path metadata, and Advanced shows read-only layout/content/
   presentation summaries without raw JSON payloads or normalization actions.
-- Logo Cloud follows the same TASK-336-19 contract: Wizard seeds only layout,
-  section title, logo count, and starter logo names; Visual owns logo images,
+- Logo Cloud follows the same TASK-336-19 contract: Wizard is now read-only
+  overview for current layout/count; Visual owns layout changes, logo images,
   accessible descriptions, destinations, CTA, motion, tile presentation, and
   swatch-only colors; Advanced shows read-only human diagnostics without raw
   JSON payloads, CSS-token text inputs, or normalize/reset mutations.
@@ -258,7 +258,7 @@ Zasady:
 | `section` | variant, heading, semantics/anchor, width, spacing, surface, borders, background media | read-only layout/surface/semantics summaries and normalized payload |
 | `grid-columns` | variant, column structure/labels/spans, gaps, cardized surface, per-column behavior | read-only span totals, slot drift, cardized state, override summary, normalized payload |
 | `split-layout` | starter layout, pane ratio, phone layout, spacing, alignment, slot guidance | read-only human split/phone/spacing/alignment diagnostics and saved layout summary without developer-facing implementation labels |
-| `stack` | one-time preset in Wizard; responsive direction, spacing, alignment, distribution, and wrapping in Visual | read-only runtime stack and support summaries without raw payload snapshots |
+| `stack` | guidance-only Wizard slot framing; preset choice plus responsive direction, spacing, alignment, distribution, and wrapping in Visual | read-only runtime stack and support summaries without raw payload snapshots |
 | `spacer` | height presets and editor guide | read-only runtime spacing and support summaries without raw payload snapshots |
 | `divider` | variant/label, line, width presets, color swatch, spacing presets | read-only runtime divider and support summaries without raw payload snapshots |
 

@@ -525,7 +525,10 @@ test("testimonials editors still render their expanded section labels in SSR smo
     />
   );
   expect(wizardHtml).toContain("Section copy");
-  expect(wizardHtml).toContain("Initial testimonials");
+  expect(wizardHtml).toContain("Testimonials count");
+  expect(wizardHtml).toContain("Use Visual to write the section eyebrow");
+  expect(wizardHtml).toContain("Visual owns testimonial style, count");
+  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
 
   const visualHtml = renderToString(
     <TestimonialsVisualEditor

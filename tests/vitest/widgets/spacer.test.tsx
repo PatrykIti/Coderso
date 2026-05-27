@@ -39,31 +39,25 @@ test("spacer renders defaults", () => {
 });
 
 test("spacer normalization keeps deterministic defaults", () => {
-  const normalizedResponsive = normalizeSpacerData(
-    {
-      height: {
-        desktop: "bad",
-        tablet: "bad",
-        mobile: "24",
-      },
+  const normalizedResponsive = normalizeSpacerData({
+    height: {
+      desktop: "bad",
+      tablet: "bad",
+      mobile: "24",
     },
-    "responsive"
-  );
+  });
   expect(normalizedResponsive.height?.desktop).toBe("16");
   expect(normalizedResponsive.height?.tablet).toBe("12");
   expect(normalizedResponsive.height?.mobile).toBe("24");
 
-  const normalizedFixed = normalizeSpacerData(
-    {
-      height: {
-        desktop: "48",
-        tablet: "10",
-        mobile: "8",
-      },
-      showGuideInEditor: false,
+  const normalizedFixed = normalizeSpacerData({
+    height: {
+      desktop: "48",
+      tablet: "10",
+      mobile: "8",
     },
-    "fixed"
-  );
+    showGuideInEditor: false,
+  });
   expect(normalizedFixed.height?.desktop).toBe("48px");
   expect(normalizedFixed.height?.tablet).toBe("10");
   expect(normalizedFixed.height?.mobile).toBe("8");
@@ -125,16 +119,13 @@ test("spacer accepts bounded viewport and clamp lengths", () => {
     "clamp(2rem, 5vw, 8rem)"
   );
 
-  const normalized = normalizeSpacerData(
-    {
-      height: {
-        desktop: "10VH",
-        tablet: "clamp( 2REM , 5VW , 8rem )",
-        mobile: "48",
-      },
+  const normalized = normalizeSpacerData({
+    height: {
+      desktop: "10VH",
+      tablet: "clamp( 2REM , 5VW , 8rem )",
+      mobile: "48",
     },
-    "responsive"
-  );
+  });
 
   expect(normalized.height).toEqual({
     desktop: "10vh",
@@ -175,16 +166,13 @@ test("spacer rejects unsafe custom lengths and falls back to defaults", () => {
   expect(normalizeSpacerCustomHeightInput("clamp(2rem, calc(5vw + 1rem), 8rem)")).toBeUndefined();
   expect(normalizeSpacerCustomHeightInput("clamp(2rem, 5vw, 8rem); color:red")).toBeUndefined();
 
-  const normalized = normalizeSpacerData(
-    {
-      height: {
-        desktop: "calc(100vh - 2rem)",
-        tablet: "clamp(2rem, 5rem, 8rem)",
-        mobile: "url(https://example.com)",
-      },
+  const normalized = normalizeSpacerData({
+    height: {
+      desktop: "calc(100vh - 2rem)",
+      tablet: "clamp(2rem, 5rem, 8rem)",
+      mobile: "url(https://example.com)",
     },
-    "responsive"
-  );
+  });
 
   expect(normalized.height).toEqual({
     desktop: "16",
@@ -215,16 +203,13 @@ test("spacer rejects unsafe custom lengths and falls back to defaults", () => {
 });
 
 test("spacer fixed variant preserves hidden custom heights while rendering desktop height", () => {
-  const normalized = normalizeSpacerData(
-    {
-      height: {
-        desktop: "24px",
-        tablet: "50dvh",
-        mobile: "clamp(24px, 4dvh, 96px)",
-      },
+  const normalized = normalizeSpacerData({
+    height: {
+      desktop: "24px",
+      tablet: "50dvh",
+      mobile: "clamp(24px, 4dvh, 96px)",
     },
-    "fixed"
-  );
+  });
 
   expect(normalized.height).toEqual({
     desktop: "24px",
@@ -327,6 +312,9 @@ test("spacer editors render expected sections", () => {
   );
   expect(wizardHtml).toContain("Spacer mode");
   expect(wizardHtml).toContain("Desktop height");
+  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
+  expect(wizardHtml).toContain("Visual owns the editor guide toggle after setup");
+  expect(wizardHtml).not.toContain("<select");
 
   const visualHtml = renderToString(
     <SpacerVisualEditor

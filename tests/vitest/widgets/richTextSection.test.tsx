@@ -419,6 +419,9 @@ test("rich text editors expose the updated wizard, visual, and advanced IA", () 
   );
 
   expect(wizardHtml).toContain("Output mode stays untouched in Wizard");
+  expect(wizardHtml).toContain("Single Column");
+  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
+  expect(wizardHtml).toContain("Use Visual to edit the eyebrow, title, heading level");
   expect(visualHtml).toContain("Body content");
   expect(visualHtml).toContain("Structured content blocks");
   expect(visualHtml).toContain("Title heading level");

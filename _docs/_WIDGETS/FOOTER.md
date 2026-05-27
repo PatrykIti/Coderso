@@ -37,15 +37,13 @@ icon-based social actions.
 
 ### Wizard
 - Layout variant selection.
-- Quick setup for visible columns: title plus the first link per visible column,
-  with explicit disclosure that additional links stay in Visual mode.
-- Brand basics: brand name, tagline, Media Library logo picking, and logo alt
-  text.
-- Legal basics: visibility toggle, copyright, localized Privacy/Terms labels,
-  and page-first destination pickers.
-- Social basics: visibility toggle, platform choices with profile
-  names/handles, custom destination page picking, custom platform label support,
-  and up to 8 quick social entries.
+- Read-only visible-columns summary; all column titles, links, order, and
+  hidden columns stay in Visual mode.
+- Read-only social-visibility summary. Saved social profiles stay preserved and
+  are edited in Visual.
+
+Brand content, legal labels/destinations, copyright text, and logo media now
+belong to Visual.
 
 ### Visual
 - Primary editing mode (Footer owns variant selection in Visual).
@@ -221,9 +219,10 @@ icon-based social actions.
 ## TASK-336-18 Editor Contract
 
 - Exports `footerEditorContract` with `version: 2`.
-- Contract target: Wizard seeds footer columns, brand, legal, and social basics;
-  Visual owns all daily link/contact/social/content and presentation controls;
-  Advanced is read-only runtime diagnostics.
+- Contract target: Wizard exposes a setup-only variant action plus read-only
+  visible-columns and social-visibility summaries; Visual owns all daily
+  link/contact/social/content and presentation controls; Advanced is read-only
+  runtime diagnostics.
 - `TASK-336-19` moves the previously writable Advanced layout controls into
   Visual, adds explicit section/control ownership metadata, and removes raw
   color text inputs from normal Footer authoring.

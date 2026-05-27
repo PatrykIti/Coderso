@@ -113,33 +113,6 @@ export type SectionData = {
   };
 };
 
-const sectionWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "Wizard seeds the one-time Section shape; Visual remains the daily Section owner after setup.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "heading.label",
-    reason:
-      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "heading.title",
-    reason:
-      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "heading.description",
-    reason:
-      "Wizard seeds starter heading copy; Visual remains the daily Section heading owner after setup.",
-    expiresWithTask: "TASK-336",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 const sectionVisualPresetDuplicateAllowances = [
   "heading.align",
   "layout.containerWidth",
@@ -156,8 +129,8 @@ const sectionVisualPresetDuplicateAllowances = [
 ].map((path) => ({
   path,
   reason:
-    "Visual quick presets batch-apply Section-owned fields; individual Visual controls remain the daily fine-tuning owners.",
-  expiresWithTask: "TASK-336",
+    "Visual quick presets batch-apply Section-owned fields; individual Visual controls remain the daily fine-tuning owners after the preset pass.",
+  expiresWithTask: "TASK-336-19",
 })) satisfies NonNullable<
   WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
 >;
@@ -180,8 +153,8 @@ export const sectionEditorContract: WidgetEditorContract = {
       id: "section.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: ["variant", "heading.label", "heading.title", "heading.description"],
-      allowedDuplicateWritablePaths: sectionWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant"],
     },
     {
       mode: "visual",
@@ -203,10 +176,7 @@ export const sectionEditorContract: WidgetEditorContract = {
         "style.borderWidth",
         "style.radius",
       ],
-      allowedDuplicateWritablePaths: [
-        sectionWizardVisualDuplicateAllowances[0],
-        ...sectionVisualPresetDuplicateAllowances,
-      ],
+      allowedDuplicateWritablePaths: sectionVisualPresetDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -226,10 +196,7 @@ export const sectionEditorContract: WidgetEditorContract = {
         "heading.titleColor",
         "heading.descriptionColor",
       ],
-      allowedDuplicateWritablePaths: [
-        ...sectionWizardVisualDuplicateAllowances.slice(1),
-        ...sectionHeadingAlignPresetAllowance,
-      ],
+      allowedDuplicateWritablePaths: [...sectionHeadingAlignPresetAllowance],
     },
     {
       mode: "visual",
@@ -318,6 +285,14 @@ export const sectionEditorContract: WidgetEditorContract = {
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["heading", "style", "style.backgroundMedia"],
+    },
+    {
+      mode: "advanced",
+      id: "section.advanced.authoring-boundaries",
+      title: "Authoring boundaries",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["editorContract"],
     },
   ],
 };

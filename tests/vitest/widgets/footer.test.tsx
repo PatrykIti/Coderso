@@ -589,7 +589,9 @@ test("footer wizard keeps quick setup scope", () => {
   );
 
   expect(html).toContain("Columns quick setup");
-  expect(html).toContain("Brand basics");
-  expect(html).toContain("Legal basics");
+  expect(html).toContain("Use Visual to edit brand logo");
   expect(html).toContain("Social basics");
+  expect(html).toContain("Visible columns");
+  expect(html).not.toContain("Add social");
+  expect(html).toContain('data-widget-control-readonly="true"');
 });

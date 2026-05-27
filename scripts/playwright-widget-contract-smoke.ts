@@ -512,9 +512,17 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     await page.waitForLoadState("domcontentloaded").catch(() => undefined);
     await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => undefined);
   }
+  async function fetchPages() {
+    const response = await page.context().request.get(adminUrl + "/api/pages", {
+      failOnStatusCode: false,
+    });
+    return {
+      ok: response.ok(),
+      status: response.status(),
+      text: await response.text(),
+    };
+  }
   async function verifyAuthenticated() {
-    await page.goto(adminUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await settle();
     const pagesResponse = await fetchPages();
     if (pagesResponse.ok) {
       requiredLogin.authenticated = true;
@@ -522,13 +530,6 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     }
     requiredLogin.authenticated = false;
     requiredLogin.error = "auth_state_invalid:" + pagesResponse.status;
-  }
-  async function fetchPages() {
-    return await page.evaluate(async () => {
-      const response = await fetch("/admin/api/pages", { credentials: "include" });
-      const text = await response.text();
-      return { ok: response.ok, status: response.status, text };
-    });
   }
   function duplicatePaths(modes, allowedDuplicateWritablePaths) {
     const allowed = new Set((allowedDuplicateWritablePaths || []).map((entry) => entry.path));
@@ -588,11 +589,19 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     return { ok: false, error: "widget_block_type_missing", matchedExpectedBlock: false };
   }
   async function openFixtureAndSelect(item, pageRow, adminPath) {
-    await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 }).catch(async () => {
-      await dismissCustomDirtyDialog();
-    });
+    await dismissCustomDirtyDialog();
+    await page
+      .goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 })
+      .catch(async () => {
+        await dismissCustomDirtyDialog();
+        await page.goto(adminPath, { waitUntil: "domcontentloaded", timeout: 20000 });
+      });
     await settle();
     await dismissCustomDirtyDialog();
+    const existingEditor = page.locator('[data-widget-editor="' + item.widgetType + '"]');
+    if ((await existingEditor.count()) > 0) {
+      return { ok: true, matchedExpectedBlock: true };
+    }
     return await selectFixtureBlock(item);
   }
   async function inspectMode(widgetType, mode) {
@@ -671,18 +680,25 @@ function buildAdminProbeCode(adminUrl: string, cases: WidgetSmokeCase[]) {
     }
     const adminPath = adminUrl + "/pages/" + encodeURIComponent(pageRow.id);
     const modes = [];
-    let selectError = null;
-    for (const mode of item.requiredModes) {
-      const selected = await openFixtureAndSelect(item, pageRow, adminPath);
-      if (!selected.ok) {
-        selectError = selected.error || "block_select_missing";
-        break;
-      }
-      modes.push(await inspectMode(item.widgetType, mode));
+    let selected = await openFixtureAndSelect(item, pageRow, adminPath);
+    if (!selected.ok) {
+      await settle();
+      selected = await openFixtureAndSelect(item, pageRow, adminPath);
     }
-    if (selectError) {
-      results.push({ widgetType: item.widgetType, status: "failed", pageId: pageRow.id, adminPath, modes, duplicateWritablePaths: [], error: selectError });
+    if (!selected.ok) {
+      results.push({
+        widgetType: item.widgetType,
+        status: "failed",
+        pageId: pageRow.id,
+        adminPath,
+        modes,
+        duplicateWritablePaths: [],
+        error: selected.error || "block_select_missing"
+      });
       continue;
+    }
+    for (const mode of item.requiredModes) {
+      modes.push(await inspectMode(item.widgetType, mode));
     }
     const hasMetadataGap = modes.some((mode) => mode.controlsWithoutPath > 0);
     const duplicates = hasMetadataGap ? [] : duplicatePaths(modes, item.allowedDuplicateWritablePaths || []);
@@ -1126,90 +1142,100 @@ async function main() {
         authStatePath
       ) {
         for (const item of selectedCases) {
-          const merged: Omit<AdminWidgetResult, "status" | "duplicateWritablePaths"> = {
-            widgetType: item.widgetType,
-            modes: [],
-          };
-          let directResult: AdminWidgetResult | null = null;
-          for (const mode of item.requiredModes) {
-            await runCommand(["playwright-cli", `-s=${playwrightSession}`, "close"]);
-            const modeOpen = await openPlaywrightSession(playwrightSession);
-            if (modeOpen.exitCode !== 0) {
-              const detail = (modeOpen.stderr || modeOpen.stdout).trim().replace(/\s+/g, " ");
-              merged.modes.push(
-                createFailedAdminMode(
-                  mode,
-                  detail
-                    ? `playwright_open_failed:${detail.slice(0, 240)}`
-                    : "playwright_open_failed"
-                )
-              );
-              continue;
-            }
-            const stateLoad = await runCommand([
-              "playwright-cli",
-              `-s=${playwrightSession}`,
-              "state-load",
-              authStatePath,
-            ]);
-            if (stateLoad.exitCode !== 0) {
-              const detail = (stateLoad.stderr || stateLoad.stdout).trim().replace(/\s+/g, " ");
-              merged.modes.push(
-                createFailedAdminMode(
-                  mode,
-                  detail
-                    ? `auth_state_load_failed:${detail.slice(0, 240)}`
-                    : "auth_state_load_failed"
-                )
-              );
-              continue;
-            }
-            const adminCodePath = `${scratchDir}/admin-probe-${item.widgetType}-${mode}.js`;
-            const modeCase: WidgetSmokeCase = { ...item, requiredModes: [mode] };
-            await writeCodeFile(adminCodePath, buildAdminProbeCode(args.adminUrl, [modeCase]));
-            try {
-              const adminResult = await runPlaywrightCode<{
-                login: { attempted: boolean; authenticated: boolean | null; error?: string | null };
-                results: AdminWidgetResult[];
-                error?: string;
-              }>(playwrightSession, adminCodePath);
-              report.admin.loginAttempted =
-                report.admin.loginAttempted || adminResult.login.attempted;
-              report.admin.authenticated =
-                report.admin.authenticated === false ? false : adminResult.login.authenticated;
-              if (adminResult.error) {
-                merged.modes.push(createFailedAdminMode(mode, adminResult.error));
-                continue;
-              }
-              const [modeResult] = adminResult.results;
-              if (!modeResult) {
-                merged.modes.push(createFailedAdminMode(mode, "admin_probe_result_missing"));
-                continue;
-              }
-              if (modeResult.status === "fixture-gap") {
-                directResult = modeResult;
-                break;
-              }
-              if (modeResult.error && modeResult.modes.length === 0) {
-                merged.pageId = modeResult.pageId;
-                merged.adminPath = modeResult.adminPath;
-                merged.modes.push(
-                  isAdminFixtureUnopenableError(modeResult.error)
-                    ? createAdminFixtureGapMode(mode, modeResult.error)
-                    : createFailedAdminMode(mode, modeResult.error)
-                );
-                continue;
-              }
-              merged.pageId = merged.pageId ?? modeResult.pageId;
-              merged.adminPath = merged.adminPath ?? modeResult.adminPath;
-              merged.modes.push(...modeResult.modes);
-            } catch (error) {
-              merged.modes.push(
-                createFailedAdminMode(mode, error instanceof Error ? error.message : String(error))
-              );
-            }
+          const widgetPlaywrightSession = resolvePlaywrightCliSessionName(
+            `${playwrightSession}-${item.widgetType}`
+          );
+          await runCommand(["playwright-cli", `-s=${widgetPlaywrightSession}`, "close"]);
+          const widgetOpen = await openPlaywrightSession(widgetPlaywrightSession);
+          if (widgetOpen.exitCode !== 0) {
+            const detail = (widgetOpen.stderr || widgetOpen.stdout).trim().replace(/\s+/g, " ");
+            report.admin.results.push(
+              finalizeAdminResult(item, {
+                widgetType: item.widgetType,
+                modes: item.requiredModes.map((mode) =>
+                  createFailedAdminMode(
+                    mode,
+                    detail
+                      ? `playwright_open_failed:${detail.slice(0, 240)}`
+                      : "playwright_open_failed"
+                  )
+                ),
+              })
+            );
+            continue;
           }
-          report.admin.results.push(directResult ?? finalizeAdminResult(item, merged));
+          const stateLoad = await runCommand([
+            "playwright-cli",
+            `-s=${widgetPlaywrightSession}`,
+            "state-load",
+            authStatePath,
+          ]);
+          if (stateLoad.exitCode !== 0) {
+            const detail = (stateLoad.stderr || stateLoad.stdout).trim().replace(/\s+/g, " ");
+            report.admin.results.push(
+              finalizeAdminResult(item, {
+                widgetType: item.widgetType,
+                modes: item.requiredModes.map((mode) =>
+                  createFailedAdminMode(
+                    mode,
+                    detail
+                      ? `auth_state_load_failed:${detail.slice(0, 240)}`
+                      : "auth_state_load_failed"
+                  )
+                ),
+              })
+            );
+            await runCommand(["playwright-cli", `-s=${widgetPlaywrightSession}`, "close"]);
+            continue;
+          }
+          const adminCodePath = `${scratchDir}/admin-probe-${item.widgetType}.js`;
+          await writeCodeFile(adminCodePath, buildAdminProbeCode(args.adminUrl, [item]));
+          try {
+            const adminResult = await runPlaywrightCode<{
+              login: { attempted: boolean; authenticated: boolean | null; error?: string | null };
+              results: AdminWidgetResult[];
+              error?: string;
+            }>(widgetPlaywrightSession, adminCodePath);
+            report.admin.loginAttempted =
+              report.admin.loginAttempted || adminResult.login.attempted;
+            report.admin.authenticated =
+              report.admin.authenticated === false ? false : adminResult.login.authenticated;
+            if (adminResult.error) {
+              report.admin.results.push(
+                finalizeAdminResult(item, {
+                  widgetType: item.widgetType,
+                  modes: item.requiredModes.map((mode) =>
+                    createFailedAdminMode(mode, adminResult.error ?? "admin_probe_failed")
+                  ),
+                })
+              );
+            } else {
+              const [widgetResult] = adminResult.results;
+              report.admin.results.push(
+                widgetResult ??
+                  finalizeAdminResult(item, {
+                    widgetType: item.widgetType,
+                    modes: item.requiredModes.map((mode) =>
+                      createFailedAdminMode(mode, "admin_probe_result_missing")
+                    ),
+                  })
+              );
+            }
+          } catch (error) {
+            report.admin.results.push(
+              finalizeAdminResult(item, {
+                widgetType: item.widgetType,
+                modes: item.requiredModes.map((mode) =>
+                  createFailedAdminMode(
+                    mode,
+                    error instanceof Error ? error.message : String(error)
+                  )
+                ),
+              })
+            );
+          } finally {
+            await runCommand(["playwright-cli", `-s=${widgetPlaywrightSession}`, "close"]);
+          }
         }
       }
       if (!args.skipFront && report.environment.frontReachable && !report.public.error) {

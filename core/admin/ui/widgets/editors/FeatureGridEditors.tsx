@@ -527,13 +527,12 @@ export function FeatureGridWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter setup"
-      description="Pick the starting layout, headline, and starter card labels."
+      description="Pick the starting layout only. Card count, daily copy, and card content live in Visual."
     >
       <div className="space-y-4">
         <div
           data-widget-control="feature-grid.wizard.variant"
-          data-widget-control-path="variant"
-          data-widget-control-ownership="writable"
+          data-widget-control-ownership="action"
           className="space-y-2"
         >
           <p className="text-sm font-medium">Feature grid style</p>
@@ -562,85 +561,16 @@ export function FeatureGridWizardEditor({
           </Select>
         </div>
 
-        <div
-          data-widget-control="feature-grid.wizard.header.title"
-          data-widget-control-path="header.title"
-          data-widget-control-ownership="writable"
-          className="space-y-2"
-        >
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Everything your team needs"
-          />
-        </div>
-
-        <div
-          data-widget-control="feature-grid.wizard.header.description"
-          data-widget-control-path="header.description"
-          data-widget-control-ownership="writable"
-          className="space-y-2"
-        >
-          <p className="text-sm font-medium">Section description</p>
-          <Textarea
-            value={normalized.header?.description ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Use focused cards to explain your strongest product capabilities."
-          />
-        </div>
-
-        <div
-          data-widget-control="feature-grid.wizard.items.count"
-          data-widget-control-path="items.count"
-          data-widget-control-ownership="writable"
-          className="space-y-2"
-        >
-          <p className="text-sm font-medium">Cards count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Basic card labels</p>
-          {items.map((item, index) => (
-            <div
-              key={item.id ?? `wizard-item-${index + 1}`}
-              data-widget-control={`feature-grid.wizard.items.${index}.title`}
-              data-widget-control-path="items.title"
-              data-widget-control-ownership="writable"
-              className="space-y-2 rounded-lg border p-3"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Card {index + 1}
-              </p>
-              <Input
-                value={item.title ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { title: event.target.value })
-                }
-                placeholder={`Feature ${index + 1}`}
-              />
-            </div>
-          ))}
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="feature-grid.wizard.items.count"
+          label="Cards count"
+          path="items.count"
+          value={`${items.length} card${items.length === 1 ? "" : "s"}`}
+        />
 
         <p className="text-xs text-muted-foreground">
-          Wizard is one-time starter setup. Use Visual for card descriptions, media, CTA links,
-          layout, and styling.
+          Wizard is one-time starter setup. Use Visual for card count, descriptions, media, CTA
+          links, layout, and styling.
         </p>
       </div>
     </WidgetEditorSection>
@@ -1160,6 +1090,7 @@ export function FeatureGridVisualEditor({
                         fieldId={`feature-grid-card-${index + 1}-cta-destination`}
                         label="CTA destination"
                         value={item.ctaHref ?? ""}
+                        controlPath="items.ctaHref"
                         disabled={item.ctaEnabled === false}
                         onChange={(next) => updateItem(value, onChange, index, { ctaHref: next })}
                         feedback={

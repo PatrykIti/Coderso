@@ -175,7 +175,7 @@ export const tabsEditorContract: WidgetEditorContract = {
       id: "tabs.wizard.structure-setup",
       title: "Starter tabs",
       role: "setup",
-      writablePaths: ["items.count", "options.defaultItemId"],
+      writablePaths: ["items.count"],
     },
     {
       mode: "visual",
@@ -195,6 +195,7 @@ export const tabsEditorContract: WidgetEditorContract = {
         "items.*.triggerDescription",
         "items.*.icon",
         "items.*.disabled",
+        "options.defaultItemId",
       ],
     },
     {

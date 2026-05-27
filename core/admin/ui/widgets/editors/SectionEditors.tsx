@@ -337,9 +337,6 @@ type SectionPresetOption = {
 
 const sectionControlPathById: Record<string, string | undefined> = {
   "section.wizard.variant": "variant",
-  "section.wizard.label": "heading.label",
-  "section.wizard.title": "heading.title",
-  "section.wizard.description": "heading.description",
 };
 
 function WidgetControlRow({ id, path, ownership, ...props }: WidgetControlRowProps) {
@@ -1246,16 +1243,13 @@ function SectionBackgroundPosterFields({
 }
 
 export function SectionWizardEditor({
-  value,
-  onChange,
+  value: _value,
+  onChange: _onChange,
   variant,
-  onVariantChange,
-  onBlockPatch,
 }: WidgetEditorProps<SectionData>) {
-  const normalized = normalizeValue(value);
-  const heading = normalized.heading ?? sectionHeadingDefaults;
-  const handleVariantChange = (next: string) =>
-    applySectionVariantPatch(next as SectionVariantId, onVariantChange, onBlockPatch);
+  const resolvedVariant = resolveSectionVariant(variant);
+  const variantLabel =
+    variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Default";
 
   return (
     <div className="space-y-4">
@@ -1264,59 +1258,19 @@ export function SectionWizardEditor({
         mode="wizard"
         role="setup"
         title="Section setup"
-        description="Pick the starter section wrapper and heading for this section."
+        description="Wizard now summarizes the saved section wrapper. Heading copy, spacing, and surface styling live in Visual."
       >
-        <WidgetControlRow id="section.wizard.variant" label="Section layout">
-          {() => (
-            <VariantCards value={resolveSectionVariant(variant)} onChange={handleVariantChange} />
-          )}
-        </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="section.wizard.variant"
+          label="Section layout"
+          path="variant"
+          value={variantLabel}
+        />
 
-        <WidgetControlRow id="section.wizard.label" label="Label">
-          {(fieldProps) => (
-            <Input
-              id={fieldProps.id}
-              value={heading.label ?? ""}
-              onChange={(event) => updateHeading(value, onChange, { label: event.target.value })}
-              placeholder="Section label (optional)"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-          )}
-        </WidgetControlRow>
-
-        <WidgetControlRow id="section.wizard.title" label="Section title">
-          {(fieldProps) => (
-            <Input
-              id={fieldProps.id}
-              value={heading.title ?? ""}
-              onChange={(event) => updateHeading(value, onChange, { title: event.target.value })}
-              placeholder="Section title"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-          )}
-        </WidgetControlRow>
-
-        <WidgetControlRow id="section.wizard.description" label="Description">
-          {(fieldProps) => (
-            <Textarea
-              id={fieldProps.id}
-              value={heading.description ?? ""}
-              onChange={(event) =>
-                updateHeading(value, onChange, { description: event.target.value })
-              }
-              placeholder="Short context for the section"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-          )}
-        </WidgetControlRow>
-
-        <p className="text-xs text-muted-foreground">
-          Surface colors and spacing are configured in Visual so the guided setup stays safe and
-          one-time only.
-        </p>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Wizard is one-time starter setup. Use Visual to change the section wrapper, write the
+          label, title, description, heading hierarchy, spacing, and surface styling.
+        </div>
       </WidgetEditorSection>
     </div>
   );
@@ -2630,6 +2584,29 @@ export function SectionAdvancedEditor({ value }: WidgetEditorProps<SectionData>)
           label="Visual effects"
           path="style"
           value={`Gradient angle ${clampAngle(normalized.style?.gradientAngle)} degrees, overlay ${clampOpacity(normalized.style?.overlayOpacity)}%, motion ${normalized.style?.motion ?? "none"}.`}
+        />
+      </WidgetEditorSection>
+      <WidgetEditorSection
+        title="Authoring boundaries"
+        description="Read-only summary of which editor mode owns daily section changes."
+        id="section.advanced.authoring-boundaries"
+        mode="advanced"
+        role="summary"
+      >
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.boundary-wizard"
+          label="Wizard"
+          value="One-time setup affordance only."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.boundary-visual"
+          label="Visual"
+          value="Owns daily heading, layout, surface, media, and semantics editing."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="section.advanced.boundary-advanced"
+          label="Advanced"
+          value="Read-only diagnostics and support summaries only."
         />
       </WidgetEditorSection>
     </div>

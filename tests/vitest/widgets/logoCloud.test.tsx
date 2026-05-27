@@ -443,10 +443,12 @@ test("logo cloud wizard renders onboarding fields", () => {
     />
   );
 
-  expect(html).toContain("Starter setup");
-  expect(html).toContain("Logo cloud layout");
-  expect(html).toContain("Section title");
-  expect(html).toContain("Starter logo names");
+  expect(html).toContain("Starter overview");
+  expect(html).toContain("Current layout");
+  expect(html).toContain("Logo count");
+  expect(html).toContain(
+    "Use Visual to change layout, adjust logo count, write the section headline, add logo names, upload images, and connect destinations."
+  );
   expect(html).not.toContain("Current image");
   expect(html).not.toContain("Alt text");
   expect(html).not.toContain("Media library");

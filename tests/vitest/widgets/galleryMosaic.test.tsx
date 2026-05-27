@@ -490,7 +490,9 @@ test("gallery mosaic wizard renders onboarding fields", () => {
   expect(html).toContain("Gallery layout");
   expect(html).toContain("Section title");
   expect(html).toContain("Initial media count");
-  expect(html).toContain("import/export JSON");
+  expect(html).toContain("Configured media");
+  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).not.toContain("Media library");
 });
 
 test("gallery mosaic visual renders section-based IA", () => {
@@ -523,9 +525,9 @@ test("gallery mosaic advanced keeps read-only diagnostics scope", () => {
   );
 
   expect(html).toContain("Technical ratio and layout tokens");
-  expect(html).toContain("Configuration import and export");
   expect(html).toContain("Normalization and safeguards");
   expect(html).toContain("Runtime summary");
+  expect(html).toContain("Authoring boundaries");
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Media items and links");
 });

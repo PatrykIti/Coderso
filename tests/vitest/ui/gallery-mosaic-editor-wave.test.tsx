@@ -442,45 +442,22 @@ test("GalleryMosaic wizard normalizes the variant selector and seeds determinist
 
   try {
     const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(2);
-    expect(selects[0]?.value).toBe("mosaic");
-
-    setSelectValue(selects[0], "feature-left");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("feature-left");
-    expect(selects[0]?.value).toBe("feature-left");
-
-    setInputValue(findInputByPlaceholder(view.container, "Gallery highlights"), "Customer stories");
-    setSelectValue(selects[1], "3");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.header).toEqual({
-      title: "Customer stories",
-      description: galleryMosaicDefaults.header?.description,
-    });
-    expect(latestValue.items).toHaveLength(3);
-    expect(latestValue.items.map((item) => item.id)).toEqual([
-      "custom-1",
-      "gallery-2",
-      "gallery-3",
-    ]);
-    expect(latestValue.items.map((item) => item.caption)).toEqual([
-      "Lead story",
-      "Visual detail",
-      "Story frame",
-    ]);
-    expect(view.container.textContent).toContain("image/*,video/*");
+    expect(selects).toHaveLength(0);
+    expect(view.container.textContent).toContain("Gallery layout");
+    expect(view.container.textContent).toContain("Mosaic");
+    expect(view.container.textContent).toContain("1 item");
+    expect(onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.header).toEqual({});
+    expect(latestValue.items).toHaveLength(1);
+    expect(latestValue.items.map((item) => item.id)).toEqual(["custom-1"]);
+    expect(latestValue.items.map((item) => item.caption)).toEqual(["Lead story"]);
+    expect(view.container.textContent).toContain("Configured media");
     expect(view.container.textContent).toContain(
-      "After Wizard, use Visual for captions, destinations, alt text, posters, lightbox, density, and motion controls, or Advanced to import/export JSON."
+      "After Wizard, use Visual for section title, media selection, captions, destinations, alt text, posters, lightbox, density, and motion controls."
     );
-
-    await React.act(async () => {
-      findButtonByText(view.container, "pick-video-media")?.click();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    expect(latestValue.items[0]?.video).toBe("/media/launch.mp4");
-    expect(latestValue.items[0]?.image).toBeUndefined();
-    expect(latestValue.items[0]?.caption).toBe("Launch clip");
+    expect(findInputByPlaceholder(view.container, "Gallery highlights")).toBeUndefined();
+    expect(findButtonByText(view.container, "pick-video-media")).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -786,9 +763,9 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gat
 
   try {
     expect(view.container.textContent).toContain("Visual owns the current shared style fields.");
-    expect(view.container.textContent).toContain("Configuration import and export");
     expect(view.container.textContent).toContain("Normalization and safeguards");
     expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain("Authoring boundaries");
     expect(view.container.querySelector("pre")).toBeNull();
     expect(
       view.container.querySelectorAll(
@@ -837,135 +814,15 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with confirm-gat
     });
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
     expect(view.container.querySelector('input[placeholder="rgba(15, 23, 42, 0.35)"]')).toBeNull();
+    expect(view.container.textContent).toContain(
+      "Use Visual for captions, destinations, alt text, posters, lightbox, density, and motion."
+    );
 
     clickElement(findButtonByText(view.container, "Reset to defaults"));
     expect(view.container.textContent).toContain("Reset Gallery Mosaic?");
     expect(latestValue).not.toEqual(galleryMosaicDefaults);
     clickElement(findButtonByText(view.container, "confirm-action"));
     expect(latestValue).toEqual(galleryMosaicDefaults);
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("GalleryMosaic advanced editor exports current config and imports validated JSON non-destructively", async () => {
-  const { GalleryMosaicAdvancedEditor } =
-    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
-
-  const onChangeSpy = vi.fn();
-  let latestValue: GalleryMosaicData = {
-    items: [
-      {
-        id: "gallery-1",
-        image: "/lead.jpg",
-        caption: "Lead frame",
-      },
-    ],
-    style: {
-      ratio: "4:3",
-      gap: "md",
-      radius: "lg",
-      captionPosition: "inside",
-      layoutDensity: "auto",
-      motionPreset: "none",
-    },
-  };
-
-  const Harness = () => {
-    const [value, setValue] = useState<GalleryMosaicData>(latestValue);
-
-    return (
-      <GalleryMosaicAdvancedEditor
-        value={value}
-        onChange={(next) => {
-          latestValue = next;
-          onChangeSpy(next);
-          setValue(next);
-        }}
-        variant="mosaic"
-        onVariantChange={() => undefined}
-      />
-    );
-  };
-
-  const view = mount(<Harness />);
-
-  try {
-    const configSection = findSectionByTitle(view.container, "Configuration import and export");
-    const configDraft = findTextareaByPlaceholder(
-      configSection ?? view.container,
-      "Paste a Gallery Mosaic JSON config."
-    );
-    expect(configDraft).toBeInstanceOf(HTMLTextAreaElement);
-
-    clickElement(findButtonByText(configSection ?? view.container, "Export current config"));
-    expect((configDraft as HTMLTextAreaElement).value).toContain('"motionPreset": "none"');
-    expect(view.container.textContent).toContain("Exported the current config to the JSON field.");
-
-    setTextareaValue(
-      configDraft,
-      JSON.stringify(
-        {
-          items: [
-            {
-              id: "gallery-1",
-              image: "/lead.jpg",
-              privateToken: "secret",
-            },
-          ],
-        },
-        null,
-        2
-      )
-    );
-    clickElement(findButtonByText(configSection ?? view.container, "Import config"));
-    expect(view.container.textContent).toContain(
-      "Import error: gallery_mosaic_import_unknown_field at items[0].privateToken"
-    );
-    expect(onChangeSpy).not.toHaveBeenCalled();
-    expect(latestValue.items[0]?.caption).toBe("Lead frame");
-
-    setTextareaValue(
-      configDraft,
-      JSON.stringify(
-        {
-          items: [
-            {
-              id: "gallery-1",
-              image: "/imported.jpg",
-              caption: "Imported frame",
-            },
-          ],
-          style: {
-            layoutDensity: "compact",
-            motionPreset: "fade",
-          },
-        },
-        null,
-        2
-      )
-    );
-    clickElement(findButtonByText(configSection ?? view.container, "Import config"));
-    expect(view.container.textContent).toContain(
-      "Validated Gallery Mosaic config. Confirm import to apply it."
-    );
-    expect(onChangeSpy).not.toHaveBeenCalled();
-    expect(latestValue.items[0]?.caption).toBe("Lead frame");
-    clickElement(findButtonByText(view.container, "confirm-action"));
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.items[0]).toEqual(
-      expect.objectContaining({
-        image: "/imported.jpg",
-        caption: "Imported frame",
-      })
-    );
-    expect(latestValue.style).toEqual(
-      expect.objectContaining({
-        layoutDensity: "compact",
-        motionPreset: "fade",
-      })
-    );
-    expect(view.container.textContent).toContain("Imported Gallery Mosaic config.");
   } finally {
     view.cleanup();
   }

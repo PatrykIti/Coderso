@@ -21,10 +21,8 @@ media-first cards, CTA actions, and bounded layout/style controls.
 
 ### Wizard
 
-- variant
-- section title and description
-- cards count
-- basic card labels
+- setup-only variant action
+- read-only cards count summary
 - guidance that richer card/media/layout editing lives in `Visual`
 
 ### Visual
@@ -121,9 +119,9 @@ media-first cards, CTA actions, and bounded layout/style controls.
 ## TASK-336-18 Editor Contract
 
 - Exports `featureGridEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter layout/count/copy; Visual owns daily
-  card content, CTA, media, layout, and styling; Advanced is read-only runtime
-  diagnostics.
+- Contract target: Wizard exposes a setup-only layout action plus read-only
+  cards-count guidance; Visual owns daily card content, CTA, media, layout, and
+  styling; Advanced is read-only runtime diagnostics.
 
 ## TASK-336-19 Editor Drift Cleanup
 

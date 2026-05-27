@@ -662,108 +662,6 @@ function summarizeSafeLinks(items: StatsKpiItem[]) {
   return `${safeCount}/${configuredCount} configured metric links resolve to safe hrefs.`;
 }
 
-function WizardMetricFields({
-  value,
-  onChange,
-}: {
-  value: StatsKpiData;
-  onChange: (next: StatsKpiData) => void;
-}) {
-  const items = normalizeStatsKpiItems(normalizeValue(value).items);
-
-  return (
-    <div className="space-y-3">
-      {items.map((item, index) => (
-        <div
-          key={item.id ?? `wizard-metric-${index + 1}`}
-          className="space-y-3 rounded-lg border p-3"
-        >
-          <p className="text-sm font-semibold">Metric {index + 1}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <WidgetControlRow
-              id={`stats-kpi.wizard.items.${index}.value`}
-              label="Value"
-              path={`items.${index}.value`}
-            >
-              {(fieldProps) => (
-                <Input
-                  id={fieldProps.id}
-                  value={item.value ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { value: event.target.value })
-                  }
-                  placeholder={`Metric ${index + 1} value`}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-              )}
-            </WidgetControlRow>
-            <WidgetControlRow
-              id={`stats-kpi.wizard.items.${index}.label`}
-              label="Label"
-              path={`items.${index}.label`}
-            >
-              {(fieldProps) => (
-                <Input
-                  id={fieldProps.id}
-                  value={item.label ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { label: event.target.value })
-                  }
-                  placeholder={`Metric ${index + 1} label`}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-              )}
-            </WidgetControlRow>
-            <WidgetControlRow
-              id={`stats-kpi.wizard.items.${index}.description`}
-              label="Description"
-              path={`items.${index}.description`}
-              className="sm:col-span-2"
-            >
-              {(fieldProps) => (
-                <Textarea
-                  id={fieldProps.id}
-                  value={item.description ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { description: event.target.value })
-                  }
-                  placeholder="Optional supporting context."
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-              )}
-            </WidgetControlRow>
-            <WidgetControlRow
-              id={`stats-kpi.wizard.items.${index}.icon`}
-              label="Icon"
-              path={`items.${index}.icon`}
-            >
-              {(fieldProps) => (
-                <Input
-                  id={fieldProps.id}
-                  value={item.icon ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { icon: event.target.value })
-                  }
-                  placeholder="🚀"
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                />
-              )}
-            </WidgetControlRow>
-          </div>
-        </div>
-      ))}
-      <p className="text-xs text-muted-foreground">
-        Icon guidance: use emoji or short plain-text glyphs only. SVG markup and icon class names
-        are not supported.
-      </p>
-    </div>
-  );
-}
-
 function renderLinkValidation(href: string | undefined) {
   if (!href || href.trim().length === 0) return null;
   const safeHref = normalizeWidgetSafeHref(href, {
@@ -781,85 +679,44 @@ function renderLinkValidation(href: string | undefined) {
   );
 }
 
-export function StatsKpiWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  onBlockPatch,
-}: WidgetEditorProps<StatsKpiData>) {
+export function StatsKpiWizardEditor({ value, variant }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
+  const resolvedVariant = resolveStatsKpiVariant(variant);
 
   return (
     <div className="space-y-4">
       <EditorSection
         id="stats-kpi.wizard.layout-seed"
         mode="wizard"
-        role="setup"
-        title="Layout seed"
-        description="Pick the publishable KPI layout and the number of visible metrics."
+        role="summary"
+        title="Layout overview"
+        description="Review the current KPI structure before daily editing in Visual."
       >
-        <WidgetControlRow id="stats-kpi.wizard.variant" label="Starter KPI layout" path="variant">
-          {() => (
-            <VariantCards
-              value={resolveStatsKpiVariant(variant)}
-              onChange={(next) =>
-                applyVariantDataPatch(next as StatsKpiVariantId, onVariantChange, onBlockPatch)
-              }
-            />
-          )}
-        </WidgetControlRow>
-
-        <WidgetControlRow id="stats-kpi.wizard.items.count" label="Metric count" path="items.count">
-          {(fieldProps) => (
-            <Select
-              value={String(items.length)}
-              onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
-            >
-              <SelectTrigger
-                id={fieldProps.id}
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              >
-                <SelectValue placeholder="Select count" />
-              </SelectTrigger>
-              <SelectContent>
-                {itemCountOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </WidgetControlRow>
-      </EditorSection>
-
-      <EditorSection
-        id="stats-kpi.wizard.header-seed"
-        mode="wizard"
-        role="setup"
-        title="Header seed"
-        description="The Wizard now covers the publishable section heading without leaving onboarding mode."
-      >
-        <HeaderFields
-          value={value}
-          onChange={onChange}
-          clearLabel="Clear header"
-          controlIdPrefix="stats-kpi.wizard.header"
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.wizard.variant"
+          label="Current layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolvedVariant)?.label ?? resolvedVariant
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="stats-kpi.wizard.items.count"
+          label="Metric count"
+          path="items.count"
+          value={`${items.length} metric${items.length === 1 ? "" : "s"}`}
         />
       </EditorSection>
 
-      <EditorSection
-        id="stats-kpi.wizard.metric-seed"
-        mode="wizard"
-        role="setup"
-        title="Metric seed"
-        description="Edit the visible value, label, description, and icon fields for the current metric count."
-      >
-        <WizardMetricFields value={value} onChange={onChange} />
-      </EditorSection>
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+        Use Visual to change the KPI layout, visible count, section title, and supporting header
+        copy while Wizard stays read-only after setup.
+      </div>
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+        Visual owns metric values, labels, descriptions, icons, trends, and links after the starter
+        layout is chosen.
+      </div>
 
       <EditorSection
         id="stats-kpi.wizard.spacing-guidance"

@@ -9,7 +9,7 @@
 
 | Widget | Mode | Status | Root | Sections | Visible sections | Controls | Writable paths | Missing metadata | Raw payload |
 |---|---|---|---:|---:|---:|---:|---|---:|---|
-| `stack` | wizard | passed | 1 | 1 | 1 | 1 | `variant` | 0 | no |
+| `stack` | wizard | passed | 1 | 1 | 1 | 0 | `[]` | 0 | no |
 
 ## Copy Checks
 

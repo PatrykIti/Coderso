@@ -641,13 +641,7 @@ function ResponsiveAxisAndWrapGrid({
   );
 }
 
-export function StackWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  onBlockPatch,
-}: WidgetEditorProps<StackData>) {
+export function StackWizardEditor(_props: WidgetEditorProps<StackData>) {
   return (
     <div className="space-y-4">
       <EditorSection
@@ -655,43 +649,11 @@ export function StackWizardEditor({
         mode="wizard"
         role="setup"
         title="Stack quick start"
-        description="Pick a safe starting flow. Visual owns ongoing responsive layout editing."
+        description="Wizard is one-time starter setup. Use Visual for preset choice, responsive flow, spacing, alignment, distribution, and wrapping."
       >
-        <WidgetControlRow
-          id="stack.wizard.variant"
-          label="Stack preset"
-          path="variant"
-          help="Picking a preset sets the starting desktop, tablet, and mobile flow directions. Visual can fine-tune them after setup."
-        >
-          {() => (
-            <Select
-              value={resolveStackVariant(variant)}
-              onValueChange={(next) =>
-                applyVariantDataPatch(
-                  next as StackVariantId,
-                  buildVariantSyncedStackData(value, next as StackVariantId),
-                  onChange,
-                  onVariantChange,
-                  onBlockPatch
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select stack preset" />
-              </SelectTrigger>
-              <SelectContent>
-                {variantOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </WidgetControlRow>
-
         <p className="rounded-md border border-dashed border-border/80 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup.
+          Visual owns stack preset choice, breakpoint flow directions, spacing, alignment,
+          distribution, and wrapping after setup.
         </p>
 
         <SlotGuidanceCard />

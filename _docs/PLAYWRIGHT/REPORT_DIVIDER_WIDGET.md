@@ -349,7 +349,7 @@ Targeted evidence from this slice:
 |---|---|---|---|
 | Advanced hidden mutators | `fixed-task-336-19` | `TASK-336-19` | Divider Advanced now renders read-only runtime/support summaries only and exposes no writable editor groups. |
 | Raw payload snapshot | `fixed-task-336-19` | `TASK-336-19` | The visible JSON payload snapshot was removed from Advanced; diagnostics use human line/width/spacing/support rows. |
-| Wizard/Visual metadata gap | `fixed-task-336-19` | `TASK-336-19` | Divider controls now use `WidgetControlRow` metadata, and Wizard is narrowed to one-time style/label setup while Visual owns daily line, width, color, and spacing. |
+| Wizard/Visual metadata gap | `fixed-task-336-19` | `TASK-336-19` | Divider controls now use `WidgetControlRow` metadata, and Wizard is narrowed to a read-only style summary while Visual owns daily label, line, width, color, and spacing. |
 | Beginner-facing CSS/token authoring | `fixed-task-336-19` | `TASK-336-19` | Width, spacing, opacity, and thickness controls show friendly labels or saved-custom compatibility state instead of raw CSS values or token numbers. |
 
 Additional closure notes:

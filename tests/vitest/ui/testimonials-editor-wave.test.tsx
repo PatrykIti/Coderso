@@ -478,73 +478,53 @@ const renderEditor = (
   };
 };
 
-test("TestimonialsWizardEditor covers header copy, social proof fields, and avatar media picking", async () => {
+test("TestimonialsWizardEditor is now a read-only starter summary", async () => {
   const view = renderEditor(TestimonialsWizardEditor, { initialValue: testimonialsDefaults });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, [
-      "grid",
-      "spotlight",
-      "slider-static",
-    ]);
-    setSelectValue(variantSelect, "spotlight");
-    expect(view.getLatestVariant()).toBe("spotlight");
-    expect(view.getLatestValue().testimonials).toHaveLength(2);
-    expect(writableControlPaths(view.container)).toEqual(
-      expect.arrayContaining([
-        "variant",
-        "header.eyebrow",
-        "header.title",
-        "header.description",
-        "testimonials.count",
-        "testimonials.quote",
-        "testimonials.author",
-        "testimonials.role",
-        "testimonials.sourceLabel",
-        "testimonials.rating",
-        "testimonials.avatar",
-      ])
+    expect(view.container.textContent).toContain("Testimonials style");
+    expect(view.container.textContent).toContain("Grid");
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(view.getLatestVariant()).toBe("grid");
+    expect(view.getLatestValue().testimonials).toHaveLength(
+      testimonialsDefaults.testimonials.length
     );
-    expect(writableControlCount(view.container, "testimonials.quote")).toBe(2);
-    expect(writableControlCount(view.container, "testimonials.avatar")).toBe(2);
-
-    setInputValue(findInputsByPlaceholder(view.container, "Customer stories")[0], "Proof");
-    setInputValue(
-      findInputsByPlaceholder(view.container, "Trusted by teams that ship fast")[0],
-      "Trusted across launches"
+    expect(writableControlPaths(view.container)).toEqual([]);
+    expect(writableControlCount(view.container, "testimonials.count")).toBe(0);
+    expect(readonlyControlPaths(view.container)).toEqual(
+      expect.arrayContaining(["variant", "testimonials.count"])
     );
-    setTextareaValue(
+    expect(view.container.textContent).toContain(
+      "Use Visual to write the section eyebrow, title, description, quotes, author names, ratings, avatars, pagination, and CTA."
+    );
+    expect(findInputsByPlaceholder(view.container, "Customer stories")[0]).toBeUndefined();
+    expect(
+      findInputsByPlaceholder(view.container, "Trusted by teams that ship fast")[0]
+    ).toBeUndefined();
+    expect(
       findTextareasByPlaceholder(
         view.container,
         "Use real customer voices to build trust and reduce hesitation."
-      )[0],
-      "Detailed trust copy"
-    );
-
-    setInputValue(findInputsByPlaceholder(view.container, "Role or position")[0], "Founder");
-    setInputValue(findInputsByPlaceholder(view.container, "Acme Studio")[0], "North Labs");
-    setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"]), "4");
-
+      )[0]
+    ).toBeUndefined();
+    expect(findInputsByPlaceholder(view.container, "Role or position")[0]).toBeUndefined();
+    expect(findInputsByPlaceholder(view.container, "Acme Studio")[0]).toBeUndefined();
     expect(
-      findInputsByPlaceholder(view.container, "https://cdn.example.com/avatar.jpg")
+      findSelectsByOptions(view.container, [
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+      ])
     ).toHaveLength(0);
-
-    const firstPicker = findMediaPickers(view.container)[0];
-    clickButton(findButtonsByText(firstPicker ?? view.container, "pick-avatar-media")[0]);
-    await flushPromises();
-
-    expect(view.getLatestValue().header).toMatchObject({
-      eyebrow: "Proof",
-      title: "Trusted across launches",
-      description: "Detailed trust copy",
-    });
-    expect(view.getLatestValue().testimonials[0]).toMatchObject({
-      role: "Founder",
-      sourceLabel: "North Labs",
-      rating: 4,
-      avatar: "https://cdn.example.com/avatar-picked.jpg",
-    });
-    expect(mediaClient.listMediaCached).toHaveBeenCalledWith({ force: false });
+    expect(view.getLatestValue()).toEqual(testimonialsDefaults);
   } finally {
     view.cleanup();
   }
@@ -627,6 +607,9 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     expect(writableControlPaths(view.container)).toEqual(
       expect.arrayContaining([
         "variant",
+        "header.eyebrow",
+        "header.title",
+        "header.description",
         "testimonials.count",
         "testimonials",
         "testimonials.quote",

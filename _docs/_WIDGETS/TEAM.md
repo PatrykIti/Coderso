@@ -19,14 +19,15 @@ links, and an optional section CTA.
 
 ### Wizard (minimal onboarding)
 - Team layout variant
-- Members count with Spotlight guardrails
-- Quick setup for the first three member names and roles
+- Read-only members count summary
 
 Notes:
 - Switching to `spotlight` from a larger setup clamps the member list to `3`
   when the current count is greater than `6`.
 - Team intentionally keeps the `1..12` member contract. Larger directories
   should use multiple Team sections or a different listing surface.
+- Member count changes, names, roles, bios, photos, social links, spotlight
+  lead, and CTA now belong to Visual.
 
 ### Visual (primary editing mode)
 Sections:

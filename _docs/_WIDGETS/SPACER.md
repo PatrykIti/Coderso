@@ -21,10 +21,9 @@ None.
 ## Editor Modes
 
 ### Wizard
-- spacer mode (fixed/responsive)
-- named rhythm presets for quick vertical spacing choices
-- desktop height preset with explicit fixed-mode guidance when `fixed` is active
-- editor guide toggle
+- read-only spacer mode summary
+- read-only rhythm summary
+- read-only desktop height summary with explicit fixed-mode guidance when `fixed` is active
 
 Wizard is a one-time setup surface. Completed widgets use Visual for daily
 rhythm changes and can explicitly re-enter setup through `Run setup again`.

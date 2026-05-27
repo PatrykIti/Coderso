@@ -328,34 +328,6 @@ export const richTextSectionDefaults: RichTextSectionData = {
   },
 };
 
-const richTextSectionWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the starter reading layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "titleBlock.eyebrow",
-    reason: "Wizard seeds title copy; Visual remains the daily editorial owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "titleBlock.title",
-    reason: "Wizard seeds title copy; Visual remains the daily editorial owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "titleBlock.headingLevel",
-    reason: "Wizard seeds title structure; Visual remains the daily editorial owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "body.blocks",
-    reason: "Wizard seeds starter blocks; Visual remains the daily rich-content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const richTextSectionEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -364,14 +336,8 @@ export const richTextSectionEditorContract: WidgetEditorContract = {
       id: "rich-text-section.wizard.starter-copy",
       title: "Starter copy",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "titleBlock.eyebrow",
-        "titleBlock.title",
-        "titleBlock.headingLevel",
-        "body.blocks",
-      ],
-      allowedDuplicateWritablePaths: richTextSectionWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "body.blocks"],
     },
     {
       mode: "visual",
@@ -390,7 +356,6 @@ export const richTextSectionEditorContract: WidgetEditorContract = {
         "options.toc",
         "options.maxWidth",
       ],
-      allowedDuplicateWritablePaths: richTextSectionWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -1232,7 +1197,7 @@ function RichTextToc({ items }: { items: TocItem[] }) {
   );
 }
 
-export function RichTextSectionBlock({
+function RichTextSectionBlockView({
   data,
   variant,
   blockId,
@@ -1299,8 +1264,8 @@ export function RichTextSectionBlock({
       data-rich-text-font-scale={style.fontScale ?? "md"}
       data-rich-text-line-height={style.lineHeight ?? "normal"}
       data-rich-text-spacing={style.spacing ?? "md"}
-      data-rich-text-dropcap={String(Boolean(options.dropcap))}
-      data-rich-text-toc={String(Boolean(options.toc))}
+      data-rich-text-dropcap={options.dropcap ? "true" : "false"}
+      data-rich-text-toc={options.toc ? "true" : "false"}
       data-rich-text-max-width={options.maxWidth ?? "lg"}
       data-rich-text-output-mode={options.outputMode ?? "blocks-fallback"}
       data-rich-text-rendered-source={source.renderedSource}
@@ -1335,7 +1300,7 @@ export function RichTextSectionBlock({
             )}
           >
             <div className="space-y-4 lg:col-span-1">
-              {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
+              {options.toc ? <RichTextToc items={tocItems} /> : null}
             </div>
             <div className="lg:col-span-2">{content}</div>
           </div>
@@ -1346,7 +1311,7 @@ export function RichTextSectionBlock({
               maxWidthClassMap[options.maxWidth ?? "lg"]
             )}
           >
-            {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
+            {options.toc ? <RichTextToc items={tocItems} /> : null}
             {content}
           </article>
         ) : (
@@ -1356,7 +1321,7 @@ export function RichTextSectionBlock({
               maxWidthClassMap[options.maxWidth ?? "lg"]
             )}
           >
-            {Boolean(options.toc) ? <RichTextToc items={tocItems} /> : null}
+            {options.toc ? <RichTextToc items={tocItems} /> : null}
             {content}
           </div>
         )}
@@ -1364,6 +1329,8 @@ export function RichTextSectionBlock({
     </section>
   );
 }
+
+export { RichTextSectionBlockView as RichTextSectionBlock };
 
 export function createRichTextSectionWidget(editors: {
   wizard: ComponentType<WidgetEditorProps<RichTextSectionData>>;
@@ -1400,6 +1367,6 @@ export function createRichTextSectionWidget(editors: {
     editorCapabilities: {
       visualOwnsVariantSelection: true,
     },
-    render: RichTextSectionBlock,
+    render: RichTextSectionBlockView,
   };
 }

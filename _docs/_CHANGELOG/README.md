@@ -25,6 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 972 | 2026-05-27 | Widget contract Vitest expectation drift repair | QA/Widgets/Admin UI/Tooling |
+| 971 | 2026-05-27 | Spacer and Stats KPI lint typecheck repair | QA/Widgets/Admin UI/Tooling |
+| 970 | 2026-05-26 | Widget UI mode drift cleanup closure | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
 | 969 | 2026-05-26 | Raw Advanced payload and preset cleanup | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |
 | 968 | 2026-05-26 | Booking editor cleanup | CMS Widgets/Admin UI/Booking/Contracts/QA/Docs |
 | 967 | 2026-05-26 | Gallery Mosaic and Team editor cleanup | CMS Widgets/Admin UI/Media/Team/Contracts/QA/Docs |

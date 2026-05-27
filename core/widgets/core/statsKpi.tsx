@@ -303,13 +303,6 @@ export const statsKpiDefaults: StatsKpiData = {
   },
 };
 
-const statsKpiWizardMetricSeedPaths = Array.from({ length: statsKpiItemMax }, (_, index) => [
-  `items.${index}.value`,
-  `items.${index}.label`,
-  `items.${index}.description`,
-  `items.${index}.icon`,
-]).flat();
-
 const statsKpiItemDailyWritablePaths = Array.from({ length: statsKpiItemMax }, (_, index) => [
   `items.${index}.value`,
   `items.${index}.prefix`,
@@ -325,17 +318,6 @@ const statsKpiItemDailyWritablePaths = Array.from({ length: statsKpiItemMax }, (
   `items.${index}.link.openInNewTab`,
 ]).flat();
 
-const statsKpiWizardDuplicateAllowanceReason =
-  "Temporary one-time Wizard seed overlap until TASK-336-16 moves Wizard completion out of daily editing.";
-
-const createStatsKpiWizardDuplicateAllowances = (paths: string[]) =>
-  paths.map((path) => ({
-    path,
-    reason: statsKpiWizardDuplicateAllowanceReason,
-    expiresWithTask: "TASK-336-16",
-  }));
-
-const statsKpiWizardSetupPaths = ["variant", "items.count"];
 const statsKpiWizardHeaderPaths = ["header.title", "header.description"];
 
 export const statsKpiEditorContract: WidgetEditorContract = {
@@ -344,30 +326,10 @@ export const statsKpiEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "stats-kpi.wizard.layout-seed",
-      title: "Layout seed",
-      role: "setup",
-      writablePaths: statsKpiWizardSetupPaths,
-      allowedDuplicateWritablePaths:
-        createStatsKpiWizardDuplicateAllowances(statsKpiWizardSetupPaths),
-    },
-    {
-      mode: "wizard",
-      id: "stats-kpi.wizard.header-seed",
-      title: "Header seed",
-      role: "setup",
-      writablePaths: statsKpiWizardHeaderPaths,
-      allowedDuplicateWritablePaths:
-        createStatsKpiWizardDuplicateAllowances(statsKpiWizardHeaderPaths),
-    },
-    {
-      mode: "wizard",
-      id: "stats-kpi.wizard.metric-seed",
-      title: "Metric seed",
-      role: "setup",
-      writablePaths: statsKpiWizardMetricSeedPaths,
-      allowedDuplicateWritablePaths: createStatsKpiWizardDuplicateAllowances(
-        statsKpiWizardMetricSeedPaths
-      ),
+      title: "Layout overview",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "items.count"],
     },
     {
       mode: "wizard",
@@ -383,8 +345,6 @@ export const statsKpiEditorContract: WidgetEditorContract = {
       title: "Variant and structure",
       role: "setup",
       writablePaths: ["variant", "items.count", "items.order"],
-      allowedDuplicateWritablePaths:
-        createStatsKpiWizardDuplicateAllowances(statsKpiWizardSetupPaths),
     },
     {
       mode: "visual",
@@ -392,8 +352,6 @@ export const statsKpiEditorContract: WidgetEditorContract = {
       title: "Section header",
       role: "content",
       writablePaths: statsKpiWizardHeaderPaths,
-      allowedDuplicateWritablePaths:
-        createStatsKpiWizardDuplicateAllowances(statsKpiWizardHeaderPaths),
     },
     {
       mode: "visual",
@@ -401,9 +359,6 @@ export const statsKpiEditorContract: WidgetEditorContract = {
       title: "Metrics content and links",
       role: "content",
       writablePaths: statsKpiItemDailyWritablePaths,
-      allowedDuplicateWritablePaths: createStatsKpiWizardDuplicateAllowances(
-        statsKpiWizardMetricSeedPaths
-      ),
     },
     {
       mode: "visual",

@@ -272,20 +272,22 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
   const view = mount(<Harness />);
 
   try {
-    const wizardStyle = findSelectsByOptions(view.container, ["line", "dashed", "label-center"])[0];
-    expect((wizardStyle as HTMLSelectElement | null | undefined)?.value).toBe("line");
-    setSelectValue(wizardStyle, "label-center");
-    expect(currentVariant).toBe("label-center");
-
-    setInputValue(findInputByPlaceholder(view.container, "Optional label"), "Milestone");
     const wizardSection = findSectionByTitle(view.container, "Divider quick start");
-    expect(normalizeText((wizardSection as ParentNode).textContent)).toContain(
-      "visual owns line weight, color, width, and spacing after setup."
+    const wizardStyleSummary = (wizardSection as ParentNode).querySelector(
+      '[data-widget-control="divider.wizard.variant"]'
     );
-
-    expect(latestValue).toMatchObject({
-      label: "Milestone",
-    });
+    expect(wizardStyleSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardStyleSummary?.textContent).toContain("Line");
+    expect(normalizeText((wizardSection as ParentNode).textContent)).toContain(
+      "visual owns divider style changes, center labels, line weight, color, width, and spacing."
+    );
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(findInputByPlaceholder(wizardRoot ?? view.container, "Optional label")).toBeUndefined();
+    expect(
+      findSelectsByOptions(wizardRoot ?? view.container, ["line", "dashed", "label-center"])
+    ).toHaveLength(0);
 
     clickByText(view.container, "Dashed");
     expect(currentVariant).toBe("dashed");

@@ -41,7 +41,7 @@ import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ClearableFieldHeader, resolveColorPickerValue } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: CtaBannerVariantId;
@@ -170,9 +170,18 @@ function EditorSection({
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
-      {children}
-    </WidgetEditorSection>
+    <section aria-labelledby={`${resolvedId}-heading`} className="space-y-3">
+      <div className="space-y-1">
+        <h3
+          id={`${resolvedId}-heading`}
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          {title}
+        </h3>
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
   );
 }
 
@@ -679,15 +688,8 @@ function BackgroundMediaFields({
   );
 }
 
-export function CtaBannerWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<CtaBannerData>) {
+export function CtaBannerWizardEditor({ value, variant }: WidgetEditorProps<CtaBannerData>) {
   const normalized = normalizeValue(value);
-  const primary = normalized.actions?.primaryCta;
-  const secondary = normalized.actions?.secondaryCta;
 
   return (
     <WidgetEditorSection
@@ -695,110 +697,30 @@ export function CtaBannerWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter conversion"
-      description="Choose the banner layout and seed the primary conversion copy."
+      description="Review the current banner layout and headline. Daily CTA editing happens in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Banner layout</p>
-          <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
-        </div>
-
-        <label className="space-y-1">
-          <span className="text-sm font-medium">Headline</span>
-          <Input
-            value={normalized.content?.title ?? ""}
-            onChange={(event) => updateContent(value, onChange, { title: event.target.value })}
-            placeholder="Ready to launch your next campaign?"
-          />
-        </label>
-
-        <label className="space-y-1">
-          <span className="text-sm font-medium">Primary CTA label</span>
-          <Input
-            value={primary?.label ?? ""}
-            onChange={(event) =>
-              updateActions(value, onChange, {
-                primaryCta: {
-                  ...primary,
-                  label: event.target.value,
-                },
-              })
-            }
-            placeholder="Get started"
-          />
-        </label>
-
-        <LinkDestinationField
-          fieldId="cta-banner-wizard-primary-destination"
-          label="Primary CTA destination"
-          controlPath="actions.primaryCta.href"
-          value={primary?.href ?? ""}
-          onChange={(next) =>
-            updateActions(value, onChange, {
-              primaryCta: {
-                ...primary,
-                href: next,
-              },
-            })
+        <ReadonlyWidgetSummaryRow
+          id="cta-banner.wizard.variant"
+          label="Banner layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolveCtaBannerVariant(variant))
+              ?.label ?? "Centered"
           }
-          feedback={getCtaHrefWarning(primary?.href)}
-          feedbackTone="destructive"
         />
 
-        <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-          <span>Enable secondary CTA</span>
-          <Switch
-            checked={secondary?.enabled !== false}
-            onCheckedChange={(next) =>
-              updateActions(value, onChange, {
-                secondaryCta: {
-                  ...secondary,
-                  enabled: next,
-                },
-              })
-            }
-          />
-        </label>
+        <ReadonlyWidgetSummaryRow
+          id="cta-banner.wizard.content.title"
+          label="Headline"
+          path="content.title"
+          value={normalized.content?.title ?? "No headline yet"}
+        />
 
-        {secondary?.enabled !== false ? (
-          <>
-            <label className="space-y-1">
-              <span className="text-sm font-medium">Secondary CTA label</span>
-              <Input
-                value={secondary?.label ?? ""}
-                onChange={(event) =>
-                  updateActions(value, onChange, {
-                    secondaryCta: {
-                      ...secondary,
-                      label: event.target.value,
-                    },
-                  })
-                }
-                placeholder="Contact sales"
-              />
-            </label>
-            <LinkDestinationField
-              fieldId="cta-banner-wizard-secondary-destination"
-              label="Secondary CTA destination"
-              controlPath="actions.secondaryCta.href"
-              value={secondary?.href ?? ""}
-              onChange={(next) =>
-                updateActions(value, onChange, {
-                  secondaryCta: {
-                    ...secondary,
-                    href: next,
-                  },
-                })
-              }
-              feedback={getCtaHrefWarning(secondary?.href)}
-              feedbackTone="destructive"
-            />
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Saved secondary label and URL stay intact while the CTA is hidden.
-          </p>
-        )}
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual for CTA labels, destinations, visibility toggles, button styling, background
+          media, and motion.
+        </div>
       </div>
     </WidgetEditorSection>
   );
@@ -823,213 +745,398 @@ export function CtaBannerVisualEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection
-        title="Variant and layout structure"
-        description="Choose CTA layout variant for this conversion strip."
+      <WidgetEditorSection
+        id="cta-banner.visual.copy-actions"
+        mode="visual"
+        role="content"
+        title="Copy and actions"
+        description="Daily copy and CTA authoring live here."
       >
-        <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
-        <p className="text-xs text-muted-foreground">
-          Full-width lives in the shared block Layout panel. CTA Banner only removes its own
-          redundant inner width constraint.
-        </p>
-      </EditorSection>
+        <EditorSection
+          title="Variant and layout structure"
+          description="Choose CTA layout variant for this conversion strip."
+        >
+          <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
+          <p className="text-xs text-muted-foreground">
+            Full-width lives in the shared block Layout panel. CTA Banner only removes its own
+            redundant inner width constraint.
+          </p>
+        </EditorSection>
 
-      <EditorSection
-        title="Content copy"
-        description="Edit badge, title, support line, and visibility."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Badge</p>
-          <Input
-            value={normalized.content?.badge ?? ""}
-            onChange={(event) => updateContent(value, onChange, { badge: event.target.value })}
-            placeholder="Limited offer"
-          />
-        </div>
+        <EditorSection
+          title="Content copy"
+          description="Edit badge, title, support line, and visibility."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Badge</p>
+            <Input
+              value={normalized.content?.badge ?? ""}
+              onChange={(event) => updateContent(value, onChange, { badge: event.target.value })}
+              placeholder="Limited offer"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={normalized.content?.title ?? ""}
-            onChange={(event) => updateContent(value, onChange, { title: event.target.value })}
-            placeholder="Ready to launch your next campaign?"
-          />
-        </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Title</p>
+            <Input
+              value={normalized.content?.title ?? ""}
+              onChange={(event) => updateContent(value, onChange, { title: event.target.value })}
+              placeholder="Ready to launch your next campaign?"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={normalized.content?.description ?? ""}
-            onChange={(event) =>
-              updateContent(value, onChange, { description: event.target.value })
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Description</p>
+            <Textarea
+              value={normalized.content?.description ?? ""}
+              onChange={(event) =>
+                updateContent(value, onChange, { description: event.target.value })
+              }
+              placeholder="Use reusable sections and publish faster."
+            />
+          </div>
+
+          <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
+            <span>Show description</span>
+            <Switch
+              checked={normalized.content?.showDescription !== false}
+              onCheckedChange={(next) => updateContent(value, onChange, { showDescription: next })}
+            />
+          </label>
+        </EditorSection>
+
+        <EditorSection
+          title="Actions"
+          description="Configure CTA labels, URLs, targets, icons, and intentional visibility."
+        >
+          <ActionFields
+            kind="primary"
+            key={`primary-${primary?.href ?? ""}`}
+            title="Primary CTA"
+            action={primary}
+            onPatch={(patch) =>
+              updateActions(value, onChange, {
+                primaryCta: {
+                  ...primary,
+                  ...patch,
+                },
+              })
             }
-            placeholder="Use reusable sections and publish faster."
           />
-        </div>
 
-        <label className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm">
-          <span>Show description</span>
-          <Switch
-            checked={normalized.content?.showDescription !== false}
-            onCheckedChange={(next) => updateContent(value, onChange, { showDescription: next })}
+          <ActionFields
+            kind="secondary"
+            key={`secondary-${secondary?.href ?? ""}`}
+            title="Secondary CTA"
+            action={secondary}
+            showToggle
+            onPatch={(patch) =>
+              updateActions(value, onChange, {
+                secondaryCta: {
+                  ...secondary,
+                  ...patch,
+                },
+              })
+            }
           />
-        </label>
-      </EditorSection>
 
-      <EditorSection
-        title="Actions"
-        description="Configure CTA labels, URLs, targets, icons, and intentional visibility."
+          <ActionFields
+            kind="tertiary"
+            key={`tertiary-${tertiary?.href ?? ""}`}
+            title="Tertiary CTA"
+            action={tertiary}
+            showToggle
+            onPatch={(patch) =>
+              updateActions(value, onChange, {
+                tertiaryCta: {
+                  ...tertiary,
+                  ...patch,
+                },
+              })
+            }
+          />
+        </EditorSection>
+      </WidgetEditorSection>
+
+      <WidgetEditorSection
+        id="cta-banner.visual.presentation"
+        mode="visual"
+        role="visual"
+        title="Presentation"
+        description="Colors, surface controls, background media, and motion."
       >
-        <ActionFields
-          kind="primary"
-          key={`primary-${primary?.href ?? ""}`}
-          title="Primary CTA"
-          action={primary}
-          onPatch={(patch) =>
-            updateActions(value, onChange, {
-              primaryCta: {
-                ...primary,
-                ...patch,
-              },
-            })
-          }
-        />
+        <EditorSection
+          title="Colors and button styles"
+          description="Set content palette plus CTA-local button shape and emphasis."
+        >
+          <SharedColorControl
+            label="Text color"
+            value={normalized.style?.text}
+            onChange={(next) => updateStyle(value, onChange, { text: next })}
+            onClear={() => clearStyleField(value, onChange, "text")}
+            placeholder="var(--color-text)"
+            pickerFallback="#0f172a"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Badge background"
+            value={normalized.style?.badgeBackground}
+            onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
+            onClear={() => clearStyleField(value, onChange, "badgeBackground")}
+            placeholder="var(--color-primary)"
+            pickerFallback="#1d4ed8"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Badge text"
+            value={normalized.style?.badgeText}
+            onChange={(next) => updateStyle(value, onChange, { badgeText: next })}
+            onClear={() => clearStyleField(value, onChange, "badgeText")}
+            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Primary button background"
+            value={normalized.style?.primaryButtonBg}
+            onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
+            onClear={() => clearStyleField(value, onChange, "primaryButtonBg")}
+            placeholder="var(--color-primary)"
+            pickerFallback="#1d4ed8"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Primary button text"
+            value={normalized.style?.primaryButtonText}
+            onChange={(next) => updateStyle(value, onChange, { primaryButtonText: next })}
+            onClear={() => clearStyleField(value, onChange, "primaryButtonText")}
+            placeholder="var(--color-bg)"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Primary button border"
+            value={normalized.style?.primaryButtonBorder}
+            onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
+            onClear={() => clearStyleField(value, onChange, "primaryButtonBorder")}
+            placeholder="transparent"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Secondary button background"
+            value={normalized.style?.secondaryButtonBg}
+            onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
+            onClear={() => clearStyleField(value, onChange, "secondaryButtonBg")}
+            placeholder="transparent"
+            pickerFallback="#ffffff"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Secondary button text"
+            value={normalized.style?.secondaryButtonText}
+            onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
+            onClear={() => clearStyleField(value, onChange, "secondaryButtonText")}
+            placeholder="var(--color-text)"
+            pickerFallback="#0f172a"
+            showValueInput={false}
+          />
+          <SharedColorControl
+            label="Secondary button border"
+            value={normalized.style?.secondaryButtonBorder}
+            onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
+            onClear={() => clearStyleField(value, onChange, "secondaryButtonBorder")}
+            placeholder="var(--color-border)"
+            pickerFallback="#e2e8f0"
+            showValueInput={false}
+          />
 
-        <ActionFields
-          kind="secondary"
-          key={`secondary-${secondary?.href ?? ""}`}
-          title="Secondary CTA"
-          action={secondary}
-          showToggle
-          onPatch={(patch) =>
-            updateActions(value, onChange, {
-              secondaryCta: {
-                ...secondary,
-                ...patch,
-              },
-            })
-          }
-        />
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Button radius</span>
+              <Select
+                value={normalized.style?.buttonRadius ?? "__default__"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    buttonRadius: next === "__default__" ? undefined : (next as CtaButtonRadius),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buttonRadiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <ActionFields
-          kind="tertiary"
-          key={`tertiary-${tertiary?.href ?? ""}`}
-          title="Tertiary CTA"
-          action={tertiary}
-          showToggle
-          onPatch={(patch) =>
-            updateActions(value, onChange, {
-              tertiaryCta: {
-                ...tertiary,
-                ...patch,
-              },
-            })
-          }
-        />
-      </EditorSection>
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Primary button size</span>
+              <Select
+                value={normalized.style?.primaryButtonSize ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { primaryButtonSize: next as CtaButtonSize })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buttonSizeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      <EditorSection
-        title="Colors and button styles"
-        description="Set content palette plus CTA-local button shape and emphasis."
-      >
-        <SharedColorControl
-          label="Text color"
-          value={normalized.style?.text}
-          onChange={(next) => updateStyle(value, onChange, { text: next })}
-          onClear={() => clearStyleField(value, onChange, "text")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Badge background"
-          value={normalized.style?.badgeBackground}
-          onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
-          onClear={() => clearStyleField(value, onChange, "badgeBackground")}
-          placeholder="var(--color-primary)"
-          pickerFallback="#1d4ed8"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Badge text"
-          value={normalized.style?.badgeText}
-          onChange={(next) => updateStyle(value, onChange, { badgeText: next })}
-          onClear={() => clearStyleField(value, onChange, "badgeText")}
-          placeholder="var(--color-bg)"
-          pickerFallback="#ffffff"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Primary button background"
-          value={normalized.style?.primaryButtonBg}
-          onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
-          onClear={() => clearStyleField(value, onChange, "primaryButtonBg")}
-          placeholder="var(--color-primary)"
-          pickerFallback="#1d4ed8"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Primary button text"
-          value={normalized.style?.primaryButtonText}
-          onChange={(next) => updateStyle(value, onChange, { primaryButtonText: next })}
-          onClear={() => clearStyleField(value, onChange, "primaryButtonText")}
-          placeholder="var(--color-bg)"
-          pickerFallback="#ffffff"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Primary button border"
-          value={normalized.style?.primaryButtonBorder}
-          onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
-          onClear={() => clearStyleField(value, onChange, "primaryButtonBorder")}
-          placeholder="transparent"
-          pickerFallback="#ffffff"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Secondary button background"
-          value={normalized.style?.secondaryButtonBg}
-          onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
-          onClear={() => clearStyleField(value, onChange, "secondaryButtonBg")}
-          placeholder="transparent"
-          pickerFallback="#ffffff"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Secondary button text"
-          value={normalized.style?.secondaryButtonText}
-          onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
-          onClear={() => clearStyleField(value, onChange, "secondaryButtonText")}
-          placeholder="var(--color-text)"
-          pickerFallback="#0f172a"
-          showValueInput={false}
-        />
-        <SharedColorControl
-          label="Secondary button border"
-          value={normalized.style?.secondaryButtonBorder}
-          onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
-          onClear={() => clearStyleField(value, onChange, "secondaryButtonBorder")}
-          placeholder="var(--color-border)"
-          pickerFallback="#e2e8f0"
-          showValueInput={false}
-        />
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Secondary button size</span>
+              <Select
+                value={normalized.style?.secondaryButtonSize ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { secondaryButtonSize: next as CtaButtonSize })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buttonSizeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </EditorSection>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <EditorSection
+          title="Border and spacing"
+          description="Adjust surface border, banner radius, and padding."
+        >
+          <SharedColorControl
+            label="Border color"
+            value={normalized.style?.border}
+            onChange={(next) => updateStyle(value, onChange, { border: next })}
+            onClear={() => clearStyleField(value, onChange, "border")}
+            placeholder="var(--color-border)"
+            pickerFallback="#e2e8f0"
+            showValueInput={false}
+          />
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Border width</span>
+              <Select
+                value={normalized.style?.borderWidth ?? "1"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { borderWidth: next as CtaBannerBorderWidth })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select border width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Banner radius</span>
+              <Select
+                value={normalized.style?.radius ?? "xl"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { radius: next as CtaBannerRadius })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {radiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-sm font-medium">Padding</span>
+              <Select
+                value={normalized.style?.padding ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { padding: next as CtaBannerPadding })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select padding" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paddingOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </EditorSection>
+
+        <EditorSection
+          title="Background and motion"
+          description="Use background color, gradient, media, and optional CSS-safe motion."
+        >
+          <SharedColorControl
+            label="Background color"
+            value={normalized.background?.color ?? normalized.style?.background}
+            onChange={(next) => updateSurfaceColor(value, onChange, next)}
+            onClear={() => clearBackgroundField(value, onChange, "color")}
+            placeholder="var(--color-surface)"
+            pickerFallback="#f8fafc"
+            showValueInput={false}
+          />
+
+          <GradientField
+            value={normalized.background?.gradient}
+            onChange={(next) => updateBackground(value, onChange, { gradient: next })}
+            onClear={() => clearBackgroundField(value, onChange, "gradient")}
+          />
+
           <div className="space-y-1">
-            <span className="text-sm font-medium">Button radius</span>
+            <span className="text-sm font-medium">Background media type</span>
             <Select
-              value={normalized.style?.buttonRadius ?? "__default__"}
+              value={backgroundMedia.type ?? "none"}
               onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  buttonRadius: next === "__default__" ? undefined : (next as CtaButtonRadius),
+                updateBackgroundMedia(value, onChange, {
+                  type: next as CtaBackgroundMediaType,
+                  source: next === "image" ? (backgroundMedia.source ?? "external") : "external",
+                  assetId: next === "image" ? backgroundMedia.assetId : undefined,
+                  src: next === "image" ? backgroundMedia.src : undefined,
                 })
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
+                <SelectValue placeholder="Select media type" />
               </SelectTrigger>
               <SelectContent>
-                {buttonRadiusOptions.map((option) => (
+                {mediaTypeOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
@@ -1038,214 +1145,45 @@ export function CtaBannerVisualEditor({
             </Select>
           </div>
 
+          {backgroundMedia.type === "image" ? (
+            <BackgroundMediaFields
+              media={backgroundMedia}
+              onChange={(patch) => updateBackgroundMedia(value, onChange, patch)}
+            />
+          ) : null}
+
           <div className="space-y-1">
-            <span className="text-sm font-medium">Primary button size</span>
+            <span className="text-sm font-medium">Entrance motion</span>
             <Select
-              value={normalized.style?.primaryButtonSize ?? "md"}
+              value={normalized.motion?.preset ?? "none"}
               onValueChange={(next) =>
-                updateStyle(value, onChange, { primaryButtonSize: next as CtaButtonSize })
+                updateValue(value, onChange, (current) => ({
+                  ...current,
+                  motion: {
+                    ...current.motion,
+                    preset: next as CtaMotionPreset,
+                  },
+                }))
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select size" />
+                <SelectValue placeholder="Select motion" />
               </SelectTrigger>
               <SelectContent>
-                {buttonSizeOptions.map((option) => (
+                {motionOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id}>
                     {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Motion stays CSS-only and reduced-motion safe. Keep it static if the page does not
+              need animation.
+            </p>
           </div>
-
-          <div className="space-y-1">
-            <span className="text-sm font-medium">Secondary button size</span>
-            <Select
-              value={normalized.style?.secondaryButtonSize ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { secondaryButtonSize: next as CtaButtonSize })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                {buttonSizeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Border and spacing"
-        description="Adjust surface border, banner radius, and padding."
-      >
-        <SharedColorControl
-          label="Border color"
-          value={normalized.style?.border}
-          onChange={(next) => updateStyle(value, onChange, { border: next })}
-          onClear={() => clearStyleField(value, onChange, "border")}
-          placeholder="var(--color-border)"
-          pickerFallback="#e2e8f0"
-          showValueInput={false}
-        />
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-1">
-            <span className="text-sm font-medium">Border width</span>
-            <Select
-              value={normalized.style?.borderWidth ?? "1"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { borderWidth: next as CtaBannerBorderWidth })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-sm font-medium">Banner radius</span>
-            <Select
-              value={normalized.style?.radius ?? "xl"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { radius: next as CtaBannerRadius })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-sm font-medium">Padding</span>
-            <Select
-              value={normalized.style?.padding ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { padding: next as CtaBannerPadding })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select padding" />
-              </SelectTrigger>
-              <SelectContent>
-                {paddingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Background and motion"
-        description="Use background color, gradient, media, and optional CSS-safe motion."
-      >
-        <SharedColorControl
-          label="Background color"
-          value={normalized.background?.color ?? normalized.style?.background}
-          onChange={(next) => updateSurfaceColor(value, onChange, next)}
-          onClear={() => clearBackgroundField(value, onChange, "color")}
-          placeholder="var(--color-surface)"
-          pickerFallback="#f8fafc"
-          showValueInput={false}
-        />
-
-        <GradientField
-          value={normalized.background?.gradient}
-          onChange={(next) => updateBackground(value, onChange, { gradient: next })}
-          onClear={() => clearBackgroundField(value, onChange, "gradient")}
-        />
-
-        <div className="space-y-1">
-          <span className="text-sm font-medium">Background media type</span>
-          <Select
-            value={backgroundMedia.type ?? "none"}
-            onValueChange={(next) =>
-              updateBackgroundMedia(value, onChange, {
-                type: next as CtaBackgroundMediaType,
-                source: next === "image" ? (backgroundMedia.source ?? "external") : "external",
-                assetId: next === "image" ? backgroundMedia.assetId : undefined,
-                src: next === "image" ? backgroundMedia.src : undefined,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select media type" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaTypeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {backgroundMedia.type === "image" ? (
-          <BackgroundMediaFields
-            media={backgroundMedia}
-            onChange={(patch) => updateBackgroundMedia(value, onChange, patch)}
-          />
-        ) : null}
-
-        <div className="space-y-1">
-          <span className="text-sm font-medium">Entrance motion</span>
-          <Select
-            value={normalized.motion?.preset ?? "none"}
-            onValueChange={(next) =>
-              updateValue(value, onChange, (current) => ({
-                ...current,
-                motion: {
-                  ...current.motion,
-                  preset: next as CtaMotionPreset,
-                },
-              }))
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select motion" />
-            </SelectTrigger>
-            <SelectContent>
-              {motionOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Motion stays CSS-only and reduced-motion safe. Keep it static if the page does not need
-            animation.
-          </p>
-        </div>
-      </EditorSection>
+        </EditorSection>
+      </WidgetEditorSection>
     </div>
   );
 }
@@ -1293,37 +1231,49 @@ export function CtaBannerAdvancedEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection
-        title="Style diagnostics"
-        description="Read-only resolved CTA banner colors. Visual owns color editing."
-      >
-        <ReadonlyDiagnosticRows rows={styleRows} />
-      </EditorSection>
-
-      <EditorSection
-        title="Normalization and safeguards"
-        description="Confirmed support actions for deterministic CTA banner repair."
-      >
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPendingSupportAction("normalize")}
-          >
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setPendingSupportAction("reset")}>
-            Reset to defaults
-          </Button>
-        </div>
-      </EditorSection>
-
-      <EditorSection
+      <WidgetEditorSection
+        id="cta-banner.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime summary"
-        description="Human diagnostics only. Advanced does not show raw CTA banner JSON."
+        description="Human diagnostics only. Advanced keeps support actions confirmed and read-only."
       >
-        <ReadonlyDiagnosticRows rows={runtimeRows} />
-      </EditorSection>
+        <EditorSection
+          title="Style diagnostics"
+          description="Read-only resolved CTA banner colors. Visual owns color editing."
+        >
+          <ReadonlyDiagnosticRows rows={styleRows} />
+        </EditorSection>
+
+        <EditorSection
+          title="Normalization and safeguards"
+          description="Confirmed support actions for deterministic CTA banner repair."
+        >
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingSupportAction("normalize")}
+            >
+              Normalize now
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingSupportAction("reset")}
+            >
+              Reset to defaults
+            </Button>
+          </div>
+        </EditorSection>
+
+        <EditorSection
+          title="Runtime summary"
+          description="Human diagnostics only. Advanced does not show raw CTA banner JSON."
+        >
+          <ReadonlyDiagnosticRows rows={runtimeRows} />
+        </EditorSection>
+      </WidgetEditorSection>
 
       <ConfirmActionDialog
         open={pendingSupportAction !== null}

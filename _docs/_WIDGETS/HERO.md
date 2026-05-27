@@ -23,17 +23,11 @@ Top-of-page section with main value proposition, CTA, and optional media.
 
 ### Wizard
 
-- One-time setup only: goal preset action, initial Hero layout, headline seed,
-  and primary CTA seed.
+- One-time setup only: goal preset action plus read-only headline / primary CTA
+  summary.
 - Wizard intentionally does not own subhead/body, secondary CTA, media,
   background, style, layout spacing, or responsive behavior. Those are Visual
   edits.
-- Temporary duplicate writable paths with Visual (`variant`, `headline`,
-  `primaryCta.label`, `primaryCta.href`) are allowed only until
-  `TASK-336-16` hides completed Wizard setup for existing widgets.
-- `primaryCta.href` is authored through the shared page-first destination
-  picker. Saved custom/hash/external destinations remain replace-or-clear
-  compatible instead of editable raw URL text.
 
 ### Visual
 

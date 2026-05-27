@@ -17,16 +17,13 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 ## Editor Modes (current after TASK-050-13-02)
 
 ### Wizard (minimal onboarding)
-- Gallery layout variant
-- Section title
-- Initial media count
-- Shared MediaPicker-backed media selection
+- read-only gallery layout summary
+- read-only section title summary
+- read-only initial media count summary
+- read-only configured-media summary
 
-Wizard media selection currently uses the admin media cache for current-contract
-image and video assets and persists selected media as schema-owned public
-`image` or `video` values plus caption copy. It does not seed
-`header.description`; Visual owns supporting copy after setup.
-Wizard now also points authors toward the final flow: Visual owns per-item
+Wizard does not seed `header.description`; Visual owns supporting copy after
+setup. Wizard now points authors toward the final flow: Visual owns per-item
 captions, destinations, alt text, posters, lightbox, density, and motion
 controls, while Advanced owns confirm-gated support import/export for the
 schema payload.
@@ -176,11 +173,12 @@ the config.
 ## TASK-336-18 Editor Contract
 
 - Exports `galleryMosaicEditorContract` with `version: 2`.
-- Contract target: Wizard seeds initial media/copy/count; Visual owns media,
+- Contract target: Wizard is a read-only starter summary; Visual owns media,
   captions, links, lightbox, density, and motion; Advanced is read-only runtime
   diagnostics.
 - TASK-336-19 removed raw image/video/link/poster URL authoring from normal
   Visual flows. The contract still stores runtime-safe string paths, but the
   beginner UI uses media and page pickers plus read-only legacy state.
-- The Wizard contract now matches actual writes: `variant`, `header.title`,
-  `items.count`, `items.image`, `items.video`, and `items.caption`.
+- The Wizard contract now matches the current summary-only flow: layout, title,
+  count, and configured media are shown as read-only context before Visual
+  editing.

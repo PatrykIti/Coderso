@@ -278,7 +278,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ToggleBlock wizard editor guides setup through variant, labels, and starting pane", async () => {
+test("ToggleBlock wizard editor keeps setup focused on variant and points daily editing to Visual", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-toggle",
@@ -287,70 +287,38 @@ test("ToggleBlock wizard editor guides setup through variant, labels, and starti
 
   try {
     expect(view.container.textContent).toContain("Step 1: Variant");
-    expect(view.container.textContent).toContain("Step 2: Labels");
-    expect(view.container.textContent).toContain("Step 3: Starting pane");
+    expect(view.container.textContent).toContain("Wizard is one-time starter setup.");
     expect(view.container.textContent).not.toContain("Theme");
     expect(view.container.textContent).not.toContain("Diagnostics");
     const variantSection = getSectionByTitle(view.container, "Step 1: Variant");
     expect(variantSection.getAttribute("data-widget-editor-mode")).toBe("wizard");
     expect(variantSection.getAttribute("data-widget-editor-section-role")).toBe("setup");
-    expect(
-      view.container
-        .querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
-        ?.getAttribute("data-widget-control-ownership")
-    ).toBe("preview");
-    expect(
-      view.container
-        .querySelector('[data-widget-control="toggle-block.variant-preview.cards"]')
-        ?.getAttribute("data-widget-control-ownership")
-    ).toBe("preview");
-
-    clickButton(findButtonByText(view.container, "Cards"));
-    expect(view.getVariant()).toBe("cards");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("cards");
-
-    const labelsSection = getSectionByTitle(view.container, "Step 2: Labels");
-    const primaryInput = findInputByPlaceholder(labelsSection, "View A");
-    const helperInput = findInputByPlaceholder(labelsSection, "Switch between two content views.");
-    setInputValue(primaryInput, " Overview ");
-    setInputValue(helperInput, "");
-
-    const startingPaneSection = getSectionByTitle(view.container, "Step 3: Starting pane");
-    const stateSelect = findSelectByOptions(startingPaneSection, ["primary", "secondary"]);
-    setSelectValue(stateSelect, "secondary");
-
-    expect(view.container.textContent).toContain(
-      "Secondary pane opens first in preview and runtime"
+    const variantSummary = variantSection.querySelector(
+      '[data-widget-control="toggle-block.wizard.variant-summary"]'
     );
-    expect(view.getValue()).toEqual({
-      labels: {
-        primary: "Overview",
-        secondary: "View B",
-        helper: "",
-        ariaLabel: "Toggle content view",
-        selectedSuffix: "selected",
-      },
-      options: {
-        defaultState: "secondary",
-        motion: "none",
-      },
-      style: {
-        panes: {
-          primary: {
-            surface: "default",
-            padding: "comfortable",
-            radius: "md",
-            borderEmphasis: "subtle",
-          },
-          secondary: {
-            surface: "default",
-            padding: "comfortable",
-            radius: "md",
-            borderEmphasis: "subtle",
-          },
-        },
-      },
-    });
+    expect(variantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(variantSummary?.textContent).toContain("Switch");
+    expect(
+      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.switch"]')
+    ).toBeNull();
+    expect(
+      view.container.querySelector('[data-widget-control="toggle-block.variant-preview.cards"]')
+    ).toBeNull();
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.getVariant()).toBe("legacy-toggle");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.querySelector('input[placeholder="View A"]')).toBeNull();
+    expect(
+      view.container.querySelector('input[placeholder="Switch between two content views."]')
+    ).toBeNull();
+    expect(
+      Array.from(view.container.querySelectorAll("select")).some((select) => {
+        if (!(select instanceof HTMLSelectElement)) return false;
+        const optionValues = Array.from(select.options).map((option) => option.value);
+        return optionValues.includes("primary") && optionValues.includes("secondary");
+      })
+    ).toBe(false);
+    expect(view.getValue()).toEqual({});
   } finally {
     view.cleanup();
   }

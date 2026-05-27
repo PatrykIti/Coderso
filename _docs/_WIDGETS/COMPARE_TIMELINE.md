@@ -22,12 +22,12 @@ Typical use cases:
 
 ### Wizard
 
-- Highlight mode on/off
-- Axis step count (`3-10`)
-- Axis labels and descriptions
-- Track labels
-- Marker baseline per track
-- Beginner-safe highlight target + segment editing when highlight mode is enabled
+- Read-only current highlight mode summary
+- Read-only axis step count summary
+
+Wizard does not own axis wording, track labels, marker baseline, highlight
+targets, or segment mapping. Those daily comparison edits live only in Visual
+after setup.
 
 ### Visual
 
@@ -192,7 +192,7 @@ tokens remain explicit semantic choices; they are not clearable style sentinels.
 ## TASK-336-18 Editor Contract
 
 - Exports `compareTimelineEditorContract` with `version: 2`.
-- Contract target: Wizard seeds comparison copy, axis, and tracks; Visual owns
+- Contract target: Wizard is a read-only starter summary; Visual owns
   axis/tracks/highlights/layout/style; Advanced is read-only runtime
   diagnostics.
 - `TASK-336-19` closed the raw step ID, writable Advanced guide/highlight, and

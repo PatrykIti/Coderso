@@ -28,7 +28,11 @@ import {
   type CompareTrack,
   type CompareTrackSegment,
 } from "../../../../widgets/core/compareTimeline";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  WidgetEditorMode,
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+} from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
   ColorContrastNotice,
@@ -37,7 +41,7 @@ import {
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: CompareTimelineVariantId;
@@ -166,18 +170,28 @@ function normalizeValue(value: CompareTimelineData): CompareTimelineData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: WidgetEditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -749,174 +763,45 @@ function getHighlightContext(value: CompareTimelineData) {
 
 export function CompareTimelineWizardEditor({
   value,
-  onChange,
   variant,
-  onVariantChange,
 }: WidgetEditorProps<CompareTimelineData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolveCompareTimelineVariant(variant);
   const highlightEnabled = resolvedVariant === "dual-track-highlight";
-  const { highlightMode, targetTrackIds } = getHighlightContext(normalized);
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="compare-timeline.wizard.starter-comparison"
+        mode="wizard"
+        role="setup"
         title="Quick setup"
         description="Set comparison baseline without deep styling controls."
       >
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Highlight mode</p>
-            <p className="text-xs text-muted-foreground">Emphasize ranges on one or both tracks.</p>
-          </div>
-          <Switch
-            checked={highlightEnabled}
-            onCheckedChange={(checked) =>
-              onVariantChange?.(checked ? "dual-track-highlight" : "dual-track")
-            }
-          />
+        <ReadonlyWidgetSummaryRow
+          id="compare-timeline.wizard.variant"
+          label="Highlight mode"
+          path="variant"
+          value={highlightEnabled ? "Enabled on one or both tracks" : "Disabled"}
+        />
+
+        <ReadonlyWidgetSummaryRow
+          id="compare-timeline.wizard.axis-steps-count"
+          label="Axis step count"
+          path="axis.steps.count"
+          value={`${normalized.axis.steps.length} steps`}
+        />
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Visual owns axis wording, track labels, marker mapping, and highlight segment editing
+          after setup.
         </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Axis step count</p>
-          <Select
-            value={String(normalized.axis.steps.length)}
-            onValueChange={(next) => setAxisStepCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select step count" />
-            </SelectTrigger>
-            <SelectContent>
-              {stepCountOptions.map((count) => (
-                <SelectItem key={count} value={String(count)}>
-                  {count} steps
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {highlightEnabled ? (
+          <p className="text-xs text-muted-foreground">
+            Highlight targets and segment ranges stay in Visual so comparison mapping has one
+            truthful editing surface.
+          </p>
+        ) : null}
       </EditorSection>
-
-      <EditorSection
-        title="Axis copy"
-        description="Set beginner-friendly labels and descriptions for each step."
-      >
-        <div className="space-y-3">
-          {normalized.axis.steps.map((step, stepIndex) => (
-            <div key={step.id ?? `${stepIndex}`} className="space-y-2 rounded-lg border p-3">
-              <Input
-                value={step.label}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, { label: event.target.value })
-                }
-                placeholder={`Step ${stepIndex + 1}`}
-              />
-              <Textarea
-                value={step.description ?? ""}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, {
-                    description: event.target.value,
-                  })
-                }
-                placeholder="Optional step description"
-                rows={2}
-              />
-            </div>
-          ))}
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Track labels"
-        description="Name both tracks for a clear side-by-side comparison."
-      >
-        <div className="grid gap-2 sm:grid-cols-2">
-          {normalized.tracks.map((track, trackIndex) => (
-            <Input
-              key={track.id}
-              value={track.label}
-              onChange={(event) =>
-                updateTrack(value, onChange, trackIndex, { label: event.target.value })
-              }
-              placeholder={`Track ${trackIndex + 1} label`}
-            />
-          ))}
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Marker baseline"
-        description="Choose which axis points are active for each track."
-      >
-        {normalized.tracks.map((track, trackIndex) => (
-          <div key={track.id} className="space-y-2">
-            <p className="text-sm font-medium">{track.label}</p>
-            <MarkerToggleGrid
-              track={track}
-              steps={normalized.axis.steps}
-              onToggle={(stepIndex) => toggleMarker(value, onChange, trackIndex, stepIndex)}
-            />
-            {track.markers.length === 0 ? (
-              <p className="text-xs text-amber-700">
-                This track currently has no active markers, so the runtime row will look empty.
-              </p>
-            ) : null}
-          </div>
-        ))}
-      </EditorSection>
-
-      {highlightEnabled ? (
-        <EditorSection
-          title="Highlight segments"
-          description="Choose highlight targets and configure beginner-safe segment ranges."
-        >
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Highlight targets</p>
-            <Select
-              value={highlightMode}
-              onValueChange={(next) => updateHighlightTargets(value, onChange, next)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select highlight targets" />
-              </SelectTrigger>
-              <SelectContent>
-                {normalized.tracks.map((track) => (
-                  <SelectItem key={track.id} value={track.id}>
-                    {track.label}
-                  </SelectItem>
-                ))}
-                <SelectItem value="both">Both tracks</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-3">
-            {normalized.tracks.map((track, trackIndex) => (
-              <div key={track.id} className="space-y-2 rounded-lg border p-3">
-                <p className="text-sm font-medium">{track.label}</p>
-                <SegmentEditor
-                  track={track}
-                  steps={normalized.axis.steps}
-                  onAdd={() => addSegment(value, onChange, trackIndex)}
-                  onPatch={(segmentIndex, patch) =>
-                    updateSegment(value, onChange, trackIndex, segmentIndex, patch)
-                  }
-                  onRemove={(segmentIndex) =>
-                    removeSegment(value, onChange, trackIndex, segmentIndex)
-                  }
-                  renderHint={resolveTrackHighlightHint(normalized, track.id)}
-                />
-                {targetTrackIds.includes(track.id) ? null : (
-                  <p className="text-xs text-muted-foreground">
-                    Saved segments on this track stay hidden until you include it in Highlight
-                    targets.
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </EditorSection>
-      ) : null}
     </div>
   );
 }
@@ -954,6 +839,8 @@ export function CompareTimelineVisualEditor({
     <div className="space-y-4">
       <EditorSection
         id="compare-timeline.visual.variant"
+        mode="visual"
+        role="setup"
         title="Variant and compare structure"
         description="Select how the comparison story is presented."
       >
@@ -964,6 +851,8 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.section-heading"
+        mode="visual"
+        role="content"
         title="Section heading"
         description="Name the compare block before tuning the axis and tracks."
       >
@@ -988,10 +877,15 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.axis-tracks"
+        mode="visual"
+        role="content"
         title="Axis steps and track labels"
         description="Define axis wording and track names shown in preview."
       >
-        <div className="space-y-3 rounded-lg border p-3" data-widget-control-path="axis.steps">
+        <div
+          className="space-y-3 rounded-lg border p-3"
+          data-widget-control-path="axis.steps.count"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[12rem] flex-1 space-y-2">
               <p className="text-sm font-medium">Axis step count</p>
@@ -1042,34 +936,41 @@ export function CompareTimelineVisualEditor({
           {normalized.axis.steps.map((step, stepIndex) => (
             <div key={step.id ?? `${stepIndex}`} className="space-y-2 rounded-lg border p-3">
               <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  value={step.label}
+                <div data-widget-control-path="axis.steps.*.label">
+                  <Input
+                    value={step.label}
+                    onChange={(event) =>
+                      updateAxisStep(value, onChange, stepIndex, { label: event.target.value })
+                    }
+                    placeholder={`Step ${stepIndex + 1}`}
+                  />
+                </div>
+                <div data-widget-control-path="axis.steps.*.icon">
+                  <Input
+                    value={step.icon ?? ""}
+                    onChange={(event) =>
+                      updateAxisStep(value, onChange, stepIndex, { icon: event.target.value })
+                    }
+                    placeholder="Optional icon or emoji"
+                  />
+                </div>
+              </div>
+              <div data-widget-control-path="axis.steps.*.description">
+                <Textarea
+                  value={step.description ?? ""}
                   onChange={(event) =>
-                    updateAxisStep(value, onChange, stepIndex, { label: event.target.value })
+                    updateAxisStep(value, onChange, stepIndex, {
+                      description: event.target.value,
+                    })
                   }
-                  placeholder={`Step ${stepIndex + 1}`}
-                />
-                <Input
-                  value={step.icon ?? ""}
-                  onChange={(event) =>
-                    updateAxisStep(value, onChange, stepIndex, { icon: event.target.value })
-                  }
-                  placeholder="Optional icon or emoji"
+                  placeholder="Optional step description"
+                  rows={2}
                 />
               </div>
-              <Textarea
-                value={step.description ?? ""}
-                onChange={(event) =>
-                  updateAxisStep(value, onChange, stepIndex, {
-                    description: event.target.value,
-                  })
-                }
-                placeholder="Optional step description"
-                rows={2}
-              />
               <LinkDestinationField
                 fieldId={`compare-timeline-step-${stepIndex + 1}-destination`}
                 label="Step destination"
+                controlPath="axis.steps.*.href"
                 value={step.href}
                 onChange={(next) => updateAxisStep(value, onChange, stepIndex, { href: next })}
                 emptyLabel="No step destination"
@@ -1079,7 +980,7 @@ export function CompareTimelineVisualEditor({
           ))}
         </div>
 
-        <div className="space-y-2" data-widget-control-path="tracks">
+        <div className="space-y-2" data-widget-control-path="tracks.*.label">
           <p className="text-sm font-medium">Track labels</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {normalized.tracks.map((track, trackIndex) => (
@@ -1098,6 +999,8 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.markers-segments"
+        mode="visual"
+        role="visual"
         title="Markers and segment mapping"
         description="Map active points per track and configure highlight ranges when needed."
       >
@@ -1128,7 +1031,11 @@ export function CompareTimelineVisualEditor({
         ) : null}
 
         {normalized.tracks.map((track, trackIndex) => (
-          <div key={track.id} className="space-y-3 rounded-lg border p-3">
+          <div
+            key={track.id}
+            className="space-y-3 rounded-lg border p-3"
+            data-widget-control-path="tracks.*.markers"
+          >
             <p className="text-sm font-medium">{track.label}</p>
             <MarkerToggleGrid
               track={track}
@@ -1142,18 +1049,20 @@ export function CompareTimelineVisualEditor({
             ) : null}
 
             {highlightEnabled ? (
-              <SegmentEditor
-                track={track}
-                steps={normalized.axis.steps}
-                onAdd={() => addSegment(value, onChange, trackIndex)}
-                onPatch={(segmentIndex, patch) =>
-                  updateSegment(value, onChange, trackIndex, segmentIndex, patch)
-                }
-                onRemove={(segmentIndex) =>
-                  removeSegment(value, onChange, trackIndex, segmentIndex)
-                }
-                renderHint={resolveTrackHighlightHint(normalized, track.id)}
-              />
+              <div data-widget-control-path="tracks.*.segments">
+                <SegmentEditor
+                  track={track}
+                  steps={normalized.axis.steps}
+                  onAdd={() => addSegment(value, onChange, trackIndex)}
+                  onPatch={(segmentIndex, patch) =>
+                    updateSegment(value, onChange, trackIndex, segmentIndex, patch)
+                  }
+                  onRemove={(segmentIndex) =>
+                    removeSegment(value, onChange, trackIndex, segmentIndex)
+                  }
+                  renderHint={resolveTrackHighlightHint(normalized, track.id)}
+                />
+              </div>
             ) : null}
           </div>
         ))}
@@ -1169,6 +1078,8 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.highlight-guides"
+        mode="visual"
+        role="visual"
         title="Highlight and guide styles"
         description="Tune emphasis style and guide lines for better readability."
       >
@@ -1239,6 +1150,8 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.colors-typography"
+        mode="visual"
+        role="visual"
         title="Colors and typography"
         description="Control comparison contrast, label colors, and text scale."
       >
@@ -1440,28 +1353,30 @@ export function CompareTimelineVisualEditor({
             </Select>
           </div>
 
-          <div className="space-y-2" data-widget-control-path="style.segmentLabelFontWeight">
-            <p className="text-sm font-medium">Segment label weight</p>
-            <Select
-              value={normalized.style?.segmentLabelFontWeight ?? "normal"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, {
-                  segmentLabelFontWeight: next as CompareStyle["segmentLabelFontWeight"],
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Segment label weight" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontWeightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {fontWeightLabels[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {highlightEnabled ? (
+            <div className="space-y-2" data-widget-control-path="style.segmentLabelFontWeight">
+              <p className="text-sm font-medium">Segment label weight</p>
+              <Select
+                value={normalized.style?.segmentLabelFontWeight ?? "normal"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    segmentLabelFontWeight: next as CompareStyle["segmentLabelFontWeight"],
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Segment label weight" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontWeightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {fontWeightLabels[option]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-2" data-widget-control-path="style.markerShape">
@@ -1488,6 +1403,8 @@ export function CompareTimelineVisualEditor({
 
       <EditorSection
         id="compare-timeline.visual.spacing-layout"
+        mode="visual"
+        role="layout"
         title="Spacing and layout preview hints"
         description="Adjust density and axis label placement for desktop/tablet/mobile preview modes."
       >
@@ -1657,6 +1574,8 @@ export function CompareTimelineAdvancedEditor({
     <div className="space-y-4">
       <EditorSection
         id="compare-timeline.advanced.runtime-layout"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime layout diagnostics"
         description="Read-only layout, guide, highlight, and style summary."
       >
@@ -1696,6 +1615,8 @@ export function CompareTimelineAdvancedEditor({
 
       <EditorSection
         id="compare-timeline.advanced.metadata"
+        mode="advanced"
+        role="diagnostics"
         title="Metadata diagnostics"
         description="Read-only normalized IDs, step descriptions, and runtime counts."
       >
@@ -1757,6 +1678,8 @@ export function CompareTimelineAdvancedEditor({
 
       <EditorSection
         id="compare-timeline.advanced.normalization"
+        mode="advanced"
+        role="summary"
         title="Normalization support"
         description="Confirmed deterministic cleanup for axis count, IDs, markers, and segments."
       >

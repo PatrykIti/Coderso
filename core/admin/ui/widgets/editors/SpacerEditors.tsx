@@ -1,13 +1,6 @@
 import { type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +65,8 @@ const spacerHeightBreakpointHelp = {
   mobile: "Applies to phone previews before tablet takes over.",
 } as const;
 
-function normalizeValue(value: SpacerData, variant: string): SpacerData {
-  return normalizeSpacerData(value, variant);
+function normalizeValue(value: SpacerData, _variant: string): SpacerData {
+  return normalizeSpacerData(value);
 }
 
 function formatSpacerHeightForEditor(value: string | undefined) {
@@ -353,15 +346,12 @@ function ResponsiveHeights({
   );
 }
 
-export function SpacerWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<SpacerData>) {
+export function SpacerWizardEditor({ value, variant }: WidgetEditorProps<SpacerData>) {
   const normalized = normalizeValue(value, variant);
   const height = normalized.height ?? spacerDefaults.height!;
   const resolvedVariant = resolveSpacerVariant(variant);
+  const variantLabel =
+    variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Responsive";
 
   return (
     <div className="space-y-4">
@@ -370,52 +360,35 @@ export function SpacerWizardEditor({
         mode="wizard"
         role="setup"
         title="Spacer quick start"
-        description="Pick a safe rhythm preset. Visual owns ongoing responsive height editing."
+        description="Wizard now summarizes the saved spacer mode and starter rhythm. Visual owns ongoing responsive height editing."
       >
-        <WidgetControlRow id="spacer.wizard.variant" label="Spacer mode" path="variant">
-          {(fieldProps) => (
-            <Select
-              value={resolveSpacerVariant(variant)}
-              onValueChange={(next) => onVariantChange?.(next)}
-            >
-              <SelectTrigger
-                id={fieldProps.id}
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              >
-                <SelectValue placeholder="Select mode" />
-              </SelectTrigger>
-              <SelectContent>
-                {variantOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="spacer.wizard.variant"
+          label="Spacer mode"
+          path="variant"
+          value={variantLabel}
+        />
 
         <WidgetControlRow
           id="spacer.wizard.rhythm-preset"
           label="Rhythm presets"
           path="height"
-          help="Apply a named vertical rhythm preset without typing technical lengths."
+          ownership="readonly"
+          help="Visual owns spacer heights after setup."
         >
           {() => (
-            <div className="rounded-md border p-3">
-              <SpacerPresetChooser value={value} variant={variant} onChange={onChange} />
+            <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              Desktop: {height.desktop ?? "16"} / Tablet: {height.tablet ?? "12"} / Phone:{" "}
+              {height.mobile ?? "8"}
             </div>
           )}
         </WidgetControlRow>
 
-        <HeightField
+        <ReadonlyWidgetSummaryRow
           id="spacer.wizard.desktop-height"
-          path="height.desktop"
           label="Desktop height"
-          breakpoint="desktop"
+          path="height.desktop"
           value={height.desktop ?? "16"}
-          onChange={(next) => updateHeight(value, variant, onChange, { desktop: next })}
         />
         {resolvedVariant === "fixed" ? (
           <p className="text-xs text-muted-foreground">
@@ -423,31 +396,10 @@ export function SpacerWizardEditor({
           </p>
         ) : null}
 
-        <WidgetControlRow
-          id="spacer.wizard.editor-guide"
-          label="Show guide in editor"
-          path="showGuideInEditor"
-          hideLabel
-        >
-          {() => (
-            <div className="rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Show guide in editor</p>
-                  <p className="text-xs text-muted-foreground">
-                    Displays a spacer label overlay in editor preview.
-                  </p>
-                </div>
-                <Switch
-                  checked={Boolean(normalized.showGuideInEditor)}
-                  onCheckedChange={(checked) =>
-                    updateMeta(value, variant, onChange, { showGuideInEditor: checked })
-                  }
-                />
-              </div>
-            </div>
-          )}
-        </WidgetControlRow>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Visual owns the editor guide toggle after setup so you can enable or hide the spacer
+          helper while composing.
+        </div>
       </EditorSection>
     </div>
   );

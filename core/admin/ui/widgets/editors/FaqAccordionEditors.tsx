@@ -548,12 +548,7 @@ function describeFaqSavedData(value: FaqAccordionData) {
     : "Saved FAQ data is already clean.";
 }
 
-export function FaqAccordionWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<FaqAccordionData>) {
+export function FaqAccordionWizardEditor({ value, variant }: WidgetEditorProps<FaqAccordionData>) {
   const normalized = normalizeValue(value);
   const items = normalizeFaqAccordionItems(normalized.items);
 
@@ -563,129 +558,29 @@ export function FaqAccordionWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter questions"
-      description="Seed the FAQ layout, heading, and first question set."
+      description="Review the FAQ layout and question count. Daily copy, answers, and layout changes live in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">FAQ layout</p>
-          <Select
-            value={resolveFaqAccordionVariant(variant)}
-            onValueChange={(next) => onVariantChange?.(next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="faq-accordion.wizard.variant"
+          label="FAQ layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolveFaqAccordionVariant(variant))
+              ?.label ?? "Single Column"
+          }
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Frequently asked questions"
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="faq-accordion.wizard.items.count"
+          label="Questions count"
+          path="items.count"
+          value={`${items.length} question${items.length === 1 ? "" : "s"}`}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section description</p>
-          <Textarea
-            value={normalized.header?.description ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Address objections with short and clear answers."
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Questions count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Questions and answers</p>
-          {items.map((item, index) => (
-            <div
-              key={item.id ?? `wizard-question-${index + 1}`}
-              className="space-y-2 rounded-lg border p-3"
-            >
-              <div className="grid gap-2 sm:grid-cols-[6rem_minmax(0,1fr)]">
-                <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Icon
-                  </p>
-                  <Input
-                    aria-label={`Icon ${index + 1}`}
-                    value={item.icon ?? ""}
-                    onChange={(event) =>
-                      updateItem(value, onChange, index, { icon: event.target.value })
-                    }
-                    placeholder="⭐"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Answer mode
-                  </p>
-                  <Select
-                    value={item.answerFormat ?? "plain"}
-                    onValueChange={(next) =>
-                      updateItem(value, onChange, index, {
-                        answerFormat: next as FaqAccordionAnswerFormat,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select answer mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {answerFormatOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Input
-                aria-label={`Question ${index + 1}`}
-                value={item.question ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { question: event.target.value })
-                }
-                placeholder={`Question ${index + 1}`}
-              />
-              <Textarea
-                aria-label={`Answer ${index + 1}`}
-                value={item.answer ?? ""}
-                onChange={(event) =>
-                  updateItem(value, onChange, index, { answer: event.target.value })
-                }
-                placeholder={`Answer ${index + 1}`}
-              />
-            </div>
-          ))}
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual to write the section heading, questions, answers, answer format, icons,
+          default-open behavior, style, search visibility, and question count.
         </div>
       </div>
     </WidgetEditorSection>

@@ -19,11 +19,10 @@ Pricing table for plans, tiers, and comparison-style rows.
 
 ### Wizard
 
-- variant
-- header text
+- read-only current layout summary
 - fixed-count layout guidance
-- name, badge, price, billing period, CTA label, page-first CTA destination,
-  and feature essentials per visible plan
+- read-only visible-plan preview that points daily copy, pricing, features,
+  badges, and CTAs to Visual
 
 ### Visual
 
@@ -167,9 +166,9 @@ Pricing table for plans, tiers, and comparison-style rows.
 ## TASK-336-18 Editor Contract
 
 - Exports `pricingPlansEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter offer/count/copy/prices; Visual owns
-  plan details, billing, comparison rows, layout, and style; Advanced is
-  read-only runtime diagnostics.
+- Contract target: Wizard is a read-only starter summary; Visual owns plan
+  details, billing, comparison rows, layout, and style; Advanced is read-only
+  runtime diagnostics.
 - TASK-336-19 replaced normal Wizard/Visual `CTA URL` text inputs with
   page-first destination pickers, removed fake `href: "#"` defaults, hid raw
   color token textboxes behind swatch/clear controls, and corrected Wizard

@@ -8,8 +8,8 @@ Tasks: TASK-336-19
 
 ### Widgets
 
-- Narrowed `stack` Wizard to one-time preset setup and slot guidance while
-  Visual owns daily responsive flow, spacing, alignment, distribution, and
+- Narrowed `stack` Wizard to guidance-only setup framing and slot guidance
+  while Visual owns preset choice plus daily responsive flow, spacing, alignment, distribution, and
   wrapping controls.
 - Preset changes now normalize saved Stack data before persistence and disclose
   that the preset updates desktop, tablet, and mobile flow directions.

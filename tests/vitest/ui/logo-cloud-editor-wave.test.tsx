@@ -575,42 +575,28 @@ test("LogoCloud wizard covers one-time starter setup without daily logo details"
       render: (props) => <LogoCloudWizardEditor {...props} />,
     });
 
-  const variantSelect = getSelectByOptions(container, ["grid", "strip", "dense"]);
-  expect(variantSelect.value).toBe("grid");
-  expect(getLogoNameInputs(container)).toHaveLength(initialValue.logos.length);
-
-  setSelectValue(variantSelect, "strip");
-  expect(getLatestVariant()).toBe("strip");
-  expect(onVariantChangeSpy).toHaveBeenLastCalledWith("strip");
-
-  setInputValue(
-    getInputByPlaceholder(container, "Trusted by teams worldwide"),
-    "Trusted by enterprise teams"
+  expect(container.textContent).toContain("Starter overview");
+  expect(container.textContent).toContain("Current layout");
+  expect(container.textContent).toContain("Grid");
+  expect(container.textContent).toContain("Logo count");
+  expect(container.textContent).toContain("4 logos");
+  expect(getLogoNameInputs(container)).toHaveLength(0);
+  expect(container.textContent).toContain(
+    "Use Visual to change layout, adjust logo count, write the section headline, add logo names, upload images, and connect destinations."
   );
-
-  expect(getLatestValue().header?.title).toBe("Trusted by enterprise teams");
-  expect(getLatestValue().header?.description).toBe(logoCloudDefaults.header?.description);
-
-  const countSelect = getSelectByOptions(container, ["1", String(logoCloudLogoMax)]);
-  setSelectValue(countSelect, "2");
-
-  expect(getLatestValue().logos).toHaveLength(2);
-  expect(getLatestValue().logos[0]?.id).toBe("same");
-  expect(getLatestValue().logos[1]?.id).toBe("logo-2");
-  expect(getLogoNameInputs(container)).toHaveLength(2);
+  expect(container.querySelector("select")).toBeNull();
+  expect(getLatestVariant()).toBe("unexpected");
+  expect(getLatestValue().logos).toHaveLength(4);
+  expect(getLogoNameInputs(container)).toHaveLength(0);
   expect(getMediaPickers(container)).toHaveLength(0);
-
-  setInputValue(getInputByPlaceholder(container, "Logo 2"), "North Ridge");
-
-  expect(getLatestValue().logos[1]?.name).toBe("North Ridge");
+  expect(queryInputsByPlaceholder(container, "Trusted by teams worldwide")).toHaveLength(0);
+  expect(queryInputsByPlaceholder(container, "Logo 2")).toHaveLength(0);
   expect(queryInputsByPlaceholder(container, "Accessible logo name")).toHaveLength(0);
   expect(queryInputsByPlaceholder(container, "https://cdn.example.com/logo.svg")).toHaveLength(0);
   expect(container.textContent).not.toContain("Media library");
   expect(container.textContent).not.toContain("Logo destination");
-  expect(getLatestValue().logos[1]?.href).toBeUndefined();
-  expect(getLatestValue().logos[1]?.image).toBeUndefined();
-  expect(getLatestValue().logos[1]?.alt).toBeUndefined();
-  expect(onChangeSpy).toHaveBeenCalled();
+  expect(onChangeSpy).not.toHaveBeenCalled();
+  expect(onVariantChangeSpy).not.toHaveBeenCalled();
 
   cleanup();
 });
@@ -1134,10 +1120,13 @@ test("LogoCloud editors render sparse header and style fallbacks with safe defau
   });
 
   try {
-    expect(getInputByPlaceholder(wizardHarness.container, "Trusted by teams worldwide").value).toBe(
-      logoCloudDefaults.header?.title
+    expect(
+      queryInputsByPlaceholder(wizardHarness.container, "Trusted by teams worldwide")
+    ).toHaveLength(0);
+    expect(getLogoNameInputs(wizardHarness.container)).toHaveLength(0);
+    expect(wizardHarness.container.textContent).toContain(
+      "Use Visual to change layout, adjust logo count, write the section headline, add logo names, upload images, and connect destinations."
     );
-    expect(getLogoNameInputs(wizardHarness.container)[0]?.value).toBe("Acme");
   } finally {
     wizardHarness.cleanup();
   }
@@ -1223,10 +1212,8 @@ test("LogoCloud editors ignore variant changes safely when no handler is provide
   );
 
   try {
-    const variantSelect = getSelectByOptions(wizardView.container, ["grid", "strip", "dense"]);
-    expect(variantSelect.value).toBe("grid");
-    setSelectValue(variantSelect, "strip");
-    expect(variantSelect.value).toBe("grid");
+    expect(wizardView.container.textContent).toContain("Grid");
+    expect(wizardView.container.querySelector("select")).toBeNull();
   } finally {
     wizardView.cleanup();
   }

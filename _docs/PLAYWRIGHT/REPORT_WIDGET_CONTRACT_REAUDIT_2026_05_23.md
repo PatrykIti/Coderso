@@ -916,13 +916,13 @@ and segment destination authoring drift.
 
 ## TASK-336-19 Timeline Mode/Destination Evidence (2026-05-25)
 
-The fourteenth TASK-336-19 implementation family targets Timeline Wizard,
-Visual destination, and Advanced diagnostics drift.
+The fourteenth TASK-336-19 implementation family originally targeted Timeline
+Wizard, Visual destination, and Advanced diagnostics drift. The current landed
+state is narrower and stricter than this intermediate report:
 
-- Timeline Wizard now seeds only the starter story: variant, header title,
-  header description, starter step count, and starter step title/description.
-  Layout, guides, status, icons, marker accents, dates, and destinations are
-  no longer exposed in Wizard.
+- Timeline Wizard is now a read-only starter summary for variant, header, and
+  step-count/copy previews. Layout, guides, status, icons, marker accents,
+  dates, destinations, and the variant owner all live in Visual.
 - Timeline Visual no longer exposes raw safe-link/path text inputs for step CTA
   or whole-step destinations. Both use the shared page-first
   `LinkDestinationField` while preserving saved custom/hash/external

@@ -2130,7 +2130,11 @@ export function GridColumnsWizardEditor({
         title="Grid quick start"
         description="Choose the starter grid shape. Visual owns ongoing column sizing, spacing, and surface editing."
       >
-        <WidgetControlRow id="grid-columns.wizard.variant" label="Starter layout" path="variant">
+        <WidgetControlRow
+          id="grid-columns.wizard.variant"
+          label="Starter layout"
+          ownership="action"
+        >
           {() => (
             <VariantCards
               value={resolveGridColumnsVariant(variant)}

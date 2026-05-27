@@ -126,7 +126,6 @@ vi.mock("@/lib/utils", () => ({
 
 const variantSelectValues = ["responsive", "fixed"];
 const heightSelectValues = [...spacerHeightTokens.filter((token) => token !== "0"), "custom"];
-const customHeightPlaceholder = "Saved custom height";
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -146,16 +145,6 @@ const mount = (node: React.ReactNode) => {
       container.remove();
     },
   };
-};
-
-const setInputValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
 };
 
 const setSelectValue = (element: Element | null | undefined, value: string) => {
@@ -180,46 +169,6 @@ const clickButton = (element: Element | null | undefined) => {
   React.act(() => {
     element.click();
   });
-};
-
-const findInputByPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
-  const input = Array.from(container.querySelectorAll("input")).filter(
-    (element): element is HTMLInputElement =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  )[index];
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
-  }
-  return input;
-};
-
-const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
-    (element): element is HTMLInputElement =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-
-const findInputByAriaLabel = (container: ParentNode, ariaLabel: string, index = 0) => {
-  const input = Array.from(container.querySelectorAll("input")).filter(
-    (element): element is HTMLInputElement =>
-      element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
-  )[index];
-  if (!(input instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with aria-label "${ariaLabel}" (${index})`);
-  }
-  return input;
-};
-
-const findSelectByOptions = (container: ParentNode, values: string[]) => {
-  const select = Array.from(container.querySelectorAll("select")).find((element) => {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
-  });
-  if (!(select instanceof HTMLSelectElement)) {
-    throw new Error(`Missing select with options ${values.join(", ")}`);
-  }
-  return select;
 };
 
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
@@ -249,13 +198,6 @@ const findCheckbox = (container: ParentNode, index = 0) => {
   }
   return checkbox;
 };
-
-const readAriaDescriptions = (element: HTMLInputElement) =>
-  (element.getAttribute("aria-describedby") ?? "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((id) => element.ownerDocument.getElementById(id)?.textContent ?? "")
-    .join(" ");
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -357,9 +299,7 @@ test("Spacer editors expose truthful mode ownership metadata", async () => {
   const advanced = await renderEditor({ editor: "advanced", initialValue: baseValue });
 
   try {
-    expect(writablePaths(wizard.container)).toEqual(
-      expect.arrayContaining(["variant", "height", "height.desktop", "showGuideInEditor"])
-    );
+    expect(writablePaths(wizard.container)).toEqual([]);
     expect(writablePaths(visual.container)).toEqual(
       expect.arrayContaining([
         "variant",
@@ -378,7 +318,7 @@ test("Spacer editors expose truthful mode ownership metadata", async () => {
   }
 });
 
-test("Spacer wizard editor covers legacy variant fallback, token/custom height changes, and guide toggles", async () => {
+test("Spacer wizard editor keeps mode and height guidance read-only while daily editing stays in Visual", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-spacer",
@@ -392,75 +332,36 @@ test("Spacer wizard editor covers legacy variant fallback, token/custom height c
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, variantSelectValues);
-    expect(variantSelect.value).toBe("responsive");
+    const variantSummary = view.container.querySelector(
+      '[data-widget-control="spacer.wizard.variant"]'
+    );
+    expect(variantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(variantSummary?.textContent).toContain("Responsive");
 
     const initialHeightSelect = findSelectsByOptions(view.container, heightSelectValues)[0];
-    const initialHeightInput = findInputByPlaceholder(view.container, customHeightPlaceholder);
-    const desktopCustomInput = findInputByAriaLabel(
-      view.container,
-      "Desktop height saved custom height"
-    );
-    const guideToggle = findCheckbox(view.container);
+    const guideToggle = view.container.querySelector('input[type="checkbox"]');
 
-    expect(initialHeightSelect?.value).toBe("16");
-    expect(initialHeightInput.value).toBe("");
-    expect(desktopCustomInput).toBe(initialHeightInput);
-    expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
-      "applies to desktop previews and wide screens"
-    );
-    expect(normalizeText(readAriaDescriptions(desktopCustomInput))).toContain(
-      "saved custom heights stay compatible. pick a preset to replace them."
-    );
-    expect(normalizeText(view.container.textContent)).toContain("rhythm presets");
+    expect(initialHeightSelect).toBeUndefined();
     expect(normalizeText(view.container.textContent)).toContain(
-      "manual heights are active. presets stay available as shortcuts."
-    );
-    expect(normalizeText(view.container.textContent)).not.toContain("clamp(");
-    expect(normalizeText(view.container.textContent)).not.toContain("10vh");
-    expect(normalizeText(view.container.textContent)).not.toContain("4rem");
-    expect(normalizeText(view.container.textContent)).not.toContain(
-      "desktop 8 / tablet 6 / mobile 4"
+      "desktop: 16 / tablet: 24 / phone: 40px"
     );
     expect(normalizeText(view.container.textContent)).toContain(
-      "desktop: card gap / tablet: compact gap / phone: small gap"
+      "visual owns spacer heights after setup"
     );
-    expect(normalizeText(view.container.textContent)).not.toContain("tailwind");
-    expect(normalizeText(view.container.textContent)).not.toContain("1024px");
-    expect(normalizeText(view.container.textContent)).not.toContain("768px");
-    expect(guideToggle.checked).toBe(true);
-
-    setSelectValue(variantSelect, "fixed");
-    expect(view.getVariant()).toBe("fixed");
-    expect(view.onVariantChangeSpy).toHaveBeenLastCalledWith("fixed");
+    expect(guideToggle).toBeNull();
     expect(normalizeText(view.container.textContent)).toContain(
-      "fixed mode reuses the desktop height for tablet and mobile."
+      "visual owns the editor guide toggle after setup"
     );
-
-    setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "custom");
-    expect(findSelectsByOptions(view.container, heightSelectValues)[0]?.value).toBe("custom");
-    expect(normalizeText(view.container.textContent)).toContain("custom value unavailable");
-    expect(normalizeText(view.container.textContent)).not.toContain("enter a custom length");
-
-    setSelectValue(findSelectsByOptions(view.container, heightSelectValues)[0], "20");
-    expect(view.getValue()).toEqual({
-      height: {
-        desktop: "20",
-        tablet: "24",
-        mobile: "40px",
-      },
-      showGuideInEditor: true,
-    });
-
-    setCheckboxValue(findCheckbox(view.container), false);
-    expect(view.getValue()).toEqual({
-      height: {
-        desktop: "20",
-        tablet: "24",
-        mobile: "40px",
-      },
-      showGuideInEditor: false,
-    });
+    expect(
+      Array.from(view.container.querySelectorAll("select")).some((element) => {
+        if (!(element instanceof HTMLSelectElement)) return false;
+        const optionValues = Array.from(element.options).map((option) => option.value);
+        return variantSelectValues.every((value) => optionValues.includes(value));
+      })
+    ).toBe(false);
+    expect(view.getVariant()).toBe("legacy-spacer");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(findSelectsByOptions(view.container, heightSelectValues)[0]).toBeUndefined();
   } finally {
     view.cleanup();
   }
@@ -696,7 +597,7 @@ test("Spacer editors fall back to default height controls when normalized data o
               } satisfies SpacerData);
         }
 
-        return actual.normalizeSpacerData(_data, variant);
+        return actual.normalizeSpacerData(_data);
       }),
     };
   });
@@ -747,27 +648,25 @@ test("Spacer editors fall back to default height controls when normalized data o
     ).toHaveLength(0);
     expect(advancedEmptyHeightView.container.querySelector("pre")).toBeNull();
 
-    expect(findSelectByOptions(wizardMissingHeightView.container, variantSelectValues).value).toBe(
-      "responsive"
+    const wizardMissingVariantSummary = wizardMissingHeightView.container.querySelector(
+      '[data-widget-control="spacer.wizard.variant"]'
     );
-    expect(
-      findSelectsByOptions(wizardMissingHeightView.container, heightSelectValues)[0]?.value
-    ).toBe("16");
-    expect(
-      findInputByPlaceholder(wizardMissingHeightView.container, customHeightPlaceholder).value
-    ).toBe("");
-    expect(findCheckbox(wizardMissingHeightView.container).checked).toBe(false);
+    expect(wizardMissingVariantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardMissingVariantSummary?.textContent).toContain("Responsive");
+    expect(normalizeText(wizardMissingHeightView.container.textContent)).toContain(
+      "desktop: 16 / tablet: 12 / phone: 8"
+    );
+    expect(wizardMissingHeightView.container.querySelector('input[type="checkbox"]')).toBeNull();
 
-    expect(findSelectByOptions(wizardEmptyHeightView.container, variantSelectValues).value).toBe(
-      "responsive"
+    const wizardEmptyVariantSummary = wizardEmptyHeightView.container.querySelector(
+      '[data-widget-control="spacer.wizard.variant"]'
     );
-    expect(
-      findSelectsByOptions(wizardEmptyHeightView.container, heightSelectValues)[0]?.value
-    ).toBe("16");
-    expect(
-      findInputByPlaceholder(wizardEmptyHeightView.container, customHeightPlaceholder).value
-    ).toBe("");
-    expect(findCheckbox(wizardEmptyHeightView.container).checked).toBe(false);
+    expect(wizardEmptyVariantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardEmptyVariantSummary?.textContent).toContain("Responsive");
+    expect(normalizeText(wizardEmptyHeightView.container.textContent)).toContain(
+      "desktop: 16 / tablet: 12 / phone: 8"
+    );
+    expect(wizardEmptyHeightView.container.querySelector('input[type="checkbox"]')).toBeNull();
   } finally {
     advancedMissingHeightView.cleanup();
     advancedEmptyHeightView.cleanup();

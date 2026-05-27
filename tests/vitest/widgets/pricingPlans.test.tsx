@@ -556,9 +556,9 @@ test("pricing plans wizard renders onboarding fields", () => {
   );
 
   expect(html).toContain("Pricing layout");
-  expect(html).toContain("Section title");
   expect(html).toContain("Layout plan count");
-  expect(html).toContain("Basic plan setup");
+  expect(html).toContain("Daily editing happens in Visual");
+  expect(html).toContain('data-widget-control-readonly="true"');
 });
 
 test("pricing plans visual renders section-based IA", () => {

@@ -470,40 +470,6 @@ export const timelineDefaults: TimelineData = {
   background: { color: "transparent" },
 };
 
-const timelineWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "One-time Wizard seeds the starter visual style; Visual remains the daily variant owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.title",
-    reason: "One-time Wizard seeds timeline copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.description",
-    reason: "One-time Wizard seeds timeline copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "steps.count",
-    reason: "One-time Wizard chooses starter milestone count; Visual remains the daily step owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "steps.title",
-    reason: "One-time Wizard seeds milestone titles; Visual remains the daily step owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "steps.description",
-    reason: "One-time Wizard seeds milestone descriptions; Visual remains the daily step owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const timelineEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -512,15 +478,8 @@ export const timelineEditorContract: WidgetEditorContract = {
       id: "timeline.wizard.starter-steps",
       title: "Starter steps",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.title",
-        "header.description",
-        "steps.count",
-        "steps.title",
-        "steps.description",
-      ],
-      allowedDuplicateWritablePaths: timelineWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "steps.count"],
     },
     {
       mode: "visual",
@@ -548,7 +507,6 @@ export const timelineEditorContract: WidgetEditorContract = {
         "steps.markerBackgroundColor",
         "steps.markerIconColor",
       ],
-      allowedDuplicateWritablePaths: timelineWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

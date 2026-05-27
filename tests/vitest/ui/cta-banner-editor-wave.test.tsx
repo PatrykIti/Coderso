@@ -283,16 +283,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -343,17 +333,6 @@ const getDestinationSelect = (container: ParentNode, fieldId: string) => {
   return select;
 };
 
-const getTextareaByPlaceholder = (container: ParentNode, placeholder: string) => {
-  const textarea = Array.from(container.querySelectorAll("textarea")).find(
-    (element) =>
-      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
-  );
-  if (!(textarea instanceof HTMLTextAreaElement)) {
-    throw new Error(`Missing textarea with placeholder "${placeholder}"`);
-  }
-  return textarea;
-};
-
 const getSelectByOptions = (container: ParentNode, values: string[]) => {
   const select = Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -370,11 +349,10 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
 const getSectionByTitle = (container: ParentNode, title: string) => {
-  const section = Array.from(container.querySelectorAll("section")).find((candidate) =>
-    Array.from(candidate.querySelectorAll("h3, p")).some(
-      (node) => normalizeText(node.textContent) === normalizeText(title)
-    )
+  const titleNode = Array.from(container.querySelectorAll("h3, p")).find(
+    (candidate) => normalizeText(candidate.textContent) === normalizeText(title)
   );
+  const section = titleNode?.closest("section");
   if (!(section instanceof HTMLElement)) {
     throw new Error(`Missing section "${title}"`);
   }
@@ -470,7 +448,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("CtaBanner wizard covers variant cards, destinations, and secondary toggle preservation", async () => {
+test("CtaBanner wizard stays setup-only while preserving existing CTA data for Visual", async () => {
   const { CtaBannerWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
 
@@ -495,48 +473,40 @@ test("CtaBanner wizard covers variant cards, destinations, and secondary toggle 
 
   try {
     await flush();
-    expect(getButtonsByText(container, "Selected")).toHaveLength(1);
-    clickButton(getButtonsByText(container, "Split")[0]);
-    expect(getLatestVariant()).toBe("split");
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("split");
+    expect(container.textContent).toContain("Banner layout");
+    expect(container.textContent).toContain("Centered");
+    expect(container.querySelector("button")).toBeNull();
+    expect(getLatestVariant()).toBe("legacy-layout");
+    expect(onVariantChangeSpy).not.toHaveBeenCalled();
 
-    setInputValue(
-      getInputByPlaceholder(container, "Ready to launch your next campaign?"),
-      "Ship campaigns faster"
+    expect(findInputsByPlaceholder(container, "Ready to launch your next campaign?")).toHaveLength(
+      0
     );
-    setInputValue(getInputByPlaceholder(container, "Get started"), "Start free trial");
-    setSelectValue(
-      getDestinationSelect(container, "cta-banner-wizard-primary-destination"),
-      "page-demo"
-    );
+    expect(
+      container.querySelector(
+        '[data-link-destination-field="cta-banner-wizard-primary-destination"]'
+      )
+    ).toBeNull();
+    expect(
+      container.querySelector(
+        '[data-link-destination-field="cta-banner-wizard-secondary-destination"]'
+      )
+    ).toBeNull();
+    expect(
+      Array.from(container.querySelectorAll("label")).some((candidate) =>
+        normalizeText(candidate.textContent).includes(normalizeText("Enable secondary CTA"))
+      )
+    ).toBe(false);
 
-    const secondarySwitch = getSwitchByLabel(container, "Enable secondary CTA");
-    clickButton(secondarySwitch);
-    expect(getLatestValue().actions?.secondaryCta).toMatchObject({
-      label: "Talk to sales",
-      href: "/contact",
-      enabled: false,
-    });
-
-    clickButton(getSwitchByLabel(container, "Enable secondary CTA"));
-    setInputValue(getInputByPlaceholder(container, "Contact sales"), "Talk with team");
-    await flush();
-    setSelectValue(
-      getDestinationSelect(container, "cta-banner-wizard-secondary-destination"),
-      "page-sales"
-    );
-
-    expect(getLatestValue().content).toMatchObject({
-      title: "Ship campaigns faster",
-    });
+    expect(getLatestValue().content).toEqual(initialValue.content);
     expect(getLatestValue().actions).toMatchObject({
       primaryCta: {
-        label: "Start free trial",
-        href: "/demo",
+        label: "Start",
+        href: "/upgrade",
       },
       secondaryCta: {
-        label: "Talk with team",
-        href: "/sales",
+        label: "Talk to sales",
+        href: "/contact",
         enabled: true,
       },
     });

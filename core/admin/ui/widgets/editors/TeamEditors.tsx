@@ -915,10 +915,10 @@ export function TeamWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter team"
-      description="Seed the layout, member count, and first member names."
+      description="Seed the layout only. Member count, names, roles, bios, photos, and CTA live in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-2" data-widget-control-ownership="action">
           <p className="text-sm font-medium">Team layout</p>
           <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
             <SelectTrigger>
@@ -934,49 +934,16 @@ export function TeamWizardEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Members count</p>
-          <Select
-            value={String(members.length)}
-            onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {memberCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Team intentionally supports up to 12 members. Use multiple Team sections for larger
-            directories.
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="team.wizard.members.count"
+          label="Members count"
+          path="members.count"
+          value={`${members.length} member${members.length === 1 ? "" : "s"}`}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Primary member names</p>
-          {members.slice(0, 3).map((member, index) => (
-            <div key={member.id} className="grid gap-3 sm:grid-cols-2">
-              <Input
-                value={member.name ?? ""}
-                onChange={(event) =>
-                  updateMember(value, onChange, index, { name: event.target.value })
-                }
-                placeholder={`Member ${index + 1} name`}
-              />
-              <Input
-                value={member.role ?? ""}
-                onChange={(event) =>
-                  updateMember(value, onChange, index, { role: event.target.value })
-                }
-                placeholder={`Member ${index + 1} role`}
-              />
-            </div>
-          ))}
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual to change member count, name members, set roles, add bios, upload photos,
+          connect social links, and choose the spotlight lead.
         </div>
       </div>
     </WidgetEditorSection>
@@ -1202,6 +1169,7 @@ export function TeamVisualEditor({
             fieldId="team-cta-destination"
             label="CTA destination"
             value={cta.url}
+            controlPath="cta.url"
             onChange={(next) => updateCta(value, onChange, { url: next })}
             emptyLabel="No destination"
             helpText="Pick a site page for the Team CTA. Hand-typed links from older edits stay until you replace or clear them."

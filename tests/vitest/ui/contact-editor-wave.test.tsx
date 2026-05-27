@@ -260,16 +260,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -337,22 +327,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("ContactWizardEditor uses variant cards, exposes hours, and shows minimal form fallback copy", async () => {
+test("ContactWizardEditor keeps layout and form setup in Visual and only shows summaries", async () => {
   const { ContactWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ContactEditors");
 
-  let latestValue: ContactData = {
-    ...contactDefaults,
-    contact: {
-      ...contactDefaults.contact,
-      hours: "",
-    },
-  };
-  let currentVariant = "form-left";
+  let latestValue: ContactData = { ...contactDefaults };
 
   const Harness = () => {
     const [value, setValue] = useState<ContactData>(latestValue);
-    const [variant, setVariant] = useState(currentVariant);
 
     return (
       <ContactWizardEditor
@@ -361,11 +343,7 @@ test("ContactWizardEditor uses variant cards, exposes hours, and shows minimal f
           latestValue = next;
           setValue(next);
         }}
-        variant={variant}
-        onVariantChange={(next) => {
-          currentVariant = next;
-          setVariant(next);
-        }}
+        variant="form-left"
       />
     );
   };
@@ -373,29 +351,32 @@ test("ContactWizardEditor uses variant cards, exposes hours, and shows minimal f
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Section header");
-    expect(view.container.textContent).toContain("Business hours");
+    const layoutSection = findSection(view.container, "Contact layout");
+    const formSection = findSection(view.container, "Contact form");
 
-    setInputValue(findInputByPlaceholder(view.container, "Get in touch"), "Contact us");
-    setTextareaValue(
-      findTextareaByPlaceholder(
-        view.container,
-        "Optional supporting copy for the contact section."
-      ),
-      "Tell us what you need."
-    );
-    setInputValue(findInputByPlaceholder(view.container, "Mon-Fri 9-5"), "24/7 support");
-
-    expect(latestValue.title).toBe("Contact us");
-    expect(latestValue.description).toBe("Tell us what you need.");
-    expect(latestValue.contact?.hours).toBe("24/7 support");
-
-    clickButtonByText(view.container, "Minimal");
-    expect(currentVariant).toBe("minimal");
+    expect(layoutSection?.getAttribute("data-widget-editor-section")).toBe("contact.wizard.layout");
+    expect(layoutSection?.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(layoutSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
+    expect(formSection?.getAttribute("data-widget-editor-section")).toBe("contact.wizard.form");
+    expect(formSection?.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(formSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
     expect(view.container.textContent).toContain(
-      "Minimal layout shows contact details only, so form controls stay hidden here."
+      "Use Visual to edit the section title, description, field copy, and all daily contact presentation details."
     );
-    expect(findInputByPlaceholder(view.container, "Send message")).toBeUndefined();
+    expect(view.container.textContent).toContain("Current layout");
+    expect(view.container.textContent).toContain("Visible fields");
+    expect(view.container.textContent).toContain("Submit label");
+    expect(view.container.querySelector("select")).toBeNull();
+
+    expect(findInputByPlaceholder(view.container, "Get in touch")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(view.container, "Optional supporting copy for the contact section.")
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Mon-Fri 9-5")).toBeUndefined();
+    expect(latestValue.title).toBe(contactDefaults.title);
+    expect(latestValue.description).toBe(contactDefaults.description);
+    expect(latestValue.form?.submitLabel).toBe(contactDefaults.form?.submitLabel);
+    expect(latestValue.contact?.hours).toBe(contactDefaults.contact?.hours);
   } finally {
     view.cleanup();
   }
@@ -447,6 +428,13 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
   const view = mount(<Harness />);
 
   try {
+    const variantSection = findSection(view.container, "Variant and section header");
+
+    expect(variantSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.visual.variant-header"
+    );
+    expect(variantSection?.getAttribute("data-widget-editor-mode")).toBe("visual");
+    expect(variantSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
     expect(view.container.textContent).toContain(
       "Minimal layout shows contact details only. Form-field controls are hidden"
     );
@@ -454,6 +442,17 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
 
     clickButtonByText(view.container, "Form left");
     expect(currentVariant).toBe("form-left");
+    const runtimeSection = findSection(view.container, "Submission runtime binding");
+    const mapSection = findSection(view.container, "Map source and display behavior");
+
+    expect(runtimeSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.visual.submission-runtime"
+    );
+    expect(runtimeSection?.getAttribute("data-widget-editor-section-role")).toBe("source");
+    expect(mapSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.visual.map-display"
+    );
+    expect(mapSection?.getAttribute("data-widget-editor-section-role")).toBe("content");
     expect(view.container.textContent).toContain("Visible fields");
     expect(view.container.textContent).toContain("Required fields");
     expect(view.container.textContent).toContain("Field order");
@@ -482,7 +481,6 @@ test("ContactVisualEditor separates required/order UX and exposes metadata, map,
     setInputValue(findInputByPlaceholder(view.container, "Get in touch"), "Reach the team");
     setInputValue(findInputByPlaceholder(view.container, "Contact details"), "Ways to reach us");
 
-    const mapSection = findSection(view.container, "Map source and display behavior");
     if (!mapSection) throw new Error("Missing map section");
     setCheckboxValue(mapSection.querySelector("input[type='checkbox']"), true);
     setInputValue(
@@ -568,6 +566,23 @@ test("ContactAdvancedEditor reports normalization results and redacts diagnostic
   const view = mount(<Harness />);
 
   try {
+    const mapSection = findSection(view.container, "Map source and runtime metadata");
+    const normalizationSection = findSection(view.container, "Normalization and fallback controls");
+    const runtimeSection = findSection(view.container, "Runtime diagnostics summary");
+
+    expect(mapSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.advanced.map-runtime"
+    );
+    expect(mapSection?.getAttribute("data-widget-editor-mode")).toBe("advanced");
+    expect(mapSection?.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
+    expect(normalizationSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.advanced.normalization"
+    );
+    expect(normalizationSection?.getAttribute("data-widget-editor-section-role")).toBe("technical");
+    expect(runtimeSection?.getAttribute("data-widget-editor-section")).toBe(
+      "contact.advanced.runtime-summary"
+    );
+    expect(runtimeSection?.getAttribute("data-widget-editor-section-role")).toBe("diagnostics");
     expect(view.container.textContent).toContain("Submission nonce redacted");
     expect(view.container.textContent).not.toContain("secret-nonce");
     expect(findInputByPlaceholder(view.container, "https://maps.google.com/...")).toBeUndefined();

@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-05-26T19:09:36.996Z",
+  "command": "bun scripts/playwright-widget-contract-smoke.ts --session task-336-19-admin-compare-timeline-2026-05-26-isolated --widget compare-timeline --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/widget-smoke-compare-timeline-admin-isolated.json --output-md .tmp/widget-smoke-compare-timeline-admin-isolated.md",
+  "dryRun": false,
+  "inventory": {
+    "expectedWidgetCount": 38,
+    "actualWidgetCount": 38,
+    "excludedScreenOnlyWidgets": [
+      "screen-record-header",
+      "screen-field-value",
+      "screen-field-group",
+      "screen-two-column"
+    ],
+    "selectedWidgetTypes": ["compare-timeline"]
+  },
+  "environment": {
+    "adminUrl": "http://localhost:5173/admin",
+    "frontUrl": "http://localhost:3000",
+    "adminReachable": true,
+    "frontReachable": true,
+    "playwrightCliAvailable": true,
+    "resolvedPlaywrightSession": "task-336-19-admin-compare-timeline-2026-05-26-isolated"
+  },
+  "admin": {
+    "skipped": false,
+    "loginAttempted": true,
+    "authenticated": true,
+    "results": [
+      {
+        "widgetType": "compare-timeline",
+        "status": "passed",
+        "pageId": "9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
+        "adminPath": "http://localhost:5173/admin/pages/9ad7e86e-e732-4d17-9ea9-07c5bfb32cca",
+        "modes": [
+          {
+            "mode": "visual",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 9,
+            "visibleSectionCount": 9,
+            "writablePaths": [
+              "variant",
+              "header.title",
+              "header.subtitle",
+              "axis.steps.count",
+              "axis.steps.*.label",
+              "axis.steps.*.icon",
+              "axis.steps.*.description",
+              "axis.steps.*.href",
+              "axis.steps.*.label",
+              "axis.steps.*.icon",
+              "axis.steps.*.description",
+              "axis.steps.*.href",
+              "axis.steps.*.label",
+              "axis.steps.*.icon",
+              "axis.steps.*.description",
+              "axis.steps.*.href",
+              "tracks.*.label",
+              "tracks.*.markers",
+              "tracks.*.markers",
+              "guides.enabled",
+              "guides.style",
+              "style.markerColor",
+              "style.trackLabelColor",
+              "style.stepLabelColor",
+              "style.mutedStepColor",
+              "style.guideColor",
+              "style.trackBackgroundColor",
+              "style.trackLabelSize",
+              "style.stepLabelSize",
+              "style.trackLabelFontWeight",
+              "style.stepLabelFontWeight",
+              "style.markerShape",
+              "layout.trackSpacing",
+              "layout.labelPosition",
+              "layout.maxWidth",
+              "layout.padding",
+              "layout.trackOrder",
+              "layout.motion",
+              "layout.container",
+              "layout.padding.top",
+              "layout.padding.bottom",
+              "layout.margin.top",
+              "layout.margin.bottom",
+              "visibility.devices.desktop",
+              "visibility.devices.tablet",
+              "visibility.devices.mobile"
+            ],
+            "controlsWithoutPath": 0
+          },
+          {
+            "mode": "advanced",
+            "status": "passed",
+            "rootCount": 1,
+            "sectionCount": 5,
+            "visibleSectionCount": 5,
+            "writablePaths": [],
+            "controlsWithoutPath": 0
+          }
+        ],
+        "duplicateWritablePaths": []
+      }
+    ]
+  },
+  "public": {
+    "skipped": false,
+    "results": [
+      {
+        "widgetType": "compare-timeline",
+        "publicPath": "/test-compare-timeline-0516",
+        "statusCode": 200,
+        "status": "passed",
+        "emptyFixture": false,
+        "bodyOverflow": false,
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "unmarkedOverflowOwners": []
+      }
+    ]
+  },
+  "summary": {
+    "adminFailures": 0,
+    "publicFailures": 0,
+    "fixtureGaps": 0,
+    "metadataGaps": 0
+  }
+}

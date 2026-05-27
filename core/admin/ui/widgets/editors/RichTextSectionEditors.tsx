@@ -48,7 +48,7 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: RichTextSectionVariantId;
@@ -150,7 +150,6 @@ const embedAspectRatioOptions: Array<{
 ];
 
 const blockCountOptions = Array.from({ length: richTextBlockMax + 1 }, (_, index) => String(index));
-const wizardBlockCount = Math.max(richTextSectionDefaults.body?.blocks?.length ?? 2, 2);
 const blockPageSize = 5;
 
 type TitleBlockData = NonNullable<RichTextSectionData["titleBlock"]>;
@@ -566,16 +565,11 @@ function resolveBlockKindLabel(block: RichTextSectionBlock) {
 
 export function RichTextSectionWizardEditor({
   value,
-  onChange,
   variant,
-  onVariantChange,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
   const source = resolveRichTextRenderedSource(normalized);
-  const blocks = ensureBlocksCount(
-    normalizeRichTextBlocks(normalized.body?.blocks),
-    wizardBlockCount
-  );
+  const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
 
   return (
     <WidgetEditorSection
@@ -583,17 +577,18 @@ export function RichTextSectionWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter copy"
-      description="Seed the layout, title, and first structured text blocks."
+      description="Review the current layout and first structured text blocks. Title copy stays in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Rich text layout</p>
-          <VariantCards
-            value={resolveRichTextSectionVariant(variant)}
-            onChange={onVariantChange}
-            compact
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.wizard.variant"
+          label="Rich text layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolveRichTextSectionVariant(variant))
+              ?.label ?? "Single column"
+          }
+        />
 
         <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
           <p className="text-sm font-medium">Output mode stays untouched in Wizard</p>
@@ -603,29 +598,16 @@ export function RichTextSectionWizardEditor({
           </p>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Eyebrow</p>
-          <Input
-            value={normalized.titleBlock?.eyebrow ?? ""}
-            onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
-            placeholder="Editorial"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={normalized.titleBlock?.title ?? ""}
-            onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
-            placeholder="Long-form content section"
-          />
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+          Use Visual to edit the eyebrow, title, heading level, output preference, and presentation
+          of the section.
         </div>
 
         <div className="space-y-3">
           <p className="text-sm font-medium">Structured quick-start blocks</p>
           <p className="text-xs text-muted-foreground">
-            Wizard keeps the first two text blocks beginner-friendly. Media, attachments, embeds,
-            and raw HTML stay in Visual and Advanced.
+            Wizard previews the first two text blocks only. Media, attachments, embeds, and raw HTML
+            stay in Visual and Advanced.
           </p>
           {blocks.slice(0, 2).map((block, index) => {
             if (block.kind && block.kind !== "text") {
@@ -642,37 +624,19 @@ export function RichTextSectionWizardEditor({
 
             return (
               <div key={block.id ?? `wizard-block-${index + 1}`} className="space-y-2">
-                <Input
-                  value={block.heading ?? ""}
-                  onChange={(event) =>
-                    updateBlocks(value, onChange, (currentBlocks) => {
-                      const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
-                      nextBlocks[index] = {
-                        ...(nextBlocks[index] as RichTextSectionTextBlock),
-                        kind: "text",
-                        heading: event.target.value,
-                      };
-                      return nextBlocks;
-                    })
-                  }
-                  placeholder={`Heading ${index + 1}`}
+                <ReadonlyWidgetSummaryRow
+                  id={`rich-text-section.wizard.blocks.${index}.heading`}
+                  label={`Heading ${index + 1}`}
+                  path="body.blocks"
+                  value={block.heading?.trim() || `No heading ${index + 1}`}
                 />
-                <Textarea
-                  value={(block.contentHtml ? "" : block.content) ?? ""}
-                  onChange={(event) =>
-                    updateBlocks(value, onChange, (currentBlocks) => {
-                      const nextBlocks = ensureBlocksCount(currentBlocks, wizardBlockCount);
-                      nextBlocks[index] = {
-                        ...(nextBlocks[index] as RichTextSectionTextBlock),
-                        kind: "text",
-                        content: event.target.value,
-                        contentHtml: undefined,
-                      };
-                      return nextBlocks;
-                    })
+                <ReadonlyWidgetSummaryRow
+                  id={`rich-text-section.wizard.blocks.${index}.content`}
+                  label={`Paragraph ${index + 1}`}
+                  path="body.blocks"
+                  value={
+                    (block.contentHtml ? "" : block.content)?.trim() || "No paragraph text yet"
                   }
-                  placeholder={`Paragraph ${index + 1}`}
-                  className="min-h-28"
                 />
               </div>
             );

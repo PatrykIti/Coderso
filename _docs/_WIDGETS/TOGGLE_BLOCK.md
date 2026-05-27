@@ -27,11 +27,9 @@ for 3+ views instead of widening this widget implicitly.
 
 ### Wizard
 
-Wizard handles the first-run setup path:
-- variant choice with preview miniatures
-- primary / secondary labels
-- helper copy
-- default starting pane
+Wizard is now a read-only starter summary:
+- current toggle surface summary
+- guidance that Visual owns pane naming, helper copy, starting pane, motion, and styling
 
 ### Visual
 
@@ -174,10 +172,10 @@ fallbacks in editor/runtime code.
 ## TASK-336-19 Editor Contract Cleanup
 
 - Exports `toggleBlockEditorContract` with `version: 2`.
-- Contract target: Wizard seeds variant, labels, and starting pane; Visual owns
+- Contract target: Wizard is a read-only starter summary; Visual owns variant,
   daily labels, motion, accessibility copy, colors, and pane styling; Advanced
   is read-only runtime/contract diagnostics.
 - `TASK-336-19` removes the remaining Advanced writable controls, moves
   accessibility and pane-card styling to Visual, and retargets temporary
-  Wizard/Visual duplicate allowances to the open `TASK-336` umbrella until the
-  shared contract gains first-class setup-only duplicate semantics.
+  Wizard/Visual duplicate allowances until the shared contract matches strict
+  ownership semantics end to end.

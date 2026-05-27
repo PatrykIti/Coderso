@@ -311,39 +311,6 @@ export const faqAccordionDefaults: FaqAccordionData = {
   },
 };
 
-const faqAccordionWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the starter FAQ layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds FAQ copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.description",
-    reason: "Wizard seeds FAQ copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.count",
-    reason: "Wizard chooses the starter question count; Visual remains the daily item owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.question",
-    reason: "Wizard seeds initial questions; Visual remains the daily item owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.answer",
-    reason: "Wizard seeds initial answers; Visual remains the daily item owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const faqAccordionEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -352,15 +319,8 @@ export const faqAccordionEditorContract: WidgetEditorContract = {
       id: "faq-accordion.wizard.starter-questions",
       title: "Starter questions",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.title",
-        "header.description",
-        "items.count",
-        "items.question",
-        "items.answer",
-      ],
-      allowedDuplicateWritablePaths: faqAccordionWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "items.count"],
     },
     {
       mode: "visual",
@@ -380,7 +340,6 @@ export const faqAccordionEditorContract: WidgetEditorContract = {
         "options.defaultOpenIndex",
         "seo.emitFaqJsonLd",
       ],
-      allowedDuplicateWritablePaths: faqAccordionWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

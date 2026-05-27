@@ -51,33 +51,8 @@ export const spacerEditorContract: WidgetEditorContract = {
       id: "spacer.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: ["variant", "height", "height.desktop", "showGuideInEditor"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Spacer rhythm mode; Visual remains the daily rhythm owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "height",
-          reason:
-            "Wizard seeds one-time Spacer rhythm presets; Visual remains the daily spacing owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "height.desktop",
-          reason:
-            "Wizard seeds one-time desktop rhythm; Visual remains the daily spacing owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "showGuideInEditor",
-          reason:
-            "Wizard seeds one-time guide preference; Visual remains the daily guide owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
+      writablePaths: [],
+      readOnlyPaths: ["variant", "height", "height.desktop"],
     },
     {
       mode: "visual",
@@ -85,14 +60,6 @@ export const spacerEditorContract: WidgetEditorContract = {
       title: "Variant and responsive behavior",
       role: "visual",
       writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Spacer rhythm mode; Visual remains the daily rhythm owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
     },
     {
       mode: "visual",
@@ -100,20 +67,6 @@ export const spacerEditorContract: WidgetEditorContract = {
       title: "Responsive heights",
       role: "layout",
       writablePaths: ["height", "height.desktop", "height.tablet", "height.mobile"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "height",
-          reason:
-            "Wizard seeds one-time Spacer rhythm presets; Visual remains the daily spacing owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "height.desktop",
-          reason:
-            "Wizard seeds one-time desktop rhythm; Visual remains the daily spacing owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
     },
     {
       mode: "visual",
@@ -121,14 +74,6 @@ export const spacerEditorContract: WidgetEditorContract = {
       title: "Editor guide",
       role: "visual",
       writablePaths: ["showGuideInEditor"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "showGuideInEditor",
-          reason:
-            "Wizard seeds one-time guide preference; Visual remains the daily guide owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
     },
     {
       mode: "advanced",
@@ -349,7 +294,7 @@ export function resolveSpacerVariant(variant: string): SpacerVariantId {
   return "responsive";
 }
 
-export function normalizeSpacerData(data: SpacerData, variant: string = "responsive"): SpacerData {
+export function normalizeSpacerData(data: SpacerData): SpacerData {
   const height = resolveSpacerHeightValues(data.height);
 
   return {
@@ -382,7 +327,7 @@ export function SpacerBlock({
   renderContext?: WidgetRenderContext;
 }) {
   const resolvedVariant = resolveSpacerVariant(variant);
-  const normalized = normalizeSpacerData(data, resolvedVariant);
+  const normalized = normalizeSpacerData(data);
   const height = normalized.height ?? {
     desktop: "16",
     tablet: "12",

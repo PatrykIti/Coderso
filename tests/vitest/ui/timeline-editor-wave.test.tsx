@@ -223,16 +223,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -336,7 +326,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("Timeline wizard editor seeds starter copy and keeps daily presentation controls out", async () => {
+test("Timeline wizard keeps header and step previews read-only and leaves daily presentation controls out", async () => {
   const { TimelineWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
@@ -382,51 +372,47 @@ test("Timeline wizard editor seeds starter copy and keeps daily presentation con
   await flushAsyncEffects();
 
   try {
-    expect(view.container.textContent).toContain("Wizard seeds the initial timeline story");
+    expect(view.container.textContent).toContain("Wizard summarizes the saved timeline story");
     expect(view.container.textContent).toContain("Visual owns daily step details");
     expect(view.container.textContent).not.toContain("Show guide lines");
     expect(view.container.textContent).not.toContain("Step titles are hidden right now");
     expect(findInputByPlaceholder(view.container, "Icon text or emoji")).toBeUndefined();
     expect(findInputsByPlaceholder(view.container, "#1d4ed8")).toHaveLength(0);
 
-    const variantSelect = findSelectByOptions(view.container, ["milestones", "cards", "compact"]);
-    setSelectValue(variantSelect, "cards");
-    expect(currentVariant).toBe("cards");
-
-    setInputValue(findInputByPlaceholder(view.container, "Timeline heading"), "Launch roadmap");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Optional context above the timeline"),
-      "A practical rollout path"
+    const variantSummary = view.container.querySelector(
+      '[data-widget-control="timeline.wizard.variant"]'
     );
+    expect(variantSummary?.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(variantSummary?.textContent).toContain("Milestones");
+    expect(findSelectByOptions(view.container, ["milestones", "cards", "compact"])).toBeUndefined();
+    expect(currentVariant).toBe("milestones");
 
-    const stepCountSelect = findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"]);
-    setSelectValue(stepCountSelect, "5");
-    expect(latestValue.steps).toHaveLength(5);
-    expect(findInputByPlaceholder(view.container, "Step 5")).toBeTruthy();
+    expect(findInputByPlaceholder(view.container, "Timeline heading")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(view.container, "Optional context above the timeline")
+    ).toBeUndefined();
+    expect(view.container.textContent).toContain("Existing roadmap");
+    expect(view.container.textContent).toContain("Existing context");
 
-    setInputValue(findInputByPlaceholder(view.container, "Step 1"), "Discovery starter");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Step description"),
-      "Confirm the first milestone."
-    );
+    expect(findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"])).toBeUndefined();
+    expect(view.container.textContent).toContain("3 steps");
 
-    clickButtonByText(view.container, "Remove", 4);
-    expect(view.container.textContent).toContain("Remove Step 5?");
-    clickButtonByText(view.container, "Confirm");
+    expect(findInputByPlaceholder(view.container, "Step 1")).toBeUndefined();
+    expect(findTextareaByPlaceholder(view.container, "Step description")).toBeUndefined();
 
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.steps).toHaveLength(4);
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(latestValue.steps).toHaveLength(3);
     expect(latestValue.steps[0]).toEqual(
       expect.objectContaining({
-        id: "step-1",
-        title: "Discovery starter",
-        description: "Confirm the first milestone.",
+        id: "",
+        title: " ",
       })
     );
     expect(latestValue.header).toEqual(
       expect.objectContaining({
-        title: "Launch roadmap",
-        description: "A practical rollout path",
+        title: "Existing roadmap",
+        description: "Existing context",
       })
     );
   } finally {

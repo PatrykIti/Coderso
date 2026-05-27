@@ -44,12 +44,12 @@ import {
 } from "../../../../widgets/core/timeline";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import {
-  ClearableFieldHeader,
   ColorContrastNotice,
   type ColorContrastAdvisory,
   resolveColorContrastAdvisory,
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -223,7 +223,6 @@ const stepCountOptions = Array.from(
   (_, index) => timelineStepMin + index
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 type TimelineLayout = NonNullable<TimelineData["layout"]>;
@@ -237,9 +236,6 @@ const preferredVariantForMode = (mode: TimelineMode): TimelineVariantId => {
   if (mode === "axis") return "milestones";
   return "cards";
 };
-
-const resolvePickerColor = (value: string | undefined, fallback: string) =>
-  value && hexColorPattern.test(value) ? value : fallback;
 
 const getTimelineModeCopy = (mode: TimelineMode) => {
   const preferredVariant = preferredVariantForMode(mode);
@@ -290,6 +286,7 @@ function EditorSection({
 
 function ColorField({
   label,
+  path,
   value,
   onChange,
   onClear,
@@ -298,6 +295,7 @@ function ColorField({
   helperText,
 }: {
   label: string;
+  path?: string;
   value: string | undefined;
   onChange: (next: string) => void;
   onClear?: () => void;
@@ -307,52 +305,17 @@ function ColorField({
 }) {
   return (
     <div className="space-y-2">
-      <ClearableFieldHeader
+      <SharedColorControl
         label={label}
         value={value}
+        onChange={onChange}
         onClear={onClear}
-        onRestoreValue={onChange}
+        controlPath={path}
+        placeholder={placeholder}
+        pickerFallback={pickerFallback}
+        showValueInput={false}
       />
-      <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-        <Input
-          type="color"
-          value={resolvePickerColor(value, pickerFallback)}
-          onChange={(event) => onChange(event.target.value)}
-          className="h-9 w-10 p-1"
-        />
-        <Input
-          value={value ?? ""}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-        />
-      </div>
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
-    </div>
-  );
-}
-
-function TimelineVariantSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Timeline style</p>
-      <Select value={value} onValueChange={(next) => onChange?.(next)}>
-        <SelectTrigger>
-          <SelectValue placeholder="Choose variant" />
-        </SelectTrigger>
-        <SelectContent>
-          {variantOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }
@@ -1006,6 +969,7 @@ function TimelineMarkerFields({
 
         <ColorField
           label="Global marker color"
+          path="style.markerColor"
           value={value.style?.markerColor}
           onChange={(next) => updateStyle(value, onChange, { markerColor: next })}
           onClear={() => clearStyle(value, onChange, "markerColor")}
@@ -1028,6 +992,7 @@ function TimelineMarkerFields({
             <div className="grid gap-3 md:grid-cols-2">
               <ColorField
                 label={`Step ${index + 1} accent`}
+                path="steps.accent"
                 value={step.accent}
                 onChange={(next) => updateStep(value, onChange, index, { accent: next })}
                 placeholder="#1d4ed8"
@@ -1043,6 +1008,7 @@ function TimelineMarkerFields({
               />
               <ColorField
                 label={`Step ${index + 1} marker background`}
+                path="steps.markerBackgroundColor"
                 value={step.markerBackgroundColor}
                 onChange={(next) =>
                   updateStep(value, onChange, index, { markerBackgroundColor: next })
@@ -1053,6 +1019,7 @@ function TimelineMarkerFields({
               />
               <ColorField
                 label={`Step ${index + 1} marker icon color`}
+                path="steps.markerIconColor"
                 value={step.markerIconColor}
                 onChange={(next) => updateStep(value, onChange, index, { markerIconColor: next })}
                 placeholder="#ffffff"
@@ -1094,6 +1061,7 @@ function TimelineColorFields({
       <div className="grid gap-3 md:grid-cols-2">
         <ColorField
           label="Line color"
+          path="style.lineColor"
           value={value.style?.lineColor}
           onChange={(next) => updateStyle(value, onChange, { lineColor: next })}
           onClear={() => clearStyle(value, onChange, "lineColor")}
@@ -1102,6 +1070,7 @@ function TimelineColorFields({
         />
         <ColorField
           label="Title color"
+          path="style.titleColor"
           value={value.style?.titleColor}
           onChange={(next) => updateStyle(value, onChange, { titleColor: next })}
           placeholder="#0f172a"
@@ -1109,6 +1078,7 @@ function TimelineColorFields({
         />
         <ColorField
           label="Description color"
+          path="style.descriptionColor"
           value={value.style?.descriptionColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
           placeholder="#334155"
@@ -1116,6 +1086,7 @@ function TimelineColorFields({
         />
         <ColorField
           label="Background color"
+          path="background.color"
           value={value.background?.color}
           onChange={(next) => updateBackground(value, onChange, next)}
           onClear={() => clearBackground(value, onChange)}
@@ -1337,66 +1308,47 @@ function TimelineTypographyFields({
   );
 }
 
-export function TimelineWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<TimelineData>) {
+export function TimelineWizardEditor({ value, variant }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
-  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
-  const pendingRemoveStep =
-    typeof pendingRemoveIndex === "number" ? steps[pendingRemoveIndex] : undefined;
+  const variantLabel =
+    variantOptions.find((option) => option.id === variant)?.label ?? variantOptions[0]?.label;
 
   return (
     <div className="space-y-4">
-      <TimelineVariantSelect value={variant} onChange={onVariantChange} />
-
       <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-        Wizard seeds the initial timeline story. Visual owns daily status, marker accents, guides,
-        layout, and destination changes after setup.
+        Wizard summarizes the saved timeline story. Visual owns variant changes, daily status,
+        marker accents, guides, layout, and destination changes.
       </div>
 
+      <ReadonlyWidgetSummaryRow
+        id="timeline.wizard.variant"
+        label="Timeline style"
+        path="variant"
+        value={variantLabel}
+      />
+
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Header title</p>
-          <Input
-            value={value.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Timeline heading"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Header description</p>
-          <Textarea
-            value={value.header?.description ?? ""}
-            onChange={(event) =>
-              updateHeader(value, onChange, {
-                description: event.target.value,
-              })
-            }
-            placeholder="Optional context above the timeline"
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="timeline.wizard.header.title"
+          label="Header title"
+          path="header.title"
+          value={value.header?.title ?? "No header title yet"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline.wizard.header.description"
+          label="Header description"
+          path="header.description"
+          value={value.header?.description ?? "No header description yet"}
+        />
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Number of steps</p>
-        <Select
-          value={String(steps.length)}
-          onValueChange={(next) => setStepsCount(value, onChange, Number(next))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select step count" />
-          </SelectTrigger>
-          <SelectContent>
-            {stepCountOptions.map((count) => (
-              <SelectItem key={count} value={String(count)}>
-                {count} steps
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ReadonlyWidgetSummaryRow
+          id="timeline.wizard.steps.count"
+          label="Number of steps"
+          path="steps.count"
+          value={`${steps.length} steps`}
+        />
         <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
           Visual owns daily step details such as status, icons, accents, dates, and destinations.
         </div>
@@ -1405,60 +1357,19 @@ export function TimelineWizardEditor({
       <div className="space-y-3">
         {steps.map((step, index) => (
           <div key={step.id ?? `${index}`} className="space-y-3 rounded-lg border p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold">Step {index + 1}</p>
-              {pendingRemoveIndex === index ? (
-                <div className="flex items-center gap-2 text-xs">
-                  <span>{`Remove ${pendingRemoveStep?.title || `Step ${index + 1}`}?`}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      removeStep(value, onChange, index);
-                      setPendingRemoveIndex(null);
-                    }}
-                    disabled={steps.length <= timelineStepMin}
-                  >
-                    Confirm
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setPendingRemoveIndex(null)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setPendingRemoveIndex(index)}
-                  disabled={steps.length <= timelineStepMin}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
+            <p className="text-sm font-semibold">Step {index + 1}</p>
 
-            <Input
-              value={step.title}
-              onChange={(event) =>
-                updateStep(value, onChange, index, { title: event.target.value })
-              }
-              placeholder={`Step ${index + 1}`}
+            <ReadonlyWidgetSummaryRow
+              id={`timeline.wizard.steps.${index}.title`}
+              label={`Step ${index + 1} title`}
+              path="steps.title"
+              value={step.title || `Step ${index + 1}`}
             />
-            <Textarea
-              value={step.description ?? ""}
-              onChange={(event) =>
-                updateStep(value, onChange, index, {
-                  description: event.target.value,
-                })
-              }
-              placeholder="Step description"
+            <ReadonlyWidgetSummaryRow
+              id={`timeline.wizard.steps.${index}.description`}
+              label={`Step ${index + 1} description`}
+              path="steps.description"
+              value={step.description || "No description yet"}
             />
           </div>
         ))}
@@ -1695,6 +1606,7 @@ export function TimelineVisualEditor({
                     label="Step CTA destination"
                     value={step.cta?.href}
                     onChange={(next) => updateStepCta(value, onChange, index, { href: next })}
+                    controlPath="steps.cta.href"
                     emptyLabel="No CTA destination"
                     helpText="Choose an existing site page for this step CTA. Saved custom destinations stay replace-or-clear only."
                   />
@@ -1712,6 +1624,7 @@ export function TimelineVisualEditor({
                     label="Whole-step destination"
                     value={step.link?.href}
                     onChange={(next) => updateStepLink(value, onChange, index, { href: next })}
+                    controlPath="steps.link.href"
                     emptyLabel="No whole-step destination"
                     helpText="Use this only when the whole step should open one selected site page."
                     feedback={

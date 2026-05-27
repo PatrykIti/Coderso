@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 - **To Do:** 10 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1937 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1940 tasks
 
 ---
 
@@ -58,13 +58,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | In progress (2026-05-26): DOM metadata, raw media/link authoring, Contact map/social authoring, Newsletter/commerce/gallery/pricing/team/footer drift, Hero media/rich-copy/overlay/color waves, FAQ/CTA/Stats/Rich Text color/source waves, Compare Timeline Advanced/color cleanup, Posts Feed source/color destination cleanup, Footer Advanced/layout/color cleanup, Toggle Block Advanced/color cleanup, Entry Teaser source/presentation cleanup, Testimonials Advanced/pagination/color cleanup, Section Wizard/Visual/Advanced cleanup, Grid Columns one-time Wizard/Visual/Advanced cleanup, Template Section stale-payload/Advanced summary cleanup, Split Layout one-time Wizard/metadata/Advanced summary cleanup, Tabs Visual/Advanced/overflow cleanup, shared page-builder Visual layout/visibility ownership, Accordion Visual/Advanced/default-open cleanup, Spacer Advanced/metadata/friendly rhythm cleanup, Divider Advanced/metadata/friendly rhythm cleanup, Stack Wizard/Visual/Advanced cleanup, Content List page-first/Advanced-summary cleanup, Search Box provider/destination/swatch/Advanced-summary cleanup, Listing Filters field-picker/swatch/Advanced-summary cleanup, Product Table writable-metadata/Advanced-summary cleanup, Form Embed swatch-only/Advanced-summary cleanup, FAQ Accordion read-only Advanced/Wizard re-entry cleanup, Newsletter one-time Wizard/swatch-only Visual/read-only Advanced cleanup, Feature Grid swatch-only Visual/read-only Advanced cleanup, Logo Cloud one-time Wizard/swatch-only Visual/read-only Advanced cleanup, Product Gallery/Product Compare swatch-only Visual/read-only source summary cleanup, Gallery Mosaic/Team swatch-only Visual plus confirm-gated read-only Advanced cleanup, Booking Calendar/Appointment Form picker-first flow/link/locale plus read-only Advanced route cleanup, and the Contact/CTA/Hero/Posts Feed/Pricing/Rich Text/Stats raw Advanced payload cleanup are implemented with targeted Vitest/Playwright evidence; remaining widget families continue in dependency order |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-338 | Widget Contract Vitest Expectation Drift Repair | High | Medium | Done (2026-05-27): full `bun run test:vitest` is green again after aligning stale widget expectations with the current editor-ownership and runtime contract. |
+| TASK-337 | Spacer and Stats KPI Lint Typecheck Drift Repair | High | Medium | Done (2026-05-27): root `bun run lint` is green again after aligning Spacer tests with the current normalization owner and widening the Stats KPI helper to the correct DOM base type. |
+| TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | Done (2026-05-26): all remaining widget editor ownership drift is closed, source-of-truth docs are synchronized, and the final strict 38-widget contract smoke is green with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. |
 | TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Done (2026-05-24): completed widgets now show `Setup complete`, daily `Visual`/`Advanced` tabs only, and explicit `Run setup again` one-time setup reentry backed by Vitest and Playwright lifecycle smoke. |
 | TASK-336-18 | Remaining Page Builder Widget Contract Coverage | Medium | Large | Done (2026-05-24): all 18 remaining page-builder widgets now export strict v2 contracts; full frontend smoke is green, and remaining admin UI/fixture/metadata drift is routed to TASK-336-19. |
 | TASK-336-15 | Renderer Fixture Overflow and Team UX Contract | Medium | Large | Done (2026-05-24): frontend fixture data is meaningful across 38 widgets, approved overflow regions are allowlisted with visible affordances, Team spotlight rail collapse is fixed, and full frontend Playwright smoke has zero failures or fixture gaps. |

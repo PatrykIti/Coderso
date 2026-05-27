@@ -760,47 +760,7 @@ function HeroRichTextSanitizerNotice({
   );
 }
 
-function HeroVariantSelect({
-  value,
-  onChange,
-  fieldProps,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-  fieldProps?: {
-    id: string;
-    "aria-labelledby": string;
-    "aria-describedby"?: string;
-  };
-}) {
-  return (
-    <div className="space-y-2">
-      <Select value={value} onValueChange={(next) => onChange?.(next)}>
-        <SelectTrigger
-          id={fieldProps?.id}
-          aria-labelledby={fieldProps?.["aria-labelledby"]}
-          aria-describedby={fieldProps?.["aria-describedby"]}
-        >
-          <SelectValue placeholder="Choose layout" />
-        </SelectTrigger>
-        <SelectContent>
-          {variantOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-export function HeroWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<HeroData>) {
+export function HeroWizardEditor({ value, onChange }: WidgetEditorProps<HeroData>) {
   const [goal, setGoal] = useState<(typeof goalOptions)[number]["id"]>("lead");
   const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
   const primary = value.primaryCta ?? { label: "", href: "" };
@@ -811,8 +771,8 @@ export function HeroWizardEditor({
         id="hero.wizard.goal-structure"
         mode="wizard"
         role="setup"
-        title="Goal and structure"
-        description="Seed a usable Hero. Daily presentation changes live in Visual."
+        title="Goal and starter plan"
+        description="Seed a usable Hero. Layout and daily presentation changes live in Visual."
       >
         <WidgetControlRow id="hero.goal" label="Goal" ownership="action">
           {(fieldProps) => (
@@ -841,62 +801,44 @@ export function HeroWizardEditor({
             </Select>
           )}
         </WidgetControlRow>
-        <WidgetControlRow id="hero.variant" label="Initial Hero layout" path="variant">
-          {(fieldProps) => (
-            <HeroVariantSelect value={variant} onChange={onVariantChange} fieldProps={fieldProps} />
-          )}
-        </WidgetControlRow>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Visual owns Hero layout, media position, spacing, typography, and all daily presentation
+          choices after setup.
+        </div>
       </EditorSection>
       <EditorSection
         id="hero.wizard.starter-copy"
         mode="wizard"
         role="setup"
         title="Starter copy"
-        description="Seed the headline only. Subheads, body, badges, and rich copy are Visual edits."
+        description="Review the current headline. Subheads, body, badges, and rich copy are Visual edits."
       >
-        <WidgetControlRow id="hero.headline" label="Headline seed" path="headline">
-          {(fieldProps) => (
-            <Input
-              id={fieldProps.id}
-              value={value.headline}
-              onChange={(event) => update({ headline: event.target.value })}
-              placeholder="Build with confidence"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-          )}
-        </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="hero.headline"
+          label="Headline seed"
+          path="headline"
+          value={value.headline || "No headline yet"}
+        />
       </EditorSection>
       <EditorSection
         id="hero.wizard.primary-action"
         mode="wizard"
         role="setup"
         title="Primary action seed"
-        description="Seed the first CTA. Secondary CTAs and button design are Visual edits."
+        description="Review the current primary CTA. Secondary CTAs and button design are Visual edits."
       >
         <div className="grid gap-3 md:grid-cols-2">
-          <WidgetControlRow id="hero.primaryCta.label" label="Primary CTA label">
-            {(fieldProps) => (
-              <Input
-                id={fieldProps.id}
-                value={primary.label}
-                onChange={(event) =>
-                  update({ primaryCta: { ...primary, label: event.target.value } })
-                }
-                placeholder="Get started"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
-              />
-            )}
-          </WidgetControlRow>
-          <LinkDestinationField
-            fieldId="hero.primaryCta.href"
+          <ReadonlyWidgetSummaryRow
+            id="hero.primaryCta.label"
+            label="Primary CTA label"
+            path="primaryCta.label"
+            value={primary.label || "No primary CTA label"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="hero.primaryCta.href"
             label="Primary CTA destination"
-            controlPath="primaryCta.href"
-            value={primary.href}
-            onChange={(next) => update({ primaryCta: { ...primary, href: next } })}
-            emptyLabel="No primary destination"
-            helpText="Pick an existing site page for the primary Hero action. Saved custom destinations stay replace-or-clear only."
+            path="primaryCta.href"
+            value={primary.href || "No primary destination"}
           />
         </div>
       </EditorSection>
@@ -1710,6 +1652,7 @@ export function HeroVisualEditor({
     <div className="space-y-4">
       <EditorSection
         id="hero.variant-presets"
+        role="setup"
         title="Variant and Presets"
         description="Choose hero orientation and save reusable configurations."
       >
@@ -1841,6 +1784,7 @@ export function HeroVisualEditor({
 
       <EditorSection
         id="hero.badge-headline"
+        role="content"
         title="Badge and headline"
         description="Control the announcement line and primary hero copy."
       >
@@ -1979,6 +1923,7 @@ export function HeroVisualEditor({
 
       <EditorSection
         id="hero.cta"
+        role="content"
         title="CTA"
         description="Manage CTA structure and button appearance."
       >
@@ -2111,6 +2056,7 @@ export function HeroVisualEditor({
 
       <EditorSection
         id="hero.rich-copy-social-proof"
+        role="content"
         title="Rich copy and social proof"
         description="Add optional emphasis and links with the formatting toolbar, then pair it with a compact trust row."
       >
@@ -3626,7 +3572,7 @@ export function HeroAdvancedEditor({ value, variant }: WidgetEditorProps<HeroDat
           <ReadonlyWidgetSummaryRow
             id="hero.advanced.contract.wizard"
             label="Wizard owns"
-            value="One-time setup seed: initial layout, headline, and primary CTA."
+            value="One-time setup seed: goal presets, initial headline, and primary CTA."
           />
           <ReadonlyWidgetSummaryRow
             id="hero.advanced.contract.visual"

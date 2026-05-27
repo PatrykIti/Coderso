@@ -76,21 +76,8 @@ export const dividerEditorContract: WidgetEditorContract = {
       id: "divider.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: ["variant", "label"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Divider style; Visual remains the daily appearance owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "label",
-          reason:
-            "Wizard seeds an optional one-time center label; Visual remains the daily label owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
+      writablePaths: [],
+      readOnlyPaths: ["variant"],
     },
     {
       mode: "visual",
@@ -113,20 +100,6 @@ export const dividerEditorContract: WidgetEditorContract = {
         "labelTransform",
         "labelLetterSpacing",
         "labelGap",
-      ],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Divider style; Visual remains the daily appearance owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-        {
-          path: "label",
-          reason:
-            "Wizard seeds an optional one-time center label; Visual remains the daily label owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
       ],
     },
     {

@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
-  richTextBlockMax,
   richTextSectionDefaults,
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
@@ -390,7 +389,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("RichTextSection wizard editor keeps output mode while variant cards and quick-start blocks update", async () => {
+test("RichTextSection wizard editor keeps output mode while block previews stay read-only", async () => {
   const { RichTextSectionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
@@ -433,24 +432,23 @@ test("RichTextSection wizard editor keeps output mode while variant cards and qu
   try {
     expect(view.container.textContent).toContain("Output mode stays untouched in Wizard");
     expect(view.container.textContent).toContain("Single Column");
-
-    clickByText(view.container, "Article");
-    expect(latestVariant).toBe("article");
-
-    setInputValue(findInputByPlaceholder(view.container, "Editorial"), "Analysis");
-    setInputValue(
-      findInputByPlaceholder(view.container, "Long-form content section"),
-      "Quarterly narrative"
+    expect(view.container.textContent).toContain(
+      "Use Visual to edit the eyebrow, title, heading level"
     );
-    setInputValue(findInputByPlaceholder(view.container, "Heading 1"), "Inside the release");
-    setTextareaValue(findTextareaByPlaceholder(view.container, "Paragraph 1"), "Structured update");
+    expect(view.container.querySelector("button")).toBeNull();
+    expect(latestVariant).toBe("legacy-layout");
 
-    expect(latestValue.titleBlock?.eyebrow).toBe("Analysis");
-    expect(latestValue.titleBlock?.title).toBe("Quarterly narrative");
+    expect(findInputByPlaceholder(view.container, "Editorial")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Long-form content section")).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Heading 1")).toBeUndefined();
+    expect(findTextareaByPlaceholder(view.container, "Paragraph 1")).toBeUndefined();
+    expect(view.container.textContent).toContain("Original");
+    expect(view.container.textContent).toContain("Alpha");
+
+    expect(latestValue.titleBlock).toBeUndefined();
     expect(latestValue.body?.blocks?.[0]).toMatchObject({
-      kind: "text",
-      heading: "Inside the release",
-      content: "Structured update",
+      heading: "Original",
+      content: "Alpha",
     });
     expect(latestValue.options?.outputMode).toBe("html");
   } finally {

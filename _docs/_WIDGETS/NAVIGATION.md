@@ -24,13 +24,14 @@ Primary CTA jest renderowane tylko dla:
 
 ### Wizard
 
-- onboarding dla wariantu, szybkich linkow, typu logo i CTA
-- pokazuje pierwsze 3 quick links oraz overflow summary, gdy linkow jest wiecej
-- logo, quick links i CTA wybieraja destination przez published-page picker
-  zamiast raw URL/path inputow
+- read-only current layout summary
+- read-only current logo type / logo text-or-image summary
+- pokazuje read-only current source plus first 3 quick/fallback/synced links
+  z overflow summary, gdy linkow jest wiecej
 - obraz logo wybierany jest przez Media Library; istniejace zewnetrzne obrazy
   pozostaja jako read-only replace/clear state
-- przy `linksSource = menu` pokazuje read-only synced preview zamiast edytowalnych rows
+- source switching, menu sync, quick-link labels/destinations, CTA destination,
+  i logo destination sa juz tylko w Visual
 
 ### Visual
 
@@ -275,9 +276,9 @@ Primary CTA jest renderowane tylko dla:
 ## TASK-336-18 Editor Contract
 
 - Exports `navigationEditorContract` with `version: 2`.
-- Contract target: Wizard seeds brand/menu source/links/CTA; Visual owns brand,
-  links, CTA, mobile behavior, layout, and style; Advanced is read-only runtime
-  diagnostics.
+- Contract target: Wizard is a read-only setup summary; Visual owns brand,
+  links, CTA, source selection, mobile behavior, layout, and style; Advanced is
+  read-only runtime diagnostics.
 - TASK-336-19 converts writable Advanced layout/runtime behavior into read-only
   summaries, moves the friendly controls to Visual, redacts raw menu keys in
   Advanced summaries, and removes nonexistent `cta.target`/`cta.enabled`

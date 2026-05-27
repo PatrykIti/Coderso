@@ -795,10 +795,11 @@ test("section editors render expected sections", () => {
   );
   expect(wizardHtml).not.toContain("Quick preset");
   expect(wizardHtml).toContain("Section layout");
-  expect(wizardHtml).toContain("Section title");
   expect(wizardHtml).toContain("Section setup");
+  expect(wizardHtml).toContain("Wizard is one-time starter setup");
   expect(wizardHtml).not.toContain('data-widget-control="section.wizard.preset"');
   expect(wizardHtml).toContain('data-widget-control="section.wizard.variant"');
+  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
   expect(wizardHtml).not.toContain('tabindex="-1"');
 
   const visualHtml = renderToString(

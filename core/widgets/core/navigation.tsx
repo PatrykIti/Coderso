@@ -283,54 +283,6 @@ export const navigationDefaults: NavigationData = {
   },
 };
 
-const navigationWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the navigation layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "logo.type",
-    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "logo.value",
-    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "logo.href",
-    reason: "Wizard seeds brand setup; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "linksSource",
-    reason: "Wizard seeds menu source; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "menuKey",
-    reason: "Wizard seeds menu source; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items",
-    reason: "Wizard seeds starter links; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "cta.label",
-    reason: "Wizard seeds the starter CTA; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "cta.href",
-    reason: "Wizard seeds the starter CTA; Visual remains the daily navigation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const navigationEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -339,18 +291,8 @@ export const navigationEditorContract: WidgetEditorContract = {
       id: "navigation.wizard.starter-menu",
       title: "Starter menu",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "logo.type",
-        "logo.value",
-        "logo.href",
-        "linksSource",
-        "menuKey",
-        "items",
-        "cta.label",
-        "cta.href",
-      ],
-      allowedDuplicateWritablePaths: navigationWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "logo.type", "logo.value", "linksSource", "menuKey"],
     },
     {
       mode: "visual",
@@ -365,13 +307,13 @@ export const navigationEditorContract: WidgetEditorContract = {
         "logo.alt",
         "logo.source",
         "logo.assetId",
+        "behavior.activeLinkMode",
         "linksSource",
         "menuKey",
         "items",
         "cta.label",
         "cta.href",
       ],
-      allowedDuplicateWritablePaths: navigationWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -384,12 +326,22 @@ export const navigationEditorContract: WidgetEditorContract = {
         "behavior.collapseOnScroll",
         "behavior.mobileMode",
         "behavior.hideCtaOnMobile",
-        "behavior.activeLinkMode",
         "layout.alignment",
         "layout.maxWidth",
         "layout.paddingY",
         "layout.itemGap",
         "style.surfaceColor",
+        "style.borderColor",
+        "style.textColor",
+        "style.logoColor",
+        "style.linkColor",
+        "style.linkHoverColor",
+        "style.linkActiveColor",
+        "style.borderWidth",
+        "style.fontSize",
+        "style.fontWeight",
+        "style.textTransform",
+        "style.letterSpacing",
         "style.ctaBackgroundColor",
         "style.ctaTextColor",
         "style.ctaBorderColor",

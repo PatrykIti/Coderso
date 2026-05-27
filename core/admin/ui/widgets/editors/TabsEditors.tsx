@@ -343,7 +343,7 @@ function TabsStructureSection({
       title={isSetupMode ? "Starter tabs" : "Tab content"}
       description={
         isSetupMode
-          ? "Set the initial tab count and default tab before daily visual editing."
+          ? "Set the initial tab count before daily visual editing."
           : "Edit tab labels, content intro copy, tab notes, icons, and unavailable states."
       }
     >
@@ -376,10 +376,19 @@ function TabsStructureSection({
             Each tab owns a matching content area. Reducing the count confirms which tab content
             areas will be removed.
           </p>
+          <p className="text-xs text-muted-foreground">
+            Visual owns the default tab choice together with daily label and content editing.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="space-y-3">
+        {!isSetupMode ? (
           <WidgetControlRow
-            id="tabs.wizard.default-tab"
+            id="tabs.visual.default-tab"
             label="Default tab"
             path="options.defaultItemId"
+            help="Choose which tab opens by default for visitors."
           >
             {(fieldProps) => (
               <Select
@@ -409,10 +418,7 @@ function TabsStructureSection({
               </Select>
             )}
           </WidgetControlRow>
-        </div>
-      ) : null}
-
-      <div className="space-y-3">
+        ) : null}
         {items.map((item, index) => {
           const slotLabel = context?.slotTargets?.[index]?.label ?? `Tab ${index + 1}`;
           const isDefault = item.id === defaultItemId;

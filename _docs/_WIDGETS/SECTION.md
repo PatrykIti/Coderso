@@ -24,12 +24,9 @@ repeatable internal regions.
 ## Editor Modes (current after TASK-336-19 follow-up)
 
 ### Wizard
-- one-time variant cards that seed the Section shape only
-- label/title/description onboarding
-- no visible surface, CSS, or token text entry; surface authoring starts in Visual
-- Wizard writes only `variant`, `heading.label`, `heading.title`, and
-  `heading.description`; the overlap with Visual is explicitly temporary under
-  the shared one-time setup lifecycle (`TASK-336`)
+- read-only section wrapper summary
+- guidance that Visual owns heading copy, spacing, surface styling, presets, and media
+- no visible surface, CSS, or token text entry; surface authoring stays in Visual
 
 ### Visual
 Sections:

@@ -374,34 +374,6 @@ export const compareTimelineDefaults: CompareTimelineData = {
   },
 };
 
-const compareTimelineWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds comparison layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds comparison copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.subtitle",
-    reason: "Wizard seeds comparison copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "axis.steps",
-    reason: "Wizard seeds starter axis labels; Visual remains the daily timeline owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "tracks",
-    reason: "Wizard seeds starter tracks; Visual remains the daily track owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const compareTimelineEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -410,16 +382,15 @@ export const compareTimelineEditorContract: WidgetEditorContract = {
       id: "compare-timeline.wizard.starter-comparison",
       title: "Starter comparison",
       role: "setup",
-      writablePaths: ["variant", "header.title", "header.subtitle", "axis.steps", "tracks"],
-      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "axis.steps.count"],
     },
     {
       mode: "visual",
       id: "compare-timeline.visual.variant",
       title: "Variant and compare structure",
-      role: "content",
+      role: "setup",
       writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -427,22 +398,32 @@ export const compareTimelineEditorContract: WidgetEditorContract = {
       title: "Section heading",
       role: "content",
       writablePaths: ["header.title", "header.subtitle"],
-      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
       id: "compare-timeline.visual.axis-tracks",
-      title: "Axis and tracks",
+      title: "Axis steps and track labels",
       role: "content",
-      writablePaths: ["axis.steps", "tracks"],
-      allowedDuplicateWritablePaths: compareTimelineWizardVisualDuplicateAllowances,
+      writablePaths: [
+        "axis.steps.count",
+        "axis.steps.*.label",
+        "axis.steps.*.description",
+        "axis.steps.*.icon",
+        "axis.steps.*.href",
+        "tracks.*.label",
+      ],
     },
     {
       mode: "visual",
       id: "compare-timeline.visual.markers-segments",
       title: "Markers and segment mapping",
       role: "visual",
-      writablePaths: ["highlight.targetTrackId", "highlight.targetTrackIds"],
+      writablePaths: [
+        "tracks.*.markers",
+        "tracks.*.segments",
+        "highlight.targetTrackId",
+        "highlight.targetTrackIds",
+      ],
     },
     {
       mode: "visual",
@@ -476,7 +457,7 @@ export const compareTimelineEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "compare-timeline.visual.spacing-layout",
-      title: "Spacing and layout",
+      title: "Spacing and layout preview hints",
       role: "layout",
       writablePaths: [
         "layout.trackSpacing",

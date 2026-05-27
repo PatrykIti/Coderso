@@ -89,8 +89,6 @@ const togglePaneSurfaceTokens = ["default", "soft", "contrast"] as const;
 const togglePanePaddingTokens = ["compact", "comfortable", "spacious"] as const;
 const togglePaneRadiusTokens = ["sm", "md", "lg"] as const;
 const togglePaneBorderTokens = ["subtle", "strong"] as const;
-const toggleMotionTokens = ["none", "fade", "slide"] as const;
-
 export const toggleBlockSchema = {
   type: "object",
   additionalProperties: false,
@@ -180,83 +178,63 @@ export const toggleBlockDefaults: ToggleBlockData = {
   },
 };
 
-const toggleBlockWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "Wizard seeds setup-only variant selection; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "labels.primary",
-    reason:
-      "Wizard seeds setup-only labels; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "labels.secondary",
-    reason:
-      "Wizard seeds setup-only labels; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "labels.helper",
-    reason:
-      "Wizard seeds setup-only helper copy; Visual remains the daily owner until setup-only duplicate semantics are first-class.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "options.defaultState",
-    reason:
-      "Wizard seeds the setup-only opening pane; Visual remains the daily behavior owner until setup-only duplicate semantics are first-class.",
-    expiresWithTask: "TASK-336",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const toggleBlockEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
     {
       mode: "wizard",
-      id: "toggle-block.wizard.initial-setup",
-      title: "Initial setup",
+      id: "toggle-block.wizard.variant",
+      title: "Step 1: Variant",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "labels.primary",
-        "labels.secondary",
-        "labels.helper",
-        "options.defaultState",
-      ],
-      allowedDuplicateWritablePaths: toggleBlockWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant"],
     },
     {
       mode: "visual",
-      id: "toggle-block.visual.structure-copy",
-      title: "Structure and copy",
+      id: "toggle-block.visual.variant",
+      title: "Variant",
+      role: "visual",
+      writablePaths: ["variant"],
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.labels",
+      title: "Labels",
       role: "content",
-      writablePaths: [
-        "variant",
-        "labels.primary",
-        "labels.secondary",
-        "labels.helper",
-        "labels.ariaLabel",
-        "labels.selectedSuffix",
-        "options.defaultState",
-        "options.motion",
-      ],
-      allowedDuplicateWritablePaths: toggleBlockWizardVisualDuplicateAllowances,
+      writablePaths: ["labels.primary", "labels.secondary", "labels.helper"],
     },
     {
       mode: "visual",
-      id: "toggle-block.visual.theme-panes",
-      title: "Theme and panes",
+      id: "toggle-block.visual.experience",
+      title: "Experience",
+      role: "visual",
+      writablePaths: ["options.defaultState", "options.motion"],
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.accessibility",
+      title: "Accessibility",
+      role: "content",
+      writablePaths: ["labels.ariaLabel", "labels.selectedSuffix"],
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.theme",
+      title: "Theme",
       role: "visual",
       writablePaths: [
         "style.surfaceColor",
         "style.borderColor",
         "style.accentColor",
         "style.accentContrastColor",
+      ],
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.pane-style",
+      title: "Pane cards",
+      role: "visual",
+      writablePaths: [
         "style.panes.primary.surface",
         "style.panes.primary.padding",
         "style.panes.primary.radius",
@@ -266,6 +244,13 @@ export const toggleBlockEditorContract: WidgetEditorContract = {
         "style.panes.secondary.radius",
         "style.panes.secondary.borderEmphasis",
       ],
+    },
+    {
+      mode: "visual",
+      id: "toggle-block.visual.authoring",
+      title: "Pane authoring",
+      role: "summary",
+      writablePaths: [],
     },
     {
       mode: "advanced",

@@ -19,9 +19,8 @@ blocks, and bounded inline media/attachment/embed support.
 
 ### Wizard
 
-- Compact variant cards
-- Eyebrow and title quick setup
-- Quick authoring for the first two structured text blocks only
+- Read-only current layout summary
+- Read-only preview of the first two structured text blocks
 - Does not change `options.outputMode`; Wizard now leaves output ownership to
   Visual
 
@@ -179,8 +178,8 @@ style duplication, and raw HTML authoring do not live here anymore.
 ## TASK-336-18 Editor Contract
 
 - Exports `richTextSectionEditorContract` with `version: 2`.
-- Contract target: Wizard seeds safe structured copy; Visual owns daily rich
-  content, typography, spacing, and color; Advanced is read-only source,
+- Contract target: Wizard is a read-only starter summary; Visual owns daily
+  rich content, typography, spacing, and color; Advanced is read-only source,
   sanitizer, and runtime diagnostics.
 - TASK-336-19 closes raw HTML/output-mode authoring drift by keeping Advanced
   read-only and moving authoring through Visual rich-text/structured controls.

@@ -477,32 +477,21 @@ test("FeatureGrid editors cover variant changes, card editing, swatch colors, an
     expect((variantSelect as HTMLSelectElement | null | undefined)?.value).toBe("cards-3");
     setSelectValue(variantSelect, "cards-4");
     expect(currentVariant).toBe("cards-4");
-
-    setInputValue(
-      findInputByPlaceholder(view.container, "Everything your team needs"),
-      "Core feature set"
-    );
-    setTextareaValue(
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(
+      findInputByPlaceholder(wizardRoot ?? view.container, "Everything your team needs")
+    ).toBeUndefined();
+    expect(
       findTextareasByPlaceholder(
-        view.container,
+        wizardRoot ?? view.container,
         "Use focused cards to explain your strongest product capabilities."
-      )[0],
-      "Short proof of platform value."
-    );
-
-    const countSelect = findSelectsByOptions(view.container, [
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-    ])[0];
-    setSelectValue(countSelect, "4");
-    expect(latestValue.items).toHaveLength(4);
-    setInputValue(findInputsByPlaceholder(view.container, "Feature 1")[0], "Wizard automation");
+      )[0]
+    ).toBeUndefined();
+    expect(
+      findSelectsByOptions(wizardRoot ?? view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])
+    ).toHaveLength(0);
 
     const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
     const headerSection = findSectionByTitle(view.container, "Header copy");
@@ -522,6 +511,19 @@ test("FeatureGrid editors cover variant changes, card editing, swatch colors, an
     expect(colorsSection).toBeTruthy();
     expect(sectionStyleSection).toBeTruthy();
     expect(advancedSection).toBeTruthy();
+    const countSelect = findSelectsByOptions(layoutSection as ParentNode, [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ])[0];
+    setSelectValue(countSelect, "4");
+    expect(latestValue.items).toHaveLength(4);
+    expect(findInputsByPlaceholder(wizardRoot ?? view.container, "Feature 1")[0]).toBeUndefined();
     expect(
       view.container
         .querySelector('[data-widget-control="feature-grid-variant-preview-cards-3"]')
@@ -848,29 +850,21 @@ test("FeatureGrid editors render sparse fallback defaults and ignore variant cha
   );
 
   try {
+    expect(wizardView.container.textContent).toContain("Wizard is one-time starter setup.");
     expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
-          | HTMLInputElement
-          | undefined
-      )?.value
-    ).toBe(featureGridDefaults.header?.title);
+      findInputByPlaceholder(wizardView.container, "Everything your team needs")
+    ).toBeUndefined();
     expect(
-      (
-        findTextareasByPlaceholder(
-          wizardView.container,
-          "Use focused cards to explain your strongest product capabilities."
-        )[0] as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe(featureGridDefaults.header?.description);
+      findTextareasByPlaceholder(
+        wizardView.container,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0]
+    ).toBeUndefined();
+    expect(wizardView.container.textContent).toContain("Cards count");
+    expect(wizardView.container.textContent).toContain("1 card");
     expect(
-      (
-        findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
-          | HTMLSelectElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("1");
+      findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])
+    ).toHaveLength(0);
   } finally {
     wizardView.cleanup();
   }
@@ -1033,29 +1027,15 @@ test("FeatureGrid editors fall back to default layout tokens when normalized pay
       )?.value
     ).toBe("cards-3");
     expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Everything your team needs") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findInputByPlaceholder(wizardView.container, "Everything your team needs")
+    ).toBeUndefined();
     expect(
-      (
-        findTextareasByPlaceholder(
-          wizardView.container,
-          "Use focused cards to explain your strongest product capabilities."
-        )[0] as HTMLTextAreaElement | null | undefined
-      )?.value
-    ).toBe("");
-    expect(
-      (
-        findInputsByPlaceholder(wizardView.container, "Feature 1")[0] as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("");
+      findTextareasByPlaceholder(
+        wizardView.container,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0]
+    ).toBeUndefined();
+    expect(findInputsByPlaceholder(wizardView.container, "Feature 1")[0]).toBeUndefined();
   } finally {
     wizardView.cleanup();
   }

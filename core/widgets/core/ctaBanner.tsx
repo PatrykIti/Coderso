@@ -312,34 +312,6 @@ export const ctaBannerDefaults: CtaBannerData = {
   },
 };
 
-const ctaBannerWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the conversion layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "content.title",
-    reason: "Wizard seeds primary CTA copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "content.description",
-    reason: "Wizard seeds supporting copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "actions.primaryCta.label",
-    reason: "Wizard seeds the primary action; Visual remains the daily action owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "actions.primaryCta.href",
-    reason: "Wizard seeds the primary action; Visual remains the daily action owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const ctaBannerEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -348,14 +320,8 @@ export const ctaBannerEditorContract: WidgetEditorContract = {
       id: "cta-banner.wizard.starter-conversion",
       title: "Starter conversion",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "content.title",
-        "content.description",
-        "actions.primaryCta.label",
-        "actions.primaryCta.href",
-      ],
-      allowedDuplicateWritablePaths: ctaBannerWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "content.title"],
     },
     {
       mode: "visual",
@@ -384,7 +350,6 @@ export const ctaBannerEditorContract: WidgetEditorContract = {
         "actions.tertiaryCta.openInNewTab",
         "actions.tertiaryCta.icon",
       ],
-      allowedDuplicateWritablePaths: ctaBannerWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

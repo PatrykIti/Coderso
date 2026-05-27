@@ -18,10 +18,13 @@ optional supporting copy, and bounded presentation controls.
 ## Editor Modes (current after TASK-336-12)
 
 ### Wizard (one-time setup seed)
-- `Layout seed`: starter variant cards and metric count.
-- `Header seed`: initial section title and description.
-- `Metric seed`: visible metric `value`, `label`, `description`, and `icon` fields for the active count.
+- `Layout overview`: read-only current layout and visible metric count.
 - `Spacing guidance`: read-only explanation of the active Visual-owned rhythm.
+
+Wizard does not own layout/count, section header copy, or metric content
+anymore. `variant`, `items.count`, `header.*`, plus per-metric `value`,
+`label`, `description`, `icon`, trends, and links are all Visual-owned daily
+edits.
 
 Wizard intentionally overlaps with Visual for starter fields only until
 `TASK-336-16` moves the Wizard lifecycle out of daily editing. Those overlaps

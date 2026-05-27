@@ -296,12 +296,6 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("input")).filter(
-    (element) =>
-      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
-  );
-
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
@@ -337,7 +331,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("CompareTimeline wizard editor covers variant fallback, step expansion, track normalization, and marker toggles", async () => {
+test("CompareTimeline wizard editor is now a read-only starter summary", async () => {
   const { CompareTimelineWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
 
@@ -379,48 +373,29 @@ test("CompareTimeline wizard editor covers variant fallback, step expansion, tra
   const view = mount(<Harness />);
 
   try {
+    const setupSection = findSectionByTitle(view.container, "Quick setup");
+    expect(setupSection?.getAttribute("data-widget-editor-section")).toBe(
+      "compare-timeline.wizard.starter-comparison"
+    );
+    expect(setupSection?.getAttribute("data-widget-editor-mode")).toBe("wizard");
+    expect(setupSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
     expect(view.container.textContent).toContain("Quick setup");
-    expect(view.container.textContent).toContain("Marker baseline");
-
-    const highlightSwitch = view.container.querySelector("input[type='checkbox']");
-    expect((highlightSwitch as HTMLInputElement | null)?.checked).toBe(false);
-
-    toggleCheckbox(highlightSwitch);
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("dual-track-highlight");
-    expect(currentVariant).toBe("dual-track-highlight");
-
-    toggleCheckbox(highlightSwitch);
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("dual-track");
-    expect(currentVariant).toBe("dual-track");
-
-    setSelectValue(findSelectByOptions(view.container, ["3", "4", "5", "6"]), "4");
-    expect(latestValue.axis.steps).toHaveLength(4);
-    expect(latestValue.axis.steps[3]).toEqual(
-      expect.objectContaining({ id: "step-4", label: "Optimize" })
+    expect(view.container.textContent).toContain(
+      "Visual owns axis wording, track labels, marker mapping, and highlight segment editing after setup."
     );
-    expect(view.container.textContent).toContain("Optimize");
+    expect(view.container.textContent).not.toContain("Marker baseline");
+    expect(view.container.textContent).not.toContain("Axis copy");
+    expect(view.container.textContent).not.toContain("Track labels");
+    expect(findInputByPlaceholder(view.container, "Track 1 label")).toBeUndefined();
 
-    setInputValue(findInputByPlaceholder(view.container, "Track 1 label"), "  Guided rollout  ");
-    setInputValue(findInputByPlaceholder(view.container, "Track 2 label"), " ");
-
-    clickButtonByText(view.container, "Discover", 0);
-    clickButtonByText(view.container, "Optimize", 1);
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.tracks[0]).toEqual(
-      expect.objectContaining({
-        id: "a",
-        label: "Guided rollout",
-        markers: [2],
-      })
-    );
-    expect(latestValue.tracks[1]).toEqual(
-      expect.objectContaining({
-        id: "b",
-        label: "With us",
-        markers: [1, 3],
-      })
-    );
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(view.container.textContent).toContain("Disabled");
+    expect(onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(findSelectByOptions(view.container, ["3", "4", "5", "6"])).toBeUndefined();
+    expect(view.container.textContent).toContain("3 steps");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.tracks[0]).toEqual(expect.objectContaining({ label: "Current state" }));
+    expect(latestValue.tracks[1]).toEqual(expect.objectContaining({ label: "Future state" }));
   } finally {
     view.cleanup();
   }
@@ -494,6 +469,11 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
 
   try {
     expect(view.container.textContent).toContain("Variant and compare structure");
+    expect(
+      findSectionByTitle(view.container, "Variant and compare structure")?.getAttribute(
+        "data-widget-editor-section-role"
+      )
+    ).toBe("setup");
     expect(view.container.textContent).toContain(
       "Segment mapping is hidden in Dual Track. Saved segments are preserved and will reappear in Dual Track Highlight."
     );
@@ -571,8 +551,14 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     expect(new Set(writablePaths)).toEqual(
       new Set([
         "variant",
-        "axis.steps",
-        "tracks",
+        "axis.steps.count",
+        "axis.steps.*.label",
+        "axis.steps.*.description",
+        "axis.steps.*.icon",
+        "axis.steps.*.href",
+        "tracks.*.label",
+        "tracks.*.markers",
+        "tracks.*.segments",
         "highlight.targetTrackId",
         "highlight.targetTrackIds",
         "guides.enabled",
@@ -609,7 +595,12 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
         .filter(Boolean)
     );
     expect(highlightOnlyPaths).toEqual(
-      new Set(["highlight.targetTrackId", "highlight.targetTrackIds"])
+      new Set([
+        "highlight.targetTrackId",
+        "highlight.targetTrackIds",
+        "tracks.*.markers",
+        "tracks.*.segments",
+      ])
     );
 
     setInputValue(colorInputs[0], "#ffaa00");

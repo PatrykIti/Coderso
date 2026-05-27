@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { expect, test } from "vitest";
 
+import { ToggleBlockWizardEditor } from "../../../core/admin/ui/widgets/editors/ToggleBlockEditors";
 import {
   createToggleBlockWidget,
   normalizeToggleBlockData,
@@ -295,4 +296,22 @@ test("toggle block validator accepts expanded task-292 schema", () => {
       },
     })
   ).not.toThrow();
+});
+
+test("toggle block wizard keeps setup focused on variant", () => {
+  const html = renderToString(
+    <ToggleBlockWizardEditor
+      value={{}}
+      onChange={() => undefined}
+      variant="switch"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Step 1: Variant");
+  expect(html).toContain("Wizard is one-time starter setup.");
+  expect(html).toContain("Toggle surface");
+  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).not.toContain("Step 2: Labels");
+  expect(html).not.toContain("Step 3: Starting pane");
 });

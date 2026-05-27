@@ -315,9 +315,6 @@ const findInputsByAriaLabel = (container: ParentNode, label: string) =>
       element instanceof HTMLInputElement && element.getAttribute("aria-label") === label
   );
 
-const findInputByAriaLabel = (container: ParentNode, label: string) =>
-  findInputsByAriaLabel(container, label)[0];
-
 const findColorInputByLabel = (container: ParentNode, label: string, index = 0) => {
   const colorInput = findInputsByAriaLabel(container, `${label} swatch`)[index];
   if (!(colorInput instanceof HTMLInputElement)) {
@@ -548,7 +545,8 @@ test("Section editors normalize malformed defaults, summarize saved custom color
     if (!(wizardVariantControl instanceof HTMLElement)) {
       throw new Error("Missing wizard variant control");
     }
-    clickByText(wizardVariantControl, "Contained");
+    expect(wizardVariantControl.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardVariantControl.textContent).toContain("Default");
     expect(view.getLatestVariant()).toBe("legacy");
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
@@ -638,23 +636,19 @@ test("Section editors cover variant changes, friendly link fields, swatch colors
     if (!(wizardVariantControl instanceof HTMLElement)) {
       throw new Error("Missing wizard variant control");
     }
-    clickByText(wizardVariantControl, "Contained");
-    expect(view.getLatestVariant()).toBe("contained");
-
-    setInputValue(
-      findInputByPlaceholder(view.container, "Section label (optional)"),
-      "Platform label"
-    );
-    setInputValue(findInputByPlaceholder(view.container, "Section title"), "Platform section");
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Short context for the section"),
-      "Reusable wrapper for grouped content."
-    );
-    expect(view.getLatestValue().heading).toMatchObject({
-      label: "Platform label",
-      title: "Platform section",
-      description: "Reusable wrapper for grouped content.",
-    });
+    expect(wizardVariantControl.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(wizardVariantControl.textContent).toContain("Default");
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(view.container.textContent).toContain("Wizard is one-time starter setup");
+    expect(
+      findInputByPlaceholder(wizardRoot ?? view.container, "Section label (optional)")
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(wizardRoot ?? view.container, "Section title")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(wizardRoot ?? view.container, "Short context for the section")
+    ).toBeUndefined();
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
@@ -783,7 +777,7 @@ test("Section editors cover variant changes, friendly link fields, swatch colors
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(view.getLatestValue().heading).toMatchObject({
       label: "Overview",
-      title: "Overview section",
+      title: "",
       description: "Supporting copy from visual editor.",
       level: "h4",
       align: "center",
@@ -844,7 +838,7 @@ test("Section editors cover variant changes, friendly link fields, swatch colors
   }
 });
 
-test("Section presets and variant cards use atomic block patches when available", async () => {
+test("Section variant cards use atomic block patches when available", async () => {
   const view = await renderEditors({
     initialValue: {
       heading: {
@@ -861,11 +855,16 @@ test("Section presets and variant cards use atomic block patches when available"
     if (!(wizardSection instanceof HTMLElement)) {
       throw new Error("Missing section setup");
     }
-    clickByText(wizardSection, "Bleed");
-    expect(view.onBlockPatchSpy).toHaveBeenCalled();
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    expect(wizardVariantControl.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(view.onBlockPatchSpy).not.toHaveBeenCalled();
     expect(view.onChangeSpy).not.toHaveBeenCalled();
-    expect(view.getLatestVariant()).toBe("bleed");
-    expect(view.getLatestValue().layout).toBeUndefined();
+    expect(view.getLatestVariant()).toBe("default");
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
@@ -940,20 +939,26 @@ test("Section editor presets preserve heading copy and expose friendly width and
     }
     expect(wizardSection.textContent).not.toContain("Quick preset");
     expect(wizardSection.textContent).not.toContain("Two-column region group");
-    clickByText(wizardSection, "Bleed");
-    expect(view.getLatestVariant()).toBe("bleed");
-    expect(view.getLatestValue().heading).toMatchObject({
-      label: "Overview",
-      title: "Pricing plans",
-      description: "Supportive copy stays intact.",
-    });
-    expect(view.getLatestValue().layout).toBeUndefined();
+    const wizardVariantControl = wizardSection.querySelector(
+      '[data-widget-control="section.wizard.variant"]'
+    );
+    if (!(wizardVariantControl instanceof HTMLElement)) {
+      throw new Error("Missing wizard variant control");
+    }
+    expect(wizardVariantControl.getAttribute("data-widget-control-readonly")).toBe("true");
 
     const variantSection = findSectionByTitle(view.container, "Variant and structure");
     if (!(variantSection instanceof HTMLElement)) {
       throw new Error("Missing variant and structure section");
     }
     expect(variantSection.textContent).toContain("Quick presets");
+    clickByText(variantSection, "Bleed");
+    expect(view.getLatestVariant()).toBe("bleed");
+    expect(view.getLatestValue().heading).toMatchObject({
+      label: "Overview",
+      title: "Pricing plans",
+      description: "Supportive copy stays intact.",
+    });
     clickByText(variantSection, "Two-column region group");
     expect(view.getLatestVariant()).toBe("default");
     expect(view.getLatestValue().heading).toMatchObject({
@@ -1543,10 +1548,13 @@ test("Section editors fall back to sparse normalized token fields and contract d
       initialValue: {},
     });
 
-    expect(findInputByPlaceholder(view.container, "Section title")?.value).toBe("");
-    expect(findTextareaByPlaceholder(view.container, "Short context for the section")?.value).toBe(
-      ""
-    );
+    const wizardRoot = view.container.querySelector(
+      '[data-widget-editor-mode="wizard"]'
+    ) as ParentNode | null;
+    expect(findInputByPlaceholder(wizardRoot ?? view.container, "Section title")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(wizardRoot ?? view.container, "Short context for the section")
+    ).toBeUndefined();
     expect(findInputsByPlaceholder(view.container, "transparent")).toHaveLength(0);
     expect(findColorInputByLabel(view.container, "Background color").value).toBe("#ffffff");
 
@@ -1559,9 +1567,13 @@ test("Section editors fall back to sparse normalized token fields and contract d
       throw new Error("Missing width and spacing section");
     }
 
-    expect(findInputByPlaceholder(view.container, "Section label (optional)")?.value).toBe("");
+    expect(findInputByPlaceholder(view.container, "Section label (optional)")).toBeUndefined();
     expect(findInputByPlaceholder(view.container, "Section label")?.value).toBe("");
-    expect(findInputsByPlaceholder(view.container, "Section title")[1]?.value).toBe("");
+    const headingSection = findSectionByTitle(view.container, "Heading and intro");
+    if (!(headingSection instanceof HTMLElement)) {
+      throw new Error("Missing heading section");
+    }
+    expect(findInputByPlaceholder(headingSection, "Section title")?.value).toBe("");
     expect(
       findTextareaByPlaceholder(view.container, "Supportive copy for this section")?.value
     ).toBe("");

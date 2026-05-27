@@ -1254,29 +1254,6 @@ export function HeroBlock({
   );
 }
 
-const heroSetupDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard remains a temporary one-time seed surface until TASK-336-16 hides setup.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "headline",
-    reason: "Wizard remains a temporary one-time seed surface until TASK-336-16 hides setup.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "primaryCta.label",
-    reason: "Wizard remains a temporary one-time seed surface until TASK-336-16 hides setup.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "primaryCta.href",
-    reason: "Wizard remains a temporary one-time seed surface until TASK-336-16 hides setup.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"];
-
 const heroSocialProofAvatarWritablePaths = Array.from({ length: 5 }, (_, index) => [
   `socialProof.avatars.${index}.source`,
   `socialProof.avatars.${index}.assetId`,
@@ -1290,29 +1267,25 @@ export const heroEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "hero.wizard.goal-structure",
-      title: "Goal and structure",
+      title: "Goal and starter plan",
       role: "setup",
-      writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: [heroSetupDuplicateAllowances[0]],
+      writablePaths: [],
     },
     {
       mode: "wizard",
       id: "hero.wizard.starter-copy",
       title: "Starter copy",
       role: "setup",
-      writablePaths: ["headline"],
-      allowedDuplicateWritablePaths: [heroSetupDuplicateAllowances[1]],
+      writablePaths: [],
+      readOnlyPaths: ["headline"],
     },
     {
       mode: "wizard",
       id: "hero.wizard.primary-action",
       title: "Primary action seed",
       role: "setup",
-      writablePaths: ["primaryCta.label", "primaryCta.href"],
-      allowedDuplicateWritablePaths: [
-        heroSetupDuplicateAllowances[2],
-        heroSetupDuplicateAllowances[3],
-      ],
+      writablePaths: [],
+      readOnlyPaths: ["primaryCta.label", "primaryCta.href"],
     },
     {
       mode: "visual",
@@ -1320,7 +1293,6 @@ export const heroEditorContract: WidgetEditorContract = {
       title: "Variant and Presets",
       role: "setup",
       writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: [heroSetupDuplicateAllowances[0]],
     },
     {
       mode: "visual",
@@ -1338,7 +1310,6 @@ export const heroEditorContract: WidgetEditorContract = {
         "subhead",
         "body",
       ],
-      allowedDuplicateWritablePaths: [heroSetupDuplicateAllowances[1]],
     },
     {
       mode: "visual",
@@ -1353,10 +1324,6 @@ export const heroEditorContract: WidgetEditorContract = {
         "secondaryCta.label",
         "secondaryCta.href",
         "style.secondaryButtonSize",
-      ],
-      allowedDuplicateWritablePaths: [
-        heroSetupDuplicateAllowances[2],
-        heroSetupDuplicateAllowances[3],
       ],
     },
     {
@@ -1569,7 +1536,7 @@ export const heroEditorContract: WidgetEditorContract = {
       title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
-      readOnlyPaths: ["runtime.normalizedData"],
+      readOnlyPaths: ["variant", "primaryCta.href", "media.src", "richBody"],
     },
     {
       mode: "advanced",

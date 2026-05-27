@@ -10,6 +10,7 @@ import {
 } from "../../../core/admin/ui/widgets/editors/CompareTimelineEditors";
 import {
   CompareTimelineBlock,
+  compareTimelineEditorContract,
   compareTimelineDefaults,
   createCompareTimelineWidget,
   normalizeCompareTimelineData,
@@ -203,9 +204,13 @@ test("compare timeline wizard renders minimal onboarding fields", () => {
   );
 
   expect(html).toContain("Quick setup");
-  expect(html).toContain("Axis copy");
-  expect(html).toContain("Track labels");
-  expect(html).toContain("Marker baseline");
+  expect(html).toContain("Highlight mode");
+  expect(html).toContain("Axis step count");
+  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).toContain("Visual owns axis wording, track labels, marker mapping");
+  expect(html).not.toContain("Axis copy");
+  expect(html).not.toContain("Track labels");
+  expect(html).not.toContain("Marker baseline");
 });
 
 test("compare timeline visual renders section-based IA", () => {
@@ -224,6 +229,29 @@ test("compare timeline visual renders section-based IA", () => {
   expect(html).toContain("Highlight and guide styles");
   expect(html).toContain("Colors and typography");
   expect(html).toContain("Spacing and layout preview hints");
+});
+
+test("compare timeline exposes the strict v2 section contract for setup vs mapping ownership", () => {
+  const widget = createCompareTimelineWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.editorContract).toBe(compareTimelineEditorContract);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "compare-timeline.wizard.starter-comparison",
+    "compare-timeline.visual.variant",
+    "compare-timeline.visual.section-heading",
+    "compare-timeline.visual.axis-tracks",
+    "compare-timeline.visual.markers-segments",
+    "compare-timeline.visual.highlight-guides",
+    "compare-timeline.visual.colors-typography",
+    "compare-timeline.visual.spacing-layout",
+    "compare-timeline.advanced.runtime-layout",
+    "compare-timeline.advanced.metadata",
+    "compare-timeline.advanced.normalization",
+  ]);
 });
 
 test("compare timeline visual hides segment editor for non-highlight variant", () => {

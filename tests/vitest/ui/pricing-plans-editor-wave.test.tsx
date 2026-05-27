@@ -36,19 +36,32 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-    ({ value, onChange, disabled, placeholder, type, className, ...props }, ref) => (
-      <input
-        ref={ref}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        placeholder={placeholder}
-        type={type}
-        className={className}
-        {...props}
-      />
-    )
+  Input: ({
+    value,
+    onChange,
+    disabled,
+    placeholder,
+    type,
+    className,
+    ...props
+  }: {
+    value?: string | number;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
+    placeholder?: string;
+    type?: string;
+    className?: string;
+    [key: string]: unknown;
+  }) => (
+    <input
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={placeholder}
+      type={type}
+      className={className}
+      {...props}
+    />
   ),
 }));
 
@@ -346,7 +359,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("PricingPlans wizard editor covers variant changes, publishable plan fields, and fixed-count guidance", async () => {
+test("PricingPlans wizard editor keeps setup focused on layout and points daily editing to Visual", async () => {
   const { PricingPlansWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
 
@@ -381,78 +394,24 @@ test("PricingPlans wizard editor covers variant changes, publishable plan fields
 
   try {
     await flushAsyncUpdates();
-    setSelectValue(
-      findSelectByOptions(view.container, [
-        "two-plans",
-        "three-plans",
-        "four-plans",
-        "comparison-rows",
-      ]),
-      "two-plans"
-    );
-    setInputValue(
+    expect(view.container.textContent).toContain("Pricing layout");
+    expect(view.container.textContent).toContain("Three Plans");
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(view.container.textContent).not.toContain("1 preserved plan is hidden");
+    expect(view.container.textContent).toContain("Daily editing happens in Visual");
+    expect(
       findInputByPlaceholder(
         view.container,
         pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-      ),
-      "Simple pricing"
-    );
-    const firstPlanCard = Array.from(
-      view.container.querySelectorAll("div.space-y-3.rounded-lg.border.p-3")
-    )[0];
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Plan 1"), "Solo");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Most popular"), "New");
-    setInputValue(findInputsByPlaceholder(firstPlanCard ?? view.container, "$49")[0], "$29");
-    setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "/month"), "/seat");
-    setInputValue(
-      findInputByPlaceholder(firstPlanCard ?? view.container, "Choose plan"),
-      "Start free"
-    );
-    expect(firstPlanCard?.textContent).not.toContain("CTA URL");
-    setSelectValue(
-      findSelectByOptions(firstPlanCard ?? view.container, ["solo-page"]),
-      "solo-page"
-    );
-    clickButtonByText(firstPlanCard ?? view.container, "Add feature");
-    await Promise.resolve();
-    const newFeatureInput = findInputByPlaceholder(firstPlanCard ?? view.container, "Feature 1");
-    expect(document.activeElement).toBe(newFeatureInput);
-    setInputValue(newFeatureInput, "Email support");
-    setSelectValue(
-      findSelectByOptions(view.container, [
-        "two-plans",
-        "three-plans",
-        "four-plans",
-        "comparison-rows",
-      ]),
-      "three-plans"
-    );
-
-    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("three-plans");
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(
-      (
-        findSelectByOptions(view.container, [
-          "two-plans",
-          "three-plans",
-          "four-plans",
-          "comparison-rows",
-        ]) as HTMLSelectElement | null | undefined
-      )?.value
-    ).toBe("three-plans");
-    expect(view.container.textContent).toContain("Three Plans shows 3 plans.");
-    expect(view.container.textContent).not.toContain("1 preserved plan is hidden");
-    expect(latestValue.header?.title).toBe("Simple pricing");
-    expect(latestValue.plans).toHaveLength(3);
-    expect(latestValue.plans[0]).toMatchObject({
-      name: "Solo",
-      badge: "New",
-      price: "$29",
-      period: "/seat",
-      ctaLabel: "Start free",
-      ctaHref: "/solo",
-      features: [{ text: "Email support", status: "included" }],
-    });
+      )
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "Plan 1")).toBeUndefined();
+    expect(findInputsByPlaceholder(view.container, "$49")).toHaveLength(0);
+    expect(findInputByPlaceholder(view.container, "Choose plan")).toBeUndefined();
+    expect(latestValue).toEqual({ plans: [] });
   } finally {
     view.cleanup();
   }
@@ -732,9 +691,6 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       "All prices exclude VAT."
     );
 
-    const colorPickersAfterUpdate = Array.from(
-      view.container.querySelectorAll("input[type='color']")
-    ) as HTMLInputElement[];
     expect(latestValue.style).toMatchObject({
       cardBorder: "#223344",
       highlightRing: "#334455",
@@ -966,31 +922,16 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
   );
 
   try {
-    expect(
-      (
-        findInputByPlaceholder(
-          wizardView.container,
-          pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
-        ) as HTMLInputElement | null | undefined
-      )?.value
-    ).toBe(pricingPlansDefaults.header?.title);
     expect(wizardView.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(wizardView.container.textContent).toContain("Daily editing happens in Visual");
     expect(
-      (
-        findInputByPlaceholder(wizardView.container, "Plan 1") as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("Starter");
-    expect(
-      (
-        findInputsByPlaceholder(wizardView.container, "$49")[0] as
-          | HTMLInputElement
-          | null
-          | undefined
-      )?.value
-    ).toBe("$19");
+      findInputByPlaceholder(
+        wizardView.container,
+        pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
+      )
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(wizardView.container, "Plan 1")).toBeUndefined();
+    expect(findInputsByPlaceholder(wizardView.container, "$49")).toHaveLength(0);
 
     setSelectValue(
       findSelectByOptions(wizardView.container, [
@@ -1001,16 +942,8 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
       ]),
       "comparison-rows"
     );
-    expect(
-      (
-        findSelectByOptions(wizardView.container, [
-          "two-plans",
-          "three-plans",
-          "four-plans",
-          "comparison-rows",
-        ]) as HTMLSelectElement | undefined
-      )?.value
-    ).toBe("three-plans");
+    expect(wizardView.container.textContent).toContain("Three Plans");
+    expect(wizardView.container.querySelector("select")).toBeNull();
   } finally {
     wizardView.cleanup();
   }

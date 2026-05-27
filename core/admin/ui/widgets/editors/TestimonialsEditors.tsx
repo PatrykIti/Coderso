@@ -838,281 +838,42 @@ function TestimonialContentCard({
   );
 }
 
-export function TestimonialsWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  onBlockPatch,
-}: WidgetEditorProps<TestimonialsData>) {
-  const normalized = normalizeValue(value);
-  const testimonials = normalizeTestimonialsItems(normalized.testimonials);
-  const [selectedAvatarMediaIds, setSelectedAvatarMediaIds] = useState<
-    Record<string, string | null>
-  >({});
-  const [avatarInputValues, setAvatarInputValues] = useState<Record<string, string>>({});
-  const [mediaPickerErrorsByRowKey, setMediaPickerErrorsByRowKey] = useState<
-    Record<string, string>
-  >({});
-
-  const handleVariantChange = (next: string) => {
-    if (!onVariantChange && !onBlockPatch) return;
-    const nextValue = buildVariantSyncedTestimonialsValue(value, next);
-    if (onBlockPatch) {
-      onBlockPatch((current) => ({
-        ...current,
-        variant: next,
-        data: nextValue,
-      }));
-      return;
-    }
-    onVariantChange?.(next);
-    onChange(nextValue);
-  };
-
-  const setAvatarError = (rowKey: string, message?: string) => {
-    setMediaPickerErrorsByRowKey((current) => {
-      if (!message) {
-        const { [rowKey]: _removed, ...rest } = current;
-        return rest;
-      }
-      return { ...current, [rowKey]: message };
-    });
-  };
-
-  const setAvatarInputValue = (rowKey: string, nextValue?: string) => {
-    setAvatarInputValues((current) => {
-      if (nextValue === undefined) {
-        const { [rowKey]: _removed, ...rest } = current;
-        return rest;
-      }
-      return { ...current, [rowKey]: nextValue };
-    });
-  };
-
-  const handleAvatarAssetChange = async (
-    testimonialId: string,
-    index: number,
-    nextValue: unknown
-  ) => {
-    const rowKey = testimonials[index]?.id ?? testimonialId;
-    const change = resolveMediaPickerChange(nextValue);
-    if (change.kind === "invalid") {
-      setAvatarError(rowKey, `Testimonial ${index + 1}: failed to resolve selected media.`);
-      return;
-    }
-
-    if (change.kind === "clear") {
-      setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
-      setAvatarError(rowKey);
-      setAvatarInputValue(rowKey, undefined);
-      updateItemById(value, onChange, testimonialId, { avatar: undefined });
-      return;
-    }
-
-    try {
-      const items = await listMediaCached({ force: false });
-      const selected = items.find((item) => item.id === change.assetId);
-      if (!selected?.url) throw new Error("testimonials_media_not_found");
-      if (
-        !(selected.type === "image" || selected.mimeType.trim().toLowerCase().startsWith("image/"))
-      ) {
-        throw new Error("testimonials_media_unsupported");
-      }
-      setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: change.assetId }));
-      setAvatarError(rowKey);
-      setAvatarInputValue(rowKey, undefined);
-      updateItemById(value, onChange, testimonialId, { avatar: selected.url });
-    } catch (error) {
-      setAvatarError(
-        rowKey,
-        error instanceof Error && error.message === "testimonials_media_unsupported"
-          ? `Testimonial ${index + 1}: selected media must be an image asset.`
-          : `Testimonial ${index + 1}: failed to resolve selected media.`
-      );
-    }
-  };
+export function TestimonialsWizardEditor({ value, variant }: WidgetEditorProps<TestimonialsData>) {
+  const resolvedVariant = resolveTestimonialsVariant(variant);
+  const testimonials = normalizeTestimonialsItems(normalizeValue(value).testimonials);
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2" {...controlAttributes("testimonials.wizard.variant", "variant")}>
-        <p className="text-sm font-medium">Testimonials style</p>
-        <Select value={resolveTestimonialsVariant(variant)} onValueChange={handleVariantChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ReadonlyWidgetSummaryRow
+        id="testimonials.wizard.variant"
+        label="Testimonials style"
+        path="variant"
+        value={variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Grid"}
+      />
 
       <EditorSection
         title="Section copy"
         mode="wizard"
         role="setup"
-        description="Configure the headline and supporting social proof context up front."
+        description="Review the current testimonial setup. Daily copy and customer proof live in Visual."
       >
-        <div
-          className="space-y-2"
-          {...controlAttributes("testimonials.wizard.header.eyebrow", "header.eyebrow")}
-        >
-          <p className="text-sm font-medium">Eyebrow</p>
-          <Input
-            value={normalized.header?.eyebrow ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { eyebrow: event.target.value })}
-            placeholder="Customer stories"
-          />
-        </div>
-
-        <div
-          className="space-y-2"
-          {...controlAttributes("testimonials.wizard.header.title", "header.title")}
-        >
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Trusted by teams that ship fast"
-          />
-        </div>
-
-        <div
-          className="space-y-2"
-          {...controlAttributes("testimonials.wizard.header.description", "header.description")}
-        >
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={normalized.header?.description ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Use real customer voices to build trust and reduce hesitation."
-          />
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual to write the section eyebrow, title, description, quotes, author names,
+          ratings, avatars, pagination, and CTA.
         </div>
       </EditorSection>
 
-      <div
-        className="space-y-2"
-        {...controlAttributes("testimonials.wizard.count", "testimonials.count")}
-      >
-        <p className="text-sm font-medium">Testimonials count</p>
-        <Select
-          value={String(testimonials.length)}
-          onValueChange={(next) => setTestimonialsCount(value, onChange, Number(next))}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select count" />
-          </SelectTrigger>
-          <SelectContent>
-            {itemCountOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <ReadonlyWidgetSummaryRow
+        id="testimonials.wizard.count"
+        label="Testimonials count"
+        path="testimonials.count"
+        value={`${testimonials.length} testimonial${testimonials.length === 1 ? "" : "s"}`}
+      />
+
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+        Visual owns testimonial style, count, the testimonial list, quote formatting, ratings,
+        avatars, CTA, and display styling.
       </div>
-
-      <EditorSection
-        title="Initial testimonials"
-        mode="wizard"
-        role="setup"
-        description="Capture the essential author, quote, role, source, rating, and avatar fields."
-      >
-        {testimonials.map((testimonial, index) => {
-          const itemControlAttributes = (id: string, path: string) =>
-            controlAttributes(`testimonials.wizard.${id}.${index + 1}`, path);
-          const rowKey = resolveItemRowKey(testimonial, index);
-          const avatarValue = resolveAvatarInputValue(
-            rowKey,
-            avatarInputValues,
-            testimonial.avatar
-          );
-          return (
-            <div key={rowKey} className="space-y-3 rounded-lg border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Testimonial {index + 1}
-              </p>
-              <div {...itemControlAttributes("quote", "testimonials.quote")}>
-                <Textarea
-                  value={testimonial.quote ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { quote: event.target.value })
-                  }
-                  placeholder="Customer quote"
-                />
-              </div>
-              <div {...itemControlAttributes("author", "testimonials.author")}>
-                <Input
-                  value={testimonial.author ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { author: event.target.value })
-                  }
-                  placeholder="Author name"
-                />
-              </div>
-              <div {...itemControlAttributes("role", "testimonials.role")}>
-                <Input
-                  value={testimonial.role ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { role: event.target.value })
-                  }
-                  placeholder="Role or position"
-                />
-              </div>
-              <div {...itemControlAttributes("sourceLabel", "testimonials.sourceLabel")}>
-                <Input
-                  value={testimonial.sourceLabel ?? ""}
-                  onChange={(event) =>
-                    updateItem(value, onChange, index, { sourceLabel: event.target.value })
-                  }
-                  placeholder="Acme Studio"
-                />
-              </div>
-              <div {...itemControlAttributes("rating", "testimonials.rating")}>
-                <Select
-                  value={String(testimonial.rating ?? 0)}
-                  onValueChange={(next) =>
-                    updateItem(value, onChange, index, { rating: Number(next) })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Rating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ratingOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option} / 5
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div {...itemControlAttributes("avatar", "testimonials.avatar")}>
-                <AvatarPickerField
-                  label="Avatar image"
-                  avatarValue={avatarValue}
-                  rowKey={rowKey}
-                  mediaPickerValue={selectedAvatarMediaIds[rowKey] ?? null}
-                  mediaError={mediaPickerErrorsByRowKey[rowKey]}
-                  onClear={() => {
-                    setAvatarInputValue(rowKey, undefined);
-                    setSelectedAvatarMediaIds((current) => ({ ...current, [rowKey]: null }));
-                    setAvatarError(rowKey);
-                    updateItem(value, onChange, index, { avatar: undefined });
-                  }}
-                  onAssetChange={(next) =>
-                    void handleAvatarAssetChange(testimonial.id ?? rowKey, index, next)
-                  }
-                />
-              </div>
-            </div>
-          );
-        })}
-      </EditorSection>
     </div>
   );
 }
@@ -1793,6 +1554,7 @@ export function TestimonialsVisualEditor({
               fieldId="testimonials-cta-destination"
               label="CTA destination"
               value={normalized.cta?.href ?? ""}
+              controlPath="cta.href"
               disabled={!normalized.cta?.enabled}
               onChange={(next) => updateCta(value, onChange, { href: next })}
               feedback={getCtaHrefFeedback(normalized.cta?.href)}

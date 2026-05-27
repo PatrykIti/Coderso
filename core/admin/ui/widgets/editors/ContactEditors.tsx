@@ -44,7 +44,11 @@ import {
   type ContactSpacing,
   type ContactVariantId,
 } from "../../../../widgets/core/contact";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type {
+  WidgetEditorProps,
+  WidgetEditorSectionRole,
+  WidgetEditorMode,
+} from "../../../../widgets/types";
 import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
@@ -244,18 +248,28 @@ function useContactFormDetail(formId: string | undefined) {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: WidgetEditorMode;
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -823,6 +837,9 @@ function SubmissionRuntimeSection({
 
   return (
     <EditorSection
+      id="contact.visual.submission-runtime"
+      mode="visual"
+      role="source"
       title="Submission runtime binding"
       description="Keep Contact static by default or bind it to an existing public-compatible Form."
     >
@@ -1209,118 +1226,65 @@ function SocialLinksEditor({
   );
 }
 
-export function ContactWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<ContactData>) {
+export function ContactWizardEditor({ value, variant }: WidgetEditorProps<ContactData>) {
   const normalized = normalizeContactData(value);
   const resolvedVariant = resolveContactVariant(variant);
-  const showFormControls = resolvedVariant !== "minimal";
+  const visibleFieldLabels = (normalized.form?.fields ?? []).map((field) => fieldLabels[field]);
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="contact.wizard.layout"
+        mode="wizard"
+        role="setup"
         title="Contact layout"
-        description="Pick the layout first so the rest of the setup matches the final presentation."
+        description="Review the current layout before daily editing in Visual."
       >
-        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+        <ReadonlyWidgetSummaryRow
+          id="contact.wizard.layout.variant"
+          label="Current layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Form left"
+          }
+        />
       </EditorSection>
 
       <EditorSection
-        title="Section header"
-        description="Optional title and description for the whole Contact section."
-      >
-        <SectionHeaderControls value={value} onChange={onChange} titlePlaceholder="Get in touch" />
-      </EditorSection>
-
-      <EditorSection
+        id="contact.wizard.form"
+        mode="wizard"
+        role="setup"
         title="Contact form"
-        description="Choose the visible fields and submit button copy."
+        description="Review the current field setup before daily editing in Visual."
       >
-        {showFormControls ? (
-          <>
-            <FieldToggleList value={value} onChange={onChange} />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Submit label</p>
-              <Input
-                value={normalized.form?.submitLabel ?? ""}
-                onChange={(event) =>
-                  updateForm(value, onChange, { submitLabel: event.target.value })
-                }
-                placeholder="Send message"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Runtime submission setup stays in Visual so Wizard remains a one-time starter flow.
-            </p>
-          </>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual to edit the section title, description, field copy, and all daily contact
+          presentation details.
+        </div>
+        <ReadonlyWidgetSummaryRow
+          id="contact.wizard.form.fields"
+          label="Visible fields"
+          path="form.fields"
+          value={
+            visibleFieldLabels.length > 0 ? visibleFieldLabels.join(", ") : "No fields configured"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="contact.wizard.form.submitLabel"
+          label="Submit label"
+          path="form.submitLabel"
+          value={normalized.form?.submitLabel ?? "Send message"}
+        />
+        {resolvedVariant === "minimal" ? (
+          <p className="text-xs text-muted-foreground">
+            Minimal layout shows contact details only in runtime; form setup remains stored for
+            other variants and stays editable in Visual.
+          </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Minimal layout shows contact details only, so form controls stay hidden here.
+            Runtime submission setup stays in Visual so Wizard remains a read-only starter summary.
           </p>
         )}
-      </EditorSection>
-
-      <EditorSection
-        title="Contact details"
-        description="Quick business info shown beside the form."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Details panel title</p>
-          <Input
-            value={normalized.contact?.title ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { title: event.target.value })
-            }
-            placeholder="Contact details"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Phone</p>
-          <Input
-            value={normalized.contact?.phone ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { phone: event.target.value })
-            }
-            placeholder="+1 555 123 456"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Email</p>
-          <Input
-            value={normalized.contact?.email ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { email: event.target.value })
-            }
-            placeholder="hello@example.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Address</p>
-          <Textarea
-            rows={3}
-            value={normalized.contact?.address ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { address: event.target.value })
-            }
-            placeholder="123 Market Street"
-          />
-          <p className="text-xs text-muted-foreground">
-            Use separate lines for street, city, or country when needed.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Business hours</p>
-          <Input
-            value={normalized.contact?.hours ?? ""}
-            onChange={(event) =>
-              updateContactDetails(value, onChange, { hours: event.target.value })
-            }
-            placeholder="Mon-Fri 9-5"
-          />
-        </div>
       </EditorSection>
     </div>
   );
@@ -1340,6 +1304,9 @@ export function ContactVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="contact.visual.variant-header"
+        mode="visual"
+        role="setup"
         title="Variant and section header"
         description="Choose the Contact layout and give the full section a clear entry point."
       >
@@ -1348,6 +1315,9 @@ export function ContactVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="contact.visual.form-fields-required"
+        mode="visual"
+        role="content"
         title="Form fields and required rules"
         description="Control which Contact form fields appear and what visitors must complete."
       >
@@ -1394,6 +1364,9 @@ export function ContactVisualEditor({
 
       {showFormControls ? (
         <EditorSection
+          id="contact.visual.field-copy-layout"
+          mode="visual"
+          role="content"
           title="Field labels, placeholders, and layout"
           description="Tune labels, placeholders, autocomplete, and grid width for each visible field."
         >
@@ -1529,6 +1502,9 @@ export function ContactVisualEditor({
       {showFormControls ? <SubmissionRuntimeSection value={value} onChange={onChange} /> : null}
 
       <EditorSection
+        id="contact.visual.details-business"
+        mode="visual"
+        role="content"
         title="Contact details and business info"
         description="Shape the business panel, semantic labels, icon choices, and social links."
       >
@@ -1625,6 +1601,9 @@ export function ContactVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="contact.visual.map-display"
+        mode="visual"
+        role="content"
         title="Map source and display behavior"
         description="Control if the map appears, how tall it is, and how validation feedback is explained."
       >
@@ -1699,6 +1678,9 @@ export function ContactVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="contact.visual.surface-styling"
+        mode="visual"
+        role="visual"
         title="Colors, borders, and surface styling"
         description="Configure section background and card surfaces shown in runtime output."
       >
@@ -1748,6 +1730,9 @@ export function ContactVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="contact.visual.layout-spacing"
+        mode="visual"
+        role="layout"
         title="Section layout and spacing"
         description="Tune overall width, horizontal padding, gap density, and panel column layout."
       >
@@ -1864,6 +1849,9 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
   return (
     <div className="space-y-4">
       <EditorSection
+        id="contact.advanced.map-runtime"
+        mode="advanced"
+        role="diagnostics"
         title="Map source and runtime metadata"
         description="Read-only map metadata and current Contact payload diagnostics."
       >
@@ -1895,6 +1883,9 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
       </EditorSection>
 
       <EditorSection
+        id="contact.advanced.normalization"
+        mode="advanced"
+        role="technical"
         title="Normalization and fallback controls"
         description="Confirmed support action for deterministic payload cleanup."
       >
@@ -1940,6 +1931,9 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
       </EditorSection>
 
       <EditorSection
+        id="contact.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime diagnostics summary"
         description="Read-only human summary for debugging and QA checks. Runtime nonces stay redacted."
       >

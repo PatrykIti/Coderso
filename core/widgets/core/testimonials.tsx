@@ -307,64 +307,6 @@ export const testimonialsDefaults: TestimonialsData = {
   },
 };
 
-const testimonialsWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the social-proof layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "header.eyebrow",
-    reason: "Wizard seeds starter section context; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "header.description",
-    reason: "Wizard seeds section copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.count",
-    reason: "Wizard chooses the starter quote count; Visual remains the daily list owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.quote",
-    reason: "Wizard seeds initial quotes; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.author",
-    reason: "Wizard seeds initial authors; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.role",
-    reason: "Wizard seeds starter attribution; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.sourceLabel",
-    reason: "Wizard seeds starter attribution; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.rating",
-    reason: "Wizard seeds starter ratings; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-  {
-    path: "testimonials.avatar",
-    reason: "Wizard seeds starter avatars; Visual remains the daily testimonial owner.",
-    expiresWithTask: "TASK-336",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const testimonialsEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -373,20 +315,8 @@ export const testimonialsEditorContract: WidgetEditorContract = {
       id: "testimonials.wizard.starter-proof",
       title: "Starter social proof",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.eyebrow",
-        "header.title",
-        "header.description",
-        "testimonials.count",
-        "testimonials.quote",
-        "testimonials.author",
-        "testimonials.role",
-        "testimonials.sourceLabel",
-        "testimonials.rating",
-        "testimonials.avatar",
-      ],
-      allowedDuplicateWritablePaths: testimonialsWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "testimonials.count"],
     },
     {
       mode: "visual",
@@ -408,7 +338,6 @@ export const testimonialsEditorContract: WidgetEditorContract = {
         "testimonials.rating",
         "testimonials.sourceLabel",
       ],
-      allowedDuplicateWritablePaths: testimonialsWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

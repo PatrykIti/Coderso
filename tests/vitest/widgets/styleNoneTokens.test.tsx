@@ -125,16 +125,13 @@ test("utility widgets preserve none token values in rendered markers", () => {
   expect(dividerHtml).toContain('data-divider-margin-top-kind="none"');
   expect(dividerHtml).toContain('data-divider-margin-bottom-kind="none"');
 
-  const spacer = normalizeSpacerData(
-    {
-      height: {
-        desktop: "none",
-        tablet: "none",
-        mobile: "none",
-      },
+  const spacer = normalizeSpacerData({
+    height: {
+      desktop: "none",
+      tablet: "none",
+      mobile: "none",
     },
-    "responsive"
-  );
+  });
   expect(spacer.height).toEqual({
     desktop: "none",
     tablet: "none",

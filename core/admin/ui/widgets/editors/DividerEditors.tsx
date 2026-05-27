@@ -826,14 +826,10 @@ function SpacingFields({
   );
 }
 
-export function DividerWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<DividerData>) {
-  const normalized = normalizeValue(value, variant);
+export function DividerWizardEditor({ value, variant }: WidgetEditorProps<DividerData>) {
   const resolvedVariant = resolveDividerVariant(variant);
+  const variantLabel =
+    variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Line";
 
   return (
     <div className="space-y-4">
@@ -846,41 +842,15 @@ export function DividerWizardEditor({
       >
         <DividerPreview value={value} variant={variant} />
 
-        <WidgetControlRow id="divider.wizard.variant" label="Divider style" path="variant">
-          {() => (
-            <Select value={resolvedVariant} onValueChange={(next) => onVariantChange?.(next)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select divider style" />
-              </SelectTrigger>
-              <SelectContent>
-                {variantOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </WidgetControlRow>
-
-        {resolvedVariant === "label-center" ? (
-          <WidgetControlRow id="divider.wizard.label" label="Center label" path="label" hideLabel>
-            {() => (
-              <ClearableInputField
-                label="Center label"
-                value={normalized.label}
-                onChange={(next) => updateData(value, variant, onChange, { label: next })}
-                onClear={() =>
-                  updateData(value, variant, onChange, { label: dividerDefaults.label ?? "" })
-                }
-                placeholder="Optional label"
-              />
-            )}
-          </WidgetControlRow>
-        ) : null}
+        <ReadonlyWidgetSummaryRow
+          id="divider.wizard.variant"
+          label="Divider style"
+          path="variant"
+          value={variantLabel}
+        />
 
         <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
-          Visual owns line weight, color, width, and spacing after setup.
+          Visual owns divider style changes, center labels, line weight, color, width, and spacing.
         </p>
       </EditorSection>
     </div>

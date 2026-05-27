@@ -432,7 +432,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FaqAccordion wizard editor updates variant, description, answer mode, and onboarding questions across the full wizard scope", async () => {
+test("FaqAccordion wizard editor stays read-only for layout and item count", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialValue: faqAccordionDefaults,
@@ -440,41 +440,21 @@ test("FaqAccordion wizard editor updates variant, description, answer mode, and 
   });
 
   try {
-    const variantSelect = findSelectByOptions(view.container, [
-      "single-column",
-      "two-column",
-      "compact",
-    ]);
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(findInputByPlaceholder(view.container, "Frequently asked questions")).toBeUndefined();
+    expect(
+      findTextareaByPlaceholder(view.container, "Address objections with short and clear answers.")
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "⭐")).toBeUndefined();
+    expect(findInputsByPlaceholderPrefix(view.container, "Question ")).toHaveLength(0);
 
-    expect(variantSelect).toBeInstanceOf(HTMLSelectElement);
-    expect((variantSelect as HTMLSelectElement).value).toBe("single-column");
-
-    const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
-    expect(questionInputs).toHaveLength(faqAccordionDefaults.items.length);
-
-    setSelectValue(variantSelect, "compact");
-    setInputValue(
-      findInputByPlaceholder(view.container, "Frequently asked questions"),
-      "Billing FAQ"
-    );
-    setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Address objections with short and clear answers."),
-      "Everything about billing and setup."
-    );
-    setInputValue(findInputByPlaceholder(view.container, "⭐"), "❔");
-    setSelectValue(findSelectByOptions(view.container, ["plain", "markdown"]), "markdown");
-    setInputValue(questionInputs[0], "How fast is launch?");
-    setInputValue(questionInputs[1], "Can I edit content myself?");
-
-    expect(view.getVariant()).toBe("compact");
-    expect(view.onVariantChangeSpy).toHaveBeenCalledWith("compact");
-    expect(view.getValue().header?.title).toBe("Billing FAQ");
-    expect(view.getValue().header?.description).toBe("Everything about billing and setup.");
+    expect(view.getVariant()).toBe("unexpected");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
     expect(view.getValue().items).toHaveLength(faqAccordionDefaults.items.length);
-    expect(view.getValue().items[0]?.icon).toBe("❔");
-    expect(view.getValue().items[0]?.answerFormat).toBe("markdown");
-    expect(view.getValue().items[0]?.question).toBe("How fast is launch?");
-    expect(view.getValue().items[1]?.question).toBe("Can I edit content myself?");
+    expect(view.container.textContent).toContain("Single Column");
+    expect(view.container.textContent).toContain(
+      "Use Visual to write the section heading, questions, answers, answer format, icons, default-open behavior, style, search visibility, and question count."
+    );
   } finally {
     view.cleanup();
   }
@@ -861,13 +841,7 @@ test("FaqAccordion editors fall back to default UI values when normalized payloa
   );
 
   try {
-    expect(
-      (
-        findSelectByOptions(view.container, ["single-column", "two-column", "compact"]) as
-          | HTMLSelectElement
-          | undefined
-      )?.value
-    ).toBe("single-column");
+    expect(view.container.textContent).toContain("Single Column");
     expect(
       (
         findInputByPlaceholder(view.container, "Frequently asked questions") as

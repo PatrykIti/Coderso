@@ -39,15 +39,6 @@ export type StackData = {
   wrap?: StackResponsiveValue<boolean>;
 };
 
-const stackVariantDuplicateAllowance = {
-  path: "variant",
-  reason:
-    "Wizard seeds the one-time Stack preset; Visual remains the daily responsive-flow owner after setup.",
-  expiresWithTask: "TASK-336",
-} satisfies NonNullable<
-  WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
->[number];
-
 const stackPresetDirectionDuplicateAllowances = stackBreakpoints.map((breakpoint) => ({
   path: `direction.${breakpoint}`,
   reason:
@@ -57,11 +48,6 @@ const stackPresetDirectionDuplicateAllowances = stackBreakpoints.map((breakpoint
   WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]
 >;
 
-const stackPresetDuplicateAllowances = [
-  stackVariantDuplicateAllowance,
-  ...stackPresetDirectionDuplicateAllowances,
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const stackEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -70,8 +56,7 @@ export const stackEditorContract: WidgetEditorContract = {
       id: "stack.wizard.quick-start",
       title: "Guided quick start",
       role: "setup",
-      writablePaths: ["variant", "direction.desktop", "direction.tablet", "direction.mobile"],
-      allowedDuplicateWritablePaths: stackPresetDuplicateAllowances,
+      writablePaths: [],
     },
     {
       mode: "visual",
@@ -79,7 +64,7 @@ export const stackEditorContract: WidgetEditorContract = {
       title: "Variant and flow",
       role: "layout",
       writablePaths: ["variant", "direction.desktop", "direction.tablet", "direction.mobile"],
-      allowedDuplicateWritablePaths: stackPresetDuplicateAllowances,
+      allowedDuplicateWritablePaths: stackPresetDirectionDuplicateAllowances,
     },
     {
       mode: "visual",

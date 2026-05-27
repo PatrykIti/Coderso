@@ -301,13 +301,17 @@ test("stats kpi wizard renders publishable onboarding fields", () => {
     />
   );
 
-  expect(html).toContain("Layout seed");
-  expect(html).toContain("Header seed");
-  expect(html).toContain("Metric seed");
-  expect(html).toContain("Clear header");
+  expect(html).toContain("Layout overview");
+  expect(html).toContain(
+    "Use Visual to change the KPI layout, visible count, section title, and supporting header copy"
+  );
+  expect(html).toContain(
+    "Visual owns metric values, labels, descriptions, icons, trends, and links"
+  );
   expect(html).toContain("Spacing guidance");
   expect(html).toContain('data-widget-editor-mode="wizard"');
   expect(html).toContain('data-widget-control-path="items.count"');
+  expect(html).toContain('data-widget-control-readonly="true"');
 });
 
 test("stats kpi visual renders grouped IA", () => {

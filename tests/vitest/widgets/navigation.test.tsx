@@ -5,6 +5,7 @@ import { renderToString } from "react-dom/server";
 
 import {
   createNavigationWidget,
+  navigationEditorContract,
   navigationDefaults,
   normalizeNavigationData,
   NavigationBlock,
@@ -23,6 +24,49 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
+
+test("navigation exposes the current v2 editor contract for brand and behavior ownership", () => {
+  const widget = createNavigationWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.editorContract).toBe(navigationEditorContract);
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.brand-links"
+    )?.writablePaths
+  ).toEqual(
+    expect.arrayContaining([
+      "behavior.activeLinkMode",
+      "linksSource",
+      "menuKey",
+      "items",
+      "cta.label",
+      "cta.href",
+    ])
+  );
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.behavior-presentation"
+    )?.writablePaths
+  ).toEqual(
+    expect.arrayContaining([
+      "style.borderColor",
+      "style.textColor",
+      "style.logoColor",
+      "style.linkColor",
+      "style.linkHoverColor",
+      "style.linkActiveColor",
+      "style.borderWidth",
+      "style.fontSize",
+      "style.fontWeight",
+      "style.textTransform",
+      "style.letterSpacing",
+    ])
+  );
+});
 
 test("navigation renders defaults", () => {
   const html = renderToString(<NavigationBlock data={navigationDefaults} variant="simple" />);
@@ -448,7 +492,9 @@ test("navigation wizard shows CTA fields only for CTA variants", () => {
 
   expect(simpleHtml).toContain("Simple variant hides CTA in runtime output.");
   expect(simpleHtml).not.toContain("Primary CTA");
-  expect(withCtaHtml).toContain("Primary CTA");
+  expect(withCtaHtml).not.toContain("Primary CTA");
+  expect(withCtaHtml).toContain("Set its label and destination in Visual");
+  expect(withCtaHtml).not.toContain("pick-media");
 });
 
 test("navigation visual editor renders section-based IA", () => {
@@ -480,8 +526,8 @@ test("navigation advanced editor keeps technical-only controls", () => {
     />
   );
 
-  expect(html).toContain("Layout Tokens");
-  expect(html).toContain("Runtime Behavior");
+  expect(html).toContain("Layout token summary");
+  expect(html).toContain("Runtime behavior summary");
   expect(html).not.toContain("Navigation Links");
   expect(html).not.toContain("CTA and Right Actions");
 });

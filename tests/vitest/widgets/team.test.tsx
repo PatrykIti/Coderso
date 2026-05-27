@@ -340,7 +340,7 @@ test("team wizard renders onboarding fields", () => {
 
   expect(html).toContain("Team layout");
   expect(html).toContain("Members count");
-  expect(html).toContain("Primary member names");
+  expect(html).toContain("Use Visual to change member count");
 });
 
 test("team visual renders section-based IA", () => {

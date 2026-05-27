@@ -221,9 +221,18 @@ function EditorSection({
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
-      {children}
-    </WidgetEditorSection>
+    <section aria-labelledby={`${resolvedId}-heading`} className="space-y-3">
+      <div className="space-y-1">
+        <h3
+          id={`${resolvedId}-heading`}
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          {title}
+        </h3>
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
   );
 }
 
@@ -409,32 +418,6 @@ function NavigationMetadataFields({
         Visibility metadata remains preserved from existing payloads and menu settings, but this
         editor does not turn it into a runtime auth gate.
       </p>
-    </div>
-  );
-}
-
-function NavigationVariantSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange?: (next: string) => void;
-}) {
-  return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Navigation style</p>
-      <Select value={value} onValueChange={(next) => onChange?.(next)}>
-        <SelectTrigger>
-          <SelectValue placeholder="Choose variant" />
-        </SelectTrigger>
-        <SelectContent>
-          {variantOptions.map((option) => (
-            <SelectItem key={option.id} value={option.id}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }
@@ -638,36 +621,25 @@ function NavigationLogoSourceFields({
   );
 }
 
-export function NavigationWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<NavigationData>) {
-  const update = (patch: Partial<NavigationData>) => onChange({ ...value, ...patch });
+export function NavigationWizardEditor({ value, variant }: WidgetEditorProps<NavigationData>) {
   const logo: NavigationLogo = {
     source: "external",
     ...value.logo,
   };
   const linksSource = value.linksSource ?? "manual";
+  const linksSourceLabel =
+    linkSourceOptions.find((option) => option.id === linksSource)?.label ?? "Manual links";
   const usesPagesIndex = linksSource === "pages";
   const items = value.items.length > 0 ? value.items : navigationDefaults.items;
   const ctaEnabled = variantSupportsCta(variant);
-
-  const updateLogo = (patch: Partial<NavigationLogo>) =>
-    update({
-      logo: {
-        source: "external",
-        ...value.logo,
-        ...patch,
-      },
-    });
-
-  const updateItem = (index: number, patch: Partial<NavigationItem>) => {
-    const next = [...items];
-    next[index] = { ...next[index], ...patch };
-    update({ items: next });
-  };
+  const variantLabel = variantOptions.find((option) => option.id === variant)?.label ?? "Simple";
+  const logoTypeLabel = logo.type === "image" ? "Image logo" : "Text logo";
+  const logoValueSummary =
+    logo.type === "text"
+      ? logo.value?.trim() || "No logo text yet"
+      : (logo.value?.trim() || "").length > 0
+        ? "Saved image logo configured"
+        : "Choose the logo image in Visual";
 
   return (
     <WidgetEditorSection
@@ -675,52 +647,42 @@ export function NavigationWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter menu"
-      description="Seed the logo, link source, first links, and optional primary CTA."
+      description="Review the current navigation setup. Daily logo, source, link, and CTA editing happens in Visual."
     >
       <div className="space-y-4">
-        <NavigationVariantSelect value={variant} onChange={onVariantChange} />
+        <ReadonlyWidgetSummaryRow
+          id="navigation.wizard.variant"
+          label="Current layout"
+          path="variant"
+          value={variantLabel}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Links source</p>
-          <Select
-            value={linksSource}
-            onValueChange={(next) =>
-              update({
-                linksSource: next as NavigationData["linksSource"],
-                menuKey: next === "menu" ? value.menuKey : undefined,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select links source" />
-            </SelectTrigger>
-            <SelectContent>
-              {linkSourceOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Manual links use the rows below, Existing menu syncs from Menus, and Pages index reads
-            published pages that are enabled for navigation.
-          </p>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="navigation.wizard.links-source"
+          label="Current links source"
+          path="linksSource"
+          value={linksSourceLabel}
+        />
+
+        {linksSource === "menu" ? (
+          <ReadonlyWidgetSummaryRow
+            id="navigation.wizard.menu-key"
+            label="Selected menu"
+            path="menuKey"
+            value={value.menuKey ?? "No menu selected"}
+          />
+        ) : null}
 
         {linksSource === "menu" ? (
           <div className="space-y-3">
-            <MenuSelectField
-              menuId={value.menuKey}
-              onSelectionChange={({ menuId, items }) =>
-                update(buildMenuSelectionPatch(menuId, items))
-              }
-            />
             <NavigationItemPreviewList
               title="Synced menu preview"
               items={items}
-              emptyLabel="Select a menu to preview its current links."
+              emptyLabel="Visual selects and syncs menus for this navigation."
             />
+            <p className="text-xs text-muted-foreground">
+              Switch source or sync a different menu in Visual.
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -734,154 +696,46 @@ export function NavigationWizardEditor({
                 appear when no pages match.
               </p>
             ) : null}
-            <div className="space-y-2">
-              {items.slice(0, 3).map((item, index) => (
-                <div
-                  key={`${item.href || item.label}-${index}`}
-                  className="grid gap-2 sm:grid-cols-2"
-                >
-                  <label className="space-y-1 text-sm">
-                    <span className="font-medium text-foreground">Link {index + 1} label</span>
-                    <Input
-                      value={item.label}
-                      onChange={(event) => updateItem(index, { label: event.target.value })}
-                      placeholder={`Item ${index + 1} label`}
-                    />
-                  </label>
-                  <LinkDestinationField
-                    fieldId={`navigation-wizard-link-${index + 1}-destination`}
-                    label={`Link ${index + 1} destination`}
-                    value={item.href}
-                    onChange={(next) => updateItem(index, { href: next })}
-                    feedback={
-                      !isValidHref(item.href) ? "Saved destination is not public-safe." : null
-                    }
-                    feedbackTone="destructive"
-                  />
-                </div>
-              ))}
-            </div>
+            <NavigationItemPreviewList
+              title={usesPagesIndex ? "Fallback links preview" : "Starter links preview"}
+              items={items.slice(0, 3)}
+              emptyLabel={
+                usesPagesIndex
+                  ? "Visual owns fallback links when the pages source needs them."
+                  : "Visual owns starter link labels and destinations."
+              }
+            />
             {items.length > 3 ? (
               <p className="text-xs text-muted-foreground">
                 Showing the first 3 links here. {items.length - 3} additional link
                 {items.length - 3 === 1 ? "" : "s"} continue in Visual mode.
               </p>
             ) : null}
+            <p className="text-xs text-muted-foreground">
+              Visual owns source switching, link labels, destinations, and dropdown structure.
+            </p>
           </div>
         )}
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Logo type</p>
-          <Select
-            value={logo.type}
-            onValueChange={(next) =>
-              updateLogo({
-                type: next as NavigationLogo["type"],
-                value: next === "text" ? logo.value || "Coderso" : logo.value,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose logo type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="text">Text logo</SelectItem>
-              <SelectItem value="image">Image logo</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="navigation.wizard.logo.type"
+          label="Logo type"
+          path="logo.type"
+          value={logoTypeLabel}
+        />
 
-        <div className="space-y-2">
-          {logo.type === "text" ? (
-            <>
-              <p className="text-sm font-medium">Logo text</p>
-              <Input
-                value={logo.value}
-                onChange={(event) => updateLogo({ value: event.target.value })}
-                placeholder="Coderso"
-              />
-            </>
-          ) : (
-            <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
-          )}
-          <LinkDestinationField
-            fieldId="navigation-wizard-logo-destination"
-            label="Logo destination"
-            value={logo.href ?? ""}
-            onChange={(next) => updateLogo({ href: next })}
-            feedback={!isValidHref(logo.href) ? "Saved destination is not public-safe." : null}
-            feedbackTone="destructive"
-          />
-          {logo.type === "image" ? (
-            <Input
-              value={logo.alt ?? ""}
-              onChange={(event) => updateLogo({ alt: event.target.value })}
-              placeholder="Logo alt text"
-            />
-          ) : null}
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="navigation.wizard.logo.value"
+          label={logo.type === "text" ? "Logo text" : "Logo image"}
+          path="logo.value"
+          value={logoValueSummary}
+        />
 
-        <div className="rounded-lg border p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-sm font-medium">CTA enabled</p>
-              <p className="text-xs text-muted-foreground">
-                Toggle CTA capability for this navigation variant.
-              </p>
-            </div>
-            <Switch
-              checked={ctaEnabled}
-              onCheckedChange={(checked) => {
-                if (checked && !variantSupportsCta(variant)) {
-                  onVariantChange?.("with-cta");
-                }
-                if (!checked && variantSupportsCta(variant)) {
-                  onVariantChange?.("simple");
-                }
-              }}
-            />
-          </div>
+        <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+          {ctaEnabled
+            ? "This layout supports a primary CTA. Set its label and destination in Visual."
+            : "Simple variant hides CTA in runtime output. Switch to With CTA or Split when you want a primary action, then finish it in Visual."}
         </div>
-
-        {ctaEnabled ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Primary CTA</p>
-            <Input
-              value={value.cta?.label ?? ""}
-              onChange={(event) =>
-                update({
-                  cta: {
-                    label: event.target.value,
-                    href: value.cta?.href ?? "",
-                  },
-                })
-              }
-              placeholder="Get started"
-            />
-            <LinkDestinationField
-              fieldId="navigation-wizard-cta-destination"
-              label="Primary CTA destination"
-              value={value.cta?.href ?? ""}
-              onChange={(next) =>
-                update({
-                  cta: {
-                    label: value.cta?.label ?? "",
-                    href: next,
-                  },
-                })
-              }
-              feedback={
-                !isValidHref(value.cta?.href) ? "Saved destination is not public-safe." : null
-              }
-              feedbackTone="destructive"
-            />
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Simple variant hides CTA in runtime output. Use the `Right Actions` slot later if the
-            layout needs extra actions without enabling a primary CTA.
-          </p>
-        )}
       </div>
     </WidgetEditorSection>
   );
@@ -1019,932 +873,955 @@ export function NavigationVisualEditor({
 
   return (
     <div className="space-y-4">
-      <EditorSection
-        title="Variant and Structure"
-        description="Choose navigation structure and source strategy."
+      <WidgetEditorSection
+        id="navigation.visual.brand-links"
+        mode="visual"
+        role="content"
+        title="Brand and links"
+        description="Daily navigation authoring for source, logo, links, and CTA."
       >
-        <div className="space-y-2">
-          {variantOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => onVariantChange?.(option.id)}
-              className={cn(
-                "w-full rounded-lg border p-3 text-left transition",
-                variant === option.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background hover:border-primary/50"
-              )}
-            >
-              <div className="flex w-full items-start justify-between gap-2">
-                <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
-                <Badge className="shrink-0" variant={variant === option.id ? "default" : "outline"}>
-                  {variant === option.id ? "Selected" : "Pick"}
-                </Badge>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Links source</p>
-          <Select
-            value={linksSource}
-            onValueChange={(next) =>
-              update({
-                linksSource: next as NavigationData["linksSource"],
-                menuKey: next === "menu" ? value.menuKey : undefined,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select links source" />
-            </SelectTrigger>
-            <SelectContent>
-              {linkSourceOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {linksSource === "menu" ? (
-          <MenuSelectField
-            menuId={value.menuKey}
-            onSelectionChange={({ menuId, items }) =>
-              update(buildMenuSelectionPatch(menuId, items))
-            }
-          />
-        ) : null}
-      </EditorSection>
-
-      <EditorSection
-        title="Brand and Logo"
-        description="Configure brand mark and destination link."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Logo type</p>
-          <Select
-            value={logo.type}
-            onValueChange={(next) =>
-              updateLogo({
-                type: next as NavigationLogo["type"],
-                value: next === "text" ? logo.value || "Coderso" : logo.value,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose logo type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="text">Text logo</SelectItem>
-              <SelectItem value="image">Image logo</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {logo.type === "text" ? (
+        <EditorSection
+          title="Variant and Structure"
+          description="Choose navigation structure and source strategy."
+        >
           <div className="space-y-2">
-            <p className="text-sm font-medium">Logo text</p>
-            <Input
-              value={logo.value}
-              onChange={(event) => updateLogo({ value: event.target.value })}
-              placeholder="Coderso"
-            />
+            {variantOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onVariantChange?.(option.id)}
+                className={cn(
+                  "w-full rounded-lg border p-3 text-left transition",
+                  variant === option.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-background hover:border-primary/50"
+                )}
+              >
+                <div className="flex w-full items-start justify-between gap-2">
+                  <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+                  <Badge
+                    className="shrink-0"
+                    variant={variant === option.id ? "default" : "outline"}
+                  >
+                    {variant === option.id ? "Selected" : "Pick"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+              </button>
+            ))}
           </div>
-        ) : (
-          <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
-        )}
 
-        <LinkDestinationField
-          fieldId="navigation-visual-logo-destination"
-          label="Logo destination"
-          value={logo.href ?? ""}
-          onChange={(next) => updateLogo({ href: next })}
-          feedback={!isValidHref(logo.href) ? "Saved destination is not public-safe." : null}
-          feedbackTone="destructive"
-        />
-        {logo.type === "image" ? (
-          <Input
-            value={logo.alt ?? ""}
-            onChange={(event) => updateLogo({ alt: event.target.value })}
-            placeholder="Logo alt text"
-          />
-        ) : null}
-      </EditorSection>
-
-      <EditorSection
-        title="Navigation Links"
-        description="Edit labels, URLs, and first-level dropdown links."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Active link state</p>
-          <Select
-            value={behavior.activeLinkMode ?? "none"}
-            onValueChange={(next) =>
-              updateBehavior({ activeLinkMode: next as NavigationBehavior["activeLinkMode"] })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Choose active-link behavior" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeLinkModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Active links are detected in runtime from the current browser pathname. Menu and Pages
-            sources stay on same-tab targets until their upstream owners define target metadata.
-          </p>
-        </div>
-        {linksSource === "menu" ? (
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Links are synced from the selected menu and remain read-only here so this widget does
-              not fork Menu ownership.
-            </p>
-            <NavigationItemPreviewList
-              title="Current synced menu"
-              items={items}
-              emptyLabel="Choose a menu above to preview its current links."
-            />
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Links source</p>
+            <Select
+              value={linksSource}
+              onValueChange={(next) =>
+                update({
+                  linksSource: next as NavigationData["linksSource"],
+                  menuKey: next === "menu" ? value.menuKey : undefined,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select links source" />
+              </SelectTrigger>
+              <SelectContent>
+                {linkSourceOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
-          <>
-            {linksSource === "pages" ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Links are sourced from published pages with{" "}
-                  <span className="font-medium">Show in navigation</span> enabled. Manual links
-                  below act as fallback when no pages match.
-                </p>
-                <NavigationItemPreviewList
-                  title="Current fallback links"
-                  items={items}
-                  emptyLabel="Add fallback links for the pages source."
-                />
-              </div>
-            ) : null}
+
+          {linksSource === "menu" ? (
+            <MenuSelectField
+              menuId={value.menuKey}
+              onSelectionChange={({ menuId, items }) =>
+                update(buildMenuSelectionPatch(menuId, items))
+              }
+            />
+          ) : null}
+        </EditorSection>
+
+        <EditorSection
+          title="Brand and Logo"
+          description="Configure brand mark and destination link."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Logo type</p>
+            <Select
+              value={logo.type}
+              onValueChange={(next) =>
+                updateLogo({
+                  type: next as NavigationLogo["type"],
+                  value: next === "text" ? logo.value || "Coderso" : logo.value,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose logo type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Text logo</SelectItem>
+                <SelectItem value="image">Image logo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {logo.type === "text" ? (
             <div className="space-y-2">
-              {items.map((item, index) => (
-                <div
-                  key={`${item.href || item.label}-${index}`}
-                  className="rounded-md border border-border/70 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Link {index + 1}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Parent links can be reordered and may expose one level of sub-links.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={index === 0}
-                        onClick={() => moveItem(index, -1)}
-                      >
-                        Move up
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={index === items.length - 1}
-                        onClick={() => moveItem(index, 1)}
-                      >
-                        Move down
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={items.length <= 2}
-                        onClick={() => removeItem(index)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    <label className="space-y-1 text-sm">
-                      <span className="font-medium text-foreground">Label</span>
-                      <Input
-                        value={item.label}
-                        onChange={(event) => updateItem(index, { label: event.target.value })}
-                        placeholder={`Item ${index + 1} label`}
-                      />
-                    </label>
-                    <LinkDestinationField
-                      fieldId={`navigation-visual-link-${index + 1}-destination`}
-                      label="Destination"
-                      value={item.href}
-                      onChange={(next) => updateItem(index, { href: next })}
-                      feedback={
-                        !isValidHref(item.href) ? "Saved destination is not public-safe." : null
-                      }
-                      feedbackTone="destructive"
-                    />
-                  </div>
-                  <NavigationMetadataFields
-                    item={item}
-                    onChange={(patch) => updateItem(index, patch)}
+              <p className="text-sm font-medium">Logo text</p>
+              <Input
+                value={logo.value}
+                onChange={(event) => updateLogo({ value: event.target.value })}
+                placeholder="Coderso"
+              />
+            </div>
+          ) : (
+            <NavigationLogoSourceFields logo={logo} onChange={updateLogo} />
+          )}
+
+          <LinkDestinationField
+            fieldId="navigation-visual-logo-destination"
+            label="Logo destination"
+            value={logo.href ?? ""}
+            controlPath="logo.href"
+            onChange={(next) => updateLogo({ href: next })}
+            feedback={!isValidHref(logo.href) ? "Saved destination is not public-safe." : null}
+            feedbackTone="destructive"
+          />
+          {logo.type === "image" ? (
+            <Input
+              value={logo.alt ?? ""}
+              onChange={(event) => updateLogo({ alt: event.target.value })}
+              placeholder="Logo alt text"
+            />
+          ) : null}
+        </EditorSection>
+
+        <EditorSection
+          title="Navigation Links"
+          description="Edit labels, URLs, and first-level dropdown links."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Active link state</p>
+            <Select
+              value={behavior.activeLinkMode ?? "none"}
+              onValueChange={(next) =>
+                updateBehavior({ activeLinkMode: next as NavigationBehavior["activeLinkMode"] })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose active-link behavior" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeLinkModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Active links are detected in runtime from the current browser pathname. Menu and Pages
+              sources stay on same-tab targets until their upstream owners define target metadata.
+            </p>
+          </div>
+          {linksSource === "menu" ? (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Links are synced from the selected menu and remain read-only here so this widget
+                does not fork Menu ownership.
+              </p>
+              <NavigationItemPreviewList
+                title="Current synced menu"
+                items={items}
+                emptyLabel="Choose a menu above to preview its current links."
+              />
+            </div>
+          ) : (
+            <>
+              {linksSource === "pages" ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Links are sourced from published pages with{" "}
+                    <span className="font-medium">Show in navigation</span> enabled. Manual links
+                    below act as fallback when no pages match.
+                  </p>
+                  <NavigationItemPreviewList
+                    title="Current fallback links"
+                    items={items}
+                    emptyLabel="Add fallback links for the pages source."
                   />
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Sub-links
-                      </p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS}
-                        onClick={() => addChild(index)}
-                      >
-                        Add sub-link
-                      </Button>
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                {items.map((item, index) => (
+                  <div
+                    key={`${item.href || item.label}-${index}`}
+                    className="rounded-md border border-border/70 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Link {index + 1}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Parent links can be reordered and may expose one level of sub-links.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={index === 0}
+                          onClick={() => moveItem(index, -1)}
+                        >
+                          Move up
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={index === items.length - 1}
+                          onClick={() => moveItem(index, 1)}
+                        >
+                          Move down
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={items.length <= 2}
+                          onClick={() => removeItem(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
-                    {(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS ? (
-                      <p className="text-xs text-muted-foreground">
-                        Reached the current limit of {MAX_NAVIGATION_CHILD_ITEMS} sub-links for this
-                        parent.
-                      </p>
-                    ) : null}
-                    {(item.children ?? []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No sub-links yet.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {(item.children ?? []).map((child, childIndex) => (
-                          <div
-                            key={`${child.href || child.label}-${childIndex}`}
-                            className="rounded-md border border-dashed border-border/70 bg-muted/15 p-3"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-medium">Sub-link {childIndex + 1}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Child links stay scoped to this parent.
-                                </p>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      <label className="space-y-1 text-sm">
+                        <span className="font-medium text-foreground">Label</span>
+                        <Input
+                          value={item.label}
+                          onChange={(event) => updateItem(index, { label: event.target.value })}
+                          placeholder={`Item ${index + 1} label`}
+                        />
+                      </label>
+                      <LinkDestinationField
+                        fieldId={`navigation-visual-link-${index + 1}-destination`}
+                        label="Destination"
+                        value={item.href}
+                        controlPath="items.href"
+                        onChange={(next) => updateItem(index, { href: next })}
+                        feedback={
+                          !isValidHref(item.href) ? "Saved destination is not public-safe." : null
+                        }
+                        feedbackTone="destructive"
+                      />
+                    </div>
+                    <NavigationMetadataFields
+                      item={item}
+                      onChange={(patch) => updateItem(index, patch)}
+                    />
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Sub-links
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS}
+                          onClick={() => addChild(index)}
+                        >
+                          Add sub-link
+                        </Button>
+                      </div>
+                      {(item.children ?? []).length >= MAX_NAVIGATION_CHILD_ITEMS ? (
+                        <p className="text-xs text-muted-foreground">
+                          Reached the current limit of {MAX_NAVIGATION_CHILD_ITEMS} sub-links for
+                          this parent.
+                        </p>
+                      ) : null}
+                      {(item.children ?? []).length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No sub-links yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {(item.children ?? []).map((child, childIndex) => (
+                            <div
+                              key={`${child.href || child.label}-${childIndex}`}
+                              className="rounded-md border border-dashed border-border/70 bg-muted/15 p-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-medium">Sub-link {childIndex + 1}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Child links stay scoped to this parent.
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={childIndex === 0}
+                                    onClick={() => moveChild(index, childIndex, -1)}
+                                  >
+                                    Move up
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={childIndex === (item.children?.length ?? 0) - 1}
+                                    onClick={() => moveChild(index, childIndex, 1)}
+                                  >
+                                    Move down
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => removeChild(index, childIndex)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  disabled={childIndex === 0}
-                                  onClick={() => moveChild(index, childIndex, -1)}
-                                >
-                                  Move up
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  disabled={childIndex === (item.children?.length ?? 0) - 1}
-                                  onClick={() => moveChild(index, childIndex, 1)}
-                                >
-                                  Move down
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => removeChild(index, childIndex)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="mt-3 grid gap-2 md:grid-cols-2">
-                              <label className="space-y-1 text-sm">
-                                <span className="font-medium text-foreground">Label</span>
-                                <Input
-                                  value={child.label}
-                                  onChange={(event) =>
+                              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                                <label className="space-y-1 text-sm">
+                                  <span className="font-medium text-foreground">Label</span>
+                                  <Input
+                                    value={child.label}
+                                    onChange={(event) =>
+                                      updateChild(index, childIndex, {
+                                        label: event.target.value,
+                                      })
+                                    }
+                                    placeholder="Sub-link label"
+                                  />
+                                </label>
+                                <LinkDestinationField
+                                  fieldId={`navigation-visual-link-${index + 1}-child-${childIndex + 1}-destination`}
+                                  label="Destination"
+                                  value={child.href}
+                                  controlPath="items.children.href"
+                                  onChange={(next) =>
                                     updateChild(index, childIndex, {
-                                      label: event.target.value,
+                                      href: next,
                                     })
                                   }
-                                  placeholder="Sub-link label"
+                                  feedback={
+                                    !isValidHref(child.href)
+                                      ? "Saved destination is not public-safe."
+                                      : null
+                                  }
+                                  feedbackTone="destructive"
                                 />
-                              </label>
-                              <LinkDestinationField
-                                fieldId={`navigation-visual-link-${index + 1}-child-${childIndex + 1}-destination`}
-                                label="Destination"
-                                value={child.href}
-                                onChange={(next) =>
-                                  updateChild(index, childIndex, {
-                                    href: next,
-                                  })
-                                }
-                                feedback={
-                                  !isValidHref(child.href)
-                                    ? "Saved destination is not public-safe."
-                                    : null
-                                }
-                                feedbackTone="destructive"
+                              </div>
+                              <NavigationMetadataFields
+                                item={child}
+                                onChange={(patch) => updateChild(index, childIndex, patch)}
                               />
                             </div>
-                            <NavigationMetadataFields
-                              item={child}
-                              onChange={(patch) => updateChild(index, childIndex, patch)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {items.length >= MAX_NAVIGATION_ITEMS
+                  ? `Reached the current limit of ${MAX_NAVIGATION_ITEMS} top-level links. Reorder existing links or remove one before adding another.`
+                  : `You can add up to ${MAX_NAVIGATION_ITEMS} top-level links in this widget.`}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addItem}
+                disabled={items.length >= MAX_NAVIGATION_ITEMS}
+                className="w-full"
+              >
+                Add link item
+              </Button>
+            </>
+          )}
+        </EditorSection>
+
+        <EditorSection
+          title="CTA and Right Actions"
+          description="Configure CTA copy and mix it with slot content on the right."
+        >
+          {ctaEnabled ? (
+            <div className="space-y-2">
+              <Input
+                value={value.cta?.label ?? ""}
+                onChange={(event) =>
+                  update({
+                    cta: {
+                      label: event.target.value,
+                      href: value.cta?.href ?? "",
+                    },
+                  })
+                }
+                placeholder="CTA label"
+              />
+              <LinkDestinationField
+                fieldId="navigation-visual-cta-destination"
+                label="Primary CTA destination"
+                value={value.cta?.href ?? ""}
+                controlPath="cta.href"
+                onChange={(next) =>
+                  update({
+                    cta: {
+                      label: value.cta?.label ?? "",
+                      href: next,
+                    },
+                  })
+                }
+                feedback={
+                  !isValidHref(value.cta?.href) ? "Saved destination is not public-safe." : null
+                }
+                feedbackTone="destructive"
+              />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {items.length >= MAX_NAVIGATION_ITEMS
-                ? `Reached the current limit of ${MAX_NAVIGATION_ITEMS} top-level links. Reorder existing links or remove one before adding another.`
-                : `You can add up to ${MAX_NAVIGATION_ITEMS} top-level links in this widget.`}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addItem}
-              disabled={items.length >= MAX_NAVIGATION_ITEMS}
-              className="w-full"
-            >
-              Add link item
-            </Button>
-          </>
-        )}
-      </EditorSection>
+          ) : (
+            <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Use the existing `Right Actions` slot for secondary actions like login buttons or
+            language switchers. This widget keeps only one schema-backed primary CTA.
+          </p>
+        </EditorSection>
+      </WidgetEditorSection>
 
-      <EditorSection
-        title="CTA and Right Actions"
-        description="Configure CTA copy and mix it with slot content on the right."
+      <WidgetEditorSection
+        id="navigation.visual.behavior-presentation"
+        mode="visual"
+        role="visual"
+        title="Behavior and presentation"
+        description="Daily mobile behavior, surface, typography, and layout controls."
       >
-        {ctaEnabled ? (
+        <EditorSection
+          title="Mobile Behavior"
+          description="Control how navigation behaves on small devices."
+        >
           <div className="space-y-2">
-            <Input
-              value={value.cta?.label ?? ""}
-              onChange={(event) =>
-                update({
-                  cta: {
-                    label: event.target.value,
-                    href: value.cta?.href ?? "",
-                  },
+            <p className="text-sm font-medium">Mobile mode</p>
+            <Select
+              value={behavior.mobileMode ?? "expanded"}
+              onValueChange={(next) =>
+                updateBehavior({
+                  mobileMode: next as NavigationBehavior["mobileMode"],
                 })
               }
-              placeholder="CTA label"
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select mobile mode" />
+              </SelectTrigger>
+              <SelectContent>
+                {mobileModeOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+            <p className="font-medium text-foreground">
+              {mobileModeDetails[behavior.mobileMode ?? "expanded"].summary}
+            </p>
+            <p className="mt-1">{mobileModeDetails[behavior.mobileMode ?? "expanded"].cta}</p>
+            <p className="mt-1">
+              Drawer mode moves focus into the panel on open, loops it while open, and returns focus
+              to the trigger on close.
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Hide CTA on mobile</p>
+              <p className="text-xs text-muted-foreground">
+                Keep CTA visible only on tablet/desktop.
+              </p>
+            </div>
+            <Switch
+              checked={behavior.hideCtaOnMobile ?? false}
+              onCheckedChange={(checked) => updateBehavior({ hideCtaOnMobile: checked })}
             />
-            <LinkDestinationField
-              fieldId="navigation-visual-cta-destination"
-              label="Primary CTA destination"
-              value={value.cta?.href ?? ""}
-              onChange={(next) =>
-                update({
-                  cta: {
-                    label: value.cta?.label ?? "",
-                    href: next,
-                  },
-                })
-              }
-              feedback={
-                !isValidHref(value.cta?.href) ? "Saved destination is not public-safe." : null
-              }
-              feedbackTone="destructive"
+          </div>
+        </EditorSection>
+
+        <EditorSection
+          title="Colors, Borders, Typography"
+          description="Tune visual style for links, brand and CTA."
+        >
+          <ColorField
+            label="Surface color"
+            value={style.surfaceColor}
+            onChange={(next) => updateStyle({ surfaceColor: next })}
+            onClear={() => clearStyleField("surfaceColor")}
+            placeholder="#ffffff"
+            pickerFallback="#ffffff"
+          />
+          <ColorField
+            label="Border color"
+            value={style.borderColor}
+            onChange={(next) => updateStyle({ borderColor: next })}
+            placeholder="#e2e8f0"
+            pickerFallback="#e2e8f0"
+          />
+          <ColorField
+            label="Text color"
+            value={style.textColor}
+            onChange={(next) => updateStyle({ textColor: next })}
+            placeholder="#0f172a"
+            pickerFallback="#0f172a"
+          />
+          <ColorField
+            label="Logo color"
+            value={style.logoColor}
+            onChange={(next) => updateStyle({ logoColor: next })}
+            placeholder="#0f172a"
+            pickerFallback="#0f172a"
+          />
+          <ColorField
+            label="Link color"
+            value={style.linkColor}
+            onChange={(next) => updateStyle({ linkColor: next })}
+            placeholder="#334155"
+            pickerFallback="#334155"
+          />
+          {!isHexColorValue(style.linkColor) ? (
+            <p className="text-xs text-destructive">
+              Use a hex color like `#334155` or keep a CSS variable token.
+            </p>
+          ) : null}
+          <ColorField
+            label="Link hover color"
+            value={style.linkHoverColor}
+            onChange={(next) => updateStyle({ linkHoverColor: next })}
+            placeholder="#0f172a"
+            pickerFallback="#0f172a"
+          />
+          {!isHexColorValue(style.linkHoverColor) ? (
+            <p className="text-xs text-destructive">
+              Use a hex color like `#0f172a` or keep a CSS variable token.
+            </p>
+          ) : null}
+          <ColorField
+            label="Link active color"
+            value={style.linkActiveColor}
+            onChange={(next) => updateStyle({ linkActiveColor: next })}
+            placeholder="#1d4ed8"
+            pickerFallback="#1d4ed8"
+          />
+          {!isHexColorValue(style.linkActiveColor) ? (
+            <p className="text-xs text-destructive">
+              Use a hex color like `#1d4ed8` or keep a CSS variable token.
+            </p>
+          ) : null}
+          <ColorField
+            label="CTA background"
+            value={style.ctaBackgroundColor}
+            onChange={(next) => updateStyle({ ctaBackgroundColor: next })}
+            onClear={() => clearStyleField("ctaBackgroundColor")}
+            placeholder="#1d4ed8"
+            pickerFallback="#1d4ed8"
+          />
+          <ColorField
+            label="CTA text color"
+            value={style.ctaTextColor}
+            onChange={(next) => updateStyle({ ctaTextColor: next })}
+            placeholder="#ffffff"
+            pickerFallback="#ffffff"
+          />
+          <ColorField
+            label="CTA border color"
+            value={style.ctaBorderColor}
+            onChange={(next) => updateStyle({ ctaBorderColor: next })}
+            placeholder="#1d4ed8"
+            pickerFallback="#1d4ed8"
+          />
+
+          <div className="grid gap-2 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Border width</p>
+              <Select
+                value={style.borderWidth ?? "1"}
+                onValueChange={(next) =>
+                  updateStyle({ borderWidth: next as NavigationStyle["borderWidth"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Border width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Font size</p>
+              <Select
+                value={style.fontSize ?? "sm"}
+                onValueChange={(next) =>
+                  updateStyle({ fontSize: next as NavigationStyle["fontSize"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Font size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontSizeOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Font weight</p>
+              <Select
+                value={style.fontWeight ?? "medium"}
+                onValueChange={(next) =>
+                  updateStyle({ fontWeight: next as NavigationStyle["fontWeight"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Font weight" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontWeightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Text transform</p>
+              <Select
+                value={style.textTransform ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle({ textTransform: next as NavigationStyle["textTransform"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Text transform" />
+                </SelectTrigger>
+                <SelectContent>
+                  {textTransformOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Letter spacing</p>
+              <Select
+                value={style.letterSpacing ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle({ letterSpacing: next as NavigationStyle["letterSpacing"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Letter spacing" />
+                </SelectTrigger>
+                <SelectContent>
+                  {letterSpacingOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Link underline</p>
+              <Select
+                value={style.linkUnderline ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle({ linkUnderline: next as NavigationStyle["linkUnderline"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Underline policy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="hover">On hover + active</SelectItem>
+                  <SelectItem value="always">Always</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Surface shadow</p>
+              <Select
+                value={style.shadow ?? "none"}
+                onValueChange={(next) => updateStyle({ shadow: next as NavigationStyle["shadow"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Shadow" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shadowOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Backdrop blur</p>
+              <Select
+                value={style.backdropBlur ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle({ backdropBlur: next as NavigationStyle["backdropBlur"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Backdrop blur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {blurOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Dropdown direction</p>
+              <Select
+                value={style.dropdownDirection ?? "bottom"}
+                onValueChange={(next) =>
+                  updateStyle({ dropdownDirection: next as NavigationStyle["dropdownDirection"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Direction" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dropdownDirectionOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Motion</p>
+              <Select
+                value={style.motion ?? "subtle"}
+                onValueChange={(next) => updateStyle({ motion: next as NavigationStyle["motion"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Motion" />
+                </SelectTrigger>
+                <SelectContent>
+                  {motionOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Logo size</p>
+              <Select
+                value={style.logoHeight ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle({ logoHeight: next as NavigationStyle["logoHeight"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Logo size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {logoHeightOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">CTA radius</p>
+              <Select
+                value={style.ctaBorderRadius ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle({ ctaBorderRadius: next as NavigationStyle["ctaBorderRadius"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="CTA radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ctaRadiusOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option.toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">CTA separator</p>
+              <Select
+                value={style.ctaSeparator ?? "none"}
+                onValueChange={(next) =>
+                  updateStyle({ ctaSeparator: next as NavigationStyle["ctaSeparator"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="CTA separator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ctaSeparatorOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </EditorSection>
+
+        <EditorSection
+          title="Surface and Runtime Behavior"
+          description="Control layout width, spacing, and overlay behavior on top of hero sections."
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Alignment</p>
+              <Select
+                value={layout.alignment}
+                onValueChange={(next) =>
+                  updateLayout({ alignment: next as NavigationLayout["alignment"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {alignmentOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Max width</p>
+              <Select
+                value={layout.maxWidth}
+                onValueChange={(next) =>
+                  updateLayout({ maxWidth: next as NavigationLayout["maxWidth"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Max width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {maxWidthOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Vertical padding</p>
+              <Select
+                value={layout.paddingY}
+                onValueChange={(next) =>
+                  updateLayout({ paddingY: next as NavigationLayout["paddingY"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Padding Y" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paddingYOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Links gap</p>
+              <Select
+                value={layout.itemGap}
+                onValueChange={(next) =>
+                  updateLayout({ itemGap: next as NavigationLayout["itemGap"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {itemGapOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {formatTokenOptionLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Transparent surface</p>
+              <p className="text-xs text-muted-foreground">
+                Ignore surface color and render transparent background.
+              </p>
+            </div>
+            <Switch
+              checked={behavior.transparent ?? false}
+              onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
             />
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Use the existing `Right Actions` slot for secondary actions like login buttons or language
-          switchers. This widget keeps only one schema-backed primary CTA.
-        </p>
-      </EditorSection>
-
-      <EditorSection
-        title="Mobile Behavior"
-        description="Control how navigation behaves on small devices."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Mobile mode</p>
-          <Select
-            value={behavior.mobileMode ?? "expanded"}
-            onValueChange={(next) =>
-              updateBehavior({
-                mobileMode: next as NavigationBehavior["mobileMode"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select mobile mode" />
-            </SelectTrigger>
-            <SelectContent>
-              {mobileModeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">
-            {mobileModeDetails[behavior.mobileMode ?? "expanded"].summary}
-          </p>
-          <p className="mt-1">{mobileModeDetails[behavior.mobileMode ?? "expanded"].cta}</p>
-          <p className="mt-1">
-            Drawer mode moves focus into the panel on open, loops it while open, and returns focus
-            to the trigger on close.
-          </p>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Hide CTA on mobile</p>
-            <p className="text-xs text-muted-foreground">
-              Keep CTA visible only on tablet/desktop.
-            </p>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Sticky navigation</p>
+              <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
+            </div>
+            <Switch
+              checked={behavior.sticky ?? false}
+              onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
+            />
           </div>
-          <Switch
-            checked={behavior.hideCtaOnMobile ?? false}
-            onCheckedChange={(checked) => updateBehavior({ hideCtaOnMobile: checked })}
-          />
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Colors, Borders, Typography"
-        description="Tune visual style for links, brand and CTA."
-      >
-        <ColorField
-          label="Surface color"
-          value={style.surfaceColor}
-          onChange={(next) => updateStyle({ surfaceColor: next })}
-          onClear={() => clearStyleField("surfaceColor")}
-          placeholder="#ffffff"
-          pickerFallback="#ffffff"
-        />
-        <ColorField
-          label="Border color"
-          value={style.borderColor}
-          onChange={(next) => updateStyle({ borderColor: next })}
-          placeholder="#e2e8f0"
-          pickerFallback="#e2e8f0"
-        />
-        <ColorField
-          label="Text color"
-          value={style.textColor}
-          onChange={(next) => updateStyle({ textColor: next })}
-          placeholder="#0f172a"
-          pickerFallback="#0f172a"
-        />
-        <ColorField
-          label="Logo color"
-          value={style.logoColor}
-          onChange={(next) => updateStyle({ logoColor: next })}
-          placeholder="#0f172a"
-          pickerFallback="#0f172a"
-        />
-        <ColorField
-          label="Link color"
-          value={style.linkColor}
-          onChange={(next) => updateStyle({ linkColor: next })}
-          placeholder="#334155"
-          pickerFallback="#334155"
-        />
-        {!isHexColorValue(style.linkColor) ? (
-          <p className="text-xs text-destructive">
-            Use a hex color like `#334155` or keep a CSS variable token.
-          </p>
-        ) : null}
-        <ColorField
-          label="Link hover color"
-          value={style.linkHoverColor}
-          onChange={(next) => updateStyle({ linkHoverColor: next })}
-          placeholder="#0f172a"
-          pickerFallback="#0f172a"
-        />
-        {!isHexColorValue(style.linkHoverColor) ? (
-          <p className="text-xs text-destructive">
-            Use a hex color like `#0f172a` or keep a CSS variable token.
-          </p>
-        ) : null}
-        <ColorField
-          label="Link active color"
-          value={style.linkActiveColor}
-          onChange={(next) => updateStyle({ linkActiveColor: next })}
-          placeholder="#1d4ed8"
-          pickerFallback="#1d4ed8"
-        />
-        {!isHexColorValue(style.linkActiveColor) ? (
-          <p className="text-xs text-destructive">
-            Use a hex color like `#1d4ed8` or keep a CSS variable token.
-          </p>
-        ) : null}
-        <ColorField
-          label="CTA background"
-          value={style.ctaBackgroundColor}
-          onChange={(next) => updateStyle({ ctaBackgroundColor: next })}
-          onClear={() => clearStyleField("ctaBackgroundColor")}
-          placeholder="#1d4ed8"
-          pickerFallback="#1d4ed8"
-        />
-        <ColorField
-          label="CTA text color"
-          value={style.ctaTextColor}
-          onChange={(next) => updateStyle({ ctaTextColor: next })}
-          placeholder="#ffffff"
-          pickerFallback="#ffffff"
-        />
-        <ColorField
-          label="CTA border color"
-          value={style.ctaBorderColor}
-          onChange={(next) => updateStyle({ ctaBorderColor: next })}
-          placeholder="#1d4ed8"
-          pickerFallback="#1d4ed8"
-        />
-
-        <div className="grid gap-2 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Border width</p>
-            <Select
-              value={style.borderWidth ?? "1"}
-              onValueChange={(next) =>
-                updateStyle({ borderWidth: next as NavigationStyle["borderWidth"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Collapse on scroll</p>
+              <p className="text-xs text-muted-foreground">
+                Shrink the Navigation header while scrolling down.
+              </p>
+            </div>
+            <Switch
+              checked={behavior.collapseOnScroll ?? false}
+              onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
+            />
           </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Font size</p>
-            <Select
-              value={style.fontSize ?? "sm"}
-              onValueChange={(next) =>
-                updateStyle({ fontSize: next as NavigationStyle["fontSize"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Font size" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontSizeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Font weight</p>
-            <Select
-              value={style.fontWeight ?? "medium"}
-              onValueChange={(next) =>
-                updateStyle({ fontWeight: next as NavigationStyle["fontWeight"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Font weight" />
-              </SelectTrigger>
-              <SelectContent>
-                {fontWeightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Text transform</p>
-            <Select
-              value={style.textTransform ?? "none"}
-              onValueChange={(next) =>
-                updateStyle({ textTransform: next as NavigationStyle["textTransform"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Text transform" />
-              </SelectTrigger>
-              <SelectContent>
-                {textTransformOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Letter spacing</p>
-            <Select
-              value={style.letterSpacing ?? "none"}
-              onValueChange={(next) =>
-                updateStyle({ letterSpacing: next as NavigationStyle["letterSpacing"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Letter spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {letterSpacingOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Link underline</p>
-            <Select
-              value={style.linkUnderline ?? "none"}
-              onValueChange={(next) =>
-                updateStyle({ linkUnderline: next as NavigationStyle["linkUnderline"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Underline policy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="hover">On hover + active</SelectItem>
-                <SelectItem value="always">Always</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Surface shadow</p>
-            <Select
-              value={style.shadow ?? "none"}
-              onValueChange={(next) => updateStyle({ shadow: next as NavigationStyle["shadow"] })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Shadow" />
-              </SelectTrigger>
-              <SelectContent>
-                {shadowOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Backdrop blur</p>
-            <Select
-              value={style.backdropBlur ?? "none"}
-              onValueChange={(next) =>
-                updateStyle({ backdropBlur: next as NavigationStyle["backdropBlur"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Backdrop blur" />
-              </SelectTrigger>
-              <SelectContent>
-                {blurOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Dropdown direction</p>
-            <Select
-              value={style.dropdownDirection ?? "bottom"}
-              onValueChange={(next) =>
-                updateStyle({ dropdownDirection: next as NavigationStyle["dropdownDirection"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Direction" />
-              </SelectTrigger>
-              <SelectContent>
-                {dropdownDirectionOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Motion</p>
-            <Select
-              value={style.motion ?? "subtle"}
-              onValueChange={(next) => updateStyle({ motion: next as NavigationStyle["motion"] })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Motion" />
-              </SelectTrigger>
-              <SelectContent>
-                {motionOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Logo size</p>
-            <Select
-              value={style.logoHeight ?? "md"}
-              onValueChange={(next) =>
-                updateStyle({ logoHeight: next as NavigationStyle["logoHeight"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Logo size" />
-              </SelectTrigger>
-              <SelectContent>
-                {logoHeightOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA radius</p>
-            <Select
-              value={style.ctaBorderRadius ?? "md"}
-              onValueChange={(next) =>
-                updateStyle({ ctaBorderRadius: next as NavigationStyle["ctaBorderRadius"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="CTA radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {ctaRadiusOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA separator</p>
-            <Select
-              value={style.ctaSeparator ?? "none"}
-              onValueChange={(next) =>
-                updateStyle({ ctaSeparator: next as NavigationStyle["ctaSeparator"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="CTA separator" />
-              </SelectTrigger>
-              <SelectContent>
-                {ctaSeparatorOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </EditorSection>
-
-      <EditorSection
-        title="Surface and Runtime Behavior"
-        description="Control layout width, spacing, and overlay behavior on top of hero sections."
-      >
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Alignment</p>
-            <Select
-              value={layout.alignment}
-              onValueChange={(next) =>
-                updateLayout({ alignment: next as NavigationLayout["alignment"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Alignment" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignmentOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Max width</p>
-            <Select
-              value={layout.maxWidth}
-              onValueChange={(next) =>
-                updateLayout({ maxWidth: next as NavigationLayout["maxWidth"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Max width" />
-              </SelectTrigger>
-              <SelectContent>
-                {maxWidthOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Vertical padding</p>
-            <Select
-              value={layout.paddingY}
-              onValueChange={(next) =>
-                updateLayout({ paddingY: next as NavigationLayout["paddingY"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Padding Y" />
-              </SelectTrigger>
-              <SelectContent>
-                {paddingYOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Links gap</p>
-            <Select
-              value={layout.itemGap}
-              onValueChange={(next) =>
-                updateLayout({ itemGap: next as NavigationLayout["itemGap"] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {itemGapOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {formatTokenOptionLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Transparent surface</p>
-            <p className="text-xs text-muted-foreground">
-              Ignore surface color and render transparent background.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.transparent ?? false}
-            onCheckedChange={(checked) => updateBehavior({ transparent: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Sticky navigation</p>
-            <p className="text-xs text-muted-foreground">Pin navigation to top during scroll.</p>
-          </div>
-          <Switch
-            checked={behavior.sticky ?? false}
-            onCheckedChange={(checked) => updateBehavior({ sticky: checked })}
-          />
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-3">
-          <div>
-            <p className="text-sm font-medium">Collapse on scroll</p>
-            <p className="text-xs text-muted-foreground">
-              Shrink the Navigation header while scrolling down.
-            </p>
-          </div>
-          <Switch
-            checked={behavior.collapseOnScroll ?? false}
-            onCheckedChange={(checked) => updateBehavior({ collapseOnScroll: checked })}
-          />
-        </div>
-      </EditorSection>
+        </EditorSection>
+      </WidgetEditorSection>
     </div>
   );
 }
@@ -1959,80 +1836,79 @@ export function NavigationAdvancedEditor({ value }: WidgetEditorProps<Navigation
         title="Runtime summary"
         description="Read-only navigation source and runtime ownership overview."
       >
-        <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <div>
-            <dt className="font-medium text-foreground">Links source</dt>
-            <dd>{value.linksSource ?? "manual"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Menu key</dt>
-            <dd>{value.menuKey?.trim() ? "Custom menu configured" : "Not configured"}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">Manual links</dt>
-            <dd>{value.items.length}</dd>
-          </div>
-          <div>
-            <dt className="font-medium text-foreground">CTA</dt>
-            <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
-          </div>
-        </dl>
-      </WidgetEditorSection>
+        <EditorSection
+          title="Runtime summary"
+          description="Read-only navigation source and runtime ownership overview."
+        >
+          <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+            <div>
+              <dt className="font-medium text-foreground">Links source</dt>
+              <dd>{value.linksSource ?? "manual"}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-foreground">Menu key</dt>
+              <dd>{value.menuKey?.trim() ? "Custom menu configured" : "Not configured"}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-foreground">Manual links</dt>
+              <dd>{value.items.length}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-foreground">CTA</dt>
+              <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
+            </div>
+          </dl>
+        </EditorSection>
 
-      <WidgetEditorSection
-        id="navigation.advanced.layout-summary"
-        mode="advanced"
-        role="diagnostics"
-        title="Layout token summary"
-        description="Read-only layout tokens. Visual owns normal layout changes."
-      >
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-layout-alignment"
-          label="Alignment"
-          path="layout.alignment"
-          value={formatTokenOptionLabel(
-            value.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "right"
-          )}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-layout-max-width"
-          label="Max width"
-          path="layout.maxWidth"
-          value={formatTokenOptionLabel(value.layout?.maxWidth ?? "6xl")}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-layout-padding-y"
-          label="Vertical padding"
-          path="layout.paddingY"
-          value={formatTokenOptionLabel(value.layout?.paddingY ?? "4")}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-layout-item-gap"
-          label="Links gap"
-          path="layout.itemGap"
-          value={formatTokenOptionLabel(value.layout?.itemGap ?? "4")}
-        />
-      </WidgetEditorSection>
+        <EditorSection
+          title="Layout token summary"
+          description="Read-only layout tokens. Visual owns normal layout changes."
+        >
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-layout-alignment"
+            label="Alignment"
+            path="layout.alignment"
+            value={formatTokenOptionLabel(
+              value.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "right"
+            )}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-layout-max-width"
+            label="Max width"
+            path="layout.maxWidth"
+            value={formatTokenOptionLabel(value.layout?.maxWidth ?? "6xl")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-layout-padding-y"
+            label="Vertical padding"
+            path="layout.paddingY"
+            value={formatTokenOptionLabel(value.layout?.paddingY ?? "4")}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-layout-item-gap"
+            label="Links gap"
+            path="layout.itemGap"
+            value={formatTokenOptionLabel(value.layout?.itemGap ?? "4")}
+          />
+        </EditorSection>
 
-      <WidgetEditorSection
-        id="navigation.advanced.behavior-summary"
-        mode="advanced"
-        role="diagnostics"
-        title="Runtime behavior summary"
-        description="Read-only behavior diagnostics. Visual owns runtime toggles."
-      >
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-behavior-sticky"
-          label="Sticky navigation"
-          path="behavior.sticky"
-          value={value.behavior?.sticky ? "Enabled" : "Disabled"}
-        />
-        <ReadonlyWidgetSummaryRow
-          id="navigation-advanced-behavior-collapse"
-          label="Collapse on scroll"
-          path="behavior.collapseOnScroll"
-          value={value.behavior?.collapseOnScroll ? "Enabled" : "Disabled"}
-        />
+        <EditorSection
+          title="Runtime behavior summary"
+          description="Read-only behavior diagnostics. Visual owns runtime toggles."
+        >
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-behavior-sticky"
+            label="Sticky navigation"
+            path="behavior.sticky"
+            value={value.behavior?.sticky ? "Enabled" : "Disabled"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="navigation-advanced-behavior-collapse"
+            label="Collapse on scroll"
+            path="behavior.collapseOnScroll"
+            value={value.behavior?.collapseOnScroll ? "Enabled" : "Disabled"}
+          />
+        </EditorSection>
       </WidgetEditorSection>
     </div>
   );

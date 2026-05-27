@@ -14,7 +14,6 @@ import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
-  footerColumnSlotIds,
   footerSocialTypes,
   reorderFooterColumnsAndSlots,
   resolveFooterColumnCount,
@@ -737,10 +736,12 @@ function FooterVariantSelect({
   value,
   onChange,
   path = "variant",
+  ownership,
 }: {
   value: string;
   onChange?: (next: string) => void;
   path?: string;
+  ownership?: FooterControlOwnership;
 }) {
   return (
     <LabeledSelectField
@@ -750,6 +751,7 @@ function FooterVariantSelect({
       options={variantOptions}
       id="footer.variant"
       path={path}
+      ownership={ownership}
     />
   );
 }
@@ -847,6 +849,7 @@ function LegalEditor({
               fieldId="footer-legal-privacy"
               label="Privacy destination"
               value={value.legal?.privacy}
+              controlPath="legal.privacy"
               onChange={(next) => updateFooterLegal(value, onChange, { privacy: next })}
               emptyLabel="No privacy destination"
               helpText="Pick the page that explains the privacy policy. Saved custom destinations stay replace-or-clear compatible."
@@ -881,6 +884,7 @@ function LegalEditor({
               fieldId="footer-legal-terms"
               label="Terms destination"
               value={value.legal?.terms}
+              controlPath="legal.terms"
               onChange={(next) => updateFooterLegal(value, onChange, { terms: next })}
               emptyLabel="No terms destination"
               helpText="Pick the page that explains terms of use. Saved custom destinations stay replace-or-clear compatible."
@@ -900,101 +904,6 @@ function LegalEditor({
           ) : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-function ColumnsQuickSetup({
-  value,
-  onChange,
-  variant,
-}: {
-  value: FooterData;
-  onChange: (next: FooterData) => void;
-  variant: string;
-}) {
-  const visibleCount = resolveFooterColumnCount(variant);
-  const visibleColumns = resolveFooterColumnsForVariant(value.columns, variant).slice(
-    0,
-    visibleCount
-  );
-
-  return (
-    <div className="space-y-4">
-      {variant === "minimal" ? (
-        <p className="text-xs text-muted-foreground">
-          Minimal footer reuses the first column links as a compact inline row. Extra columns stay
-          preserved in Visual mode.
-        </p>
-      ) : null}
-      {visibleColumns.map((column, index) => {
-        const firstLink = column.links[0] ?? { label: "", href: "" };
-        const hiddenLinkCount = Math.max(column.links.length - 1, 0);
-        return (
-          <div key={`${column.title}-${index}`} className="space-y-3 rounded-lg border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Column {index + 1}
-            </p>
-            <FieldLabel
-              label={`Column ${index + 1} title`}
-              id={`footer.wizard.columns.${index}.title`}
-              path={`columns.${index}.title`}
-            >
-              <Input
-                value={column.title}
-                onChange={(event) =>
-                  updateColumn(value, onChange, variant, index, {
-                    title: event.target.value,
-                  })
-                }
-                placeholder={`Column ${index + 1} title`}
-              />
-            </FieldLabel>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <FieldLabel
-                label={`Column ${index + 1} first link label`}
-                id={`footer.wizard.columns.${index}.links.0.label`}
-                path={`columns.${index}.links.0.label`}
-              >
-                <Input
-                  value={firstLink.label}
-                  onChange={(event) =>
-                    updateColumnLink(value, onChange, variant, index, 0, {
-                      label: event.target.value,
-                    })
-                  }
-                  placeholder="First link label"
-                />
-              </FieldLabel>
-              <div
-                {...controlAttributes({
-                  id: `footer.wizard.columns.${index}.links.0.href`,
-                  path: `columns.${index}.links.0.href`,
-                })}
-              >
-                <LinkDestinationField
-                  fieldId={`footer-wizard-column-${index + 1}-first-link`}
-                  label={`Column ${index + 1} first link destination`}
-                  value={firstLink.href}
-                  onChange={(next) =>
-                    updateColumnLink(value, onChange, variant, index, 0, {
-                      href: next,
-                    })
-                  }
-                  emptyLabel="No destination"
-                  helpText="Pick a page for this starter footer link. Saved custom destinations stay replace-or-clear compatible."
-                />
-              </div>
-            </div>
-            {hiddenLinkCount > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {hiddenLinkCount} additional {hiddenLinkCount === 1 ? "link stays" : "links stay"}{" "}
-                available in Visual mode.
-              </p>
-            ) : null}
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -1130,6 +1039,7 @@ function SocialLinksEditor({
                     fieldId={`footer-social-${index + 1}-custom-destination`}
                     label="Custom destination"
                     value={item.href}
+                    controlPath={`social.${index}.href`}
                     onChange={(next) => updateSocial(index, { href: next })}
                     emptyLabel="No custom destination"
                     helpText="Pick a site page for this custom social/community link. Saved custom destinations stay replace-or-clear compatible."
@@ -1207,51 +1117,74 @@ function SocialLinksEditor({
 
 export function FooterWizardEditor({
   value,
-  onChange,
   variant,
   onVariantChange,
 }: WidgetEditorProps<FooterData>) {
+  const socialCount = Array.isArray(value.social) ? value.social.length : 0;
+  const visibleCount = resolveFooterColumnCount(variant);
+  const visibleColumns = resolveFooterColumnsForVariant(value.columns, variant).slice(
+    0,
+    visibleCount
+  );
+  const visibleColumnSummary =
+    visibleColumns.length > 0
+      ? visibleColumns.map((column, index) => column.title || `Column ${index + 1}`).join(", ")
+      : "No visible columns";
+
   return (
     <WidgetEditorSection
       id="footer.wizard.starter-footer"
       mode="wizard"
       role="setup"
       title="Starter footer"
-      description="Seed visible columns, brand, legal text, and social links."
+      description="Seed visible columns and social visibility. Brand and legal content live in Visual."
     >
       <div className="space-y-5">
-        <FooterVariantSelect value={variant} onChange={onVariantChange} />
+        <FooterVariantSelect
+          value={variant}
+          onChange={onVariantChange}
+          path={undefined}
+          ownership="action"
+        />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Columns quick setup</p>
           <p className="text-xs text-muted-foreground">
-            Configure titles and the first link for each visible column. Additional links stay
-            preserved and remain editable in Visual mode.
+            Review visible columns here. Edit column titles, links, order, and hidden columns in
+            Visual mode.
           </p>
-          <ColumnsQuickSetup value={value} onChange={onChange} variant={variant} />
+          <ReadonlyWidgetSummaryRow
+            id="footer.wizard.columns"
+            label="Visible columns"
+            path="columns"
+            value={visibleColumnSummary}
+          />
+          {variant === "minimal" ? (
+            <p className="text-xs text-muted-foreground">
+              Minimal footer reuses the first column links as a compact inline row. Extra columns
+              stay preserved in Visual mode.
+            </p>
+          ) : null}
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Brand basics</p>
-          <BrandEditor value={value} onChange={onChange} />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Legal basics</p>
-          <LegalEditor value={value} onChange={onChange} showVisibilityToggle />
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Use Visual to edit brand logo/text, tagline, copyright, privacy/terms labels, and legal
+          destinations.
         </div>
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Social basics</p>
-          <SwitchField
+          <ReadonlyWidgetSummaryRow
+            id="footer.wizard.socialEnabled"
             label="Show social links"
-            description="Hide social icons without deleting the current platform entries."
-            checked={value.socialEnabled !== false}
-            onCheckedChange={(checked) => onChange({ ...value, socialEnabled: checked })}
-            id="footer.socialEnabled"
             path="socialEnabled"
+            value={value.socialEnabled !== false ? "Enabled" : "Disabled"}
           />
-          <SocialLinksEditor value={value} onChange={onChange} limit={8} />
+          <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+            {socialCount === 0
+              ? "Add and edit social profiles in Visual when you are ready to publish them."
+              : `${socialCount} saved social profile${socialCount === 1 ? " stays" : "s stay"} preserved. Edit destinations, order, and labels in Visual.`}
+          </div>
         </div>
       </div>
     </WidgetEditorSection>
@@ -1298,8 +1231,8 @@ export function FooterVisualEditor({
       >
         {!canMoveColumns ? (
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Column reorder is read-only in static previews because slot remapping requires the live
-            footer block patch path.
+            Reorder columns in the live editor, where each visible footer region stays paired with
+            its saved content.
           </div>
         ) : null}
         <div className="space-y-4">
@@ -1309,8 +1242,8 @@ export function FooterVisualEditor({
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">Column {columnIndex + 1}</p>
                   <p className="text-xs text-muted-foreground">
-                    Slot owner: `{footerColumnSlotIds[columnIndex] ?? `column-${columnIndex + 1}`}`
-                    . Hidden columns remain preserved when the active variant shows fewer columns.
+                    Visible region {columnIndex + 1}. Hidden columns stay saved when this layout
+                    shows fewer columns.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -1433,6 +1366,7 @@ export function FooterVisualEditor({
                           fieldId={`footer-column-${columnIndex + 1}-link-${linkIndex + 1}`}
                           label="Link destination"
                           value={link.href}
+                          controlPath={`columns.${columnIndex}.links.${linkIndex}.href`}
                           onChange={(next) =>
                             updateColumnLink(value, onChange, variant, columnIndex, linkIndex, {
                               href: next,
@@ -1488,11 +1422,11 @@ export function FooterVisualEditor({
         mode="visual"
         role="content"
         title="Utility strip"
-        description="Newsletter stays composition-only: place it through slots. Footer only owns bounded contact display and an anchor-only back-to-top action."
+        description="Footer owns contact details and an optional back-to-top action. Add newsletter content from page regions."
       >
         <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Recommended newsletter placement: `bottom` for a dedicated lower strip, or one of the
-          visible column slots when the page needs it inline with footer links.
+          Place newsletter content in the bottom footer region for its own strip, or inside a
+          visible footer column when it should sit next to footer links.
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           <FieldLabel label="Address" id="footer.contact.address" path="contact.address">
@@ -1525,7 +1459,7 @@ export function FooterVisualEditor({
         </div>
         <SwitchField
           label="Show back-to-top action"
-          description="Uses a plain `#top` anchor so the browser handles scrolling without hidden motion scripts."
+          description="Uses the page top anchor so the browser handles scrolling without extra motion scripts."
           checked={value.backToTop?.enabled === true}
           onCheckedChange={(checked) =>
             updateFooterBackToTop(value, onChange, { enabled: checked })
@@ -1855,14 +1789,17 @@ export function FooterVisualEditor({
       >
         <ul className="space-y-1 text-xs text-muted-foreground">
           <li>
-            `column-1`, `column-2`, and `column-3` render inside the visible footer columns and move
-            with those columns when reorder happens in the live editor.
+            Column regions 1, 2, and 3 render inside the visible footer columns and move with those
+            columns in the live editor.
           </li>
           <li>
-            `bottom` renders in the lower legal/actions strip, or below the compact row in Minimal.
+            The bottom footer region renders in the lower legal/actions strip, or below the compact
+            row in Minimal.
           </li>
-          <li>Compose newsletter widgets through slots; Footer does not own submission routes.</li>
-          <li>Use the Insert dialog on canvas to place widgets into those slots.</li>
+          <li>
+            Compose newsletter widgets through page regions; Footer itself does not submit forms.
+          </li>
+          <li>Use the page canvas insert menu to place widgets into those regions.</li>
         </ul>
       </WidgetEditorSection>
     </div>

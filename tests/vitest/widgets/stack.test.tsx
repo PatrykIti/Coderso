@@ -340,9 +340,9 @@ test("stack editors render updated sections, copy, and miniatures", () => {
       onVariantChange={() => undefined}
     />
   );
-  expect(wizardHtml).toContain("Stack preset");
+  expect(wizardHtml).toContain("Stack quick start");
   expect(wizardHtml).toContain(
-    "Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup."
+    "Visual owns stack preset choice, breakpoint flow directions, spacing, alignment, distribution, and wrapping after setup."
   );
   expect(wizardHtml).not.toContain("Gap on all breakpoints");
   expect(wizardHtml).not.toContain("Align on all breakpoints");

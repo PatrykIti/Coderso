@@ -296,7 +296,7 @@ afterEach(() => {
   widgetEditorState.reset();
 });
 
-test("TemplateSection editors cover empty, selected, error, and advanced resolution states", async () => {
+test("TemplateSection editors cover setup, visual summaries, and advanced diagnostics", async () => {
   const {
     TemplateSectionAdvancedEditor,
     TemplateSectionVisualEditor,
@@ -352,20 +352,15 @@ test("TemplateSection editors cover empty, selected, error, and advanced resolut
 
   try {
     expect(view.container.textContent).toContain("Hero template");
-    expect(view.container.textContent).toContain("Template load failed");
-    expect(view.container.textContent).toContain("Resolved payload");
+    expect(view.container.textContent).toContain("Active template");
+    expect(view.container.textContent).toContain("Resolved template");
+    expect(view.container.textContent).toContain("Resolved content summary");
+    expect(view.container.textContent).toContain("No resolution problem detected.");
+    expect(view.container.textContent).not.toContain("Template load failed");
+    expect(view.container.textContent).not.toContain("Resolved payload");
 
-    const select = view.container.querySelector("select");
-    React.act(() => {
-      setSelectValue(select ?? undefined, "__no-template__");
-    });
-
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        templateId: "",
-        templateName: "",
-      })
-    );
+    expect(view.container.querySelector("select")).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -429,28 +424,12 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
 
   const onChange = vi.fn();
-  const onVariantChange = vi.fn();
 
   const view = mount(
     <>
-      <PostsFeedWizardEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
-      <PostsFeedVisualEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
-      <PostsFeedAdvancedEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
+      <PostsFeedWizardEditor value={{} as never} onChange={onChange} variant="cards" />
+      <PostsFeedVisualEditor value={{} as never} onChange={onChange} variant="cards" />
+      <PostsFeedAdvancedEditor value={{} as never} onChange={onChange} variant="cards" />
     </>
   );
 
@@ -462,7 +441,6 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    const compactVariantButton = findButtonByText(view.container, "Compact");
 
     React.act(() => {
       setSelectValue(selects[0], "manual");
@@ -473,7 +451,6 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
       toggles[2]?.click();
       toggles[3]?.click();
       toggles[4]?.click();
-      compactVariantButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       setSelectValue(selects[3], "2");
       setSelectValue(selects[4], "lg");
       setSelectValue(selects[5], "elevated");
@@ -481,7 +458,6 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
     });
 
     expect(onChange).toHaveBeenCalled();
-    expect(onVariantChange).toHaveBeenCalledWith("compact");
   } finally {
     view.cleanup();
   }
@@ -492,27 +468,11 @@ test("ContentList editors cover legacy/listing source modes and visual options",
     await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
 
   const onChange = vi.fn();
-  const onVariantChange = vi.fn();
   const view = mount(
     <>
-      <ContentListWizardEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
-      <ContentListVisualEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
-      <ContentListAdvancedEditor
-        value={{} as never}
-        onChange={onChange}
-        variant="cards"
-        onVariantChange={onVariantChange}
-      />
+      <ContentListWizardEditor value={{} as never} onChange={onChange} variant="cards" />
+      <ContentListVisualEditor value={{} as never} onChange={onChange} variant="cards" />
+      <ContentListAdvancedEditor value={{} as never} onChange={onChange} variant="cards" />
     </>
   );
 
@@ -524,14 +484,12 @@ test("ContentList editors cover legacy/listing source modes and visual options",
     const toggles = Array.from(
       view.container.querySelectorAll("input[type='checkbox']")
     ) as HTMLInputElement[];
-    const variantSelect = findSelectByOptions(view.container, ["cards", "list", "compact"]);
 
     React.act(() => {
       setSelectValue(selects[0], "listing");
       setSelectValue(selects[1], "query-1");
       setSelectValue(selects[2], "tpl-1");
       setInputValue(inputs[0], "12");
-      setSelectValue(variantSelect, "compact");
       setSelectValue(selects[4], "2");
       setSelectValue(selects[5], "lg");
       setSelectValue(selects[6], "elevated");
@@ -541,7 +499,6 @@ test("ContentList editors cover legacy/listing source modes and visual options",
     });
 
     expect(onChange).toHaveBeenCalled();
-    expect(onVariantChange).toHaveBeenCalledWith("compact");
   } finally {
     view.cleanup();
   }

@@ -21,12 +21,15 @@ static, jak i przy podpietym runtime Forms.
 
 ### Wizard
 
-Wizard prowadzi szybki setup bez technicznych pol runtime:
+Wizard jest teraz read-only starter summary:
 
-- variant cards (`form-left`, `form-right`, `minimal`)
-- section title + description
-- form fields (`name`, `email`, `phone`, `message`) i submit label
-- contact details (`phone`, `email`, `address`, `hours`)
+- current layout
+- current visible fields
+- current submit label
+
+Wizard nie edytuje już layoutu, section header, business details ani form
+setup. Tytul/opis sekcji, details panel title, telefon, email, adres, godziny,
+visible fields, submit label, i runtime binding należą do Visual.
 
 ### Visual
 
@@ -61,7 +64,7 @@ Advanced zostaje techniczny i Contact-local:
 
 - read-only map/runtime diagnostics
 - confirm-gated normalization support action
-- runtime diagnostics snapshot z redakcja `resolved.submissionNonce`
+- runtime diagnostics summary z redakcja `resolved.submissionNonce`
 
 ## Data Model (summary)
 
@@ -236,9 +239,9 @@ renderu zamiast udawac aktywna wysylke.
 ## TASK-336-18 Editor Contract
 
 - Exports `contactEditorContract` with `version: 2`.
-- Contract target: Wizard seeds contact/form basics; Visual owns form details,
-  field labels, business details, map, social links, and style; Advanced is
-  read-only submission/map/runtime diagnostics.
+- Contract target: Wizard is a read-only starter summary; Visual owns form
+  details, field labels, business details, map, social links, and style;
+  Advanced is read-only submission/map/runtime diagnostics.
 - TASK-336-19 removes duplicate map editing from Advanced and replaces normal
   Visual map/social raw URL authoring with location/profile-name flows while
   preserving the existing string schema.

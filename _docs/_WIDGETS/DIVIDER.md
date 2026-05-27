@@ -23,12 +23,11 @@ None.
 
 ### Wizard
 - live preview
-- divider style
-- optional center label
+- read-only divider style summary
 
-Wizard is a one-time setup surface. It seeds the basic separator style and
-optional label only. Completed widgets use Visual for daily line, width, color,
-alignment, and spacing changes.
+Wizard is a one-time setup surface. It seeds the basic separator style only.
+Completed widgets use Visual for daily label, line, width, color, alignment,
+and spacing changes.
 
 ### Visual
 Sections:

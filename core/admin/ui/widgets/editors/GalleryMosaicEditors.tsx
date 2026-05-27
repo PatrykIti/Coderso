@@ -19,10 +19,8 @@ import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
-  exportGalleryMosaicConfig,
   galleryMosaicDefaults,
   galleryMosaicItemMax,
-  importGalleryMosaicConfig,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItems,
   resolveGalleryMosaicVariant,
@@ -632,61 +630,12 @@ function TechnicalStyleSummary({ value }: { value: GalleryMosaicData }) {
 
 export function GalleryMosaicWizardEditor({
   value,
-  onChange,
   variant,
-  onVariantChange,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
-  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
-  const [mediaPickerError, setMediaPickerError] = useState<string | null>(null);
-
-  const handleMediaSelection = async (nextValue: unknown) => {
-    const ids = Array.isArray(nextValue) ? nextValue.map(String) : [];
-    setSelectedMediaIds(ids);
-    setMediaPickerError(null);
-    if (ids.length === 0) return;
-    try {
-      const mediaItems = await listMediaCached({ force: false });
-      const mediaById = new Map(mediaItems.map((item) => [item.id, item]));
-      let unsupportedSelection = false;
-      updateValue(value, onChange, (current) => {
-        const currentItems = normalizeGalleryMosaicItems(
-          current.items,
-          Math.max(ids.length, items.length)
-        );
-        const nextItems = [...currentItems];
-        ids.forEach((id, index) => {
-          const media = mediaById.get(id);
-          const mediaKind = resolveGalleryMediaKind(media);
-          if (!media?.url || !mediaKind) {
-            unsupportedSelection = true;
-            return;
-          }
-          nextItems[index] = {
-            ...nextItems[index],
-            image: mediaKind === "image" ? media.url : undefined,
-            video: mediaKind === "video" ? media.url : undefined,
-            caption:
-              media.title?.trim() ||
-              media.caption?.trim() ||
-              media.originalName?.trim() ||
-              nextItems[index]?.caption ||
-              `Media ${index + 1}`,
-          };
-        });
-        return {
-          ...current,
-          items: normalizeGalleryMosaicItems(nextItems, nextItems.length),
-        };
-      });
-      if (unsupportedSelection) {
-        setMediaPickerError("Gallery Mosaic currently supports image and video assets only.");
-      }
-    } catch {
-      setMediaPickerError("Failed to resolve selected media.");
-    }
-  };
+  const configuredMediaCount = items.filter((item) => Boolean(item.image || item.video)).length;
+  const resolvedVariant = resolveGalleryMosaicVariant(variant);
 
   return (
     <WidgetEditorSection
@@ -694,76 +643,40 @@ export function GalleryMosaicWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter media"
-      description="Seed the gallery layout, heading, and initial media selection."
+      description="Review the current gallery layout and item count. Daily media content lives in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Gallery layout</p>
-          <Select
-            value={resolveGalleryMosaicVariant(variant)}
-            onValueChange={(next) => onVariantChange?.(next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic.wizard.variant"
+          label="Gallery layout"
+          path="variant"
+          value={variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Mosaic"}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Gallery highlights"
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic.wizard.header.title"
+          label="Section title"
+          path="header.title"
+          value={normalized.header?.title ?? "No section title yet"}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Initial media count</p>
-          <Select
-            value={String(items.length)}
-            onValueChange={(next) => setItemCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {itemCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic.wizard.items.count"
+          label="Initial media count"
+          path="items.count"
+          value={`${items.length} item${items.length === 1 ? "" : "s"}`}
+        />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Media library</p>
-          <MediaPicker
-            value={selectedMediaIds}
-            onChange={(next) => {
-              void handleMediaSelection(next);
-            }}
-            multiple
-            accept={["image/*", "video/*"]}
-            maxItems={galleryMosaicItemMax}
-          />
-          <p className="text-xs text-muted-foreground">
-            Selected media is saved as the public image or video asset for gallery items.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            After Wizard, use Visual for captions, destinations, alt text, posters, lightbox,
-            density, and motion controls, or Advanced to import/export JSON.
-          </p>
-          {mediaPickerError ? <p className="text-xs text-destructive">{mediaPickerError}</p> : null}
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic.wizard.items.media"
+          label="Configured media"
+          path="items.count"
+          value={`${configuredMediaCount} of ${items.length} item${items.length === 1 ? "" : "s"} currently have media`}
+        />
+        <p className="text-xs text-muted-foreground">
+          After Wizard, use Visual for section title, media selection, captions, destinations, alt
+          text, posters, lightbox, density, and motion controls.
+        </p>
       </div>
     </WidgetEditorSection>
   );
@@ -1200,6 +1113,7 @@ export function GalleryMosaicVisualEditor({
                   fieldId={`gallery-mosaic-item-${stableItemId}-destination`}
                   label="Destination page"
                   value={item.href}
+                  controlPath="items.href"
                   onChange={(next) => updateItem(value, onChange, index, { href: next })}
                   emptyLabel="No destination"
                   helpText="Pick a site page. Hand-typed links from older edits stay until you replace or clear them."
@@ -1549,62 +1463,21 @@ export function GalleryMosaicAdvancedEditor({
   variant,
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
-  const [configDraft, setConfigDraft] = useState(() => exportGalleryMosaicConfig(normalized));
-  const [configStatus, setConfigStatus] = useState<string | null>(null);
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<"import" | "normalize" | "reset" | null>(null);
-  const [pendingImportData, setPendingImportData] = useState<GalleryMosaicData | null>(null);
+  const [pendingAction, setPendingAction] = useState<"normalize" | "reset" | null>(null);
   const normalizedItems = normalizeGalleryMosaicItems(normalized.items);
   const linkedItems = normalizedItems.filter((item) => (item.href ?? "").trim().length > 0).length;
   const mediaItems = normalizedItems.filter(
     (item) => (item.image ?? "").trim().length > 0 || (item.video ?? "").trim().length > 0
   ).length;
 
-  const closePendingAction = () => {
-    setPendingAction(null);
-    setPendingImportData(null);
-  };
-
-  const handleExportConfig = () => {
-    const nextDraft = exportGalleryMosaicConfig(normalizeValue(value));
-    setConfigDraft(nextDraft);
-    setConfigError(null);
-    setConfigStatus("Exported the current config to the JSON field.");
-  };
-
-  const handleImportConfig = () => {
-    const result = importGalleryMosaicConfig(configDraft);
-    if (!result.ok) {
-      setConfigStatus(null);
-      setConfigError(`Import error: ${result.code}${result.path ? ` at ${result.path}` : ""}`);
-      return;
-    }
-
-    setConfigError(null);
-    setConfigStatus("Validated Gallery Mosaic config. Confirm import to apply it.");
-    setPendingImportData(result.data);
-    setPendingAction("import");
-  };
-
   const confirmPendingAction = () => {
-    if (pendingAction === "import" && pendingImportData) {
-      onChange(pendingImportData);
-      setConfigDraft(exportGalleryMosaicConfig(pendingImportData));
-      setConfigError(null);
-      setConfigStatus("Imported Gallery Mosaic config.");
-    } else if (pendingAction === "normalize") {
+    if (pendingAction === "normalize") {
       const next = normalizeValue(value);
       onChange(next);
-      setConfigDraft(exportGalleryMosaicConfig(next));
-      setConfigError(null);
-      setConfigStatus("Normalized the current Gallery Mosaic config.");
     } else if (pendingAction === "reset") {
       onChange(galleryMosaicDefaults);
-      setConfigDraft(exportGalleryMosaicConfig(galleryMosaicDefaults));
-      setConfigError(null);
-      setConfigStatus("Reset Gallery Mosaic to defaults.");
     }
-    closePendingAction();
+    setPendingAction(null);
   };
 
   return (
@@ -1617,34 +1490,8 @@ export function GalleryMosaicAdvancedEditor({
       </EditorSection>
 
       <EditorSection
-        title="Configuration import and export"
-        description="Use the schema-owned JSON payload for safe Gallery Mosaic import/export."
-      >
-        <Textarea
-          value={configDraft}
-          onChange={(event) => {
-            setConfigDraft(event.target.value);
-            setConfigError(null);
-            setConfigStatus(null);
-          }}
-          placeholder="Paste a Gallery Mosaic JSON config."
-          rows={12}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={handleExportConfig}>
-            Export current config
-          </Button>
-          <Button type="button" variant="outline" onClick={handleImportConfig}>
-            Import config
-          </Button>
-        </div>
-        {configError ? <p className="text-xs text-destructive">{configError}</p> : null}
-        {configStatus ? <p className="text-xs text-muted-foreground">{configStatus}</p> : null}
-      </EditorSection>
-
-      <EditorSection
         title="Normalization and safeguards"
-        description="Apply deterministic fallback data for media items and styles."
+        description="Use confirm-gated support actions for deterministic fallback repair."
       >
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={() => setPendingAction("normalize")}>
@@ -1696,40 +1543,42 @@ export function GalleryMosaicAdvancedEditor({
         />
       </EditorSection>
 
+      <EditorSection
+        title="Authoring boundaries"
+        description="This tab is intentionally read-only for authors."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-daily-owner"
+          label="Daily editing"
+          value="Use Visual for captions, destinations, alt text, posters, lightbox, density, and motion."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="gallery-mosaic-advanced-setup-owner"
+          label="Starter setup"
+          value="Wizard is only for first setup or an explicit Run setup again action."
+        />
+      </EditorSection>
+
       <ConfirmActionDialog
         open={pendingAction !== null}
         onOpenChange={(open) => {
-          if (!open) closePendingAction();
+          if (!open) setPendingAction(null);
         }}
-        title={
-          pendingAction === "import"
-            ? "Import Gallery Mosaic config?"
-            : pendingAction === "reset"
-              ? "Reset Gallery Mosaic?"
-              : "Normalize Gallery Mosaic?"
-        }
+        title={pendingAction === "reset" ? "Reset Gallery Mosaic?" : "Normalize Gallery Mosaic?"}
         description={
-          pendingAction === "import"
-            ? "Apply the validated Gallery Mosaic configuration from the support JSON field."
-            : pendingAction === "reset"
-              ? "Reset Gallery Mosaic to the default starter media, copy, interaction, and style."
-              : "Apply deterministic fallback values for Gallery Mosaic media, interaction, and style."
+          pendingAction === "reset"
+            ? "Reset Gallery Mosaic to the default starter media, copy, interaction, and style."
+            : "Apply deterministic fallback values for Gallery Mosaic media, interaction, and style."
         }
         confirmLabel={
-          pendingAction === "import"
-            ? "Import config"
-            : pendingAction === "reset"
-              ? "Reset Gallery Mosaic"
-              : "Normalize Gallery Mosaic"
+          pendingAction === "reset" ? "Reset Gallery Mosaic" : "Normalize Gallery Mosaic"
         }
         tone={pendingAction === "reset" ? "destructive" : "warning"}
         onConfirm={confirmPendingAction}
       >
-        {pendingAction === "import" && pendingImportData
-          ? `${normalizeGalleryMosaicItems(pendingImportData.items).length} media item${normalizeGalleryMosaicItems(pendingImportData.items).length === 1 ? "" : "s"} will be imported.`
-          : pendingAction === "reset"
-            ? "This replaces the current Gallery Mosaic configuration with defaults."
-            : "This preserves supported content while cleaning malformed structure."}
+        {pendingAction === "reset"
+          ? "This replaces the current Gallery Mosaic configuration with defaults."
+          : "This preserves supported content while cleaning malformed structure."}
       </ConfirmActionDialog>
     </div>
   );

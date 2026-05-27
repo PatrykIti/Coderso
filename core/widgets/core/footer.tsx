@@ -370,45 +370,6 @@ export const footerDefaults: FooterData = {
   },
 };
 
-const footerWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "Wizard seeds one-time footer setup; TASK-336-19 keeps this explicit until setup-only duplicate semantics replace temporary allowances.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "columns",
-    reason:
-      "Wizard seeds one-time starter link groups; Visual remains the daily footer owner after setup completion.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "brand",
-    reason:
-      "Wizard seeds one-time brand basics; Visual remains the daily footer owner after setup completion.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "legal",
-    reason:
-      "Wizard seeds one-time legal basics; Visual remains the daily footer owner after setup completion.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "socialEnabled",
-    reason:
-      "Wizard seeds one-time social visibility; Visual remains the daily footer owner after setup completion.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "social",
-    reason:
-      "Wizard seeds one-time social links; Visual remains the daily footer owner after setup completion.",
-    expiresWithTask: "TASK-336-19",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const footerEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -417,8 +378,8 @@ export const footerEditorContract: WidgetEditorContract = {
       id: "footer.wizard.starter-footer",
       title: "Starter footer",
       role: "setup",
-      writablePaths: ["variant", "columns", "brand", "legal", "socialEnabled", "social"],
-      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "columns", "socialEnabled"],
     },
     {
       mode: "visual",
@@ -426,15 +387,18 @@ export const footerEditorContract: WidgetEditorContract = {
       title: "Variant and structure",
       role: "setup",
       writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
       id: "footer.visual.columns-links",
       title: "Columns and links",
       role: "content",
-      writablePaths: ["columns"],
-      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
+      writablePaths: [
+        "columns.*.title",
+        "columns.*.links.*.label",
+        "columns.*.links.*.href",
+        "columns.*.links.*.target",
+      ],
     },
     {
       mode: "visual",
@@ -442,7 +406,6 @@ export const footerEditorContract: WidgetEditorContract = {
       title: "Brand and legal",
       role: "content",
       writablePaths: ["brand", "legal"],
-      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -457,7 +420,6 @@ export const footerEditorContract: WidgetEditorContract = {
       title: "Social links and icon style",
       role: "content",
       writablePaths: ["socialEnabled", "social"],
-      allowedDuplicateWritablePaths: footerWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

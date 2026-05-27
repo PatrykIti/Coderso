@@ -284,39 +284,6 @@ export const galleryMosaicDefaults: GalleryMosaicData = {
   },
 };
 
-const galleryMosaicWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the media layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds gallery copy; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.count",
-    reason: "Wizard chooses the starter media count; Visual remains the daily media owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.image",
-    reason: "Wizard seeds initial media; Visual remains the daily media owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.video",
-    reason: "Wizard seeds initial video media; Visual remains the daily media owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "items.caption",
-    reason: "Wizard seeds initial media captions; Visual remains the daily caption owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const galleryMosaicEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -325,15 +292,8 @@ export const galleryMosaicEditorContract: WidgetEditorContract = {
       id: "gallery-mosaic.wizard.starter-media",
       title: "Starter media",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.title",
-        "items.count",
-        "items.image",
-        "items.video",
-        "items.caption",
-      ],
-      allowedDuplicateWritablePaths: galleryMosaicWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant", "items.count"],
     },
     {
       mode: "visual",
@@ -354,7 +314,6 @@ export const galleryMosaicEditorContract: WidgetEditorContract = {
         "items.objectPosition",
         "items.ratio",
       ],
-      allowedDuplicateWritablePaths: galleryMosaicWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

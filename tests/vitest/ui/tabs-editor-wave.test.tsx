@@ -339,10 +339,11 @@ test("Tabs editors expose non-overlapping writable ownership metadata", async ()
       (path, index, paths) => paths.indexOf(path) !== index
     );
 
-    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count", "options.defaultItemId"]));
+    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count"]));
     expect(visualPaths).toEqual(
       expect.arrayContaining([
         "variant",
+        "options.defaultItemId",
         "items.0.label",
         "items.0.panelIntro",
         "items.0.triggerDescription",
@@ -394,12 +395,9 @@ test("Tabs wizard editor covers starter item-count growth and default-tab select
       "5",
       String(tabsItemMax),
     ]);
-    const defaultSelect = findSelectByOptions(structureSection, ["overview", "details"]);
-
     expect(structureSection.textContent).toContain("matching content area");
     expect(structureSection.textContent).not.toContain("Tab subtitle");
-    expect(structureSection.textContent).toContain("Visual owns daily label edits");
-    expect(defaultSelect.value).toBe("overview");
+    expect(structureSection.textContent).toContain("Visual owns the default tab choice");
 
     setSelectValue(countSelect, "3");
     expect(view.getValue().items).toHaveLength(3);
@@ -416,15 +414,6 @@ test("Tabs wizard editor covers starter item-count growth and default-tab select
         activeId: "overview",
       })
     );
-
-    const updatedDefaultSelect = findSelectByOptions(structureSection, [
-      "overview",
-      "details",
-      "3",
-    ]);
-    setSelectValue(updatedDefaultSelect, "3");
-    expect(view.getValue().options?.defaultItemId).toBe("3");
-    expect(view.getValue().options?.activeId).toBe("3");
 
     expect(structureSection.querySelectorAll("input")).toHaveLength(0);
     expect(view.getValue().items?.[0]?.label).toBe("Overview");

@@ -205,8 +205,13 @@ test("divider editors render expected sections", () => {
     />
   );
   expect(wizardHtml).toContain("Divider style");
-  expect(wizardHtml).toContain("Visual owns line weight, color, width, and spacing after setup.");
+  expect(wizardHtml).toContain(
+    "Visual owns divider style changes, center labels, line weight, color, width, and spacing."
+  );
   expect(wizardHtml).toContain('data-widget-control-path="variant"');
+  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
+  expect(wizardHtml).not.toContain("Optional label");
+  expect(wizardHtml).not.toContain("<select");
 
   const visualHtml = renderToString(
     <DividerVisualEditor

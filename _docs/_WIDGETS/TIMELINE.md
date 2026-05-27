@@ -25,16 +25,15 @@ Legacy variants remain supported, but current behavior is driven by
 ## Editor Modes (current after TASK-291)
 
 ### Wizard
-- one-time starter story setup
-- starter variant selection
-- header title and description
-- `3-8` starter step count
-- per-step starter title and description
-- explicit remove confirmation with min-step guard
+- read-only starter story summary
+- current timeline style summary
+- read-only header title and description summary
+- read-only `3-8` starter step count summary
+- read-only per-step title and description preview
 
 Wizard intentionally does not expose timeline mode, layout, guides, status,
-icons, marker accents, dates, or link destinations. Visual owns those daily
-editing controls after setup.
+icons, marker accents, dates, link destinations, or variant changes. Visual
+owns those daily editing controls.
 
 ### Visual
 Primary day-to-day editing mode with section-based IA:
@@ -187,7 +186,8 @@ Advanced intentionally excludes duplicated day-to-day content or style editing.
 ## TASK-336-18 Editor Contract
 
 - Exports `timelineEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter milestones; Visual owns steps,
-  orientation, guides, layout, markers, colors, and background; Advanced is
-  read-only runtime diagnostics.
-- Current Wizard/Advanced style-layout drift is routed to `TASK-336-19`.
+- Contract target: Wizard is a read-only starter summary; Visual owns variant,
+  steps, orientation, guides, layout, markers, colors, and background;
+  Advanced is read-only runtime diagnostics.
+- Current TASK-336-19 cleanup is implemented for Timeline's Wizard/Visual/
+  Advanced ownership split.

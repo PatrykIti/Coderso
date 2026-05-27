@@ -25,14 +25,13 @@ raw data.
 
 ### Wizard
 
-Wizard covers the beginner-facing first-pass content flow:
+Wizard is now a read-only setup summary:
 
-- variant
-- testimonial count
-- section `eyebrow`, `title`, and `description`
-- per-testimonial `quote`, `author`, `role`, `sourceLabel`, `rating`
-- avatar Media Library image picking; legacy external avatar URLs are read-only
-  replace/clear state
+- current variant
+- read-only testimonial count summary
+
+Daily list size, section copy, quotes, authors, ratings, avatars, CTA, and
+display settings belong to Visual.
 
 ### Visual
 
@@ -177,9 +176,9 @@ ask nontechnical users for raw data.
 ## TASK-336-18 Editor Contract
 
 - Exports `testimonialsEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter social-proof copy/count; Visual owns
-  quotes, authors, avatars, ratings, CTA, pagination, and style; Advanced is
-  read-only runtime diagnostics.
+- Contract target: Wizard is a read-only setup summary; Visual owns quotes,
+  authors, avatars, ratings, CTA, pagination, and style; Advanced is read-only
+  runtime diagnostics.
 - `TASK-336-19` aligns the editor with that target: pagination is Visual-owned,
   Advanced has no writable inputs/selects/textareas/buttons/raw snapshots, color
   authoring is swatch-only, and temporary Wizard/Visual duplicate allowances are

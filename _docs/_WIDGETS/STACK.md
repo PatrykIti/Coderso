@@ -27,7 +27,7 @@ source of truth for that breakpoint.
 ## Editor Modes
 
 ### Wizard
-- one-time stack preset
+- guided `content` slot framing only
 - admin-safe `content` slot guidance
 - note that Visual owns breakpoint spacing, alignment, distribution, and
   wrapping after setup

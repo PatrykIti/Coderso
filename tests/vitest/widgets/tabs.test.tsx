@@ -374,7 +374,7 @@ test("tabs wizard and advanced editors render v2 ownership surfaces", () => {
 
   expect(wizardHtml).toContain("Starter tabs");
   expect(wizardHtml).toContain("Content intro text");
-  expect(wizardHtml).toContain("Visual owns daily label edits");
+  expect(wizardHtml).toContain("Visual owns the default tab choice");
   expect(wizardHtml).not.toContain("Variant");
   expect(wizardHtml).not.toContain("Layout");
   expect(wizardHtml).not.toContain("Tab subtitle");

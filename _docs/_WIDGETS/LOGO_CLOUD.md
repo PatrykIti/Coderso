@@ -17,14 +17,13 @@ Trust-focused section that displays partner/client logos with optional links.
 ## Editor Modes (current after TASK-336-19)
 
 ### Wizard (one-time starter setup)
-- Logo cloud layout variant
-- Section title
-- Logo count
-- Compact starter-logo rows with logo names only
+- Read-only current layout
+- Read-only logo count
 
-The wizard count selector and rendered logo-name inputs must stay synchronized.
-Images, accessible descriptions, logo destinations, CTA, and presentation
-styling belong to Visual after first setup or an explicit `Run setup again`.
+Wizard no longer edits layout, title, count, or starter logo rows. Images,
+accessible descriptions, logo destinations, CTA, count changes, and
+presentation styling belong to Visual after first setup or an explicit
+`Run setup again`.
 
 ### Visual (primary editing mode)
 Sections:
@@ -163,10 +162,10 @@ JSON payloads and it does not expose normalize/reset mutations.
 ## TASK-336-19 Editor Contract
 
 - Exports `logoCloudEditorContract` with `version: 2`.
-- Contract target: Wizard seeds only starter layout/title/count/logo names;
-  Visual owns logo images, accessible descriptions, destinations, CTA, motion,
-  swatch-only color controls, and style; Advanced is read-only human
-  diagnostics.
-- Duplicate allowances are reduced to the one-time Wizard lifecycle
-  (`variant`, `header.title`, `logos.count`, `logos.name`) and point to
+- Contract target: Wizard is a read-only starter summary; Visual owns layout,
+  logo count, headline copy, logo images, accessible descriptions,
+  destinations, CTA, motion, swatch-only color controls, and style; Advanced
+  is read-only human diagnostics.
+- Wizard/Visual duplicate ownership has been removed for the normal editor
+  flow; saved legacy state remains backward-compatible without reopening raw
   `TASK-336-19`.

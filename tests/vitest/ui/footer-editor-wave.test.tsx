@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { listMediaCached } from "@/services/mediaClient";
 import type { FooterData } from "../../../core/widgets/core/footer";
 import type { WidgetBlock } from "../../../core/widgets/types";
 
@@ -212,15 +211,6 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-const flushAsyncUpdates = async () => {
-  await React.act(async () => {
-    await flushPromises();
-    await flushPromises();
-  });
-};
-
 const clickByText = (container: ParentNode, text: string, index = 0) => {
   const button = Array.from(container.querySelectorAll("button")).filter((candidate) =>
     candidate.textContent?.includes(text)
@@ -302,9 +292,6 @@ const findSelectByLabel = (container: ParentNode, label: string, index = 0) =>
     index
   ];
 
-const findLinkDestinationSelect = (container: ParentNode, fieldId: string) =>
-  container.querySelector(`[data-link-destination-field="${fieldId}"] select`);
-
 const findCheckboxByLabel = (container: ParentNode, label: string, index = 0) =>
   Array.from(container.querySelectorAll("div"))
     .filter(
@@ -343,20 +330,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern social controls", async () => {
+test("FooterWizardEditor keeps social setup bounded to visibility while preserving saved profiles", async () => {
   const { FooterWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-  vi.mocked(listMediaCached).mockResolvedValue([
-    {
-      id: "footer-logo",
-      url: "/media/footer-logo.svg",
-      alt: "Footer logo",
-      title: "Footer logo",
-      caption: "",
-      originalName: "footer-logo.svg",
-      mimeType: "image/svg+xml",
-    } as never,
-  ]);
 
   let latestValue: FooterData = {
     columns: [
@@ -370,8 +346,16 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
       { title: "Resources", links: [] },
       { title: "Hidden", links: [{ label: "Legacy", href: "/legacy" }] },
     ],
-    legal: {},
-    social: [],
+    brand: {
+      logoText: "Coderso",
+      tagline: "Build confidently",
+    },
+    legal: {
+      privacyLabel: "Privacy",
+      privacy: "/privacy",
+    },
+    socialEnabled: true,
+    social: [{ type: "custom", href: "/community", label: "Community" }],
   };
   let currentVariant = "columns-2";
 
@@ -398,56 +382,32 @@ test("FooterWizardEditor exposes hidden-link guidance, brand basics, and modern 
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Brand basics");
-    expect(view.container.textContent).toContain(
-      "1 additional link stays available in Visual mode."
-    );
+    expect(view.container.textContent).not.toContain("Brand basics");
+    expect(view.container.textContent).not.toContain("Legal basics");
+    expect(view.container.textContent).toContain("Use Visual to edit brand logo");
+    expect(view.container.textContent).toContain("Visible columns");
+    expect(view.container.textContent).toContain("Company, Resources");
+    expect(findInputByLabel(view.container, "Column 1 title")).toBeUndefined();
+    expect(findCheckboxByLabel(view.container, "Show social links")).toBeUndefined();
 
     setSelectValue(findSelectByLabel(view.container, "Footer variant"), "minimal");
-    setInputValue(findInputByLabel(view.container, "Brand name"), "Coderso");
-    setInputValue(findInputByLabel(view.container, "Tagline"), "Build confidently");
-    clickByText(view.container, "Browse media");
-    await flushAsyncUpdates();
-    setInputValue(findInputByLabel(view.container, "Privacy label"), "Polityka");
-    await flushAsyncUpdates();
-    setSelectValue(
-      findLinkDestinationSelect(view.container, "footer-legal-privacy"),
-      "privacy-page"
-    );
-    expect(findCheckboxByLabel(view.container, "Show social links")).toBeInstanceOf(
-      HTMLInputElement
-    );
-
-    clickByText(view.container, "Add social");
-    const socialCard = findSectionCard(view.container, "Social link 1");
-    setSelectValue(findSelectByLabel(socialCard as ParentNode, "Platform"), "custom");
-    const updatedSocialCard = findSectionCard(view.container, "Social link 1");
-    await flushAsyncUpdates();
-    setSelectValue(
-      findLinkDestinationSelect(
-        updatedSocialCard as ParentNode,
-        "footer-social-1-custom-destination"
-      ),
-      "community-page"
-    );
-    setInputValue(
-      findInputByLabel(updatedSocialCard as ParentNode, "Accessible label"),
-      "Community"
-    );
+    expect(view.container.textContent).toContain("1 saved social profile stays preserved");
+    expect(() => clickByText(view.container, "Add social")).toThrow();
 
     expect(currentVariant).toBe("minimal");
+    expect(latestValue.columns?.[0]?.title).toBe("Company");
     expect(latestValue.brand).toMatchObject({
       logoText: "Coderso",
       tagline: "Build confidently",
-      logoUrl: "/media/footer-logo.svg",
     });
-    expect(latestValue.legal?.privacyLabel).toBe("Polityka");
-    expect(latestValue.legal?.privacy).toBe("/privacy");
-    expect(latestValue.social?.[0]).toEqual({
-      type: "custom",
-      href: "/community",
-      label: "Community",
+    expect(latestValue.legal).toMatchObject({
+      privacyLabel: "Privacy",
+      privacy: "/privacy",
     });
+    expect(latestValue.socialEnabled).toBe(true);
+    expect(latestValue.social).toEqual([
+      { type: "custom", href: "/community", label: "Community" },
+    ]);
   } finally {
     view.cleanup();
   }
@@ -505,7 +465,7 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-
 
   try {
     expect(view.container.textContent).toContain(
-      "Column reorder is read-only in static previews because slot remapping requires the live footer block patch path."
+      "Reorder columns in the live editor, where each visible footer region stays paired with its saved content."
     );
     expect(writablePathsForMode(view.container, "visual")).toContain("layout.sectionPaddingY");
     expect(writablePathsForMode(view.container, "visual")).toContain("style.linkColor");
@@ -561,7 +521,9 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-
     setSelectValue(findSelectByLabel(layoutPanel as ParentNode, "Section padding"), "12");
 
     const utilityPanel = findPanelByTitle(view.container, "Utility strip");
-    expect(utilityPanel?.textContent).toContain("Newsletter stays composition-only");
+    expect(utilityPanel?.textContent).toContain(
+      "Footer owns contact details and an optional back-to-top action"
+    );
     setInputValue(findInputByLabel(utilityPanel as ParentNode, "Address"), "123 Market Street");
     setInputValue(findInputByLabel(utilityPanel as ParentNode, "Phone"), "+1 415 555 0100");
     setInputValue(findInputByLabel(utilityPanel as ParentNode, "Email"), "hello@example.com");

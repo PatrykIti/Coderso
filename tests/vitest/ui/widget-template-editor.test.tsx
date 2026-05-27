@@ -336,7 +336,8 @@ test("widget template block settings render newsletter visual sections", () => {
   expect(html).toContain("Content and copy");
   expect(html).toContain("Form semantics and consent");
   expect(html).toContain("Submission runtime");
-  expect(html).toContain("Integration target");
+  expect(html).toContain("Connection status");
+  expect(html).toContain("Colors and emphasis");
   expect(html).toContain("Spacing and alignment");
 });
 
@@ -395,7 +396,9 @@ test("widget template block settings render section visual sections", () => {
   );
 
   expect(html).toContain("Variant and structure");
-  expect(html).toContain("Semantics and anchor");
+  expect(html).toContain("Heading and intro");
+  expect(html).toContain("Section link and accessibility");
+  expect(html).toContain("Width and spacing");
   expect(html).toContain("Surface and borders");
 });
 
@@ -493,9 +496,10 @@ test("widget template block settings render split layout visual sections", () =>
     />
   );
 
-  expect(html).toContain("Variant and pane ratio");
-  expect(html).toContain("Mobile collapse behavior");
-  expect(html).toContain("Spacing and vertical alignment");
+  expect(html).toContain("Pane layout");
+  expect(html).toContain("Phone behavior");
+  expect(html).toContain("Spacing and alignment");
+  expect(html).toContain("Pane content");
 });
 
 test("widget template block settings render spacer visual sections", () => {

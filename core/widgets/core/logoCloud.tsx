@@ -214,40 +214,16 @@ export const logoCloudDefaults: LogoCloudData = {
   },
 };
 
-const logoCloudWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "Wizard seeds one-time logo cloud setup; Visual remains the daily layout owner after setup.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds one-time section title; Visual remains the daily copy owner after setup.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "logos.count",
-    reason: "Wizard chooses starter logo count; Visual remains the daily list owner after setup.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "logos.name",
-    reason: "Wizard seeds starter logo labels only; Visual owns daily logo details after setup.",
-    expiresWithTask: "TASK-336-19",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const logoCloudEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
     {
       mode: "wizard",
       id: "logo-cloud.wizard.starter-setup",
-      title: "Starter setup",
-      role: "setup",
-      writablePaths: ["variant", "header.title", "logos.count", "logos.name"],
-      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
+      title: "Starter overview",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["variant", "logos.count"],
     },
     {
       mode: "visual",
@@ -255,7 +231,6 @@ export const logoCloudEditorContract: WidgetEditorContract = {
       title: "Variant and layout structure",
       role: "layout",
       writablePaths: ["variant", "logos.count"],
-      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -263,7 +238,6 @@ export const logoCloudEditorContract: WidgetEditorContract = {
       title: "Header copy",
       role: "content",
       writablePaths: ["header.eyebrow", "header.title", "header.description"],
-      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -271,7 +245,6 @@ export const logoCloudEditorContract: WidgetEditorContract = {
       title: "Logos list and links",
       role: "content",
       writablePaths: ["logos.name", "logos.alt", "logos.image", "logos.href"],
-      allowedDuplicateWritablePaths: logoCloudWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",
@@ -622,7 +595,7 @@ function LogoCloudItem({
   );
 }
 
-function LogoCloudCta({
+function LogoCloudCtaLink({
   cta,
   align,
 }: {
@@ -817,7 +790,7 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
         </div>
       )}
 
-      <LogoCloudCta cta={cta} align={alignment} />
+      <LogoCloudCtaLink cta={cta} align={alignment} />
     </section>
   );
 }

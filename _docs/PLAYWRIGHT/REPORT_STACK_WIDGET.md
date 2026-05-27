@@ -43,7 +43,7 @@ Advanced).
 | `ISSUE-02` Advanced editor lacks variant control | Closed by current mode-ownership contract | Advanced intentionally stays read-only while Visual owns variant selection; this matches the shared editor-mode ownership contract instead of being an active Stack bug. |
 | `ISSUE-03` `align` is not responsive | Fixed by `TASK-286-02`; mode ownership refreshed by `TASK-336-19` | `core/widgets/core/stack.tsx` accepts scalar-or-breakpoint `align`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint controls in Visual only. |
 | `ISSUE-04` `wrap` is not responsive | Fixed by `TASK-286-02`; mode ownership refreshed by `TASK-336-19` | `core/widgets/core/stack.tsx` accepts scalar-or-breakpoint `wrap`, renders breakpoint markers/classes, and `StackEditors.tsx` exposes per-breakpoint wrap toggles in Visual only. |
-| `ISSUE-05` Wizard exposes too little layout control | Superseded by `TASK-336-19` one-time Wizard contract | Wizard now keeps setup to a starter preset and slot guidance; Visual owns breakpoint spacing, alignment, distribution, and wrapping. |
+| `ISSUE-05` Wizard exposes too little layout control | Superseded by `TASK-336-19` guidance-only Wizard contract | Wizard now stays on slot guidance only; Visual owns preset selection plus breakpoint spacing, alignment, distribution, and wrapping. |
 | `ISSUE-06` missing `justify-around` / `justify-evenly` | Fixed by `TASK-286-01` | `core/widgets/core/stack.tsx` now allowlists `around` and `evenly`; editor options and SSR coverage were added in `tests/vitest/widgets/stack.test.tsx` and `tests/vitest/ui/stack-editor-wave.test.tsx`. |
 | `ISSUE-07` missing `align-items: baseline` | Fixed by `TASK-286-01` | `core/widgets/core/stack.tsx` now allowlists `baseline`; editor/runtime coverage added in Stack Vitests. |
 | `ISSUE-08` gap labels lack scale context | Fixed by `TASK-286-03` | Gap option labels now communicate scale context in `core/admin/ui/widgets/editors/StackEditors.tsx` while keeping the existing serialized token set. |
@@ -65,8 +65,8 @@ Advanced).
 
 ### Editor UX
 
-- Wizard now stays one-time: it chooses a starter preset and explains that
-  Visual owns responsive layout editing after setup.
+- Wizard is now guidance-only: it frames the content slot and explains that
+  Visual owns preset selection plus responsive layout editing after setup.
 - Visual owns daily breakpoint flow, spacing, item alignment, distribution, and
   wrapping controls with friendly option labels and control-path metadata.
 - Advanced is read-only runtime/support summary only; raw payload snapshots and

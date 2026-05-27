@@ -121,15 +121,8 @@ export const gridColumnsEditorContract: WidgetEditorContract = {
       id: "grid-columns.wizard.quick-start",
       title: "Grid quick start",
       role: "setup",
-      writablePaths: ["variant"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Grid Columns starter variant; Visual remains the daily variant owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
+      writablePaths: [],
+      readOnlyPaths: ["variant"],
     },
     {
       mode: "visual",
@@ -137,14 +130,6 @@ export const gridColumnsEditorContract: WidgetEditorContract = {
       title: "Variant and layout structure",
       role: "layout",
       writablePaths: ["variant", "layout.align", "layout.reverseOnMobile"],
-      allowedDuplicateWritablePaths: [
-        {
-          path: "variant",
-          reason:
-            "Wizard seeds the one-time Grid Columns starter variant; Visual remains the daily variant owner after setup.",
-          expiresWithTask: "TASK-336",
-        },
-      ],
     },
     {
       mode: "visual",

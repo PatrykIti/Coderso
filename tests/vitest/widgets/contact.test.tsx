@@ -12,6 +12,7 @@ import {
   buildContactMapEmbedUrl,
   buildContactSocialHref,
   ContactBlock,
+  contactEditorContract,
   contactDefaults,
   createContactWidget,
   getContactDiagnosticsSnapshot,
@@ -649,6 +650,36 @@ test("contact diagnostics snapshot redacts runtime nonce values", () => {
   expect(snapshot).toContain('"error": "form_not_found"');
 });
 
+test("contact exposes a strict v2 editor ownership contract aligned to the current sections", () => {
+  const widget = createContactWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+
+  expect(widget.editorContract).toBe(contactEditorContract);
+  expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
+    "contact.wizard.layout",
+    "contact.wizard.form",
+    "contact.visual.variant-header",
+    "contact.visual.form-fields-required",
+    "contact.visual.field-copy-layout",
+    "contact.visual.submission-runtime",
+    "contact.visual.details-business",
+    "contact.visual.map-display",
+    "contact.visual.surface-styling",
+    "contact.visual.layout-spacing",
+    "contact.advanced.map-runtime",
+    "contact.advanced.normalization",
+    "contact.advanced.runtime-summary",
+  ]);
+  expect(
+    widget.editorContract?.sections
+      .filter((section) => section.mode === "advanced")
+      .every((section) => section.writablePaths.length === 0)
+  ).toBe(true);
+});
+
 test("contact editor render smoke reflects the new IA", () => {
   const wizardHtml = renderToString(
     <ContactWizardEditor
@@ -659,8 +690,11 @@ test("contact editor render smoke reflects the new IA", () => {
     />
   );
 
-  expect(wizardHtml).toContain("Section header");
-  expect(wizardHtml).toContain("Business hours");
+  expect(wizardHtml).toContain("Use Visual to edit the section title, description");
+  expect(wizardHtml).toContain("Current layout");
+  expect(wizardHtml).toContain("Visible fields");
+  expect(wizardHtml).toContain("Submit label");
+  expect(wizardHtml).not.toContain("Business hours");
 
   const visualHtml = renderToString(
     <ContactVisualEditor

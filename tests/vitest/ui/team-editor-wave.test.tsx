@@ -233,16 +233,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -290,30 +280,12 @@ const findInputsByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
-const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
-  Array.from(container.querySelectorAll("textarea")).find(
-    (element) =>
-      element instanceof HTMLTextAreaElement && element.getAttribute("placeholder") === placeholder
-  );
-
 const findSelectByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
     const optionValues = Array.from(element.options).map((option) => option.value);
     return values.every((value) => optionValues.includes(value));
   });
-
-const findColorInputForPlaceholder = (container: ParentNode, placeholder: string, index = 0) => {
-  const textInput = findInputsByPlaceholder(container, placeholder)[index];
-  if (!(textInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
-  }
-  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
-  if (!(colorInput instanceof HTMLInputElement)) {
-    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
-  }
-  return colorInput;
-};
 
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
@@ -330,7 +302,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("Team wizard editor covers variant fallback, count changes, and primary member normalization", async () => {
+test("Team wizard editor covers variant fallback and leaves member count to Visual", async () => {
   const { TeamWizardEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const onChangeSpy = vi.fn();
@@ -365,8 +337,7 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
   try {
     expect(view.container.textContent).toContain("Team layout");
     expect(view.container.textContent).toContain("Members count");
-    expect(view.container.textContent).toContain("Primary member names");
-    expect(view.container.textContent).toContain("up to 12 members");
+    expect(view.container.textContent).toContain("Use Visual to change member count");
 
     const variantSelect = findSelectByOptions(view.container, [
       "cards",
@@ -378,31 +349,11 @@ test("Team wizard editor covers variant fallback, count changes, and primary mem
 
     setSelectValue(variantSelect, "spotlight");
     expect(onVariantChangeSpy).toHaveBeenLastCalledWith("spotlight");
-
-    const memberCountSelect = findSelectByOptions(view.container, ["1", "12"]);
-    setSelectValue(memberCountSelect, "4");
-
-    expect(latestValue.members).toHaveLength(4);
-    expect(latestValue.header?.title).toBe(teamDefaults.header?.title);
-    expect(latestValue.style?.columns).toBe("3");
-    expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 2 name")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 3 name")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 1 role")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 2 role")).toHaveLength(1);
-    expect(findInputsByPlaceholder(view.container, "Member 3 role")).toHaveLength(1);
-
-    setInputValue(findInputByPlaceholder(view.container, "Member 1 name"), " Alice ");
-    setInputValue(findInputByPlaceholder(view.container, "Member 1 role"), " Architect ");
-    setInputValue(findInputByPlaceholder(view.container, "Member 2 name"), "");
-    setInputValue(findInputByPlaceholder(view.container, "Member 3 name"), "Cara");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.members[0]?.name).toBe("Alice");
-    expect(latestValue.members[0]?.role).toBe("Architect");
-    expect(latestValue.members[1]?.name).toBe("Team Member 2");
-    expect(latestValue.members[2]?.name).toBe("Cara");
-    expect(latestValue.members[3]?.name).toBe("Team Member 4");
+    expect(findSelectByOptions(view.container, ["1", "12"])).toBeUndefined();
+    expect(latestValue.members).toHaveLength(1);
+    expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(0);
+    expect(findInputsByPlaceholder(view.container, "Member 1 role")).toHaveLength(0);
+    expect(onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

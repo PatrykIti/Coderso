@@ -490,7 +490,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and primary CTA", async () => {
+test("HeroWizardEditor keeps goal presets as the only mutating setup action", async () => {
   const { HeroWizardEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 
   const onChangeSpy = vi.fn();
@@ -521,7 +521,9 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
   await flush();
 
   try {
-    expect(view.container.textContent).toContain("Daily presentation changes live in Visual.");
+    expect(view.container.textContent).toContain(
+      "Layout and daily presentation changes live in Visual."
+    );
     expect(view.container.querySelector('[data-widget-control="hero.subhead"]')).toBeNull();
     expect(
       view.container.querySelector('[data-widget-control="hero.secondaryCta.label"]')
@@ -543,7 +545,12 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
       Array.from(view.container.querySelectorAll('[data-widget-control-ownership="writable"]')).map(
         (control) => control.getAttribute("data-widget-control-path")
       )
-    ).toEqual(["variant", "headline", "primaryCta.label", "primaryCta.href"]);
+    ).toEqual([]);
+    expect(
+      Array.from(view.container.querySelectorAll('[data-widget-control-readonly="true"]')).map(
+        (control) => control.getAttribute("data-widget-control-path")
+      )
+    ).toEqual(expect.arrayContaining(["headline", "primaryCta.label", "primaryCta.href"]));
 
     React.act(() => {
       setSelectValue(findSelectByOptions(view.container, ["lead", "sales", "info"]), "sales");
@@ -563,30 +570,14 @@ test("HeroWizardEditor stays setup-focused and only seeds layout, headline, and 
     expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("body");
     expect(onChangeSpy.mock.lastCall?.[0]).not.toHaveProperty("secondaryCta");
 
-    React.act(() => {
-      setInputValue(
-        findInputByPlaceholder(view.container, "Build with confidence"),
-        "Pipeline-ready hero"
-      );
-      setInputValue(findInputByPlaceholder(view.container, "Get started"), "Start onboarding");
-      setSelectValue(
-        findLinkDestinationSelect(view.container, "hero.primaryCta.href"),
-        "hero-join-page"
-      );
-    });
-
-    React.act(() => {
-      setSelectValue(
-        findSelectByOptions(view.container, ["centered", "split", "media-left"]),
-        "media-left"
-      );
-    });
-    expect(onVariantChangeSpy).toHaveBeenCalledWith("media-left");
+    expect(
+      findSelectByOptions(view.container, ["centered", "split", "media-left"])
+    ).toBeUndefined();
     expect(latestValue).toMatchObject({
-      headline: "Pipeline-ready hero",
+      headline: "Convert more visitors",
       primaryCta: {
-        label: "Start onboarding",
-        href: "/join",
+        label: "Book a demo",
+        href: "/demo",
       },
     });
     expect(latestValue.secondaryCta).toBeUndefined();
@@ -622,7 +613,7 @@ test("HeroWizardEditor marks goal as an action and keeps all writable paths docu
       Array.from(view.container.querySelectorAll("[data-widget-control]"))
         .filter((control) => control.getAttribute("data-widget-control-ownership") !== "action")
         .map((control) => control.getAttribute("data-widget-control-path"))
-    ).toEqual(["variant", "headline", "primaryCta.label", "primaryCta.href"]);
+    ).toEqual(["headline", "primaryCta.label", "primaryCta.href"]);
   } finally {
     view.cleanup();
   }
@@ -1990,8 +1981,15 @@ test("HeroVisualEditor toggles badge fields and validates unsafe badge hrefs", a
 
   try {
     await flush();
+    const variantSection = findSectionByTitle(view.container, "Variant and Presets");
     const badgeSection = findSectionByTitle(view.container, "Badge and headline");
+    const ctaSection = findSectionByTitle(view.container, "CTA");
+    const richCopySection = findSectionByTitle(view.container, "Rich copy and social proof");
+    expect(variantSection?.getAttribute("data-widget-editor-section-role")).toBe("setup");
     expect(badgeSection?.getAttribute("data-widget-editor-section")).toBe("hero.badge-headline");
+    expect(badgeSection?.getAttribute("data-widget-editor-section-role")).toBe("content");
+    expect(ctaSection?.getAttribute("data-widget-editor-section-role")).toBe("content");
+    expect(richCopySection?.getAttribute("data-widget-editor-section-role")).toBe("content");
     const badgeToggle = badgeSection?.querySelector("input[type='checkbox']");
     clickElement(badgeToggle ?? undefined);
     await flush();

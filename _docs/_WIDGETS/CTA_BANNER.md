@@ -18,12 +18,8 @@ Compact conversion strip between sections with clear CTA actions.
 
 ### Wizard
 
-- Variant cards
-- Headline
-- Primary CTA label
-- Primary CTA destination via published-page picker
-- Secondary CTA enable toggle
-- Secondary CTA label and destination via published-page picker
+- Read-only current layout summary
+- Read-only headline summary
 
 ### Visual
 
@@ -163,7 +159,7 @@ Notes:
 ## TASK-336-18 Editor Contract
 
 - Exports `ctaBannerEditorContract` with `version: 2`.
-- Contract target: Wizard seeds conversion copy and primary action; Visual owns
+- Contract target: Wizard is a read-only starter summary; Visual owns
   badge/body/actions/background/motion/style; Advanced is read-only runtime
   diagnostics.
 - TASK-336-19 follow-up removed raw style-token Advanced controls. Advanced

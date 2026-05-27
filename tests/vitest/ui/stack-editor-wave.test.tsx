@@ -140,13 +140,6 @@ const clickByText = (container: ParentNode, text: string, index = 0) => {
   });
 };
 
-const findSelectsByOptions = (container: ParentNode, values: string[]) =>
-  Array.from(container.querySelectorAll("select")).filter((element) => {
-    if (!(element instanceof HTMLSelectElement)) return false;
-    const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
-  });
-
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -167,7 +160,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("StackWizardEditor keeps setup to the preset and slot guidance", async () => {
+test("StackWizardEditor keeps setup to guidance and slot framing only", async () => {
   const { StackWizardEditor } = await import("../../../core/admin/ui/widgets/editors/StackEditors");
 
   const onChangeSpy = vi.fn();
@@ -213,44 +206,31 @@ test("StackWizardEditor keeps setup to the preset and slot guidance", async () =
 
   try {
     expect(view.container.textContent).toContain(
-      "Visual owns breakpoint spacing, alignment, distribution, and wrapping after setup."
+      "Visual owns stack preset choice, breakpoint flow directions, spacing, alignment, distribution, and wrapping after setup."
     );
     expect(view.container.textContent).toContain("`content` slot");
     expect(view.container.textContent).not.toContain("Gap on all breakpoints");
     expect(view.container.textContent).not.toContain("Align on all breakpoints");
     expect(view.container.textContent).not.toContain("Justify on all breakpoints");
-    expect(view.container.querySelector('[data-widget-control-path="variant"]')).toBeTruthy();
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    expect(selects).toHaveLength(1);
-    expect((selects[0] as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-
-    setSelectValue(selects[0], "responsive");
-    expect(currentVariant).toBe("responsive");
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.direction).toMatchObject({
-      desktop: "row",
-      tablet: "row",
-      mobile: "column",
+    expect(view.container.querySelector('[data-widget-control-path="variant"]')).toBeNull();
+    expect(Array.from(view.container.querySelectorAll("select"))).toHaveLength(0);
+    expect(currentVariant).toBe("legacy");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue).toEqual({
+      direction: {
+        desktop: "bad",
+        tablet: "bad",
+        mobile: "bad",
+      },
+      gap: {
+        desktop: "99",
+        tablet: "99",
+        mobile: "99",
+      },
+      align: "bad",
+      justify: "bad",
+      wrap: false,
     });
-    expect(latestValue.gap).toMatchObject({
-      desktop: "6",
-      tablet: "6",
-      mobile: "4",
-    });
-    expect(latestValue.align).toEqual({
-      desktop: "stretch",
-      tablet: "stretch",
-      mobile: "stretch",
-    });
-    expect(latestValue.justify).toEqual({
-      desktop: "start",
-      tablet: "start",
-      mobile: "start",
-    });
-    expect(view.container.textContent).toContain(
-      "Picking a preset sets the starting desktop, tablet, and mobile flow directions."
-    );
   } finally {
     view.cleanup();
   }
@@ -440,17 +420,8 @@ test("Stack editors fall back to safe defaults when normalization is partial and
   );
 
   try {
-    const wizardPreset = findSelectsByOptions(view.container, [
-      "vertical",
-      "horizontal",
-      "responsive",
-    ])[0];
-    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-    expect(() => setSelectValue(wizardPreset, "responsive")).not.toThrow();
-    expect((wizardPreset as HTMLSelectElement | null | undefined)?.value).toBe("vertical");
-
     const wizardSection = findSectionByTitle(view.container, "Stack quick start");
-    expect(wizardSection?.querySelectorAll("select")).toHaveLength(1);
+    expect(wizardSection?.querySelectorAll("select")).toHaveLength(0);
 
     expect(findByDataAttr(view.container, "data-stack-variant-miniature", "vertical")).toBeTruthy();
     expect(

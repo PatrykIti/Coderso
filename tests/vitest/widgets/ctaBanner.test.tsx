@@ -349,9 +349,12 @@ test("cta banner wizard renders onboarding fields", () => {
 
   expect(html).toContain("Banner layout");
   expect(html).toContain("Headline");
-  expect(html).toContain("Primary CTA label");
-  expect(html).toContain("Primary CTA destination");
-  expect(html).toContain("Enable secondary CTA");
+  expect(html).toContain('data-widget-control-readonly="true"');
+  expect(html).toContain("Daily CTA editing happens in Visual");
+  expect(html).toContain("Centered");
+  expect(html).not.toContain("Primary CTA label");
+  expect(html).not.toContain("Primary CTA destination");
+  expect(html).not.toContain("Enable secondary CTA");
 });
 
 test("cta banner visual renders section-based IA", () => {

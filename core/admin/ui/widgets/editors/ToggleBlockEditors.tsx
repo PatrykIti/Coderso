@@ -319,7 +319,7 @@ function DefaultStateNotice({ value }: { value: ToggleBlockData }) {
 function LabelsSection({
   value,
   onChange,
-  sectionId = "toggle-block.labels",
+  sectionId = "toggle-block.visual.labels",
   title = "Labels",
   description = "Name both toggle states and helper copy.",
   mode = "visual",
@@ -395,54 +395,6 @@ function LabelsSection({
   );
 }
 
-function StartingPaneSection({
-  value,
-  onChange,
-  sectionId = "toggle-block.starting-pane",
-  title = "Starting pane",
-  description = "Choose which pane users see first.",
-  mode = "visual",
-  role = "visual",
-}: {
-  value: ToggleBlockData;
-  onChange: (next: ToggleBlockData) => void;
-  sectionId?: string;
-  title?: string;
-  description?: string;
-  mode?: EditorMode;
-  role?: WidgetEditorSectionRole;
-}) {
-  const normalized = normalizeValue(value);
-
-  return (
-    <EditorSection id={sectionId} title={title} mode={mode} role={role} description={description}>
-      <div
-        className="space-y-2"
-        {...controlAttributes(`${sectionId}.defaultState`, "options.defaultState")}
-      >
-        <p className="text-sm font-medium">Default state</p>
-        <Select
-          value={normalized.options.defaultState}
-          onValueChange={(next) =>
-            updateOptions(value, onChange, {
-              defaultState: next as ToggleBlockStateId,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select default state" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="primary">Primary pane</SelectItem>
-            <SelectItem value="secondary">Secondary pane</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <DefaultStateNotice value={value} />
-    </EditorSection>
-  );
-}
-
 function ExperienceSection({
   value,
   onChange,
@@ -454,7 +406,7 @@ function ExperienceSection({
 
   return (
     <EditorSection
-      id="toggle-block.experience"
+      id="toggle-block.visual.experience"
       title="Experience"
       mode="visual"
       role="visual"
@@ -532,7 +484,7 @@ function ThemeSection({
 
   return (
     <EditorSection
-      id="toggle-block.theme"
+      id="toggle-block.visual.theme"
       title="Theme"
       mode="visual"
       role="visual"
@@ -608,7 +560,7 @@ function AccessibilitySection({
 
   return (
     <EditorSection
-      id="toggle-block.accessibility"
+      id="toggle-block.visual.accessibility"
       title="Accessibility"
       mode="visual"
       role="content"
@@ -807,7 +759,7 @@ function PaneStyleSection({
 }) {
   return (
     <EditorSection
-      id="toggle-block.pane-style"
+      id="toggle-block.visual.pane-style"
       title="Pane cards"
       mode="visual"
       role="visual"
@@ -824,7 +776,7 @@ function AuthoringGuidanceSection({ value }: { value: ToggleBlockData }) {
 
   return (
     <EditorSection
-      id="toggle-block.authoring"
+      id="toggle-block.visual.authoring"
       title="Pane authoring"
       mode="visual"
       role="summary"
@@ -998,41 +950,31 @@ function ContractSummarySection() {
   );
 }
 
-export function ToggleBlockWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<ToggleBlockData>) {
+export function ToggleBlockWizardEditor({ variant }: WidgetEditorProps<ToggleBlockData>) {
+  const resolvedVariant = resolveVariant(variant);
+  const variantLabel =
+    variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Switch";
+
   return (
     <div className="space-y-4">
       <EditorSection
-        id="toggle-block.variant"
+        id="toggle-block.wizard.variant"
         title="Step 1: Variant"
         mode="wizard"
         role="setup"
-        description="Pick the toggle surface that matches the page rhythm."
+        description="Wizard now summarizes the saved toggle surface. Use Visual to change it and handle all daily pane authoring."
       >
-        <VariantCards value={resolveVariant(variant)} onChange={onVariantChange} />
+        <ReadonlyWidgetSummaryRow
+          id="toggle-block.wizard.variant-summary"
+          label="Toggle surface"
+          path="variant"
+          value={variantLabel}
+        />
       </EditorSection>
-      <LabelsSection
-        value={value}
-        onChange={onChange}
-        sectionId="toggle-block.labels.step"
-        title="Step 2: Labels"
-        mode="wizard"
-        role="setup"
-        description="Name both views and decide whether helper copy is visible."
-      />
-      <StartingPaneSection
-        value={value}
-        onChange={onChange}
-        sectionId="toggle-block.starting-pane.step"
-        title="Step 3: Starting pane"
-        mode="wizard"
-        role="setup"
-        description="Choose which pane opens first for visitors."
-      />
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+        Wizard is one-time starter setup. Use Visual to change the toggle surface, name both panes,
+        write helper copy, choose the starting pane, and tune motion or styling.
+      </div>
     </div>
   );
 }
@@ -1046,7 +988,7 @@ export function ToggleBlockVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
-        id="toggle-block.variant"
+        id="toggle-block.visual.variant"
         title="Variant"
         mode="visual"
         role="visual"

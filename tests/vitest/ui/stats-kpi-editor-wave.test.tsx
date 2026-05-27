@@ -4,7 +4,11 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { StatsKpiData, StatsKpiItem } from "../../../core/widgets/core/statsKpi";
+import {
+  statsKpiDefaults,
+  type StatsKpiData,
+  type StatsKpiItem,
+} from "../../../core/widgets/core/statsKpi";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -196,16 +200,6 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
   });
 };
 
-const setTextareaValue = (element: Element | null | undefined, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  React.act(() => {
-    descriptor?.set?.call(element, value);
-    element.dispatchEvent(new Event("input", { bubbles: true }));
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
 const setSelectValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLSelectElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
@@ -234,15 +228,7 @@ const clickButton = (element: Element | null | undefined) => {
   });
 };
 
-const toggleCheckbox = (element: Element | null | undefined) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  React.act(() => {
-    element.checked = !element.checked;
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-};
-
-const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
+const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
     (element) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
@@ -443,29 +429,41 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Layout seed");
+    expect(view.container.textContent).toContain("Layout overview");
     expect(view.container.textContent).toContain("Metrics content and links");
     expect(view.container.textContent).toContain("Runtime summary");
     expect(
       view.container.querySelector('[data-widget-editor-section="stats-kpi.wizard.layout-seed"]')
     ).not.toBeNull();
+    expect(view.container.textContent).toContain(
+      "Use Visual to change the KPI layout, visible count, section title, and supporting header copy"
+    );
+    expect(view.container.textContent).toContain(
+      "Visual owns metric values, labels, descriptions, icons, trends, and links after the starter layout is chosen."
+    );
 
     clickByText(view.container, "Split Highlight");
 
     React.act(() => {
+      const wizardRoot = view.container.querySelector(
+        '[data-widget-editor-mode="wizard"]'
+      ) as ParentNode | null;
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6"])[0], "3");
-      setInputValue(findInputByPlaceholder(view.container, "Proof in numbers"), "Numbers");
-      setTextareaValue(
-        getTextareaByPlaceholder(view.container, "Show key performance metrics and outcomes."),
-        "Metrics description"
-      );
-      setInputValue(findInputByPlaceholder(view.container, "Metric 1 value"), "120+");
-      setInputValue(findInputByPlaceholder(view.container, "Metric 1 label"), "Clients won");
-      setTextareaValue(
-        getTextareaByPlaceholder(view.container, "Optional supporting context."),
-        "Updated description"
-      );
-      setInputValue(findInputByPlaceholder(view.container, "🚀"), "⭐");
+      expect((wizardRoot ?? view.container).querySelectorAll("select")).toHaveLength(0);
+      expect(
+        findInputByPlaceholder(wizardRoot ?? view.container, "Proof in numbers")
+      ).toBeUndefined();
+      expect(
+        (wizardRoot ?? view.container).querySelector(
+          'textarea[placeholder="Show key performance metrics and outcomes."]'
+        )
+      ).toBeNull();
+      expect(
+        findInputByPlaceholder(wizardRoot ?? view.container, "Metric 1 value")
+      ).toBeUndefined();
+      expect(
+        findInputByPlaceholder(wizardRoot ?? view.container, "Metric 1 label")
+      ).toBeUndefined();
     });
 
     clickByText(view.container, "Add metric");
@@ -515,8 +513,8 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     expect(latest).toEqual(
       expect.objectContaining({
         header: expect.objectContaining({
-          title: "Numbers",
-          description: "Metrics description",
+          title: statsKpiDefaults.header?.title,
+          description: statsKpiDefaults.header?.description,
         }),
         style: expect.objectContaining({
           alignment: "end",
@@ -534,8 +532,6 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
         label: "Launches",
         prefix: "$",
         suffix: "+",
-        description: "Updated description",
-        icon: "⭐",
         accentColor: "#aa5500",
         trend: expect.objectContaining({
           label: "+30% QoQ",
@@ -742,24 +738,12 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
   );
 
   try {
-    expect(
-      getSelectByOptions(wizardView.container, [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-        "11",
-        "12",
-      ]).value
-    ).toBe("2");
-    expect(getInputByPlaceholder(wizardView.container, "Metric 1 value").value).toBe("");
-    expect(getInputByPlaceholder(wizardView.container, "Metric 2 value").value).toBe("");
+    expect(wizardView.container.textContent).toContain("Layout overview");
+    expect(wizardView.container.textContent).toContain("Inline");
+    expect(wizardView.container.textContent).toContain("2 metrics");
+    expect(wizardView.container.querySelector("select")).toBeNull();
+    expect(findInputByPlaceholder(wizardView.container, "Metric 1 value")).toBeUndefined();
+    expect(findInputByPlaceholder(wizardView.container, "Metric 2 value")).toBeUndefined();
   } finally {
     wizardView.cleanup();
   }
@@ -817,44 +801,9 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
   }
 });
 
-test("StatsKpi wizard value inputs and visual divider toggle update isolated stateful paths", async () => {
-  const { StatsKpiVisualEditor, StatsKpiWizardEditor } =
+test("StatsKpi visual count and divider controls update isolated stateful paths", async () => {
+  const { StatsKpiVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/StatsKpiEditors");
-
-  let latestWizardValue: StatsKpiData = {
-    items: [
-      { id: "metric-1", value: "10", label: "One" },
-      { id: "metric-2", value: "20", label: "Two" },
-      { id: "metric-3", value: "30", label: "Three" },
-    ],
-  };
-
-  const WizardHarness = () => {
-    const [value, setValue] = useState<StatsKpiData>(latestWizardValue);
-
-    return (
-      <StatsKpiWizardEditor
-        value={value}
-        onChange={(next) => {
-          latestWizardValue = next;
-          setValue(next);
-        }}
-        variant="cards"
-      />
-    );
-  };
-
-  const wizardView = mount(<WizardHarness />);
-
-  try {
-    setInputValue(getInputByPlaceholder(wizardView.container, "Metric 2 value"), "240");
-    expect(latestWizardValue.items?.[1]).toMatchObject({
-      value: "240",
-      label: "Two",
-    });
-  } finally {
-    wizardView.cleanup();
-  }
 
   let latestVisualValue: StatsKpiData = {
     items: [
@@ -884,6 +833,29 @@ test("StatsKpi wizard value inputs and visual divider toggle update isolated sta
   const visualView = mount(<VisualHarness />);
 
   try {
+    setSelectValue(
+      getSelectByOptions(visualView.container, [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+      ]),
+      "3"
+    );
+    expect(latestVisualValue.items).toHaveLength(3);
+    expect(latestVisualValue.items?.[1]).toMatchObject({
+      value: "12m",
+      label: "Runtime",
+    });
+
     const checkboxes = Array.from(
       visualView.container.querySelectorAll("input[type='checkbox']")
     ).filter((element): element is HTMLInputElement => element instanceof HTMLInputElement);

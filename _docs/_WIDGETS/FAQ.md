@@ -18,13 +18,8 @@ FAQ structured data.
 ## Editor Modes
 
 ### Wizard (minimal onboarding)
-- FAQ layout (`single-column` / `two-column` / `compact`)
-- Section title
-- Section description
-- Questions count
-- Per-item icon
-- Per-item answer mode (`plain` / `markdown`)
-- Question and answer fields for the current wizard scope
+- read-only FAQ layout summary
+- read-only questions count summary
 
 ### Visual (primary editing mode)
 Sections:
@@ -153,7 +148,7 @@ normalization/repair actions.
 ## TASK-336-18 Editor Contract
 
 - Exports `faqAccordionEditorContract` with `version: 2`.
-- Contract target: Wizard seeds starter questions; Visual owns FAQ item
+- Contract target: Wizard is a read-only starter summary; Visual owns FAQ item
   content, behavior, SEO toggle, and presentation; Advanced is read-only
   runtime diagnostics.
 - Advanced exposes read-only runtime, style, and saved-data summaries; raw

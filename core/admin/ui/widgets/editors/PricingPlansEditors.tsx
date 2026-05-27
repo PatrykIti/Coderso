@@ -41,7 +41,7 @@ import {
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { WidgetEditorSection } from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: PricingPlansVariantId;
@@ -703,13 +703,7 @@ function moveFeature(
   });
 }
 
-export function PricingPlansWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<PricingPlansData>) {
-  const pendingFeatureFocusRef = useRef<string | null>(null);
+export function PricingPlansWizardEditor({ value, variant }: WidgetEditorProps<PricingPlansData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
   const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
@@ -719,51 +713,23 @@ export function PricingPlansWizardEditor({
   );
   const hiddenCount = Math.max(0, plans.length - visibleCount);
 
-  const bindFeatureInputRef = (key: string) => (node: HTMLInputElement | null) => {
-    if (!node || pendingFeatureFocusRef.current !== key) return;
-    pendingFeatureFocusRef.current = null;
-    queueMicrotask(() => {
-      node.focus();
-      node.select();
-    });
-  };
-
   return (
     <WidgetEditorSection
       id="pricing-plans.wizard.starter-offer"
       mode="wizard"
       role="setup"
       title="Starter offer"
-      description="Set the first pricing layout, section title, and visible plan basics."
+      description="Review the current pricing layout. Edit plan copy, pricing, and CTAs in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Pricing layout</p>
-          <Select
-            value={resolvePricingPlansVariant(variant)}
-            onValueChange={(next) => onVariantChange?.(next)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Section title</p>
-          <Input
-            value={normalized.header?.title ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Choose the plan that fits your workflow"
-          />
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="pricing-plans.wizard.variant"
+          label="Pricing layout"
+          path="variant"
+          value={
+            variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Three plans"
+          }
+        />
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Layout plan count</p>
@@ -774,128 +740,23 @@ export function PricingPlansWizardEditor({
           />
         </div>
 
-        <div className="space-y-3">
-          <p className="text-sm font-medium">Basic plan setup</p>
-          {plans.map((plan, index) => (
-            <div
-              key={plan.id ?? `wizard-plan-${index + 1}`}
-              className="space-y-3 rounded-lg border p-3"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Plan {index + 1}
-              </p>
-              {index >= visibleCount ? (
-                <p className="text-xs text-muted-foreground">
-                  Hidden in {getVariantLabel(resolvedVariant)} until the layout shows more plans.
-                </p>
-              ) : null}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Input
-                  value={plan.name ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { name: event.target.value })
-                  }
-                  placeholder={`Plan ${index + 1}`}
-                />
-                <Input
-                  value={plan.badge ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { badge: event.target.value })
-                  }
-                  placeholder="Most popular"
-                />
-                <Input
-                  value={plan.price ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { price: event.target.value })
-                  }
-                  placeholder="$49"
-                />
-                <Input
-                  value={plan.period ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { period: event.target.value })
-                  }
-                  placeholder="/month"
-                />
-                <Input
-                  value={plan.ctaLabel ?? ""}
-                  onChange={(event) =>
-                    updatePlan(value, onChange, index, { ctaLabel: event.target.value })
-                  }
-                  placeholder="Choose plan"
-                />
-                <LinkDestinationField
-                  fieldId={`pricing-plans-wizard-plan-${plan.id ?? index}-cta`}
-                  label="CTA destination"
-                  controlPath="plans.ctaHref"
-                  value={plan.ctaHref}
-                  onChange={(next) => updatePlan(value, onChange, index, { ctaHref: next })}
-                  emptyLabel="No destination"
-                  helpText="Pick a site page for this plan. Hand-typed links from older edits stay until you replace or clear them."
-                />
+        <div className="rounded-lg border bg-muted/20 p-4">
+          <p className="text-sm font-medium">Daily editing happens in Visual</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Use Visual to edit the section headline, plan names, descriptions, prices, feature
+            lists, badges, CTA labels, and CTA destinations.
+          </p>
+          <div className="mt-3 space-y-2">
+            {plans.slice(0, visibleCount).map((plan, index) => (
+              <div
+                key={plan.id ?? `wizard-plan-preview-${index + 1}`}
+                className="flex items-center justify-between gap-3 rounded-md border bg-background/70 px-3 py-2 text-sm"
+              >
+                <span className="font-medium">{plan.name?.trim() || `Plan ${index + 1}`}</span>
+                <span className="text-xs text-muted-foreground">Visual owns details</span>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">Key features</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      pendingFeatureFocusRef.current = `${plan.id ?? index}-feature-${
-                        plan.features?.length ?? 0
-                      }`;
-                      addFeature(value, onChange, index);
-                    }}
-                  >
-                    Add feature
-                  </Button>
-                </div>
-                {(plan.features ?? []).length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Add at least one visible benefit.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {(plan.features ?? []).map((feature, featureIndex) => {
-                      const featureText =
-                        typeof feature === "string" ? feature : (feature.text ?? "");
-                      return (
-                        <div
-                          key={`${plan.id ?? index}-wizard-feature-${featureIndex}`}
-                          className="flex gap-2"
-                        >
-                          <Input
-                            ref={bindFeatureInputRef(`${plan.id ?? index}-feature-${featureIndex}`)}
-                            value={featureText}
-                            onChange={(event) =>
-                              updateFeature(
-                                value,
-                                onChange,
-                                index,
-                                featureIndex,
-                                event.target.value
-                              )
-                            }
-                            placeholder={`Feature ${featureIndex + 1}`}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeFeature(value, onChange, index, featureIndex)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </WidgetEditorSection>

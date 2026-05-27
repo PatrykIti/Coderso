@@ -271,35 +271,6 @@ export const featureGridDefaults: FeatureGridData = {
   },
 };
 
-const featureGridWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason:
-      "Wizard seeds a starter card arrangement only during first setup or explicit Run setup again.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds the section heading; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "header.description",
-    reason: "Wizard seeds the section description; Visual remains the daily content owner.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "items.count",
-    reason: "Wizard chooses the starter card count; Visual remains the daily structure owner.",
-    expiresWithTask: "TASK-336-19",
-  },
-  {
-    path: "items.title",
-    reason: "Wizard seeds card titles; Visual remains the daily card content owner.",
-    expiresWithTask: "TASK-336-19",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const featureGridEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -308,14 +279,8 @@ export const featureGridEditorContract: WidgetEditorContract = {
       id: "feature-grid.wizard.starter-setup",
       title: "Starter setup",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.title",
-        "header.description",
-        "items.count",
-        "items.title",
-      ],
-      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["items.count"],
     },
     {
       mode: "visual",
@@ -323,9 +288,6 @@ export const featureGridEditorContract: WidgetEditorContract = {
       title: "Variant and layout structure",
       role: "layout",
       writablePaths: ["variant", "items.count", "style.columns", "style.gap"],
-      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
-        (allowance) => allowance.path === "variant" || allowance.path === "items.count"
-      ),
     },
     {
       mode: "visual",
@@ -333,9 +295,6 @@ export const featureGridEditorContract: WidgetEditorContract = {
       title: "Header copy",
       role: "content",
       writablePaths: ["header.eyebrow", "header.title", "header.description"],
-      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
-        (allowance) => allowance.path === "header.title" || allowance.path === "header.description"
-      ),
     },
     {
       mode: "visual",
@@ -354,9 +313,6 @@ export const featureGridEditorContract: WidgetEditorContract = {
         "items.ctaHref",
         "items.ctaTarget",
       ],
-      allowedDuplicateWritablePaths: featureGridWizardVisualDuplicateAllowances.filter(
-        (allowance) => allowance.path === "items.title"
-      ),
     },
     {
       mode: "visual",

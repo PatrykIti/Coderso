@@ -241,29 +241,6 @@ export const teamDefaults: TeamData = {
   },
 };
 
-const teamWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the starter presentation; Visual remains the daily presentation owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "members.count",
-    reason: "Wizard seeds starter member count; Visual remains the daily member-list owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "members.*.name",
-    reason: "Wizard seeds primary member names; Visual remains the daily member content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "members.*.role",
-    reason: "Wizard seeds primary member roles; Visual remains the daily member content owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const teamEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -272,8 +249,8 @@ export const teamEditorContract: WidgetEditorContract = {
       id: "team.wizard.starter-team",
       title: "Starter team",
       role: "setup",
-      writablePaths: ["variant", "members.count", "members.*.name", "members.*.role"],
-      allowedDuplicateWritablePaths: teamWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["members.count"],
     },
     {
       mode: "visual",
@@ -292,7 +269,6 @@ export const teamEditorContract: WidgetEditorContract = {
         "spotlightLeadId",
         "cta",
       ],
-      allowedDuplicateWritablePaths: teamWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

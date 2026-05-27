@@ -905,6 +905,7 @@ function LogoImageControl({
         <LinkDestinationField
           fieldId={`logo-cloud-logo-${index + 1}-destination`}
           label="Logo destination"
+          controlPath="logos.href"
           value={logo.href ?? ""}
           onChange={(next) => mediaSelection.commitLogoPatch(index, { href: next })}
           feedback={linkFeedback}
@@ -947,133 +948,38 @@ function LogoRemovalUndoNotice({
   );
 }
 
-export function LogoCloudWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-}: WidgetEditorProps<LogoCloudData>) {
+export function LogoCloudWizardEditor({ value, variant }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
-  const header = normalized.header ?? logoCloudDefaults.header!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
-  const { commitLogoMutation } = useLogoCloudEditCoordinator({
-    value,
-    onChange,
-  });
+  const resolvedVariant = resolveLogoCloudVariant(variant);
 
   return (
     <WidgetEditorSection
       id="logo-cloud.wizard.starter-setup"
       mode="wizard"
-      role="setup"
-      title="Starter setup"
-      description="Pick a starting layout, title, count, and simple logo names. Use Visual for images, links, CTA, and style."
+      role="summary"
+      title="Starter overview"
+      description="Review the current logo cloud structure before daily editing in Visual."
     >
-      <div
-        data-widget-control="logo-cloud.wizard.variant"
-        data-widget-control-path="variant"
-        data-widget-control-ownership="writable"
-        className="space-y-2"
-      >
-        <p className="text-sm font-medium">Logo cloud layout</p>
-        <Select
-          value={resolveLogoCloudVariant(variant)}
-          onValueChange={(next) => onVariantChange?.(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select variant" />
-          </SelectTrigger>
-          <SelectContent>
-            {variantOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ReadonlyWidgetSummaryRow
+        id="logo-cloud.wizard.variant"
+        label="Current layout"
+        path="variant"
+        value={
+          variantOptions.find((option) => option.id === resolvedVariant)?.label ?? resolvedVariant
+        }
+      />
 
-      <div
-        data-widget-control="logo-cloud.wizard.header.title"
-        data-widget-control-path="header.title"
-        data-widget-control-ownership="writable"
-        className="space-y-2"
-      >
-        <p className="text-sm font-medium">Section title</p>
-        <Input
-          value={header.title}
-          onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-          placeholder="Trusted by teams worldwide"
-        />
-      </div>
+      <ReadonlyWidgetSummaryRow
+        id="logo-cloud.wizard.logos.count"
+        label="Logo count"
+        path="logos.count"
+        value={`${logos.length} logo${logos.length === 1 ? "" : "s"}`}
+      />
 
-      <div
-        data-widget-control="logo-cloud.wizard.logos.count"
-        data-widget-control-path="logos.count"
-        data-widget-control-ownership="writable"
-        className="space-y-2"
-      >
-        <p className="text-sm font-medium">Logo count</p>
-        <Select
-          value={String(logos.length)}
-          onValueChange={(next) =>
-            commitLogoMutation((current) => setLogoCountInData(current, Number(next)), {
-              structural: true,
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select count" />
-          </SelectTrigger>
-          <SelectContent>
-            {logoCountOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-3">
-        <div>
-          <p className="text-sm font-medium">Starter logo names</p>
-          <p className="text-xs text-muted-foreground">
-            Add recognizable labels now. Images, accessible descriptions, and links are edited in
-            Visual after setup.
-          </p>
-        </div>
-        {logos.map((logo, index) => (
-          <div
-            key={logo.id ?? `wizard-logo-${index + 1}`}
-            data-widget-control={`logo-cloud.wizard.logos.${index}.name`}
-            data-widget-control-path="logos.name"
-            data-widget-control-ownership="writable"
-            className="space-y-3 rounded-lg border p-3"
-          >
-            <p className="text-sm font-semibold">Logo {index + 1}</p>
-            <Input
-              value={logo.name ?? ""}
-              onChange={(event) =>
-                commitLogoMutation((current) =>
-                  patchLogoCloudLogo(current, index, { name: event.target.value })
-                )
-              }
-              placeholder={`Logo ${index + 1}`}
-            />
-          </div>
-        ))}
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            commitLogoMutation((current) => addLogoToData(current), { structural: true })
-          }
-          disabled={logos.length >= logoCloudLogoMax}
-        >
-          Add logo
-        </Button>
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+        Use Visual to change layout, adjust logo count, write the section headline, add logo names,
+        upload images, and connect destinations.
       </div>
     </WidgetEditorSection>
   );
@@ -1354,6 +1260,7 @@ export function LogoCloudVisualEditor({
           <LinkDestinationField
             fieldId="logo-cloud-cta-destination"
             label="CTA destination"
+            controlPath="cta.href"
             value={cta.href ?? ""}
             disabled={!cta.enabled}
             onChange={(next) => updateCta(value, onChange, { href: next })}

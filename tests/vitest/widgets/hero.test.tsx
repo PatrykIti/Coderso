@@ -132,6 +132,12 @@ test("hero exposes a strict v2 editor ownership contract", () => {
     "hero.advanced.runtime-summary",
     "hero.advanced.contract-summary",
   ]);
+  expect(widget.editorContract?.sections[0]?.writablePaths).toEqual([]);
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "hero.advanced.runtime-summary"
+    )?.readOnlyPaths
+  ).toEqual(["variant", "primaryCta.href", "media.src", "richBody"]);
   expect(
     widget.editorContract?.sections
       .filter((section) => section.mode === "advanced")

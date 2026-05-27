@@ -8,8 +8,8 @@ Tasks: TASK-336-19
 
 ### Widgets
 
-- Narrowed `divider` Wizard to one-time separator style and optional label
-  setup while Visual owns daily line, width, color, visibility, and spacing
+- Narrowed `divider` Wizard to a read-only separator-style summary while Visual
+  owns daily label, line, width, color, visibility, and spacing
   controls.
 - Converted Divider Advanced from hidden writable editor groups and raw JSON
   payload diagnostics to read-only runtime divider and support summaries.

@@ -399,49 +399,6 @@ export const pricingPlansDefaults: PricingPlansData = {
   },
 };
 
-const pricingPlansWizardVisualDuplicateAllowances = [
-  {
-    path: "variant",
-    reason: "Wizard seeds the starter pricing layout until one-time setup hides replayed fields.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "header.title",
-    reason: "Wizard seeds section copy; Visual remains the daily pricing owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.count",
-    reason: "Wizard chooses the starter plan count; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.name",
-    reason: "Wizard seeds plan names; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.price",
-    reason: "Wizard seeds starter prices; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.period",
-    reason: "Wizard seeds starter prices; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.ctaLabel",
-    reason: "Wizard seeds primary action copy; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-  {
-    path: "plans.ctaHref",
-    reason: "Wizard seeds primary action destinations; Visual remains the daily plan owner.",
-    expiresWithTask: "TASK-336-16",
-  },
-] satisfies NonNullable<WidgetEditorContract["sections"][number]["allowedDuplicateWritablePaths"]>;
-
 export const pricingPlansEditorContract: WidgetEditorContract = {
   version: 2,
   sections: [
@@ -450,17 +407,8 @@ export const pricingPlansEditorContract: WidgetEditorContract = {
       id: "pricing-plans.wizard.starter-offer",
       title: "Starter offer",
       role: "setup",
-      writablePaths: [
-        "variant",
-        "header.title",
-        "plans.count",
-        "plans.name",
-        "plans.price",
-        "plans.period",
-        "plans.ctaLabel",
-        "plans.ctaHref",
-      ],
-      allowedDuplicateWritablePaths: pricingPlansWizardVisualDuplicateAllowances,
+      writablePaths: [],
+      readOnlyPaths: ["variant"],
     },
     {
       mode: "visual",
@@ -488,7 +436,6 @@ export const pricingPlansEditorContract: WidgetEditorContract = {
         "plans.ctaHref",
         "plans.highlighted",
       ],
-      allowedDuplicateWritablePaths: pricingPlansWizardVisualDuplicateAllowances,
     },
     {
       mode: "visual",

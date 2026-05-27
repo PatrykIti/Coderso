@@ -770,7 +770,7 @@ test("renderer renders footer column and bottom slot content", () => {
   expect(html).toContain("Bottom slot item");
   expect(html).toContain('aria-label="Site footer"');
   expect(html).toContain("<h3");
-  expect(html).toContain('aria-label="Twitter (opens in new tab)"');
+  expect(html).toContain('aria-label="X (opens in new tab)"');
   expect(html).toContain('target="_blank"');
   expect(html).not.toContain(">twitter<");
 });
