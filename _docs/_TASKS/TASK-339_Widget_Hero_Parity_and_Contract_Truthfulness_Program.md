@@ -97,7 +97,7 @@ frontend via Playwright.
 
 ## Sub-Tasks
 
-- [ ] TASK-339-01: Shared Block Settings Daily Live Preview Surface
+- [x] TASK-339-01: Shared Block Settings Daily Live Preview Surface
 - [ ] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
 - [ ] TASK-339-03: Contact Hero Color Parity
 - [ ] TASK-339-04: CTA Banner Hero Section Parity
@@ -254,3 +254,11 @@ User-requested validation boundary:
   rendered UI ids, titles, and roles.
 - Each executed widget leaf is backed by targeted tests, `bun --cwd core lint`,
   `bun --cwd core lint:types`, and a Claude Playwright-only UX review.
+
+## Status Notes
+
+- Done (2026-05-27): `TASK-339-01` removed the shared live preview row from
+  daily `Visual` / `Advanced` tabs while keeping unfinished Wizard preview
+  support. Focused validation passed `bun --cwd core lint`,
+  `bun --cwd core lint:types`, and
+  `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`.

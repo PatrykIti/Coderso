@@ -966,7 +966,7 @@ test("BlockSettings shows nested-children guidance for child-capable widgets", (
   }
 });
 
-test("BlockSettings renders shared live preview through WidgetRenderer with previewState dataPatch", () => {
+test("BlockSettings does not render the shared live preview after setup completion", () => {
   const block: Block = {
     ...createBlock("navigation"),
     id: "navigation-1",
@@ -999,33 +999,23 @@ test("BlockSettings renders shared live preview through WidgetRenderer with prev
   );
 
   try {
-    expect(view.container.textContent).toContain("Preview ready");
-    expect(view.container.textContent).toContain(
+    expect(view.container.textContent).toContain("visual:navigation-1");
+    expect(view.container.textContent).not.toContain("Preview ready");
+    expect(view.container.textContent).not.toContain(
       "Reflects the current Visual state through the shared widget renderer."
     );
-    expect(view.container.textContent).toContain(
+    expect(view.container.textContent).not.toContain(
       "preview:navigation-1:editor-preview:Preview headline"
     );
-    expect(previewRendererState.calls.at(-1)?.renderContext).toEqual({
-      mode: "editor-preview",
-      previewState: {
-        status: "ready",
-        dataPatch: {
-          headline: "Preview headline",
-        },
-      },
-    });
-    expect(
-      ((previewRendererState.calls.at(-1)?.block.data as Record<string, unknown> | undefined)
-        ?.headline as string) ?? ""
-    ).toBe("Preview headline");
+    expect(view.container.querySelector("[data-widget-editor-live-preview]")).toBeNull();
+    expect(previewRendererState.calls).toHaveLength(0);
     expect((block.data as Record<string, unknown>).headline).toBe("Saved headline");
   } finally {
     view.cleanup();
   }
 });
 
-test("BlockSettings keeps the panel usable when the shared live preview render throws", () => {
+test("BlockSettings keeps the wizard panel usable when the shared live preview render throws", () => {
   const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   const block: Block = {
     ...createBlock("navigation"),
@@ -1034,7 +1024,7 @@ test("BlockSettings keeps the panel usable when the shared live preview render t
     data: {
       throwPreview: true,
     },
-    editor: { mode: "visual", wizardCompleted: true },
+    editor: { mode: "wizard", wizardCompleted: false },
   };
   const widget = createWidget({
     type: "navigation",
@@ -1056,7 +1046,7 @@ test("BlockSettings keeps the panel usable when the shared live preview render t
   );
 
   try {
-    expect(view.container.textContent).toContain("visual:navigation-error");
+    expect(view.container.textContent).toContain("wizard:navigation-error");
     expect(view.container.textContent).toContain("Preview unavailable");
     expect(view.container.textContent).toContain(
       "The shared widget preview hit a render error. Keep editing and update the widget state to retry."

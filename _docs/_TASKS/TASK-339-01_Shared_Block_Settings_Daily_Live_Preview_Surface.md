@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-317, TASK-336-16
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude not required for this shared shell leaf
 
 ---
@@ -100,3 +100,14 @@ No API routes are added.
 - Completed widgets on daily `Visual` / `Advanced` tabs no longer show the
   shared live preview row.
 - Shared preview-state plumbing and renderer coverage remain intact.
+
+## Completion Notes (2026-05-27)
+
+- `BlockSettings` now renders `WidgetEditorLivePreview` only while
+  `wizardCompleted === false` on the page-builder surface.
+- Daily `Visual` / `Advanced` tabs no longer show the shared preview row, but
+  the unfinished Wizard preview path and error boundary remain intact.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`

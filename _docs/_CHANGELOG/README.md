@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 973 | 2026-05-27 | Widget daily live preview surface | CMS Widgets/Admin UI/Builder/Preview/QA/Docs |
 | 972 | 2026-05-27 | Widget contract Vitest expectation drift repair | QA/Widgets/Admin UI/Tooling |
 | 971 | 2026-05-27 | Spacer and Stats KPI lint typecheck repair | QA/Widgets/Admin UI/Tooling |
 | 970 | 2026-05-26 | Widget UI mode drift cleanup closure | CMS Widgets/Admin UI/Contracts/Playwright/QA/Docs |

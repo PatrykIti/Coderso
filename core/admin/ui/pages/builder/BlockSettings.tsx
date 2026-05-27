@@ -218,7 +218,7 @@ export function BlockSettings({
         slotTargets,
       }
     : undefined;
-  const showLivePreview = resolvedEditorContext?.surface === "page-builder";
+  const showLivePreviewInWizard = resolvedEditorContext?.surface === "page-builder";
   const syncSectionRegionBlock = (nextBlock: Block) =>
     nextBlock.type === "section"
       ? {
@@ -405,7 +405,7 @@ export function BlockSettings({
           onComplete={() => onChange(applyWizardSelection(block))}
           editorContext={resolvedEditorContext}
         />
-        {showLivePreview ? (
+        {showLivePreviewInWizard ? (
           <WidgetEditorLivePreview
             block={block}
             mode={editorState.mode}
@@ -500,13 +500,6 @@ export function BlockSettings({
           />
         </TabsContent>
       </Tabs>
-      {showLivePreview ? (
-        <WidgetEditorLivePreview
-          block={block}
-          mode={editorState.mode}
-          previewState={resolvedEditorContext?.previewState}
-        />
-      ) : null}
     </>
   );
 }

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 26 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1940 tasks
+- **Done:** 1941 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
-| TASK-339-01 | Shared Block Settings Daily Live Preview Surface | High | Medium | Remove the shared live preview row from daily `Visual` / `Advanced` tabs while keeping unfinished Wizard preview support |
 | TASK-339-02 | Navigation Hero Parity and Contract Truthfulness | High | Large | Expand coarse Navigation daily IA and remove raw daily color value inputs |
 | TASK-339-03 | Contact Hero Color Parity | High | Medium | Keep Contact IA, but remove the remaining raw daily color value inputs |
 | TASK-339-04 | CTA Banner Hero Section Parity | High | Large | Replace coarse `Visual=2` / `Advanced=1` CTA Banner daily IA with a hero-like section split |
@@ -82,6 +81,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-338 | Widget Contract Vitest Expectation Drift Repair | High | Medium | Done (2026-05-27): full `bun run test:vitest` is green again after aligning stale widget expectations with the current editor-ownership and runtime contract. |
+| TASK-339-01 | Shared Block Settings Daily Live Preview Surface | High | Medium | Done (2026-05-27): daily `Visual` / `Advanced` tabs no longer render the shared live preview row, while unfinished Wizard preview support remains intact. |
 | TASK-337 | Spacer and Stats KPI Lint Typecheck Drift Repair | High | Medium | Done (2026-05-27): root `bun run lint` is green again after aligning Spacer tests with the current normalization owner and widening the Stats KPI helper to the correct DOM base type. |
 | TASK-336-19 | Remaining Widget UI Mode Drift Cleanup | High | Very Large | Done (2026-05-26): all remaining widget editor ownership drift is closed, source-of-truth docs are synchronized, and the final strict 38-widget contract smoke is green with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. |
 | TASK-336-16 | Existing One-Time Wizard Lifecycle and Daily Work Tabs | High | Very Large | Done (2026-05-24): completed widgets now show `Setup complete`, daily `Visual`/`Advanced` tabs only, and explicit `Run setup again` one-time setup reentry backed by Vitest and Playwright lifecycle smoke. |
