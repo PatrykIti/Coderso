@@ -42,7 +42,7 @@ import {
   type TimelineTitleWeight,
   type TimelineVariantId,
 } from "../../../../widgets/core/timeline";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import {
   ColorContrastNotice,
   type ColorContrastAdvisory,
@@ -50,11 +50,7 @@ import {
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import {
-  ReadonlyWidgetSummaryRow,
-  WidgetControlRow,
-  WidgetEditorSection,
-} from "./WidgetEditorControls";
+import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 
 const variantOptions: Array<{ id: TimelineVariantId; label: string; description: string }> = [
   {
@@ -268,17 +264,21 @@ function pickContrastAdvisory(advisories: ColorContrastAdvisory[]) {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <WidgetEditorSection id={id} title={title} description={description}>
+    <WidgetEditorSection id={id} mode={mode} role={role} title={title} description={description}>
       {children}
     </WidgetEditorSection>
   );
@@ -293,6 +293,7 @@ function ColorField({
   placeholder,
   pickerFallback = "#0f172a",
   helperText,
+  allowTransparent = false,
 }: {
   label: string;
   path?: string;
@@ -302,6 +303,7 @@ function ColorField({
   placeholder: string;
   pickerFallback?: string;
   helperText?: string;
+  allowTransparent?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -314,6 +316,7 @@ function ColorField({
         placeholder={placeholder}
         pickerFallback={pickerFallback}
         showValueInput={false}
+        allowTransparent={allowTransparent}
       />
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
     </div>
@@ -680,6 +683,49 @@ function formatTimelineBackgroundSummary(background: TimelineData["background"])
   return color;
 }
 
+function describeTimelineColorValue(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) return "Theme default";
+  if (normalized === "transparent") return "Transparent";
+  if (/^#[0-9a-f]{6}$/i.test(normalized)) return "Selected swatch";
+  return "Saved custom color";
+}
+
+function countConfiguredStepOverrides(
+  steps: TimelineStep[],
+  selector: (step: TimelineStep) => string | undefined
+) {
+  return steps.filter((step) => {
+    const value = selector(step)?.trim();
+    return Boolean(value);
+  }).length;
+}
+
+function describeTimelineStepLinkCoverage(
+  rawSteps: TimelineStep[],
+  normalizedSteps: TimelineStep[],
+  kind: "cta" | "link"
+) {
+  const rawCount = rawSteps.filter((step) => {
+    const source = kind === "cta" ? step.cta : step.link;
+    const href = source?.href?.trim();
+    return Boolean(href);
+  }).length;
+  const safeCount = normalizedSteps.filter((step) => {
+    const source = kind === "cta" ? step.cta : step.link;
+    return Boolean(source?.href?.trim());
+  }).length;
+  if (rawCount === 0) return "Not configured";
+  if (rawCount === safeCount) {
+    return `${safeCount} safe ${kind === "cta" ? "CTA" : "whole-step"} destination${
+      safeCount === 1 ? "" : "s"
+    }`;
+  }
+  return `${safeCount} safe ${kind === "cta" ? "CTA" : "whole-step"} destination${
+    safeCount === 1 ? "" : "s"
+  }; ${rawCount - safeCount} invalid ${rawCount - safeCount === 1 ? "value was" : "values were"} dropped`;
+}
+
 function TimelineStructureFields({
   value,
   onChange,
@@ -995,6 +1041,7 @@ function TimelineMarkerFields({
                 path="steps.accent"
                 value={step.accent}
                 onChange={(next) => updateStep(value, onChange, index, { accent: next })}
+                onClear={() => updateStep(value, onChange, index, { accent: undefined })}
                 placeholder="#1d4ed8"
                 pickerFallback="#1d4ed8"
                 helperText="Optional per-step accent. Leave empty to inherit the global marker color."
@@ -1013,6 +1060,9 @@ function TimelineMarkerFields({
                 onChange={(next) =>
                   updateStep(value, onChange, index, { markerBackgroundColor: next })
                 }
+                onClear={() =>
+                  updateStep(value, onChange, index, { markerBackgroundColor: undefined })
+                }
                 placeholder="#1d4ed8"
                 pickerFallback="#1d4ed8"
                 helperText="Used when the marker display is dot, number, or icon."
@@ -1022,6 +1072,7 @@ function TimelineMarkerFields({
                 path="steps.markerIconColor"
                 value={step.markerIconColor}
                 onChange={(next) => updateStep(value, onChange, index, { markerIconColor: next })}
+                onClear={() => updateStep(value, onChange, index, { markerIconColor: undefined })}
                 placeholder="#ffffff"
                 pickerFallback="#ffffff"
                 helperText="Used when the marker display renders a number or icon inside the marker."
@@ -1073,6 +1124,7 @@ function TimelineColorFields({
           path="style.titleColor"
           value={value.style?.titleColor}
           onChange={(next) => updateStyle(value, onChange, { titleColor: next })}
+          onClear={() => clearStyle(value, onChange, "titleColor")}
           placeholder="#0f172a"
           pickerFallback="#0f172a"
         />
@@ -1081,6 +1133,7 @@ function TimelineColorFields({
           path="style.descriptionColor"
           value={value.style?.descriptionColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionColor: next })}
+          onClear={() => clearStyle(value, onChange, "descriptionColor")}
           placeholder="#334155"
           pickerFallback="#334155"
         />
@@ -1092,6 +1145,7 @@ function TimelineColorFields({
           onClear={() => clearBackground(value, onChange)}
           placeholder="transparent"
           pickerFallback="#ffffff"
+          allowTransparent
         />
       </div>
       <div className="space-y-1">
@@ -1315,65 +1369,68 @@ export function TimelineWizardEditor({ value, variant }: WidgetEditorProps<Timel
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-        Wizard summarizes the saved timeline story. Visual owns variant changes, daily status,
-        marker accents, guides, layout, and destination changes.
-      </div>
-
-      <ReadonlyWidgetSummaryRow
-        id="timeline.wizard.variant"
-        label="Timeline style"
-        path="variant"
-        value={variantLabel}
-      />
-
-      <div className="grid gap-3 md:grid-cols-2">
+      <EditorSection
+        id="timeline.wizard.starter-steps"
+        mode="wizard"
+        role="setup"
+        title="Starter steps"
+        description="Wizard summarizes the saved timeline story. Visual owns variant changes, daily status, marker accents, guides, layout, and destination changes."
+      >
         <ReadonlyWidgetSummaryRow
-          id="timeline.wizard.header.title"
-          label="Header title"
-          path="header.title"
-          value={value.header?.title ?? "No header title yet"}
+          id="timeline.wizard.variant"
+          label="Timeline style"
+          path="variant"
+          value={variantLabel}
         />
-        <ReadonlyWidgetSummaryRow
-          id="timeline.wizard.header.description"
-          label="Header description"
-          path="header.description"
-          value={value.header?.description ?? "No header description yet"}
-        />
-      </div>
 
-      <div className="space-y-2">
-        <ReadonlyWidgetSummaryRow
-          id="timeline.wizard.steps.count"
-          label="Number of steps"
-          path="steps.count"
-          value={`${steps.length} steps`}
-        />
-        <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          Visual owns daily step details such as status, icons, accents, dates, and destinations.
+        <div className="grid gap-3 md:grid-cols-2">
+          <ReadonlyWidgetSummaryRow
+            id="timeline.wizard.header.title"
+            label="Header title"
+            path="header.title"
+            value={value.header?.title ?? "No header title yet"}
+          />
+          <ReadonlyWidgetSummaryRow
+            id="timeline.wizard.header.description"
+            label="Header description"
+            path="header.description"
+            value={value.header?.description ?? "No header description yet"}
+          />
         </div>
-      </div>
 
-      <div className="space-y-3">
-        {steps.map((step, index) => (
-          <div key={step.id ?? `${index}`} className="space-y-3 rounded-lg border p-3">
-            <p className="text-sm font-semibold">Step {index + 1}</p>
-
-            <ReadonlyWidgetSummaryRow
-              id={`timeline.wizard.steps.${index}.title`}
-              label={`Step ${index + 1} title`}
-              path="steps.title"
-              value={step.title || `Step ${index + 1}`}
-            />
-            <ReadonlyWidgetSummaryRow
-              id={`timeline.wizard.steps.${index}.description`}
-              label={`Step ${index + 1} description`}
-              path="steps.description"
-              value={step.description || "No description yet"}
-            />
+        <div className="space-y-2">
+          <ReadonlyWidgetSummaryRow
+            id="timeline.wizard.steps.count"
+            label="Number of steps"
+            path="steps.count"
+            value={`${steps.length} steps`}
+          />
+          <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Visual owns daily step details such as status, icons, accents, dates, and destinations.
           </div>
-        ))}
-      </div>
+        </div>
+
+        <div className="space-y-3">
+          {steps.map((step, index) => (
+            <div key={step.id ?? `${index}`} className="space-y-3 rounded-lg border p-3">
+              <p className="text-sm font-semibold">Step {index + 1}</p>
+
+              <ReadonlyWidgetSummaryRow
+                id={`timeline.wizard.steps.${index}.title`}
+                label={`Step ${index + 1} title`}
+                path="steps.title"
+                value={step.title || `Step ${index + 1}`}
+              />
+              <ReadonlyWidgetSummaryRow
+                id={`timeline.wizard.steps.${index}.description`}
+                label={`Step ${index + 1} description`}
+                path="steps.description"
+                value={step.description || "No description yet"}
+              />
+            </div>
+          ))}
+        </div>
+      </EditorSection>
     </div>
   );
 }
@@ -1414,6 +1471,8 @@ export function TimelineVisualEditor({
     <div className="space-y-4">
       <EditorSection
         id="timeline.mode-layout"
+        mode="visual"
+        role="visual"
         title="Variant and timeline structure"
         description="Choose timeline variant and core structure before styling details."
       >
@@ -1431,6 +1490,8 @@ export function TimelineVisualEditor({
 
       <EditorSection
         id="timeline.items-dates"
+        mode="visual"
+        role="content"
         title="Steps content and order"
         description="Edit content for each step, validate dates, and reorder without leaving Visual mode."
       >
@@ -1642,6 +1703,8 @@ export function TimelineVisualEditor({
 
       <EditorSection
         id="timeline.axis-markers"
+        mode="visual"
+        role="visual"
         title="Guides and axis line"
         description="Control helper guides and axis line appearance."
       >
@@ -1650,6 +1713,8 @@ export function TimelineVisualEditor({
 
       <EditorSection
         id="timeline.markers-accents"
+        mode="visual"
+        role="visual"
         title="Markers and accents"
         description="Configure marker sizing, marker mode, and grouped per-step accent controls."
       >
@@ -1658,6 +1723,8 @@ export function TimelineVisualEditor({
 
       <EditorSection
         id="timeline.colors"
+        mode="visual"
+        role="visual"
         title="Colors and background"
         description="Set line, marker, text, and section background colors."
       >
@@ -1666,6 +1733,8 @@ export function TimelineVisualEditor({
 
       <EditorSection
         id="timeline.typography-spacing"
+        mode="visual"
+        role="visual"
         title="Typography and spacing"
         description="Tune section header, typography scale, and container spacing tokens."
       >
@@ -1675,24 +1744,22 @@ export function TimelineVisualEditor({
   );
 }
 
-export function TimelineAdvancedEditor({
-  value,
-  onChange,
-  variant,
-}: WidgetEditorProps<TimelineData>) {
+export function TimelineAdvancedEditor({ value, variant }: WidgetEditorProps<TimelineData>) {
   const steps = getNormalizedSteps(value);
   const normalized = normalizeTimelinePayload(value, variant);
-  const normalizationSignature = JSON.stringify(value);
-  const [normalizationReviewSignature, setNormalizationReviewSignature] = useState<string | null>(
-    null
-  );
-  const [normalizationMessage, setNormalizationMessage] = useState<string | null>(null);
-  const normalizationArmed = normalizationReviewSignature === normalizationSignature;
+  const normalizedSteps = normalized.steps ?? [];
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Visual for public-facing timeline steps, layout, guides,
+        markers, colors, background, and typography changes.
+      </p>
+
       <EditorSection
         id="timeline.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime summary"
         description="Read-only summary of the saved renderer contract. Visual owns normal editing."
       >
@@ -1718,6 +1785,8 @@ export function TimelineAdvancedEditor({
 
       <EditorSection
         id="timeline.layout-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Layout diagnostics"
         description="Read-only layout, guide, and style state. Change these in Visual."
       >
@@ -1740,57 +1809,119 @@ export function TimelineAdvancedEditor({
           value={formatTimelineStyleSummary(normalized.style)}
         />
         <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-line-color"
+          label="Line color"
+          path="style.lineColor"
+          value={describeTimelineColorValue(normalized.style?.lineColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-marker-color"
+          label="Global marker color"
+          path="style.markerColor"
+          value={describeTimelineColorValue(normalized.style?.markerColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-title-color"
+          label="Title color"
+          path="style.titleColor"
+          value={describeTimelineColorValue(normalized.style?.titleColor)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-description-color"
+          label="Description color"
+          path="style.descriptionColor"
+          value={describeTimelineColorValue(normalized.style?.descriptionColor)}
+        />
+        <ReadonlyWidgetSummaryRow
           id="timeline-advanced-background"
           label="Background"
           path="background"
           value={formatTimelineBackgroundSummary(normalized.background)}
         />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-step-accents"
+          label="Step accents"
+          path="steps.accent"
+          value={`${countConfiguredStepOverrides(normalizedSteps, (step) => step.accent)} override${
+            countConfiguredStepOverrides(normalizedSteps, (step) => step.accent) === 1 ? "" : "s"
+          }`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-step-marker-backgrounds"
+          label="Step marker backgrounds"
+          path="steps.markerBackgroundColor"
+          value={`${countConfiguredStepOverrides(
+            normalizedSteps,
+            (step) => step.markerBackgroundColor
+          )} override${
+            countConfiguredStepOverrides(normalizedSteps, (step) => step.markerBackgroundColor) ===
+            1
+              ? ""
+              : "s"
+          }`}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-step-marker-icon-colors"
+          label="Step marker icon colors"
+          path="steps.markerIconColor"
+          value={`${countConfiguredStepOverrides(
+            normalizedSteps,
+            (step) => step.markerIconColor
+          )} override${
+            countConfiguredStepOverrides(normalizedSteps, (step) => step.markerIconColor) === 1
+              ? ""
+              : "s"
+          }`}
+        />
       </EditorSection>
 
       <EditorSection
         id="timeline.data-normalization"
+        mode="advanced"
+        role="summary"
         title="Data normalization"
-        description="Confirmed support action for deterministic payload cleanup."
+        description="Read-only normalization, safe-link, and ownership summary for the current payload."
       >
         <p className="text-xs text-muted-foreground">
           Current steps: {steps.length}. Normalization keeps payload compatible with runtime rules
           (`{timelineStepMin}-{timelineStepMax}` steps, unique stable IDs).
         </p>
-        <WidgetControlRow
-          id="timeline-advanced-normalize-action"
-          label="Normalize payload"
-          ownership="action"
-          help="This support action rewrites fallback values after explicit confirmation."
-        >
-          {() => (
-            <Button
-              type="button"
-              variant={normalizationArmed ? "default" : "outline"}
-              onClick={() => {
-                if (!normalizationArmed) {
-                  setNormalizationReviewSignature(normalizationSignature);
-                  setNormalizationMessage("Review diagnostics, then confirm normalization.");
-                  return;
-                }
-
-                const before = JSON.stringify(value);
-                const after = JSON.stringify(normalized);
-                onChange(normalized);
-                setNormalizationReviewSignature(null);
-                setNormalizationMessage(
-                  before === after ? "Already normalized." : "Payload normalized."
-                );
-              }}
-            >
-              {normalizationArmed ? "Confirm normalization" : "Review normalization"}
-            </Button>
-          )}
-        </WidgetControlRow>
-        {normalizationMessage ? (
-          <p className="text-xs text-muted-foreground" role="status">
-            {normalizationMessage}
-          </p>
-        ) : null}
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-normalization-scope"
+          label="Normalization scope"
+          path="steps"
+          value="Step count clamp, unique stable IDs, safe mode/layout defaults, and inherited background fallback."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-safe-cta-links"
+          label="Step CTA links"
+          path="steps.cta.href"
+          value={describeTimelineStepLinkCoverage(steps, normalizedSteps, "cta")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-safe-step-links"
+          label="Whole-step links"
+          path="steps.link.href"
+          value={describeTimelineStepLinkCoverage(steps, normalizedSteps, "link")}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-wizard-owner"
+          label="Wizard owns"
+          path="variant"
+          value="Starter story summary only."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-visual-owner"
+          label="Visual owns"
+          path="steps"
+          value="Variant, steps, guides, markers, colors, background, and typography spacing."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="timeline-advanced-advanced-owner"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only runtime, layout diagnostics, and normalization summaries."
+        />
       </EditorSection>
     </div>
   );

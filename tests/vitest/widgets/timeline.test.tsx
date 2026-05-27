@@ -230,6 +230,12 @@ test("timeline visual editor renders section-based IA", () => {
   expect(html).toContain("Markers and accents");
   expect(html).toContain("Colors and background");
   expect(html).toContain("Typography and spacing");
+  expect(html).toContain('data-widget-editor-section="timeline.mode-layout"');
+  expect(html).toContain('data-widget-editor-section="timeline.items-dates"');
+  expect(html).toContain('data-widget-editor-section="timeline.axis-markers"');
+  expect(html).toContain('data-widget-editor-section="timeline.markers-accents"');
+  expect(html).toContain('data-widget-editor-section="timeline.colors"');
+  expect(html).toContain('data-widget-editor-section="timeline.typography-spacing"');
 });
 
 test("timeline advanced editor keeps read-only diagnostics scope", () => {
@@ -245,11 +251,19 @@ test("timeline advanced editor keeps read-only diagnostics scope", () => {
   expect(html).toContain("Runtime summary");
   expect(html).toContain("Layout diagnostics");
   expect(html).toContain("Data normalization");
-  expect(html).toContain("Review normalization");
+  expect(html).toContain("Advanced mode is read-only.");
+  expect(html).toContain("Normalization scope");
+  expect(html).toContain("Wizard owns");
+  expect(html).toContain("Visual owns");
+  expect(html).toContain("Advanced owns");
+  expect(html).toContain('data-widget-editor-section="timeline.runtime-summary"');
+  expect(html).toContain('data-widget-editor-section="timeline.layout-diagnostics"');
+  expect(html).toContain('data-widget-editor-section="timeline.data-normalization"');
   expect(html).toContain('data-widget-control-ownership="readonly"');
-  expect(html).toContain('data-widget-control-ownership="action"');
   expect(html).not.toContain("Steps content and order");
   expect(html).not.toContain("Colors and background");
+  expect(html).not.toContain("Review normalization");
+  expect(html).not.toContain("Confirm normalization");
 });
 
 test("timeline renderer falls back to milestones for unknown variant", () => {

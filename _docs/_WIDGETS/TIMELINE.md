@@ -69,12 +69,13 @@ Visual also owns:
 - title-hidden warning inside Typography when `style.titleSize = "none"`
 
 ### Advanced
-Read-only diagnostics plus explicit support actions:
+Read-only diagnostics:
 - runtime summary for variant, mode, and configured step count
 - read-only layout, guide, style, and background summaries
-- two-step confirmed payload normalization support action
+- read-only normalization and ownership summary
 
-Advanced intentionally excludes duplicated day-to-day content or style editing.
+Advanced intentionally excludes duplicated day-to-day content or style editing
+and no longer exposes mutating support actions in the daily tab flow.
 
 ## Runtime Behavior Notes
 
@@ -117,6 +118,8 @@ Advanced intentionally excludes duplicated day-to-day content or style editing.
   override.
 - Line, marker, title, and description colors can be cleared back to inherited
   theme/default behavior.
+- Per-step accent, marker background, and marker icon colors now expose the
+  same clear/default affordance pattern instead of being one-off exceptions.
 
 ## Data Model (summary)
 

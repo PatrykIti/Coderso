@@ -374,6 +374,11 @@ test("Timeline wizard keeps header and step previews read-only and leaves daily 
   try {
     expect(view.container.textContent).toContain("Wizard summarizes the saved timeline story");
     expect(view.container.textContent).toContain("Visual owns daily step details");
+    expect(
+      findSectionByTitle(view.container, "Starter steps")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.wizard.starter-steps");
     expect(view.container.textContent).not.toContain("Show guide lines");
     expect(view.container.textContent).not.toContain("Step titles are hidden right now");
     expect(findInputByPlaceholder(view.container, "Icon text or emoji")).toBeUndefined();
@@ -472,6 +477,36 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
   await flushAsyncEffects();
 
   try {
+    expect(
+      findSectionByTitle(view.container, "Variant and timeline structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.mode-layout");
+    expect(
+      findSectionByTitle(view.container, "Steps content and order")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.items-dates");
+    expect(
+      findSectionByTitle(view.container, "Guides and axis line")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.axis-markers");
+    expect(
+      findSectionByTitle(view.container, "Markers and accents")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.markers-accents");
+    expect(
+      findSectionByTitle(view.container, "Colors and background")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.colors");
+    expect(
+      findSectionByTitle(view.container, "Typography and spacing")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.typography-spacing");
     clickButtonByText(view.container, "Alternating");
     expect(latestValue.mode).toBe("alternating");
     expect(currentVariant).toBe("cards");
@@ -628,7 +663,7 @@ test("Timeline visual warns when configured marker and text colors collapse into
   }
 });
 
-test("Timeline advanced editor keeps diagnostics read-only and confirm-gates normalization", async () => {
+test("Timeline advanced editor keeps diagnostics read-only with truthful normalization summary", async () => {
   const { TimelineAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
 
@@ -686,38 +721,38 @@ test("Timeline advanced editor keeps diagnostics read-only and confirm-gates nor
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing timeline steps, layout, guides, markers, colors, background, and typography changes."
+    );
     expect(view.container.textContent).toContain("Current steps: 8.");
     expect(findSelectByOptions(view.container, ["3", "4", "5", "6", "7", "8"])).toBeUndefined();
     expect(view.container.textContent).toContain("Runtime summary");
     expect(view.container.textContent).toContain("Layout diagnostics");
     expect(view.container.textContent).toContain("Read-only layout, guide, and style state");
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Layout diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.layout-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Data normalization")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("timeline.data-normalization");
     expect(view.container.textContent).toContain("Inherited / transparent");
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
-
-    clickButtonByText(view.container, "Review normalization");
-    expect(onChangeSpy).not.toHaveBeenCalled();
-    expect(view.container.textContent).toContain("Review diagnostics, then confirm normalization.");
+    expect(view.container.textContent).toContain("Normalization scope");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
+    expect(view.container.querySelectorAll("button")).toHaveLength(1);
     clickButtonByText(view.container, "External update");
-    clickButtonByText(view.container, "Review normalization");
     expect(onChangeSpy).not.toHaveBeenCalled();
-    clickButtonByText(view.container, "Confirm normalization");
-
-    expect(onChangeSpy).toHaveBeenCalled();
-    expect(latestValue.mode).toBe("axis");
-    expect(latestValue.steps).toHaveLength(8);
-    expect(latestValue.layout).toEqual({
-      orientation: "horizontal",
-      align: "center",
-      spacing: "md",
-      labelPosition: "top",
-      padding: "md",
-      sectionSpacing: "none",
-      maxWidth: "6xl",
-    });
-    expect(latestValue.guides).toEqual({
-      enabled: false,
-      style: "dashed",
-    });
   } finally {
     view.cleanup();
   }
