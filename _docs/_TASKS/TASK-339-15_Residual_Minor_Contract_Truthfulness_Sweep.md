@@ -21,6 +21,13 @@ not for fresh hero-level UI rewrites. If one of these widgets turns out to need
 real IA expansion after the larger leaves land, stop and split a dedicated leaf
 instead of hiding that scope inside this cleanup batch.
 
+Hard stop criteria for splitting a new dedicated leaf:
+
+- the fix adds or removes a rendered section,
+- the fix introduces a new writable control surface,
+- the fix changes daily authoring for colors, media, links, or source setup,
+- the fix changes frontend-visible UX rather than contract wording/metadata only.
+
 ## Widgets In Scope
 
 - layout/support: `section`, `split-layout`, `toggle-block`, `spacer`,
@@ -88,6 +95,8 @@ No API routes are added.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Run the targeted Vitest suites for each touched residual widget.
+- If this sweep touches `booking-calendar` or `appointment-form`, run a quick
+  Playwright admin pass as well, even when the change looks title-only.
 
 ## Documentation Updates Required
 

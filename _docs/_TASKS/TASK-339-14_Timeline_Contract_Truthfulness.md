@@ -83,6 +83,8 @@ No API routes are added.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/ui/timeline-editor-wave.test.tsx tests/vitest/widgets/timeline.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`
 - Claude headless Playwright review for `timeline` against the `hero` baseline
+- Claude review for this leaf must use Playwright-visible UI only and must not
+  read repo code, task files, or source diffs.
 
 ## Documentation Updates Required
 
