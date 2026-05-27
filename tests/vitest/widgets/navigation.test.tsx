@@ -25,7 +25,7 @@ import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
-test("navigation exposes the current v2 editor contract for brand and behavior ownership", () => {
+test("navigation exposes the current v2 editor contract for hero-style section ownership", () => {
   const widget = createNavigationWidget({
     wizard: StubEditor,
     visual: StubEditor,
@@ -35,24 +35,26 @@ test("navigation exposes the current v2 editor contract for brand and behavior o
   expect(widget.editorContract).toBe(navigationEditorContract);
   expect(
     widget.editorContract?.sections.find(
-      (section) => section.id === "navigation.visual.brand-links"
+      (section) => section.id === "navigation.visual.variant-structure"
     )?.writablePaths
-  ).toEqual(
-    expect.arrayContaining([
-      "behavior.activeLinkMode",
-      "linksSource",
-      "menuKey",
-      "items",
-      "cta.label",
-      "cta.href",
-    ])
-  );
+  ).toEqual(expect.arrayContaining(["linksSource", "menuKey", "variant"]));
   expect(
     widget.editorContract?.sections.find(
-      (section) => section.id === "navigation.visual.behavior-presentation"
+      (section) => section.id === "navigation.visual.navigation-links"
+    )?.writablePaths
+  ).toEqual(expect.arrayContaining(["behavior.activeLinkMode", "items"]));
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.cta-right-actions"
+    )?.writablePaths
+  ).toEqual(expect.arrayContaining(["cta.label", "cta.href"]));
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.visual.colors-borders-typography"
     )?.writablePaths
   ).toEqual(
     expect.arrayContaining([
+      "style.surfaceColor",
       "style.borderColor",
       "style.textColor",
       "style.logoColor",
@@ -64,6 +66,18 @@ test("navigation exposes the current v2 editor contract for brand and behavior o
       "style.fontWeight",
       "style.textTransform",
       "style.letterSpacing",
+    ])
+  );
+  expect(
+    widget.editorContract?.sections.find(
+      (section) => section.id === "navigation.advanced.layout-token-summary"
+    )?.readOnlyPaths
+  ).toEqual(
+    expect.arrayContaining([
+      "layout.alignment",
+      "layout.maxWidth",
+      "layout.paddingY",
+      "layout.itemGap",
     ])
   );
 });
@@ -514,6 +528,16 @@ test("navigation visual editor renders section-based IA", () => {
   expect(html).toContain("Mobile Behavior");
   expect(html).toContain("Colors, Borders, Typography");
   expect(html).toContain("Surface and Runtime Behavior");
+  expect(html).toContain('data-widget-editor-section="navigation.visual.variant-structure"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.brand-logo"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.navigation-links"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.cta-right-actions"');
+  expect(html).toContain('data-widget-editor-section="navigation.visual.mobile-behavior"');
+  expect(html).toContain(
+    'data-widget-editor-section="navigation.visual.colors-borders-typography"'
+  );
+  expect(html).toContain('data-widget-editor-section="navigation.visual.surface-runtime-behavior"');
+  expect(html).not.toContain("Surface color value");
 });
 
 test("navigation advanced editor keeps technical-only controls", () => {
@@ -528,6 +552,11 @@ test("navigation advanced editor keeps technical-only controls", () => {
 
   expect(html).toContain("Layout token summary");
   expect(html).toContain("Runtime behavior summary");
+  expect(html).toContain('data-widget-editor-section="navigation.advanced.runtime-summary"');
+  expect(html).toContain('data-widget-editor-section="navigation.advanced.layout-token-summary"');
+  expect(html).toContain(
+    'data-widget-editor-section="navigation.advanced.runtime-behavior-summary"'
+  );
   expect(html).not.toContain("Navigation Links");
   expect(html).not.toContain("CTA and Right Actions");
 });

@@ -98,7 +98,7 @@ frontend via Playwright.
 ## Sub-Tasks
 
 - [x] TASK-339-01: Shared Block Settings Daily Live Preview Surface
-- [ ] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
+- [x] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
 - [ ] TASK-339-03: Contact Hero Color Parity
 - [ ] TASK-339-04: CTA Banner Hero Section Parity
 - [ ] TASK-339-05: Testimonials Contract Truthfulness
@@ -262,3 +262,10 @@ User-requested validation boundary:
   support. Focused validation passed `bun --cwd core lint`,
   `bun --cwd core lint:types`, and
   `bun run test:vitest -- tests/vitest/pageBuilder/blockSettings-wave.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx tests/vitest/ui/widget-template-editor.test.tsx`.
+- Done (2026-05-27): `TASK-339-02` moved Navigation from two coarse daily
+  buckets to seven hero-style `WidgetEditorSection` owners, switched Navigation
+  colors to the same swatch-first daily authoring model, synchronized the
+  widget-owned `editorContract`, and passed targeted lint/typecheck/Vitest.
+  Claude Playwright review returned `NO BLOCKERS` after an explicit
+  hero-vs-navigation snapshot comparison rejected a false-positive
+  accessibility-tree reading of `input[type=color]`.

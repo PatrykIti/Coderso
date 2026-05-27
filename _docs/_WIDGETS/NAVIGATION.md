@@ -47,6 +47,8 @@ Primary CTA jest renderowane tylko dla:
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
   mobile copy, Media Library logo replacement, bounded style/brand controls,
   layout width/spacing, sticky behavior, and collapse-on-scroll behavior
+- daily color authoring is swatch-first like `hero`; saved custom/token values
+  remain replace-or-clear compatible without visible raw color text inputs
 - manual link, child link, logo and CTA destinations use the shared
   published-page destination picker. Existing custom/hash/external `href`
   values remain read-only replace/clear state in Visual.
@@ -56,6 +58,10 @@ Primary CTA jest renderowane tylko dla:
 - read-only source/runtime summary
 - read-only layout token summary
 - read-only runtime behavior summary
+- `Advanced` sections use stable widget-owned ids matching the rendered UI:
+  `navigation.advanced.runtime-summary`,
+  `navigation.advanced.layout-token-summary`,
+  `navigation.advanced.runtime-behavior-summary`
 - bez duplikowania content/style/layout/behavior editing z Visual
 
 ## Supported Fields

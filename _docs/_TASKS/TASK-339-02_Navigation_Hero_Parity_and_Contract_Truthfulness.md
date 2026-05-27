@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01, TASK-336-19
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -105,3 +105,30 @@ No API routes are added.
 - Navigation no longer exposes raw daily color value inputs.
 - Navigation `Visual` / `Advanced` use a clearer hero-like section split.
 - The rendered section ids/titles/roles match `core/widgets/core/navigation.tsx`.
+
+## Completion Notes (2026-05-27)
+
+- Navigation now uses hero-style section ownership in the actual editor DOM:
+  `Variant and Structure`, `Brand and Logo`, `Navigation Links`,
+  `CTA and Right Actions`, `Mobile Behavior`, `Colors, Borders, Typography`,
+  and `Surface and Runtime Behavior` are each rendered as real
+  `WidgetEditorSection` owners instead of two coarse buckets.
+- Daily Navigation colors are now swatch-first with no visible raw value
+  inputs, matching the current practical `hero` authoring shape.
+- `core/widgets/core/navigation.tsx` now declares truthful `wizard` / `visual`
+  / `advanced` sections that match the rendered ids, titles, and roles.
+- Claude Playwright review was completed from browser snapshots only after
+  unblocking local admin access with a temporary local reviewer account. Claude
+  initially flagged the swatch controls as raw hex textboxes, but the finding
+  was rejected after a direct hero-vs-navigation snapshot comparison showed
+  the same `input[type=color]` accessibility mapping in Hero. Final Claude
+  result: `NO BLOCKERS`.
+- Targeted widget smoke kept `public` green for `/homepage`, while the legacy
+  widget-contract smoke harness still reports `admin_unreachable` on
+  `http://localhost:5173/admin/` even though browser-driven Playwright review
+  succeeds on the same dev server. That harness reachability false-negative was
+  recorded as environment drift, not a Navigation regression.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`

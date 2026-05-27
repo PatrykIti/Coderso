@@ -1020,6 +1020,23 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(mobileSection).toBeTruthy();
     expect(colorsSection).toBeTruthy();
     expect(surfaceSection).toBeTruthy();
+    expect(
+      Array.from(view.container.querySelectorAll("[data-widget-editor-section]")).map((section) =>
+        section.getAttribute("data-widget-editor-section")
+      )
+    ).toEqual([
+      "navigation.visual.variant-structure",
+      "navigation.visual.brand-logo",
+      "navigation.visual.navigation-links",
+      "navigation.visual.cta-right-actions",
+      "navigation.visual.mobile-behavior",
+      "navigation.visual.colors-borders-typography",
+      "navigation.visual.surface-runtime-behavior",
+    ]);
+    expect(
+      findInputByAriaLabel(colorsSection ?? view.container, "Surface color value")
+    ).toBeFalsy();
+    expect(findInputByAriaLabel(colorsSection ?? view.container, "Border color value")).toBeFalsy();
 
     clickByText(structureSection ?? view.container, "Split");
     expect(latestVariant).toBe("split");
@@ -1198,35 +1215,35 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     });
 
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "Surface color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "Surface color swatch"),
       "#f8fafc"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "Border color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "Border color swatch"),
       "#cbd5e1"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "Text color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "Text color swatch"),
       "#0f172b"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "Logo color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "Logo color swatch"),
       "#1f2937"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "Link color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "Link color swatch"),
       "#475569"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "CTA background value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA background swatch"),
       "#2563eb"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "CTA text color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA text color swatch"),
       "#eff6ff"
     );
     setInputValue(
-      findInputByAriaLabel(colorsSection ?? view.container, "CTA border color value"),
+      findInputByAriaLabel(colorsSection ?? view.container, "CTA border color swatch"),
       "#1e40af"
     );
     setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
@@ -1450,13 +1467,16 @@ test("Navigation editors fall back to default source, items, behavior, and layou
         ?.checked
     ).toBe(false);
     expect(
+      findInputByAriaLabel(colorsSection as ParentNode, "Surface color value")
+    ).toBeUndefined();
+    expect(
       (
-        findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as
+        findInputByAriaLabel(colorsSection as ParentNode, "Surface color swatch") as
           | HTMLInputElement
           | null
           | undefined
       )?.value
-    ).toBe("");
+    ).toBe("#ffffff");
     expect(
       (
         findSelectByOptions(colorsSection as ParentNode, ["0", "1", "2", "3"]) as
