@@ -101,7 +101,7 @@ frontend via Playwright.
 - [x] TASK-339-02: Navigation Hero Parity and Contract Truthfulness
 - [x] TASK-339-03: Contact Hero Color Parity
 - [x] TASK-339-04: CTA Banner Hero Section Parity
-- [ ] TASK-339-05: Testimonials Contract Truthfulness
+- [x] TASK-339-05: Testimonials Contract Truthfulness
 - [ ] TASK-339-06: Pricing Plans Contract Truthfulness
 - [ ] TASK-339-07: FAQ Accordion Contract Truthfulness
 - [ ] TASK-339-08: Gallery Mosaic Contract Truthfulness
@@ -278,3 +278,7 @@ User-requested validation boundary:
   Hero by promoting its real section owners into the contract and aligning the
   daily color/border region to the same palette/default/contrast shape.
   Claude snapshot review returned `NO BLOCKERS`.
+- Done (2026-05-27): `TASK-339-05` kept Testimonials behavior unchanged but
+  synchronized the widget-owned contract to the real section inventory already
+  rendered in Wizard, Visual, and Advanced. Claude snapshot review returned
+  `NO BLOCKERS`.

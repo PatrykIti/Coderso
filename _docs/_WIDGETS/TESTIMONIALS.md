@@ -38,6 +38,14 @@ display settings belong to Visual.
 Visual owns the full product authoring surface:
 
 - variant cards and count
+- sectioned Visual IA:
+  - `Variant and layout structure`
+  - `Header copy`
+  - `Testimonials content and ratings`
+  - `Section surface and typography`
+  - `Colors and emphasis`
+  - `CTA and conversion follow-up`
+  - `Pagination and load more`
 - spotlight pinning for the `spotlight` variant
 - per-testimonial rich quote formatting (`quoteHtml`) with plain-text fallback
 - avatar Media Library selection with read-only legacy external URL state
@@ -55,6 +63,10 @@ Visual owns the full product authoring surface:
 Advanced is read-only diagnostics. It must not duplicate Visual authoring or
 ask nontechnical users for raw data.
 
+- sectioned Advanced IA:
+  - `Runtime summary`
+  - `Display settings`
+  - `Content health`
 - runtime summary for variant, testimonial count, and spotlight item
 - display summaries for spacing, rating-zero mode, slider navigation, and
   pagination

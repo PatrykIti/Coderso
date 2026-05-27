@@ -529,6 +529,7 @@ test("testimonials editors still render their expanded section labels in SSR smo
   expect(wizardHtml).toContain("Use Visual to write the section eyebrow");
   expect(wizardHtml).toContain("Visual owns testimonial style, count");
   expect(wizardHtml).toContain('data-widget-control-readonly="true"');
+  expect(wizardHtml).toContain('data-widget-editor-section="testimonials.wizard.starter-proof"');
 
   const visualHtml = renderToString(
     <TestimonialsVisualEditor
@@ -541,6 +542,17 @@ test("testimonials editors still render their expanded section labels in SSR smo
   expect(visualHtml).toContain("Section surface and typography");
   expect(visualHtml).toContain("CTA and conversion follow-up");
   expect(visualHtml).toContain("Pagination and load more");
+  expect(visualHtml).toContain('data-widget-editor-section="testimonials.visual.variant-layout"');
+  expect(visualHtml).toContain('data-widget-editor-section="testimonials.visual.header-copy"');
+  expect(visualHtml).toContain('data-widget-editor-section="testimonials.visual.content-ratings"');
+  expect(visualHtml).toContain(
+    'data-widget-editor-section="testimonials.visual.surface-typography"'
+  );
+  expect(visualHtml).toContain('data-widget-editor-section="testimonials.visual.colors-emphasis"');
+  expect(visualHtml).toContain('data-widget-editor-section="testimonials.visual.cta-conversion"');
+  expect(visualHtml).toContain(
+    'data-widget-editor-section="testimonials.visual.pagination-load-more"'
+  );
 
   const advancedHtml = renderToString(
     <TestimonialsAdvancedEditor
@@ -551,7 +563,17 @@ test("testimonials editors still render their expanded section labels in SSR smo
     />
   );
   expect(advancedHtml).toContain("Runtime summary");
+  expect(advancedHtml).toContain("Display settings");
   expect(advancedHtml).toContain("Content health");
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="testimonials.advanced.runtime-summary"'
+  );
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="testimonials.advanced.display-settings"'
+  );
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="testimonials.advanced.content-health"'
+  );
   expect(advancedHtml).not.toContain("Import and export");
   expect(advancedHtml).not.toContain("Raw payload snapshot");
 });

@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -99,3 +99,22 @@ No API routes are added.
 - Testimonials keeps its richer UI.
 - Rendered section ids/titles/roles and `editorContract` match exactly.
 - Playwright review confirms the flow feels consistent with `hero`.
+
+## Completion Notes (2026-05-27)
+
+- Testimonials now has a truthful `editorContract` that matches the already
+  shipped editor UI instead of collapsing it into the stale `Visual=2` /
+  `Advanced=1` contract.
+- Wizard, Visual, and Advanced now expose stable widget-owned section ids:
+  - Wizard: `testimonials.wizard.starter-proof`
+  - Visual: `variant-layout`, `header-copy`, `content-ratings`,
+    `surface-typography`, `colors-emphasis`, `cta-conversion`,
+    `pagination-load-more`
+  - Advanced: `runtime-summary`, `display-settings`, `content-health`
+- The UI behavior itself stayed intact; this leaf is a truthfulness sync, not a
+  feature downgrade or redesign.
+- Claude Playwright snapshot review final result: `NO BLOCKERS`.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/testimonials-editor-wave.test.tsx tests/vitest/widgets/testimonials.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`

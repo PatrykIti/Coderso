@@ -844,36 +844,36 @@ export function TestimonialsWizardEditor({ value, variant }: WidgetEditorProps<T
 
   return (
     <div className="space-y-4">
-      <ReadonlyWidgetSummaryRow
-        id="testimonials.wizard.variant"
-        label="Testimonials style"
-        path="variant"
-        value={variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Grid"}
-      />
-
       <EditorSection
+        id="testimonials.wizard.starter-proof"
         title="Section copy"
         mode="wizard"
         role="setup"
         description="Review the current testimonial setup. Daily copy and customer proof live in Visual."
       >
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.wizard.variant"
+          label="Testimonials style"
+          path="variant"
+          value={variantOptions.find((option) => option.id === resolvedVariant)?.label ?? "Grid"}
+        />
+
+        <ReadonlyWidgetSummaryRow
+          id="testimonials.wizard.count"
+          label="Testimonials count"
+          path="testimonials.count"
+          value={`${testimonials.length} testimonial${testimonials.length === 1 ? "" : "s"}`}
+        />
+
         <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
           Use Visual to write the section eyebrow, title, description, quotes, author names,
           ratings, avatars, pagination, and CTA.
         </div>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
+          Visual owns testimonial style, count, the testimonial list, quote formatting, ratings,
+          avatars, CTA, and display styling.
+        </div>
       </EditorSection>
-
-      <ReadonlyWidgetSummaryRow
-        id="testimonials.wizard.count"
-        label="Testimonials count"
-        path="testimonials.count"
-        value={`${testimonials.length} testimonial${testimonials.length === 1 ? "" : "s"}`}
-      />
-
-      <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
-        Visual owns testimonial style, count, the testimonial list, quote formatting, ratings,
-        avatars, CTA, and display styling.
-      </div>
     </div>
   );
 }
@@ -1032,6 +1032,7 @@ export function TestimonialsVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="testimonials.visual.variant-layout"
         title="Variant and layout structure"
         mode="visual"
         role="visual"
@@ -1149,6 +1150,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.header-copy"
         title="Header copy"
         mode="visual"
         role="content"
@@ -1192,6 +1194,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.content-ratings"
         title="Testimonials content and ratings"
         mode="visual"
         role="content"
@@ -1239,6 +1242,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.surface-typography"
         title="Section surface and typography"
         mode="visual"
         role="visual"
@@ -1455,6 +1459,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.colors-emphasis"
         title="Colors and emphasis"
         mode="visual"
         role="visual"
@@ -1509,6 +1514,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.cta-conversion"
         title="CTA and conversion follow-up"
         mode="visual"
         role="visual"
@@ -1612,6 +1618,7 @@ export function TestimonialsVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.visual.pagination-load-more"
         title="Pagination and load more"
         mode="visual"
         role="visual"
@@ -1731,6 +1738,7 @@ export function TestimonialsAdvancedEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="testimonials.advanced.runtime-summary"
         title="Runtime summary"
         mode="advanced"
         role="diagnostics"
@@ -1757,6 +1765,7 @@ export function TestimonialsAdvancedEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.advanced.display-settings"
         title="Display settings"
         mode="advanced"
         role="diagnostics"
@@ -1805,6 +1814,7 @@ export function TestimonialsAdvancedEditor({
       </EditorSection>
 
       <EditorSection
+        id="testimonials.advanced.content-health"
         title="Content health"
         mode="advanced"
         role="diagnostics"

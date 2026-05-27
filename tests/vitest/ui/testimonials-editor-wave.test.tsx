@@ -539,6 +539,9 @@ test("TestimonialsVisualEditor syncs testimonial count when Visual changes the v
   try {
     const variantSection = findSectionByTitle(view.container, "Variant and layout structure");
     if (!(variantSection instanceof HTMLElement)) throw new Error("Missing variant section");
+    expect(variantSection.getAttribute("data-widget-editor-section")).toBe(
+      "testimonials.visual.variant-layout"
+    );
 
     clickButton(findButtonsByText(variantSection, "Spotlight")[0]);
     expect(view.getLatestVariant()).toBe("spotlight");
@@ -568,6 +571,9 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
   try {
     const contentSection = findSectionByTitle(view.container, "Testimonials content and ratings");
     if (!(contentSection instanceof HTMLElement)) throw new Error("Missing content section");
+    expect(contentSection.getAttribute("data-widget-editor-section")).toBe(
+      "testimonials.visual.content-ratings"
+    );
 
     expect(
       findInputsByPlaceholder(contentSection, "https://cdn.example.com/avatar.jpg")
@@ -604,6 +610,9 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
 
     const surfaceSection = findSectionByTitle(view.container, "Section surface and typography");
     if (!(surfaceSection instanceof HTMLElement)) throw new Error("Missing surface section");
+    expect(surfaceSection.getAttribute("data-widget-editor-section")).toBe(
+      "testimonials.visual.surface-typography"
+    );
     expect(writableControlPaths(view.container)).toEqual(
       expect.arrayContaining([
         "variant",
@@ -679,6 +688,9 @@ test("TestimonialsVisualEditor handles spotlight pinning, remove confirmation, b
     );
     const paginationSection = findSectionByTitle(view.container, "Pagination and load more");
     if (!(paginationSection instanceof HTMLElement)) throw new Error("Missing pagination section");
+    expect(paginationSection.getAttribute("data-widget-editor-section")).toBe(
+      "testimonials.visual.pagination-load-more"
+    );
     setSelectValue(findSelectByOptions(paginationSection, ["none", "load-more"]), "load-more");
     setSelectValue(
       findSelectByOptions(paginationSection, [
@@ -777,6 +789,21 @@ test("TestimonialsAdvancedEditor is read-only diagnostics without authoring inpu
     expect(view.container.textContent).toContain("Runtime summary");
     expect(view.container.textContent).toContain("Display settings");
     expect(view.container.textContent).toContain("Content health");
+    expect(
+      findSectionByTitle(view.container, "Runtime summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("testimonials.advanced.runtime-summary");
+    expect(
+      findSectionByTitle(view.container, "Display settings")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("testimonials.advanced.display-settings");
+    expect(
+      findSectionByTitle(view.container, "Content health")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("testimonials.advanced.content-health");
     expect(view.container.textContent).toContain("lg");
     expect(view.container.textContent).toContain("stars");
     expect(view.container.textContent).toContain("dots (inactive outside slider-static)");
