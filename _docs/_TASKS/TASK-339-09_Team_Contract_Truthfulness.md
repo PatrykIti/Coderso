@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -21,6 +21,10 @@ Make `team` contract metadata match the richer editor that already ships.
   `Advanced=4` while the contract still declares `Visual=2`, `Advanced=1`.
 - The current UI already separates member structure, header CTA, member order,
   and style; the contract is the stale piece.
+- First Claude Playwright review also found Hero-parity drift in Team field
+  labeling and background color affordances: many comboboxes/textboxes were
+  named by placeholders instead of field labels, and Team backgrounds lacked
+  Hero-style transparent background affordances.
 
 ## Sub-Tasks
 
@@ -56,11 +60,17 @@ Data flow:
 
 - Preserve the current richer UI.
 - Align the contract and stable DOM metadata to that UI.
+- Keep Hero-style ownership boundaries:
+  - Wizard seeds layout only,
+  - Visual owns daily member/CTA/style edits,
+  - Advanced stays read-only diagnostics only.
 
 Error handling:
 
 - Keep `Advanced` read-only.
 - Do not collapse the UI back to `Team content / Section and card style`.
+- Do not keep mutating support actions inside the daily Advanced tab once the
+  Hero-style diagnostics split is applied.
 
 ## Security Contract
 
@@ -86,6 +96,25 @@ No API routes are added.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Update `_docs/_WIDGETS/TEAM.md`.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Team now exports truthful Wizard/Visual/Advanced section ids and
+  roles instead of the old `Visual=2` / `Advanced=1` contract.
+- 2026-05-27: Advanced is now fully read-only and split into layout, surface,
+  content, and contract summaries to match the Hero daily-tab pattern.
+- 2026-05-27: Team visual controls now use the shared labeled-field contract
+  for the main Team-owned inputs/selects, and Team backgrounds gained
+  Hero-style transparent affordances.
+- 2026-05-27: Shared `SharedColorControl` now supports widget-local swatch
+  accessible names, which Team consumes to keep color field naming aligned with
+  Hero.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/team-editor-wave.test.tsx tests/vitest/widgets/team.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts tests/vitest/ui/link-destination-field.test.tsx`
+- 2026-05-27: Final Claude Playwright snapshot review returned
+  `VERDICT: NO BLOCKERS`.
 
 ## Acceptance Criteria
 

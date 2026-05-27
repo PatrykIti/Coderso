@@ -20,6 +20,7 @@ type SharedColorControlProps = {
   showValueInput?: boolean;
   allowTransparent?: boolean;
   treatAsThemeDefaultValues?: string[];
+  swatchAriaLabel?: string;
 };
 
 export function SharedColorControl({
@@ -35,6 +36,7 @@ export function SharedColorControl({
   showValueInput = true,
   allowTransparent = false,
   treatAsThemeDefaultValues,
+  swatchAriaLabel,
 }: SharedColorControlProps) {
   const handleSwatchChange = onSwatchChange ?? onChange;
   const normalizedValue = value?.trim();
@@ -65,7 +67,7 @@ export function SharedColorControl({
       />
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
-          aria-label={`${label} swatch`}
+          aria-label={swatchAriaLabel ?? `${label} swatch`}
           type="color"
           value={swatchColor}
           onChange={(event) => handleSwatchChange(event.target.value)}

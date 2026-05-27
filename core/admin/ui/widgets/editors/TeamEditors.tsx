@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { cn } from "@/lib/utils";
@@ -39,11 +38,15 @@ import {
   type TeamVariantId,
 } from "../../../../widgets/core/team";
 import { normalizeWidgetSafeHref } from "../../../../widgets/core/widgetSafeHref";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { resolveColorContrastAdvisory } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: TeamVariantId;
@@ -152,18 +155,28 @@ function normalizeValue(value: TeamData): TeamData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -210,6 +223,8 @@ function ColorField({
   placeholder,
   pickerFallback,
   onClear,
+  treatAsThemeDefaultValues,
+  allowTransparent = false,
 }: {
   label: string;
   value: string | undefined;
@@ -217,6 +232,8 @@ function ColorField({
   placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
+  treatAsThemeDefaultValues?: string[];
+  allowTransparent?: boolean;
 }) {
   return (
     <SharedColorControl
@@ -227,6 +244,9 @@ function ColorField({
       placeholder={placeholder}
       pickerFallback={pickerFallback}
       showValueInput={false}
+      allowTransparent={allowTransparent}
+      treatAsThemeDefaultValues={treatAsThemeDefaultValues}
+      swatchAriaLabel={label}
     />
   );
 }
@@ -234,12 +254,39 @@ function ColorField({
 const describeTeamColor = (value: string | undefined) => {
   const normalized = value?.trim();
   if (!normalized) return "Theme default";
+  if (normalized === "var(--color-bg)" || normalized === "var(--color-border)") {
+    return "Theme default";
+  }
   if (/^#[0-9a-f]{6}$/i.test(normalized)) return "Selected swatch";
   return "Saved custom color";
 };
 
 const countTeamSocialLinks = (members: TeamMember[]) =>
   members.reduce((count, member) => count + normalizeTeamSocialLinks(member.socialLinks).length, 0);
+
+const describeTeamHeaderState = (value: TeamData) => {
+  const title = normalizeValue(value).header?.title?.trim();
+  return title && title.length > 0 ? title : "Missing section heading";
+};
+
+const describeTeamDescriptionState = (value: TeamData) =>
+  normalizeValue(value).header?.description?.trim()
+    ? "Helper description is configured."
+    : "No helper description configured.";
+
+const describeTeamPhotoCoverage = (members: TeamMember[]) => {
+  const withPhoto = members.filter((member) => (member.photo ?? "").trim().length > 0).length;
+  return `${withPhoto}/${members.length} member${members.length === 1 ? "" : "s"} with photos`;
+};
+
+const describeTeamCtaState = (value: TeamData) => {
+  const cta = normalizeValue(value).cta;
+  const hasLabel = (cta?.label ?? "").trim().length > 0;
+  const hasUrl = (cta?.url ?? "").trim().length > 0;
+  if (!hasLabel && !hasUrl) return "Not configured";
+  if (hasLabel && hasUrl) return "Configured";
+  return "Incomplete";
+};
 
 function updateValue(
   value: TeamData,
@@ -798,16 +845,26 @@ function TeamSocialProfileField({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">Profile name</p>
-      <Input
-        value={profile}
-        onChange={(event) =>
-          updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
-            url: buildTeamSocialHref(platform, event.target.value),
-          })
-        }
-        placeholder={teamSocialProfilePlaceholders[platform]}
-      />
+      <WidgetControlRow
+        id={`team.members.${memberIndex + 1}.social.${socialIndex + 1}.profile`}
+        label="Profile name"
+        path="members.socialLinks.url"
+      >
+        {(fieldProps) => (
+          <Input
+            id={fieldProps.id}
+            value={profile}
+            onChange={(event) =>
+              updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+                url: buildTeamSocialHref(platform, event.target.value),
+              })
+            }
+            placeholder={teamSocialProfilePlaceholders[platform]}
+            aria-labelledby={fieldProps["aria-labelledby"]}
+            aria-describedby={fieldProps["aria-describedby"]}
+          />
+        )}
+      </WidgetControlRow>
       <p className="text-xs text-muted-foreground">
         Enter only the public profile name or handle. The editor builds the safe destination.
       </p>
@@ -918,21 +975,26 @@ export function TeamWizardEditor({
       description="Seed the layout only. Member count, names, roles, bios, photos, and CTA live in Visual."
     >
       <div className="space-y-4">
-        <div className="space-y-2" data-widget-control-ownership="action">
-          <p className="text-sm font-medium">Team layout</p>
-          <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select variant" />
-            </SelectTrigger>
-            <SelectContent>
-              {variantOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <WidgetControlRow id="team.wizard.variant" label="Team layout" ownership="action">
+          {(fieldProps) => (
+            <Select value={resolveTeamVariant(variant)} onValueChange={handleVariantChange}>
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select variant" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         <ReadonlyWidgetSummaryRow
           id="team.wizard.members.count"
@@ -1051,120 +1113,166 @@ export function TeamVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="team.visual.variant-member-structure"
+        mode="visual"
+        role="visual"
         title="Variant and member structure"
         description="Choose team presentation mode and deterministic member count."
       >
         <VariantCards value={resolvedVariant} onChange={onVariantChange} />
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Members count</p>
-          <Select
-            value={String(members.length)}
-            onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select count" />
-            </SelectTrigger>
-            <SelectContent>
-              {memberCountOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Team intentionally supports up to 12 members. Use multiple Team sections for larger
-            directories.
-          </p>
-          {resolvedVariant === "spotlight" ? (
-            <p className="text-xs text-muted-foreground">
-              Spotlight uses the selected lead member below and still honors the supporting-columns
-              control in Section and card style.
-            </p>
-          ) : null}
-        </div>
+        <WidgetControlRow
+          id="team.members.count"
+          label="Members count"
+          path="members.count"
+          help="Team intentionally supports up to 12 members. Use multiple Team sections for larger directories."
+        >
+          {(fieldProps) => (
+            <>
+              <Select
+                value={String(members.length)}
+                onValueChange={(next) => setMembersCount(value, onChange, Number(next))}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select count" />
+                </SelectTrigger>
+                <SelectContent>
+                  {memberCountOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {resolvedVariant === "spotlight" ? (
+                <p className="text-xs text-muted-foreground">
+                  Spotlight uses the selected lead member below and still honors the
+                  supporting-columns control in Section and card style.
+                </p>
+              ) : null}
+            </>
+          )}
+        </WidgetControlRow>
       </EditorSection>
 
       <EditorSection
+        id="team.visual.header-cta"
+        mode="visual"
+        role="content"
         title="Header copy and CTA"
         description="Edit section eyebrow, copy, presentation, and the optional Team CTA."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Eyebrow</p>
-          <Input
-            value={header.eyebrow ?? ""}
-            onChange={(event) => updateHeader(value, onChange, { eyebrow: event.target.value })}
-            placeholder="Our team"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Title</p>
-          <Input
-            value={header.title}
-            onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
-            placeholder="Meet the team"
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Description</p>
-          <Textarea
-            value={header.description}
-            onChange={(event) => updateHeader(value, onChange, { description: event.target.value })}
-            placeholder="Introduce key people behind delivery, support, and strategy."
-          />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Header alignment</p>
-            <Select
-              value={header.align ?? "center"}
-              onValueChange={(next) =>
-                updateHeader(value, onChange, { align: next as TeamHeaderAlign })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select alignment" />
-              </SelectTrigger>
-              <SelectContent>
-                {headerAlignOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Title size</p>
-            <Select
-              value={header.titleSize ?? "2xl"}
-              onValueChange={(next) =>
-                updateHeader(value, onChange, { titleSize: next as TeamHeaderTitleSize })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select title size" />
-              </SelectTrigger>
-              <SelectContent>
-                {titleSizeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">CTA label</p>
+        <WidgetControlRow id="team.header.eyebrow" label="Eyebrow" path="header.eyebrow">
+          {(fieldProps) => (
             <Input
-              value={cta.label ?? ""}
-              onChange={(event) => updateCta(value, onChange, { label: event.target.value })}
-              placeholder="See all positions"
+              id={fieldProps.id}
+              value={header.eyebrow ?? ""}
+              onChange={(event) => updateHeader(value, onChange, { eyebrow: event.target.value })}
+              placeholder="Our team"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
             />
-          </div>
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow id="team.header.title" label="Title" path="header.title">
+          {(fieldProps) => (
+            <Input
+              id={fieldProps.id}
+              value={header.title}
+              onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
+              placeholder="Meet the team"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <WidgetControlRow
+          id="team.header.description"
+          label="Description"
+          path="header.description"
+        >
+          {(fieldProps) => (
+            <Textarea
+              id={fieldProps.id}
+              value={header.description}
+              onChange={(event) =>
+                updateHeader(value, onChange, { description: event.target.value })
+              }
+              placeholder="Introduce key people behind delivery, support, and strategy."
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+          )}
+        </WidgetControlRow>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="team.header.align" label="Header alignment" path="header.align">
+            {(fieldProps) => (
+              <Select
+                value={header.align ?? "center"}
+                onValueChange={(next) =>
+                  updateHeader(value, onChange, { align: next as TeamHeaderAlign })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {headerAlignOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="team.header.titleSize" label="Title size" path="header.titleSize">
+            {(fieldProps) => (
+              <Select
+                value={header.titleSize ?? "2xl"}
+                onValueChange={(next) =>
+                  updateHeader(value, onChange, { titleSize: next as TeamHeaderTitleSize })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select title size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {titleSizeOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <WidgetControlRow id="team.cta.label" label="CTA label" path="cta.label">
+            {(fieldProps) => (
+              <Input
+                id={fieldProps.id}
+                value={cta.label ?? ""}
+                onChange={(event) => updateCta(value, onChange, { label: event.target.value })}
+                placeholder="See all positions"
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              />
+            )}
+          </WidgetControlRow>
           <LinkDestinationField
             fieldId="team-cta-destination"
             label="CTA destination"
@@ -1194,6 +1302,9 @@ export function TeamVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="team.visual.members-content-order"
+        mode="visual"
+        role="content"
         title="Members content and order"
         description="Manage names, roles, bios, photos, social links, spotlight lead, and member order."
       >
@@ -1297,39 +1408,61 @@ export function TeamVisualEditor({
                 </p>
               ) : null}
 
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Name</p>
-                <Input
-                  value={member.name}
-                  onChange={(event) =>
-                    updateMember(value, onChange, memberIndex, { name: event.target.value })
-                  }
-                  placeholder="Anna Kowalska"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Role</p>
-                <Input
-                  value={member.role}
-                  onChange={(event) =>
-                    updateMember(value, onChange, memberIndex, { role: event.target.value })
-                  }
-                  placeholder="Head of Product"
-                />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Bio</p>
-                <Textarea
-                  value={member.bio ?? ""}
-                  onChange={(event) =>
-                    updateMember(value, onChange, memberIndex, { bio: event.target.value })
-                  }
-                  placeholder="Short bio describing responsibilities and value."
-                />
-                <p className="text-xs text-muted-foreground">
-                  Clear the bio if you want the runtime card to omit it.
-                </p>
-              </div>
+              <WidgetControlRow
+                id={`team.members.${memberId}.name`}
+                label="Name"
+                path="members.name"
+              >
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    value={member.name}
+                    onChange={(event) =>
+                      updateMember(value, onChange, memberIndex, { name: event.target.value })
+                    }
+                    placeholder="Anna Kowalska"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow
+                id={`team.members.${memberId}.role`}
+                label="Role"
+                path="members.role"
+              >
+                {(fieldProps) => (
+                  <Input
+                    id={fieldProps.id}
+                    value={member.role}
+                    onChange={(event) =>
+                      updateMember(value, onChange, memberIndex, { role: event.target.value })
+                    }
+                    placeholder="Head of Product"
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
+              <WidgetControlRow
+                id={`team.members.${memberId}.bio`}
+                label="Bio"
+                path="members.bio"
+                help="Clear the bio if you want the runtime card to omit it."
+              >
+                {(fieldProps) => (
+                  <Textarea
+                    id={fieldProps.id}
+                    value={member.bio ?? ""}
+                    onChange={(event) =>
+                      updateMember(value, onChange, memberIndex, { bio: event.target.value })
+                    }
+                    placeholder="Short bio describing responsibilities and value."
+                    aria-labelledby={fieldProps["aria-labelledby"]}
+                    aria-describedby={fieldProps["aria-describedby"]}
+                  />
+                )}
+              </WidgetControlRow>
 
               <div className="space-y-3">
                 <p className="text-sm font-medium">Photo</p>
@@ -1428,59 +1561,72 @@ export function TeamVisualEditor({
                             )}
                           </div>
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="space-y-2">
-                              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                                Platform
-                              </p>
-                              <Select
-                                value={platform}
-                                onValueChange={(next) =>
-                                  updateMemberSocialPlatform(
-                                    value,
-                                    onChange,
-                                    memberIndex,
-                                    socialIndex,
-                                    next as TeamSocialPlatform
-                                  )
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select platform" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {platform === "custom" ? (
-                                    <SelectItem value="custom" disabled>
-                                      Custom saved destination
-                                    </SelectItem>
-                                  ) : null}
-                                  {teamSocialPlatformOptions.map((option) => (
-                                    <SelectItem key={option.id} value={option.id}>
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                                Public label
-                              </p>
-                              <Input
-                                value={link.label}
-                                onChange={(event) =>
-                                  updateMemberSocialLink(
-                                    value,
-                                    onChange,
-                                    memberIndex,
-                                    socialIndex,
-                                    {
-                                      label: event.target.value,
-                                    }
-                                  )
-                                }
-                                placeholder="LinkedIn"
-                              />
-                            </div>
+                            <WidgetControlRow
+                              id={`team.members.${memberId}.social.${socialId}.platform`}
+                              label="Platform"
+                              path="members.socialLinks.platform"
+                            >
+                              {(fieldProps) => (
+                                <Select
+                                  value={platform}
+                                  onValueChange={(next) =>
+                                    updateMemberSocialPlatform(
+                                      value,
+                                      onChange,
+                                      memberIndex,
+                                      socialIndex,
+                                      next as TeamSocialPlatform
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger
+                                    id={fieldProps.id}
+                                    aria-labelledby={fieldProps["aria-labelledby"]}
+                                    aria-describedby={fieldProps["aria-describedby"]}
+                                  >
+                                    <SelectValue placeholder="Select platform" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {platform === "custom" ? (
+                                      <SelectItem value="custom" disabled>
+                                        Custom saved destination
+                                      </SelectItem>
+                                    ) : null}
+                                    {teamSocialPlatformOptions.map((option) => (
+                                      <SelectItem key={option.id} value={option.id}>
+                                        {option.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </WidgetControlRow>
+                            <WidgetControlRow
+                              id={`team.members.${memberId}.social.${socialId}.label`}
+                              label="Public label"
+                              path="members.socialLinks.label"
+                            >
+                              {(fieldProps) => (
+                                <Input
+                                  id={fieldProps.id}
+                                  value={link.label}
+                                  onChange={(event) =>
+                                    updateMemberSocialLink(
+                                      value,
+                                      onChange,
+                                      memberIndex,
+                                      socialIndex,
+                                      {
+                                        label: event.target.value,
+                                      }
+                                    )
+                                  }
+                                  placeholder="LinkedIn"
+                                  aria-labelledby={fieldProps["aria-labelledby"]}
+                                  aria-describedby={fieldProps["aria-describedby"]}
+                                />
+                              )}
+                            </WidgetControlRow>
                           </div>
                           <TeamSocialProfileField
                             value={value}
@@ -1515,6 +1661,9 @@ export function TeamVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="team.visual.section-card-style"
+        mode="visual"
+        role="visual"
         title="Section and card style"
         description="Tune section background, card presentation, and compact-list mobile density."
       >
@@ -1525,6 +1674,7 @@ export function TeamVisualEditor({
           onClear={() => clearStyleField(value, onChange, "sectionBackground")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          allowTransparent
         />
         {(style.sectionBackground ?? "").trim().length > 0 ? (
           <ContrastAdvisoryNote
@@ -1533,67 +1683,88 @@ export function TeamVisualEditor({
           />
         ) : null}
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Columns</p>
-          <Select
-            value={style.columns}
-            onValueChange={(next) => updateStyle(value, onChange, { columns: next as TeamColumns })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select columns" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnsOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {resolvedVariant === "spotlight" ? (
-            <p className="text-xs text-muted-foreground">
-              Spotlight now applies the selected 1-4 supporting columns instead of collapsing 2, 3,
-              and 4 into the same layout.
-            </p>
-          ) : null}
-        </div>
+        <WidgetControlRow id="team.style.columns" label="Columns" path="style.columns">
+          {(fieldProps) => (
+            <>
+              <Select
+                value={style.columns}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { columns: next as TeamColumns })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select columns" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnsOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {resolvedVariant === "spotlight" ? (
+                <p className="text-xs text-muted-foreground">
+                  Spotlight now applies the selected 1-4 supporting columns instead of collapsing 2,
+                  3, and 4 into the same layout.
+                </p>
+              ) : null}
+            </>
+          )}
+        </WidgetControlRow>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Gap</p>
-            <Select
-              value={style.gap}
-              onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select gap" />
-              </SelectTrigger>
-              <SelectContent>
-                {gapOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card radius</p>
-            <Select
-              value={style.radius}
-              onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="team.style.gap" label="Gap" path="style.gap">
+            {(fieldProps) => (
+              <Select
+                value={style.gap}
+                onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select gap" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gapOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="team.style.radius" label="Card radius" path="style.radius">
+            {(fieldProps) => (
+              <Select
+                value={style.radius}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { radius: next as TeamRadius })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {radiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
         <ColorField
           label="Card background"
@@ -1602,6 +1773,8 @@ export function TeamVisualEditor({
           onClear={() => clearStyleField(value, onChange, "cardSurface")}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          treatAsThemeDefaultValues={["var(--color-bg)"]}
+          allowTransparent
         />
         <ColorField
           label="Card border"
@@ -1610,6 +1783,7 @@ export function TeamVisualEditor({
           onClear={() => clearStyleField(value, onChange, "cardBorder")}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          treatAsThemeDefaultValues={["var(--color-border)"]}
         />
         {(style.cardSurface ?? "").trim().length > 0 ? (
           <ContrastAdvisoryNote
@@ -1619,46 +1793,64 @@ export function TeamVisualEditor({
           />
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Card border width</p>
-            <Select
-              value={style.cardBorderWidth ?? "1"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { cardBorderWidth: next as TeamBorderWidth })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Border width" />
-              </SelectTrigger>
-              <SelectContent>
-                {borderWidthOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Compact-list mobile bio</p>
-            <Select
-              value={resolveTeamCompactMobileBio(style.compactMobileBio)}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { compactMobileBio: next as TeamCompactMobileBio })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Mobile bio behavior" />
-              </SelectTrigger>
-              <SelectContent>
-                {compactMobileBioOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow
+            id="team.style.cardBorderWidth"
+            label="Card border width"
+            path="style.cardBorderWidth"
+          >
+            {(fieldProps) => (
+              <Select
+                value={style.cardBorderWidth ?? "1"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { cardBorderWidth: next as TeamBorderWidth })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Border width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {borderWidthOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow
+            id="team.style.compactMobileBio"
+            label="Compact-list mobile bio"
+            path="style.compactMobileBio"
+          >
+            {(fieldProps) => (
+              <Select
+                value={resolveTeamCompactMobileBio(style.compactMobileBio)}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { compactMobileBio: next as TeamCompactMobileBio })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Mobile bio behavior" />
+                </SelectTrigger>
+                <SelectContent>
+                  {compactMobileBioOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
         <p className="text-xs text-muted-foreground">
           Compact-list mobile bio affects only the Compact List variant. Hiding keeps the bio
@@ -1669,25 +1861,22 @@ export function TeamVisualEditor({
   );
 }
 
-export function TeamAdvancedEditor({ value, onChange, variant }: WidgetEditorProps<TeamData>) {
+export function TeamAdvancedEditor({ value, variant }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
   const style = normalized.style ?? teamDefaults.style!;
   const members = normalizeTeamMembers(normalized.members);
-  const [pendingAction, setPendingAction] = useState<"normalize" | "reset" | null>(null);
-
-  const closePendingAction = () => setPendingAction(null);
-  const confirmPendingAction = () => {
-    if (pendingAction === "normalize") {
-      onChange(normalizeValue(value));
-    } else if (pendingAction === "reset") {
-      onChange(teamDefaults);
-    }
-    closePendingAction();
-  };
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Visual for public-facing Team copy, members, CTA, layout,
+        colors, and card presentation changes.
+      </p>
+
       <EditorSection
+        id="team.advanced.layout-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Layout summary"
         description="Read-only layout state. Change member layout and card style in Visual."
       >
@@ -1734,6 +1923,9 @@ export function TeamAdvancedEditor({ value, onChange, variant }: WidgetEditorPro
       </EditorSection>
 
       <EditorSection
+        id="team.advanced.surface-summary"
+        mode="advanced"
+        role="summary"
         title="Surface summary"
         description="Read-only color state. Change section and card colors in Visual."
       >
@@ -1758,6 +1950,9 @@ export function TeamAdvancedEditor({ value, onChange, variant }: WidgetEditorPro
       </EditorSection>
 
       <EditorSection
+        id="team.advanced.content-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Content summary"
         description="Read-only team content state. Change members, photos, social links, and CTA in Visual."
       >
@@ -1783,43 +1978,54 @@ export function TeamAdvancedEditor({ value, onChange, variant }: WidgetEditorPro
           id="team-advanced-cta"
           label="CTA"
           path="cta"
-          value={normalized.cta?.label || normalized.cta?.url ? "Configured" : "Not configured"}
+          value={describeTeamCtaState(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-heading"
+          label="Section heading"
+          path="header.title"
+          value={describeTeamHeaderState(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-description"
+          label="Helper copy"
+          path="header.description"
+          value={describeTeamDescriptionState(normalized)}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-photo-coverage"
+          label="Photo coverage"
+          path="members.photo"
+          value={describeTeamPhotoCoverage(members)}
         />
       </EditorSection>
 
       <EditorSection
-        title="Support actions"
-        description="Confirm-gated maintenance actions for support use. Daily authoring stays in Visual."
+        id="team.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Team v2 contract."
       >
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => setPendingAction("normalize")}>
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setPendingAction("reset")}>
-            Reset to defaults
-          </Button>
-        </div>
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-wizard-owner"
+          label="Wizard owns"
+          path="variant"
+          value="One-time team layout seed."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-visual-owner"
+          label="Visual owns"
+          path="header"
+          value="Header copy, CTA, members, spotlight lead, photos, social links, and section/card styling."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="team-advanced-advanced-owner"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only layout, surface, and content diagnostics plus contract ownership."
+        />
       </EditorSection>
-
-      <ConfirmActionDialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => {
-          if (!open) closePendingAction();
-        }}
-        title={pendingAction === "reset" ? "Reset Team widget?" : "Normalize Team widget?"}
-        description={
-          pendingAction === "reset"
-            ? "Reset Team to default members, copy, CTA, and style values."
-            : "Apply deterministic fallback values for member identities, social links, CTA, and style."
-        }
-        confirmLabel={pendingAction === "reset" ? "Reset Team" : "Normalize Team"}
-        tone={pendingAction === "reset" ? "destructive" : "warning"}
-        onConfirm={confirmPendingAction}
-      >
-        {pendingAction === "reset"
-          ? "This replaces the current Team configuration with defaults."
-          : "This preserves supported content while cleaning malformed structure."}
-      </ConfirmActionDialog>
     </div>
   );
 }

@@ -338,6 +338,9 @@ test("Team wizard editor covers variant fallback and leaves member count to Visu
     expect(view.container.textContent).toContain("Team layout");
     expect(view.container.textContent).toContain("Members count");
     expect(view.container.textContent).toContain("Use Visual to change member count");
+    expect(
+      findSectionByTitle(view.container, "Starter team")?.getAttribute("data-widget-editor-section")
+    ).toBe("team.wizard.starter-team");
 
     const variantSelect = findSelectByOptions(view.container, [
       "cards",
@@ -404,6 +407,26 @@ test("Team visual editor integrates social links into member panels and confirms
     expect(view.container.textContent).toContain("Members content and order");
     expect(view.container.textContent).toContain("Section and card style");
     expect(view.container.textContent).toContain("Social links");
+    expect(
+      findSectionByTitle(view.container, "Variant and member structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.variant-member-structure");
+    expect(
+      findSectionByTitle(view.container, "Header copy and CTA")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.header-cta");
+    expect(
+      findSectionByTitle(view.container, "Members content and order")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.members-content-order");
+    expect(
+      findSectionByTitle(view.container, "Section and card style")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.visual.section-card-style");
     expect(view.container.textContent).not.toContain(
       "No social links configured.No social links configured."
     );
@@ -565,13 +588,13 @@ test("Team visual editor covers spotlight lead, media picker, CTA feedback, and 
 
     const styleSection = findSectionByTitle(view.container, "Section and card style");
     const sectionBackgroundSwatch = (styleSection as ParentNode).querySelector(
-      'input[aria-label="Section background swatch"]'
+      'input[aria-label="Section background"]'
     );
     const cardBackgroundSwatch = (styleSection as ParentNode).querySelector(
-      'input[aria-label="Card background swatch"]'
+      'input[aria-label="Card background"]'
     );
     const cardBorderSwatch = (styleSection as ParentNode).querySelector(
-      'input[aria-label="Card border swatch"]'
+      'input[aria-label="Card border"]'
     );
     expect(sectionBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
     expect(cardBackgroundSwatch).toBeInstanceOf(HTMLInputElement);
@@ -670,7 +693,7 @@ test("Team visual editor clears stale picked-media state when media resolution f
   }
 });
 
-test("Team advanced editor keeps support actions confirm-gated and diagnostics read-only", async () => {
+test("Team advanced editor keeps truthful read-only diagnostics sections", async () => {
   const { TeamAdvancedEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
 
   const onChangeSpy = vi.fn();
@@ -722,11 +745,34 @@ test("Team advanced editor keeps support actions confirm-gated and diagnostics r
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing Team copy, members, CTA, layout, colors, and card presentation changes."
+    );
     expect(view.container.textContent).toContain("Layout summary");
     expect(view.container.textContent).toContain("Surface summary");
     expect(view.container.textContent).toContain("Content summary");
-    expect(view.container.textContent).toContain("Support actions");
+    expect(view.container.textContent).toContain("Contract summary");
     expect(view.container.textContent).toContain("Read-only layout state");
+    expect(
+      findSectionByTitle(view.container, "Layout summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.layout-summary");
+    expect(
+      findSectionByTitle(view.container, "Surface summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.surface-summary");
+    expect(
+      findSectionByTitle(view.container, "Content summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.content-summary");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("team.advanced.contract-summary");
     expect(view.container.textContent).not.toContain("Raw payload snapshot");
     expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.querySelector("select")).toBeNull();
@@ -737,22 +783,15 @@ test("Team advanced editor keeps support actions confirm-gated and diagnostics r
         '[data-widget-control-path]:not([data-widget-control-readonly="true"])'
       )
     ).toHaveLength(0);
-
-    clickButtonByText(view.container, "Normalize now");
-    expect(view.container.textContent).toContain("Normalize Team widget?");
+    expect(view.container.querySelectorAll("button")).toHaveLength(0);
+    expect(view.container.textContent).toContain("Section heading");
+    expect(view.container.textContent).toContain("Helper copy");
+    expect(view.container.textContent).toContain("Photo coverage");
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
     expect(onChangeSpy).not.toHaveBeenCalled();
     expect(latestValue.header).toBeUndefined();
-    clickButtonByText(view.container, "confirm-action");
-    expect(latestValue.header?.title).toBe(teamDefaults.header?.title);
-    expect(latestValue.style?.cardBorderWidth).toBe("1");
-    expect(latestValue.style?.compactMobileBio).toBe("show");
-    expect(latestValue.members?.[1]?.id).toBe("member-2");
-
-    clickButtonByText(view.container, "Reset to defaults");
-    expect(view.container.textContent).toContain("Reset Team widget?");
-    expect(latestValue).not.toEqual(teamDefaults);
-    clickButtonByText(view.container, "confirm-action");
-    expect(latestValue).toEqual(teamDefaults);
   } finally {
     view.cleanup();
   }

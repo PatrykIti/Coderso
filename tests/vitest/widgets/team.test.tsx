@@ -341,6 +341,7 @@ test("team wizard renders onboarding fields", () => {
   expect(html).toContain("Team layout");
   expect(html).toContain("Members count");
   expect(html).toContain("Use Visual to change member count");
+  expect(html).toContain('data-widget-editor-section="team.wizard.starter-team"');
 });
 
 test("team visual renders section-based IA", () => {
@@ -358,6 +359,10 @@ test("team visual renders section-based IA", () => {
   expect(html).toContain("Members content and order");
   expect(html).toContain("Section and card style");
   expect(html).toContain("Social links");
+  expect(html).toContain('data-widget-editor-section="team.visual.variant-member-structure"');
+  expect(html).toContain('data-widget-editor-section="team.visual.header-cta"');
+  expect(html).toContain('data-widget-editor-section="team.visual.members-content-order"');
+  expect(html).toContain('data-widget-editor-section="team.visual.section-card-style"');
 });
 
 test("team advanced keeps read-only diagnostics scope", () => {
@@ -373,8 +378,15 @@ test("team advanced keeps read-only diagnostics scope", () => {
   expect(html).toContain("Layout summary");
   expect(html).toContain("Surface summary");
   expect(html).toContain("Content summary");
-  expect(html).toContain("Support actions");
+  expect(html).toContain("Contract summary");
+  expect(html).toContain("Advanced mode is read-only.");
   expect(html).toContain("Card border width");
+  expect(html).toContain('data-widget-editor-section="team.advanced.layout-summary"');
+  expect(html).toContain('data-widget-editor-section="team.advanced.surface-summary"');
+  expect(html).toContain('data-widget-editor-section="team.advanced.content-summary"');
+  expect(html).toContain('data-widget-editor-section="team.advanced.contract-summary"');
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Members content and order");
+  expect(html).not.toContain("Normalize now");
+  expect(html).not.toContain("Reset to defaults");
 });

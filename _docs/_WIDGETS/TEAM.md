@@ -61,15 +61,18 @@ Notes:
 ### Advanced (technical-only)
 - Read-only layout summary
 - Read-only surface and content summaries
-- Confirm-gated normalization and reset utilities
+- Read-only contract summary
 
 Notes:
-- Advanced no longer duplicates Visual-owned layout/style controls and no
-  longer renders a raw payload snapshot. Support actions require confirmation
-  before they mutate the widget.
+- Advanced no longer duplicates Visual-owned layout/style controls, no longer
+  renders a raw payload snapshot, and no longer exposes mutating support
+  actions in the daily tab flow.
 - `teamEditorContract` declares Wizard as starter setup, Visual as daily
   content/style authoring, and Advanced as diagnostics-only with no writable
   paths.
+- Team main text inputs/selects now use the same shared labeled-field pattern
+  as Hero, and Team background surfaces now expose Hero-style transparent
+  affordances where those background fields are Team-owned.
 
 ## Runtime Behavior Notes
 
@@ -113,6 +116,8 @@ Notes:
   clearable from Visual controls; clearing removes the configured fields and
   the renderer omits the matching inline style keys. Advanced only summarizes
   the saved color state.
+- Section and card backgrounds also support explicit transparent state through
+  the same beginner-oriented swatch flow used elsewhere in Hero-parity work.
 - Gap, radius, border width, header alignment, title size, and compact mobile
   bio remain bounded tokens rather than arbitrary CSS.
 
