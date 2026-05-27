@@ -40,8 +40,16 @@ import {
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
-import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  hasClearableFieldValue,
+  isPickerRepresentableColorValue,
+  resolveColorPickerValue,
+} from "./ClearableFields";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: PricingPlansVariantId;
@@ -189,18 +197,28 @@ function FixedPlanCountNotice({
 
 function EditorSection({
   id,
+  mode = "visual",
+  role = "visual",
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: "setup" | "content" | "visual" | "layout" | "diagnostics" | "summary";
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      title={title}
+      mode={mode}
+      role={role}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -241,30 +259,75 @@ function VariantCards({
 }
 
 function ColorField({
+  id,
   label,
   value,
   onChange,
-  placeholder,
   pickerFallback,
   onClear,
+  treatAsThemeDefaultValues,
 }: {
+  id: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
-  placeholder: string;
   pickerFallback: string;
   onClear?: () => void;
+  treatAsThemeDefaultValues?: string[];
 }) {
+  const normalizedValue = value?.trim();
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0)
+  );
+  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
+  const hasValue = hasClearableFieldValue(value);
+  const hasCustomValue =
+    hasValue && !isThemeDefaultValue && !isPickerRepresentableColorValue(value);
+  const pickerValue = resolveColorPickerValue(value, pickerFallback);
+
   return (
-    <SharedColorControl
+    <WidgetControlRow
+      id={id}
       label={label}
-      value={value}
-      onChange={onChange}
-      onClear={onClear}
-      placeholder={placeholder}
-      pickerFallback={pickerFallback}
-      showValueInput={false}
-    />
+      actions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={!hasValue || isThemeDefaultValue}
+        >
+          Clear
+        </Button>
+      }
+    >
+      {(fieldProps) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
+            <Input
+              id={fieldProps.id}
+              type="color"
+              value={pickerValue}
+              onChange={(event) => onChange(event.target.value)}
+              className="h-10 w-11 p-1"
+              aria-labelledby={fieldProps["aria-labelledby"]}
+              aria-describedby={fieldProps["aria-describedby"]}
+            />
+            <div className="flex min-h-10 flex-wrap items-center gap-2">
+              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
+                {hasCustomValue
+                  ? "Saved custom color"
+                  : hasValue && !isThemeDefaultValue
+                    ? "Selected color"
+                    : "Theme default"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </WidgetControlRow>
   );
 }
 
@@ -794,6 +857,9 @@ export function PricingPlansVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="pricing-plans.visual.variant-structure"
+        mode="visual"
+        role="layout"
         title="Variant and plan structure"
         description="Choose pricing layout variant and maintain deterministic plan count."
       >
@@ -810,6 +876,9 @@ export function PricingPlansVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="pricing-plans.visual.header-copy"
+        mode="visual"
+        role="content"
         title="Header copy"
         description="Edit section title and description shown above pricing plans."
       >
@@ -834,6 +903,8 @@ export function PricingPlansVisualEditor({
 
       <EditorSection
         id="pricing.billing"
+        mode="visual"
+        role="content"
         title="Billing toggle"
         description="Control whether plans show monthly vs annual pricing defaults."
       >
@@ -904,6 +975,9 @@ export function PricingPlansVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="pricing-plans.visual.plan-actions"
+        mode="visual"
+        role="content"
         title="Plans, features, and actions"
         description="Manage plan content, feature rows, CTA actions, and highlighted offer."
       >
@@ -1250,12 +1324,13 @@ export function PricingPlansVisualEditor({
             </div>
 
             <ColorField
+              id={`pricing-plans.plan.${planIndex + 1}.surface`}
               label="Plan surface"
               value={plan.surface}
               onChange={(next) => updatePlan(value, onChange, planIndex, { surface: next })}
               onClear={() => updatePlan(value, onChange, planIndex, { surface: undefined })}
-              placeholder="var(--color-bg)"
               pickerFallback="#ffffff"
+              treatAsThemeDefaultValues={["var(--color-bg)"]}
             />
 
             <div className="space-y-2">
@@ -1422,6 +1497,9 @@ export function PricingPlansVisualEditor({
 
       {resolvedVariant === "comparison-rows" ? (
         <EditorSection
+          id="pricing-plans.visual.comparison-behavior"
+          mode="visual"
+          role="layout"
           title="Comparison rows behavior"
           description="Tune header hierarchy and sticky behavior for the comparison layout."
         >
@@ -1473,6 +1551,9 @@ export function PricingPlansVisualEditor({
       ) : null}
 
       <EditorSection
+        id="pricing-plans.visual.layout-notes"
+        mode="visual"
+        role="layout"
         title="Layout and notes"
         description="Set section width, typography emphasis, and plain-text pricing notes."
       >
@@ -1531,105 +1612,128 @@ export function PricingPlansVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="pricing-plans.visual.colors-emphasis"
+        mode="visual"
+        role="visual"
         title="Colors and emphasis"
         description="Configure card surface, border, highlight ring, spacing, radius, and marker style."
       >
         <ColorField
+          id="pricing-plans.style.cardSurface"
           label="Card surface"
           value={normalized.style?.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
           onClear={() => clearStyleField(value, onChange, "cardSurface")}
-          placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          treatAsThemeDefaultValues={["var(--color-bg)"]}
         />
 
         <ColorField
+          id="pricing-plans.style.cardBorder"
           label="Card border"
           value={normalized.style?.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
           onClear={() => clearStyleField(value, onChange, "cardBorder")}
-          placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          treatAsThemeDefaultValues={["var(--color-border)"]}
         />
 
         <ColorField
+          id="pricing-plans.style.highlightRing"
           label="Highlight ring"
           value={normalized.style?.highlightRing}
           onChange={(next) => updateStyle(value, onChange, { highlightRing: next })}
           onClear={() => clearStyleField(value, onChange, "highlightRing")}
-          placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
+          treatAsThemeDefaultValues={["var(--color-primary)"]}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Spacing</p>
-            <Select
-              value={normalized.style?.spacing ?? pricingPlansDefaults.style?.spacing ?? "md"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { spacing: next as PricingPlansSpacing })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Spacing" />
-              </SelectTrigger>
-              <SelectContent>
-                {spacingOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="pricing-plans.style.spacing" label="Spacing">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.spacing ?? pricingPlansDefaults.style?.spacing ?? "md"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { spacing: next as PricingPlansSpacing })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Spacing" />
+                </SelectTrigger>
+                <SelectContent>
+                  {spacingOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Radius</p>
-            <Select
-              value={normalized.style?.radius ?? pricingPlansDefaults.style?.radius ?? "lg"}
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { radius: next as PricingPlansRadius })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Radius" />
-              </SelectTrigger>
-              <SelectContent>
-                {radiusOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="pricing-plans.style.radius" label="Radius">
+            {(fieldProps) => (
+              <Select
+                value={normalized.style?.radius ?? pricingPlansDefaults.style?.radius ?? "lg"}
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, { radius: next as PricingPlansRadius })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Radius" />
+                </SelectTrigger>
+                <SelectContent>
+                  {radiusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Feature marker</p>
-            <Select
-              value={
-                normalized.style?.featureMarker === "icon"
-                  ? "status"
-                  : (normalized.style?.featureMarker ??
-                    pricingPlansDefaults.style?.featureMarker ??
-                    "bullet")
-              }
-              onValueChange={(next) =>
-                updateStyle(value, onChange, { featureMarker: next as PricingPlansFeatureMarker })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Feature marker" />
-              </SelectTrigger>
-              <SelectContent>
-                {featureMarkerOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <WidgetControlRow id="pricing-plans.style.featureMarker" label="Feature marker">
+            {(fieldProps) => (
+              <Select
+                value={
+                  normalized.style?.featureMarker === "icon"
+                    ? "status"
+                    : (normalized.style?.featureMarker ??
+                      pricingPlansDefaults.style?.featureMarker ??
+                      "bullet")
+                }
+                onValueChange={(next) =>
+                  updateStyle(value, onChange, {
+                    featureMarker: next as PricingPlansFeatureMarker,
+                  })
+                }
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Feature marker" />
+                </SelectTrigger>
+                <SelectContent>
+                  {featureMarkerOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
         </div>
       </EditorSection>
     </div>
@@ -1654,8 +1758,11 @@ export function PricingPlansAdvancedEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="pricing-plans.advanced.visual-tokens"
+        mode="advanced"
+        role="diagnostics"
         title="Visual-owned tokens"
-        description="Spacing and radius live in Visual mode. Advanced shows the current token state only."
+        description="Spacing and radius live in Visual mode. Advanced shows only the current token state."
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-2">
@@ -1671,15 +1778,13 @@ export function PricingPlansAdvancedEditor({
               {normalized.style?.radius ?? pricingPlansDefaults.style?.radius ?? "lg"}
             </div>
           </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Visible plans in this layout</p>
-            <div className="rounded-md border px-3 py-2 text-sm">{visibleCount}</div>
-          </div>
         </div>
       </EditorSection>
 
       <EditorSection
+        id="pricing-plans.advanced.fix-reset"
+        mode="advanced"
+        role="summary"
         title="Fix and reset"
         description="Support-only repair actions. Each change requires confirmation before the payload is rewritten."
       >
@@ -1702,10 +1807,17 @@ export function PricingPlansAdvancedEditor({
       </EditorSection>
 
       <EditorSection
+        id="pricing-plans.advanced.runtime-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Runtime summary"
         description="Human diagnostics only. Advanced does not show raw pricing JSON."
       >
         <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Visible plans in this layout</p>
+            <div className="rounded-md border px-3 py-2 text-sm">{visibleCount}</div>
+          </div>
           <div className="space-y-2">
             <p className="text-sm font-medium">Configured plans</p>
             <div className="rounded-md border px-3 py-2 text-sm">

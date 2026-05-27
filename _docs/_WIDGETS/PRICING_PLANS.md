@@ -27,6 +27,14 @@ Pricing table for plans, tiers, and comparison-style rows.
 ### Visual
 
 - plan cards and features
+- sectioned Visual IA:
+  - `Variant and plan structure`
+  - `Header copy`
+  - `Billing toggle`
+  - `Plans, features, and actions`
+  - `Comparison rows behavior` (comparison variant only)
+  - `Layout and notes`
+  - `Colors and emphasis`
 - billing toggle labels and default cycle
 - highlighted plan
 - plan-level card hierarchy, CTA style, CTA destination, and product copy
@@ -39,6 +47,10 @@ Pricing table for plans, tiers, and comparison-style rows.
 
 - shared diagnostics and fix/reset actions only; active spacing/radius editing
   stays in Visual mode
+- sectioned Advanced IA:
+  - `Visual-owned tokens`
+  - `Fix and reset`
+  - `Runtime summary`
 
 ## None Token Support
 

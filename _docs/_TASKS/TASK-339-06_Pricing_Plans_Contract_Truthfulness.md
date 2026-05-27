@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -90,3 +90,19 @@ No API routes are added.
 
 - Pricing Plans keeps the richer current UI.
 - Rendered section ids/titles/roles and `editorContract` match exactly.
+
+## Completion Notes (2026-05-27)
+
+- Pricing Plans now exports a truthful contract for the richer editor that was
+  already shipping: `Variant and plan structure`, `Header copy`,
+  `Billing toggle`, `Plans, features, and actions`, `Comparison rows behavior`,
+  `Layout and notes`, `Colors and emphasis`, plus the split Advanced
+  diagnostics sections.
+- The widget behavior stayed intact; this leaf focused on contract/DOM
+  truthfulness and small authoring-shape cleanup in the color rows so they now
+  match the Hero swatch/default pattern.
+- Claude Playwright snapshot review final result: `NO BLOCKERS`.
+- Validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`

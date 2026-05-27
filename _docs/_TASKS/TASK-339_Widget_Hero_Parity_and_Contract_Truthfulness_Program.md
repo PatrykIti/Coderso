@@ -102,7 +102,7 @@ frontend via Playwright.
 - [x] TASK-339-03: Contact Hero Color Parity
 - [x] TASK-339-04: CTA Banner Hero Section Parity
 - [x] TASK-339-05: Testimonials Contract Truthfulness
-- [ ] TASK-339-06: Pricing Plans Contract Truthfulness
+- [x] TASK-339-06: Pricing Plans Contract Truthfulness
 - [ ] TASK-339-07: FAQ Accordion Contract Truthfulness
 - [ ] TASK-339-08: Gallery Mosaic Contract Truthfulness
 - [ ] TASK-339-09: Team Contract Truthfulness
@@ -282,3 +282,6 @@ User-requested validation boundary:
   synchronized the widget-owned contract to the real section inventory already
   rendered in Wizard, Visual, and Advanced. Claude snapshot review returned
   `NO BLOCKERS`.
+- Done (2026-05-27): `TASK-339-06` synchronized Pricing Plans to its real
+  section inventory, cleaned the remaining color-row shape drift against Hero,
+  and passed Claude snapshot review with `NO BLOCKERS`.

@@ -616,7 +616,9 @@ test("widget template block settings render pricing plans visual sections", () =
 
   expect(html).toContain("Variant and plan structure");
   expect(html).toContain("Header copy");
+  expect(html).toContain("Billing toggle");
   expect(html).toContain("Plans, features, and actions");
+  expect(html).toContain("Layout and notes");
   expect(html).toContain("Colors and emphasis");
 });
 

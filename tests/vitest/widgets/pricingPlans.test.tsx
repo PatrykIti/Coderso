@@ -573,8 +573,16 @@ test("pricing plans visual renders section-based IA", () => {
 
   expect(html).toContain("Variant and plan structure");
   expect(html).toContain("Header copy");
+  expect(html).toContain("Billing toggle");
   expect(html).toContain("Plans, features, and actions");
+  expect(html).toContain("Layout and notes");
   expect(html).toContain("Colors and emphasis");
+  expect(html).toContain('data-widget-editor-section="pricing-plans.visual.variant-structure"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.visual.header-copy"');
+  expect(html).toContain('data-widget-editor-section="pricing.billing"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.visual.plan-actions"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.visual.layout-notes"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.visual.colors-emphasis"');
 });
 
 test("pricing plans advanced keeps technical-only scope", () => {
@@ -590,6 +598,9 @@ test("pricing plans advanced keeps technical-only scope", () => {
   expect(html).toContain("Visual-owned tokens");
   expect(html).toContain("Fix and reset");
   expect(html).toContain("Runtime summary");
+  expect(html).toContain('data-widget-editor-section="pricing-plans.advanced.visual-tokens"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.advanced.fix-reset"');
+  expect(html).toContain('data-widget-editor-section="pricing-plans.advanced.runtime-summary"');
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("<pre");
   expect(html).not.toContain("Plans, features, and actions");

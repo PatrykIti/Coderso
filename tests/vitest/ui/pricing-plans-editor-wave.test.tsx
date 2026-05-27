@@ -334,6 +334,9 @@ const findInputByAriaLabel = (container: ParentNode, ariaLabel: string) =>
       element instanceof HTMLInputElement && element.getAttribute("aria-label") === ariaLabel
   );
 
+const findColorInputByControl = (container: ParentNode, controlId: string) =>
+  container.querySelector(`[data-widget-control="${controlId}"] input[type="color"]`);
+
 const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
   Array.from(container.querySelectorAll("textarea")).find(
     (element) =>
@@ -672,9 +675,18 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       highlighted: false,
     });
 
-    setInputValue(findInputByAriaLabel(view.container, "Card surface swatch"), "#112233");
-    setInputValue(findInputByAriaLabel(view.container, "Card border swatch"), "#223344");
-    setInputValue(findInputByAriaLabel(view.container, "Highlight ring swatch"), "#334455");
+    setInputValue(
+      findColorInputByControl(view.container, "pricing-plans.style.cardSurface"),
+      "#112233"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "pricing-plans.style.cardBorder"),
+      "#223344"
+    );
+    setInputValue(
+      findColorInputByControl(view.container, "pricing-plans.style.highlightRing"),
+      "#334455"
+    );
     setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
     setSelectValue(findSelectByOptions(view.container, ["none", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(view.container, ["bullet", "check", "status"]), "status");
@@ -704,7 +716,10 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       footerNote: "All prices exclude VAT.",
     });
 
-    clickElement(findButtonsByText(view.container, "Clear").at(-1));
+    const highlightRingClear = view.container.querySelector(
+      '[data-widget-control="pricing-plans.style.highlightRing"] button'
+    );
+    clickElement(highlightRingClear);
     expect(latestValue.style?.highlightRing).toBe("var(--color-primary)");
   } finally {
     Object.defineProperty(window, "confirm", {
