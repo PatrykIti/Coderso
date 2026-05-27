@@ -780,14 +780,6 @@ export const postsFeedEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
-      id: "posts-feed.advanced.runtime-summary",
-      title: "Runtime summary",
-      role: "diagnostics",
-      writablePaths: [],
-      readOnlyPaths: ["resolved"],
-    },
-    {
-      mode: "advanced",
       id: "posts-feed.advanced.contract-summary",
       title: "Contract summary",
       role: "summary",

@@ -171,6 +171,19 @@ export const listingFiltersEditorContract: WidgetEditorContract = {
     },
     {
       mode: "visual",
+      id: "listing-filters.visual.variant-layout",
+      title: "Variant and layout",
+      role: "layout",
+      writablePaths: [
+        "variant",
+        "layout.maxWidth",
+        "layout.collapsibleFacets",
+        "layout.defaultCollapsed",
+        "layout.stickySidebar",
+      ],
+    },
+    {
+      mode: "visual",
       id: "listing-filters.visual.copy-behavior",
       title: "Filter copy and behavior",
       role: "content",
@@ -182,19 +195,6 @@ export const listingFiltersEditorContract: WidgetEditorContract = {
         "applyLabel",
         "showSearch",
         "autoApply",
-      ],
-    },
-    {
-      mode: "visual",
-      id: "listing-filters.visual.variant-layout",
-      title: "Variant and layout",
-      role: "layout",
-      writablePaths: [
-        "variant",
-        "layout.maxWidth",
-        "layout.collapsibleFacets",
-        "layout.defaultCollapsed",
-        "layout.stickySidebar",
       ],
     },
     {

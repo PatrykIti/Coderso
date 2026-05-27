@@ -49,7 +49,7 @@ export const spacerEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "spacer.wizard.quick-start",
-      title: "Guided quick start",
+      title: "Spacer quick start",
       role: "setup",
       writablePaths: [],
       readOnlyPaths: ["variant", "height", "height.desktop"],

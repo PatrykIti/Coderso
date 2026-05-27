@@ -151,7 +151,7 @@ export const sectionEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "section.wizard.quick-start",
-      title: "Guided quick start",
+      title: "Section setup",
       role: "setup",
       writablePaths: [],
       readOnlyPaths: ["variant"],
@@ -200,6 +200,13 @@ export const sectionEditorContract: WidgetEditorContract = {
     },
     {
       mode: "visual",
+      id: "section.visual.link-accessibility",
+      title: "Section link and accessibility",
+      role: "content",
+      writablePaths: ["semantics.element", "semantics.anchorId", "semantics.ariaLabel"],
+    },
+    {
+      mode: "visual",
       id: "section.width-spacing",
       title: "Width and spacing",
       role: "layout",
@@ -219,13 +226,6 @@ export const sectionEditorContract: WidgetEditorContract = {
         "layout.regionGap",
       ],
       allowedDuplicateWritablePaths: sectionLayoutPresetAllowances,
-    },
-    {
-      mode: "visual",
-      id: "section.visual.link-accessibility",
-      title: "Section link and accessibility",
-      role: "content",
-      writablePaths: ["semantics.element", "semantics.anchorId", "semantics.ariaLabel"],
     },
     {
       mode: "visual",
@@ -273,7 +273,7 @@ export const sectionEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "section.advanced.resolved-summary",
-      title: "Resolved layout summary",
+      title: "Technical tokens",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["layout", "style", "semantics"],

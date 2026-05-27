@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 987 | 2026-05-27 | Residual widget contract truthfulness sweep | CMS Widgets/Admin UI/Contracts/QA/Docs |
 | 986 | 2026-05-27 | Timeline contract truthfulness | CMS Widgets/Admin UI/Timeline/Contracts/Playwright/QA/Docs |
 | 985 | 2026-05-27 | Product Compare contract truthfulness | CMS Widgets/Admin UI/Commerce/Contracts/Playwright/QA/Docs |
 | 984 | 2026-05-27 | Product Gallery contract truthfulness | CMS Widgets/Admin UI/Commerce/Contracts/Playwright/QA/Docs |

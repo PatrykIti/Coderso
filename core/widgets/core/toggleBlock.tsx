@@ -271,7 +271,7 @@ export const toggleBlockEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "toggle-block.advanced.contract-summary",
-      title: "Contract summary",
+      title: "Support summary",
       role: "summary",
       writablePaths: [],
       readOnlyPaths: ["editorContract"],

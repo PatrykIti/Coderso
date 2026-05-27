@@ -465,8 +465,8 @@ test("listing filters widget declares a strict editor ownership contract", () =>
   expect(widget.editorContract?.sections.map((section) => section.id)).toEqual([
     "listing-filters.wizard.query-source",
     "listing-filters.wizard.facet-setup",
-    "listing-filters.visual.copy-behavior",
     "listing-filters.visual.variant-layout",
+    "listing-filters.visual.copy-behavior",
     "listing-filters.visual.surface",
     "listing-filters.visual.facet-presentation",
     "listing-filters.advanced.source-summary",

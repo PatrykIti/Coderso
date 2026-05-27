@@ -98,7 +98,7 @@ export const appointmentFormEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "appointment-form.wizard.flow-setup",
-      title: "Flow setup",
+      title: "Flow",
       role: "setup",
       writablePaths: ["flowId"],
     },

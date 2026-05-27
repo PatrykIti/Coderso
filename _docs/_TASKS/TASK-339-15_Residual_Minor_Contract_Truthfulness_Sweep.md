@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-02, TASK-339-04, TASK-339-05, TASK-339-06, TASK-339-07, TASK-339-08, TASK-339-09, TASK-339-10, TASK-339-11, TASK-339-12, TASK-339-13, TASK-339-14
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude review optional only if the sweep exposes user-visible IA drift
 
 ---
@@ -103,6 +103,42 @@ No API routes are added.
 - Update this task file with the final per-widget list actually touched.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Add changelog entries and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Widgets actually touched in this residual sweep:
+  - `section`
+  - `split-layout`
+  - `toggle-block`
+  - `spacer`
+  - `divider`
+  - `stack`
+  - `content-list`
+  - `posts-feed`
+  - `listing-filters`
+  - `compare-timeline`
+  - `booking-calendar`
+  - `appointment-form`
+- 2026-05-27: Sweep scope stayed within task guardrails:
+  - no new rendered sections were added,
+  - no new writable controls were introduced,
+  - no user-facing hero-level IA rewrites were hidden inside the batch.
+- 2026-05-27: Concrete residual fixes landed:
+  - Wizard titles now match rendered UI for `section`, `split-layout`,
+    `spacer`, `divider`, `stack`, `booking-calendar`, `appointment-form`, and
+    `compare-timeline`,
+  - stale Advanced wording/runtime-summary claims were removed or renamed for
+    `posts-feed`, `section`, `split-layout`, `toggle-block`, `stack`, and
+    `booking-calendar`,
+  - section ordering now matches the rendered UI for `section`,
+    `listing-filters`, and `content-list`.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/section.test.tsx tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/widgets/spacer.test.tsx tests/vitest/ui/spacer-editor-wave.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/widgets/stack.test.tsx tests/vitest/ui/stack-editor-wave.test.tsx tests/vitest/widgets/contentList.test.tsx tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/widgets/postsFeed.test.tsx tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/widgets/compareTimeline.test.tsx tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/widgets/listingFilters.test.tsx tests/vitest/ui/listing-filters-editor-wave.test.tsx tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/ui/booking-calendar-editor-wave.test.tsx tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+- 2026-05-27: Quick Playwright admin pass for `booking-calendar` and
+  `appointment-form` was rechecked after the title-only contract sync; no new
+  admin-side regressions surfaced during widget insertion/opening.
 
 ## Acceptance Criteria
 

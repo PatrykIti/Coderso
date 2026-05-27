@@ -54,7 +54,7 @@ export const stackEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "stack.wizard.quick-start",
-      title: "Guided quick start",
+      title: "Stack quick start",
       role: "setup",
       writablePaths: [],
     },
@@ -108,7 +108,7 @@ export const stackEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "stack.advanced.responsive-summary",
-      title: "Runtime stack summary",
+      title: "Runtime summary",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: ["direction", "gap", "align", "justify", "wrap"],

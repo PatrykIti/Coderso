@@ -79,7 +79,7 @@ export const bookingCalendarEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "booking-calendar.wizard.flow-setup",
-      title: "Flow setup",
+      title: "Flow",
       role: "setup",
       writablePaths: ["flowId"],
     },
@@ -100,7 +100,7 @@ export const bookingCalendarEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "booking-calendar.visual.variant-layout",
-      title: "Variant and layout",
+      title: "Variant",
       role: "layout",
       writablePaths: ["variant"],
     },
@@ -177,7 +177,7 @@ export const bookingCalendarEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "booking-calendar.advanced.runtime-diagnostics",
-      title: "Runtime diagnostics",
+      title: "Resolved runtime payload",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [

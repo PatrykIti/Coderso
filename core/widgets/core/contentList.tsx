@@ -110,7 +110,7 @@ export const contentListEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "content-list.wizard.source-binding",
-      title: "Source binding",
+      title: "Source setup",
       role: "source",
       writablePaths: [
         "source.mode",
@@ -223,6 +223,14 @@ export const contentListEditorContract: WidgetEditorContract = {
     },
     {
       mode: "advanced",
+      id: "content-list.advanced.style-summary",
+      title: "Style summary",
+      role: "summary",
+      writablePaths: [],
+      readOnlyPaths: ["style"],
+    },
+    {
+      mode: "advanced",
       id: "content-list.advanced.runtime-summary",
       title: "Runtime summary",
       role: "diagnostics",
@@ -238,14 +246,6 @@ export const contentListEditorContract: WidgetEditorContract = {
         "resolved.runtime",
         "resolved.error",
       ],
-    },
-    {
-      mode: "advanced",
-      id: "content-list.advanced.style-summary",
-      title: "Style summary",
-      role: "summary",
-      writablePaths: [],
-      readOnlyPaths: ["style"],
     },
   ],
 };

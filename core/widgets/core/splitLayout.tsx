@@ -52,7 +52,7 @@ export const splitLayoutEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "split-layout.wizard.quick-start",
-      title: "Guided quick start",
+      title: "Choose a starter split",
       role: "setup",
       writablePaths: ["variant"],
       allowedDuplicateWritablePaths: [
@@ -67,7 +67,7 @@ export const splitLayoutEditorContract: WidgetEditorContract = {
     {
       mode: "visual",
       id: "split-layout.visual.variant-ratio",
-      title: "Layout preset and pane ratio",
+      title: "Pane layout",
       role: "layout",
       writablePaths: ["variant", "ratio.desktop", "ratio.tablet"],
       allowedDuplicateWritablePaths: [
@@ -103,7 +103,7 @@ export const splitLayoutEditorContract: WidgetEditorContract = {
     {
       mode: "advanced",
       id: "split-layout.advanced.responsive-diagnostics",
-      title: "Responsive diagnostics",
+      title: "How this layout renders",
       role: "diagnostics",
       writablePaths: [],
       readOnlyPaths: [

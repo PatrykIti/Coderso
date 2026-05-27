@@ -74,7 +74,7 @@ export const dividerEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "divider.wizard.quick-start",
-      title: "Guided quick start",
+      title: "Divider quick start",
       role: "setup",
       writablePaths: [],
       readOnlyPaths: ["variant"],

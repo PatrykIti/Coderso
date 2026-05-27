@@ -380,7 +380,7 @@ export const compareTimelineEditorContract: WidgetEditorContract = {
     {
       mode: "wizard",
       id: "compare-timeline.wizard.starter-comparison",
-      title: "Starter comparison",
+      title: "Quick setup",
       role: "setup",
       writablePaths: [],
       readOnlyPaths: ["variant", "axis.steps.count"],
