@@ -39,6 +39,24 @@ import {
 import { SharedColorControl } from "./SharedColorControl";
 import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
 
+const variantOptions = [
+  {
+    id: "matrix",
+    label: "Matrix",
+    description: "Attribute rows with products as columns.",
+  },
+  {
+    id: "compact",
+    label: "Compact",
+    description: "Dense comparison table for tighter layouts.",
+  },
+  {
+    id: "cards",
+    label: "Cards",
+    description: "Product cards with stacked comparison details.",
+  },
+] as const;
+
 const productCompareSourceFieldOptions: CommerceSourceFieldOptions = {
   limitMax: 12,
   allowCollectionFallbackInput: false,
@@ -246,7 +264,13 @@ function SurfaceFields({
   const normalized = normalizeProductCompareData(value);
 
   return (
-    <CommerceEditorSection title="Surfaces" description="Comparison table and empty state colors.">
+    <CommerceEditorSection
+      id="product-compare.visual.surfaces"
+      mode="visual"
+      role="visual"
+      title="Surfaces"
+      description="Comparison table and empty state colors."
+    >
       <SharedColorControl
         controlId="product-compare.visual.table-background"
         controlPath="style.tableBackground"
@@ -393,6 +417,9 @@ function QuerySummarySection({ value }: { value: ProductCompareData }) {
 
   return (
     <CommerceEditorSection
+      id="product-compare.advanced.source-summary"
+      mode="advanced"
+      role="diagnostics"
       title="Source summary"
       description="Read-only summary of how products are resolved. Change source and curation in Wizard or Visual."
     >
@@ -464,7 +491,7 @@ export function ProductCompareWizardEditor({
   useEffect(() => {
     selectedProductIdsRef.current = normalized.source?.productIds ?? [];
   }, [normalized.source?.productIds]);
-  const { refresh } = useProductComparePreviewSync({
+  useProductComparePreviewSync({
     active: context?.editorMode === "wizard" && typeof context?.setPreviewState === "function",
     value,
     previewState: context?.previewState,
@@ -475,6 +502,9 @@ export function ProductCompareWizardEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-compare.wizard.comparison-source"
+        mode="wizard"
+        role="source"
         title="Comparison source"
         description="Select products used in the comparison matrix."
       >
@@ -496,13 +526,10 @@ export function ProductCompareWizardEditor({
         </p>
       </CommerceEditorSection>
 
-      <PreviewStatusCard
-        value={value}
-        context={context}
-        onRefresh={typeof context?.setPreviewState === "function" ? refresh : undefined}
-      />
-
       <CommerceEditorSection
+        id="product-compare.wizard.limit-guidance"
+        mode="wizard"
+        role="source"
         title="Limit guidance"
         description="Comparison matrix is most readable with 2-5 products."
       >
@@ -525,25 +552,58 @@ export function ProductCompareWizardEditor({
 export function ProductCompareVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
   context,
 }: WidgetEditorProps<ProductCompareData>) {
   const normalized = normalizeProductCompareData(value);
-  const { refresh } = useProductComparePreviewSync({
+  useProductComparePreviewSync({
     active: context?.editorMode === "visual" && typeof context?.setPreviewState === "function",
     value,
     previewState: context?.previewState,
     setPreviewState: context?.setPreviewState,
   });
+  const resolvedVariant = variant === "compact" || variant === "cards" ? variant : "matrix";
 
   return (
     <div className="space-y-4">
-      <PreviewStatusCard
-        value={value}
-        context={context}
-        onRefresh={typeof context?.setPreviewState === "function" ? refresh : undefined}
-      />
+      <CommerceEditorSection
+        id="product-compare.visual.variant-structure"
+        mode="visual"
+        role="visual"
+        title="Variant and structure"
+        description="Choose the comparison layout style for this widget."
+      >
+        <div className="space-y-2">
+          {variantOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onVariantChange?.(option.id)}
+              className={
+                resolvedVariant === option.id
+                  ? "w-full rounded-lg border border-primary bg-primary/5 p-3 text-left"
+                  : "w-full rounded-lg border bg-background p-3 text-left"
+              }
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                </div>
+                <span className="rounded-full border px-2 py-0.5 text-xs font-medium">
+                  {resolvedVariant === option.id ? "Selected" : "Pick"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.compared-products"
+        mode="visual"
+        role="content"
         title="Compared products"
         description="Choose products by name and control their column order."
       >
@@ -564,6 +624,9 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.section-copy"
+        mode="visual"
+        role="content"
         title="Section copy"
         description="Name the comparison section and its accessible caption."
       >
@@ -618,6 +681,9 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.attribute-rows"
+        mode="visual"
+        role="content"
         title="Attribute rows"
         description="Control which comparison attributes are visible."
       >
@@ -653,7 +719,13 @@ export function ProductCompareVisualEditor({
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Labels" description="Customize labels shown in the comparison.">
+      <CommerceEditorSection
+        id="product-compare.visual.labels"
+        mode="visual"
+        role="content"
+        title="Labels"
+        description="Customize labels shown in the comparison."
+      >
         <CommerceTextField
           label="Attribute column"
           value={normalized.labels?.attributeHeader}
@@ -720,6 +792,9 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.product-columns"
+        mode="visual"
+        role="content"
         title="Product columns"
         description="Control images, links, and CTA output in each product header."
       >
@@ -784,6 +859,9 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.formatting"
+        mode="visual"
+        role="visual"
         title="Formatting"
         description="Use bounded formatting options for money and quantity output."
       >
@@ -836,6 +914,9 @@ export function ProductCompareVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-compare.visual.layout"
+        mode="visual"
+        role="visual"
         title="Layout"
         description="Highlight a product and keep table headers visible in dense tables."
       >
@@ -865,7 +946,13 @@ export function ProductCompareVisualEditor({
         />
       </CommerceEditorSection>
 
-      <CommerceEditorSection title="Empty state" description="Shown when no products are resolved.">
+      <CommerceEditorSection
+        id="product-compare.visual.empty-state"
+        mode="visual"
+        role="content"
+        title="Empty state"
+        description="Shown when no products are resolved."
+      >
         <CommerceTextField
           label="Title"
           value={normalized.emptyState?.title}
@@ -913,9 +1000,16 @@ export function ProductCompareAdvancedEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-compare.advanced.preview-status"
+        mode="advanced"
+        role="diagnostics"
         title="Preview status"
         description="Read-only runtime diagnostics from SSR and admin preview refreshes."
       >
+        <p className="text-sm text-muted-foreground">
+          Advanced mode is read-only. Use Wizard or Visual for source setup, curation, labels,
+          formatting, layout, and surface changes.
+        </p>
         <PreviewStatusCard
           value={value}
           context={context}
@@ -931,6 +1025,9 @@ export function ProductCompareAdvancedEditor({
       <QuerySummarySection value={value} />
 
       <CommerceEditorSection
+        id="product-compare.advanced.surface-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Surface summary"
         description="Read-only color state. Change table and empty-state colors in Visual."
       >
@@ -957,6 +1054,33 @@ export function ProductCompareAdvancedEditor({
           label="Empty state colors"
           path="style"
           value={`Background: ${describeCommerceColor(normalized.style?.emptyBackground)}, border: ${describeCommerceColor(normalized.style?.emptyBorderColor)}`}
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-compare.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Product Compare v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-wizard"
+          label="Wizard owns"
+          path="source"
+          value="One-time comparison source setup and dense compare guidance."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-visual"
+          label="Visual owns"
+          path="variant"
+          value="Variant, compared products, section copy, rows, labels, product columns, formatting, layout, empty state, and surfaces."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-compare-advanced-contract-advanced"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only preview status, source summaries, surface diagnostics, and contract ownership."
         />
       </CommerceEditorSection>
     </div>

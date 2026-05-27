@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -23,6 +23,8 @@ ships.
   contract `2`, and Advanced uses different ids/roles than the contract owner.
 - The current richer UI should remain the source of truth; the contract and
   stable metadata need to catch up.
+- Browser review also confirmed the old shared wrapper still owned the variant
+  chooser instead of the widget-owned Visual IA.
 
 ## Sub-Tasks
 
@@ -63,11 +65,17 @@ Data flow:
 
 - Preserve the current richer UI and preview-state behavior.
 - Align the contract and stable DOM metadata to that UI.
+- Keep Hero-style ownership boundaries:
+  - Wizard owns source setup,
+  - Visual owns the variant and daily comparison presentation,
+  - Advanced stays read-only diagnostics only.
 
 Error handling:
 
 - Keep Advanced read-only.
 - Do not collapse the UI back to `Rows and labels / Presentation`.
+- Do not leave the shared wrapper as the owner of the Product Compare variant
+  chooser once the widget-owned Visual IA is restored.
 
 ## Security Contract
 
@@ -93,6 +101,23 @@ No API routes are added.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Update `_docs/_WIDGETS/PRODUCT_COMPARE.md`.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Product Compare now exports truthful section ids and roles across
+  Wizard, Visual, and Advanced instead of the old coarse contract.
+- 2026-05-27: Variant ownership moved into a widget-owned `Variant and
+  structure` Visual section and the shared wrapper no longer owns the Product
+  Compare variant picker.
+- 2026-05-27: Advanced now includes a Hero-style read-only banner plus a
+  contract summary while preserving preview refresh as a diagnostics-only
+  action.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/product-compare-editor-wave.test.tsx tests/vitest/ui/product-compare-admin-preview.test.tsx tests/vitest/widgets/productCompare.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- 2026-05-27: Final Claude Playwright snapshot review returned
+  `VERDICT: NO BLOCKERS`.
 
 ## Acceptance Criteria
 

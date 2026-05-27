@@ -24,6 +24,7 @@ read-only runtime diagnostics.
 - dense compare guidance
 
 ### Visual
+- variant and structure
 - selected-product picker and comparison order
 - section title/description/caption
 - attribute row visibility
@@ -38,6 +39,14 @@ read-only runtime diagnostics.
 - read-only runtime preview status
 - read-only runtime warning copy
 - read-only source and surface summaries
+- read-only contract summary
+
+Notes:
+
+- Product Compare now owns its variant selector inside Visual instead of
+  relying on the shared wrapper variant surface.
+- Advanced now opens with an explicit read-only banner plus a contract summary,
+  while the preview refresh button remains a diagnostics-only action.
 
 ## Runtime Behavior Notes
 

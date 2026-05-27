@@ -296,8 +296,10 @@ test("product compare editors render expected panels", () => {
     />
   );
   expect(wizard).toContain("Comparison source");
-  expect(wizard).toContain("Specific product curation is available in Visual");
   expect(wizard).toContain("Limit guidance");
+  expect(wizard).toContain('data-widget-editor-section="product-compare.wizard.comparison-source"');
+  expect(wizard).toContain('data-widget-editor-section="product-compare.wizard.limit-guidance"');
+  expect(wizard).toContain("Specific product curation is available in Visual");
 
   const visual = renderToString(
     <ProductCompareVisualEditor
@@ -307,9 +309,26 @@ test("product compare editors render expected panels", () => {
       onVariantChange={() => undefined}
     />
   );
+  expect(visual).toContain("Variant and structure");
+  expect(visual).toContain("Compared products");
   expect(visual).toContain("Section copy");
   expect(visual).toContain("Attribute rows");
+  expect(visual).toContain("Labels");
   expect(visual).toContain("Product columns");
+  expect(visual).toContain("Formatting");
+  expect(visual).toContain("Layout");
+  expect(visual).toContain("Empty state");
+  expect(visual).toContain("Surfaces");
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.variant-structure"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.compared-products"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.section-copy"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.attribute-rows"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.labels"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.product-columns"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.formatting"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.layout"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.empty-state"');
+  expect(visual).toContain('data-widget-editor-section="product-compare.visual.surfaces"');
 
   const advanced = renderToString(
     <ProductCompareAdvancedEditor
@@ -322,6 +341,20 @@ test("product compare editors render expected panels", () => {
   expect(advanced).toContain("Preview status");
   expect(advanced).toContain("Source summary");
   expect(advanced).toContain("Surface summary");
+  expect(advanced).toContain("Contract summary");
+  expect(advanced).toContain("Advanced mode is read-only.");
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-compare.advanced.preview-status"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-compare.advanced.source-summary"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-compare.advanced.surface-summary"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-compare.advanced.contract-summary"'
+  );
   expect(advanced).not.toContain("Runtime payload");
   expect(advanced).not.toContain("Query preview");
   expect(advanced).not.toContain("<pre");
