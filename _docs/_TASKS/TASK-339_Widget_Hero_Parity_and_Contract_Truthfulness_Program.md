@@ -6,7 +6,7 @@
 **Category:** Widgets + Page Builder + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-317, TASK-336-11, TASK-336-19, TASK-338
-**Status:** In Progress (2026-05-27)
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude headless Playwright review after each widget leaf
 
 ---
@@ -103,16 +103,16 @@ frontend via Playwright.
 - [x] TASK-339-04: CTA Banner Hero Section Parity
 - [x] TASK-339-05: Testimonials Contract Truthfulness
 - [x] TASK-339-06: Pricing Plans Contract Truthfulness
-- [ ] TASK-339-07: FAQ Accordion Contract Truthfulness
-- [ ] TASK-339-08: Gallery Mosaic Contract Truthfulness
-- [ ] TASK-339-09: Team Contract Truthfulness
-- [ ] TASK-339-10: Rich Text Section Contract Truthfulness
-- [ ] TASK-339-11: Entry Teaser Contract Truthfulness
-- [ ] TASK-339-12: Product Gallery Contract Truthfulness
-- [ ] TASK-339-13: Product Compare Contract Truthfulness
-- [ ] TASK-339-14: Timeline Contract Truthfulness
-- [ ] TASK-339-15: Residual Minor Contract Truthfulness Sweep
-- [ ] TASK-339-16: Report Docs Changelog and Closure
+- [x] TASK-339-07: FAQ Accordion Contract Truthfulness
+- [x] TASK-339-08: Gallery Mosaic Contract Truthfulness
+- [x] TASK-339-09: Team Contract Truthfulness
+- [x] TASK-339-10: Rich Text Section Contract Truthfulness
+- [x] TASK-339-11: Entry Teaser Contract Truthfulness
+- [x] TASK-339-12: Product Gallery Contract Truthfulness
+- [x] TASK-339-13: Product Compare Contract Truthfulness
+- [x] TASK-339-14: Timeline Contract Truthfulness
+- [x] TASK-339-15: Residual Minor Contract Truthfulness Sweep
+- [x] TASK-339-16: Report Docs Changelog and Closure
 
 ## Files to Change
 
@@ -285,3 +285,16 @@ User-requested validation boundary:
 - Done (2026-05-27): `TASK-339-06` synchronized Pricing Plans to its real
   section inventory, cleaned the remaining color-row shape drift against Hero,
   and passed Claude snapshot review with `NO BLOCKERS`.
+- Done (2026-05-27): `TASK-339-07` through `TASK-339-14` closed the remaining
+  rich widget leaves (`faq-accordion`, `gallery-mosaic`, `team`,
+  `rich-text-section`, `entry-teaser`, `product-gallery`, `product-compare`,
+  `timeline`) with truthful Wizard / Visual / Advanced contracts, focused
+  lint/typecheck/Vitest, and per-widget Claude Playwright review returning
+  `NO BLOCKERS`.
+- Done (2026-05-27): `TASK-339-15` closed the residual minor
+  title/order/runtime-summary drift for the remaining low-risk widgets without
+  introducing new UI surfaces; targeted residual suites are green and quick
+  admin passes rechecked `booking-calendar` and `appointment-form`.
+- Done (2026-05-27): `TASK-339-16` synchronized the umbrella, task board, and
+  changelog for the whole family. Broader security/performance scans remain
+  explicitly user-deferred after the widget wave.

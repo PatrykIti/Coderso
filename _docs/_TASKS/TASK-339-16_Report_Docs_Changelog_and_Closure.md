@@ -6,7 +6,7 @@
 **Category:** Widgets + Docs + Changelog + Playwright
 **Estimated Effort:** Medium
 **Dependencies:** TASK-339-01, TASK-339-02, TASK-339-03, TASK-339-04, TASK-339-05, TASK-339-06, TASK-339-07, TASK-339-08, TASK-339-09, TASK-339-10, TASK-339-11, TASK-339-12, TASK-339-13, TASK-339-14, TASK-339-15
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude evidence summarized from prior leaves
 
 ---
@@ -77,6 +77,19 @@ No API routes are added.
 - Update this task file with final audit notes.
 - Update `_docs/_TASKS/README.md`.
 - Update `_docs/_CHANGELOG/README.md` and add closure entries.
+
+## Closure Notes
+
+- 2026-05-27: Verified all execution leaves `TASK-339-01` through
+  `TASK-339-15` are now marked Done and indexed in `_docs/_CHANGELOG/README.md`.
+- 2026-05-27: Verified each widget leaf that changed widget UI or contract
+  records targeted lint/typecheck/Vitest evidence plus a Claude
+  Playwright-only review result in the leaf notes.
+- 2026-05-27: Final user-deferred scans remain explicitly outside this family:
+  broader security, strict scanner, and performance scans were intentionally
+  left for the user to run after the widget wave.
+- 2026-05-27: Final family status is docs/board/changelog synchronized with no
+  remaining open widget leaves in `TASK-339`.
 
 ## Acceptance Criteria
 

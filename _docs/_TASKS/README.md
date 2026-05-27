@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1956 tasks
+- **To Do:** 9 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1958 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
-| TASK-339-16 | Report Docs Changelog and Closure | High | Medium | Final board/docs/changelog/evidence closure for the TASK-339 family |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -59,13 +58,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | In progress (2026-05-27): audit confirms shared daily live-preview drift, raw color-value drift in Contact/Navigation, and substantive contract truthfulness drift in Navigation, CTA Banner, Testimonials, Pricing Plans, FAQ Accordion, Gallery Mosaic, Team, Rich Text Section, Entry Teaser, Product Gallery, Product Compare, and Timeline |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | Done (2026-05-27): the full widget wave is closed with shared live-preview removal, hero-parity color/section alignment across the dedicated leaves, residual contract sweep cleanup, and recorded Claude Playwright evidence per widget slice. |
+| TASK-339-16 | Report Docs Changelog and Closure | High | Medium | Done (2026-05-27): umbrella docs, task board, changelog indexes, and final evidence notes are synchronized for the full TASK-339 family, with broader security/perf scans explicitly left to the user. |
 | TASK-339-15 | Residual Minor Contract Truthfulness Sweep | Medium | Large | Done (2026-05-27): minor contract title/order/runtime-summary drift is closed across the remaining low-risk widgets without introducing fresh UI surfaces, and targeted residual suites plus quick admin passes are green. |
 | TASK-339-14 | Timeline Contract Truthfulness | High | Large | Done (2026-05-27): Timeline now exports truthful section ids, restores wizard metadata, keeps Hero-style read-only Advanced diagnostics, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
 | TASK-339-13 | Product Compare Contract Truthfulness | High | Large | Done (2026-05-27): Product Compare now exports truthful section ids, owns its variant selector inside Visual, keeps Hero-style read-only Advanced diagnostics, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
