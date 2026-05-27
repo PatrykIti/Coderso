@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 14 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 1952 tasks
+- **Done:** 1953 tasks
 
 ---
 
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
-| TASK-339-12 | Product Gallery Contract Truthfulness | High | Large | Align Product Gallery Wizard / Visual / Advanced contracts with the current richer UI |
 | TASK-339-13 | Product Compare Contract Truthfulness | High | Large | Align Product Compare Wizard / Visual / Advanced contracts with the current richer UI |
 | TASK-339-14 | Timeline Contract Truthfulness | High | Large | Restore Timeline Wizard metadata and align the richer daily IA with the contract owner |
 | TASK-339-15 | Residual Minor Contract Truthfulness Sweep | Medium | Large | Close lower-risk title/order/runtime-summary drift after the larger hero-parity leaves settle |
@@ -70,6 +69,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-339-12 | Product Gallery Contract Truthfulness | High | Large | Done (2026-05-27): Product Gallery now exports truthful section ids, owns its variant selector inside Visual, keeps Hero-style read-only Advanced diagnostics, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
 | TASK-339-11 | Entry Teaser Contract Truthfulness | High | Large | Done (2026-05-27): Entry Teaser now exports truthful section ids, keeps Hero-style read-only Advanced diagnostics, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
 | TASK-339-10 | Rich Text Section Contract Truthfulness | High | Large | Done (2026-05-27): Rich Text Section now exports truthful section ids, keeps Hero-style read-only Advanced diagnostics, seeds layout in Wizard, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |
 | TASK-339-09 | Team Contract Truthfulness | High | Large | Done (2026-05-27): Team now exports truthful section ids, keeps Hero-style read-only Advanced diagnostics, aligns main field labeling/background affordances with Hero, and passed focused lint/typecheck/Vitest plus Claude Playwright review with no blockers. |

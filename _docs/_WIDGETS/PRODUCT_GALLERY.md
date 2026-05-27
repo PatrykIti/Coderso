@@ -22,6 +22,7 @@ styling.
 - bounded shopper-facing price filters
 
 ### Visual
+- variant and structure
 - section header
 - card metadata and link controls
 - optional selected-product picker and card order
@@ -33,6 +34,14 @@ styling.
 ### Advanced
 - preview status and refresh
 - read-only product behavior, source, preview, and surface summaries
+- read-only contract summary
+
+Notes:
+
+- Product Gallery now owns its variant selector inside Visual instead of relying
+  on the shared wrapper variant surface.
+- Advanced now opens with an explicit read-only banner plus a contract summary,
+  while the preview refresh button remains a diagnostics-only action.
 
 ## Runtime Behavior Notes
 

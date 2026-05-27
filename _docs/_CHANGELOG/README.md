@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 984 | 2026-05-27 | Product Gallery contract truthfulness | CMS Widgets/Admin UI/Commerce/Contracts/Playwright/QA/Docs |
 | 983 | 2026-05-27 | Entry Teaser contract truthfulness | CMS Widgets/Admin UI/Content/Contracts/Playwright/QA/Docs |
 | 982 | 2026-05-27 | Rich Text Section contract truthfulness | CMS Widgets/Admin UI/Editorial/Contracts/Playwright/QA/Docs |
 | 981 | 2026-05-27 | Team contract truthfulness | CMS Widgets/Admin UI/Team/Contracts/Playwright/QA/Docs |

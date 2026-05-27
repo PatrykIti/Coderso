@@ -28,6 +28,19 @@ import { LinkDestinationField } from "./LinkDestinationField";
 import { SharedColorControl } from "./SharedColorControl";
 import { ReadonlyWidgetSummaryRow } from "./WidgetEditorControls";
 
+const variantOptions = [
+  {
+    id: "cards",
+    label: "Cards",
+    description: "Card grid for featured products.",
+  },
+  {
+    id: "compact",
+    label: "Compact",
+    description: "Dense card grid with minimal spacing.",
+  },
+] as const;
+
 const describeCommerceColor = (value: string | undefined) => {
   if (!value?.trim()) return "Theme default";
   if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
@@ -224,7 +237,13 @@ function SurfaceFields({
   const normalized = normalizeProductGalleryData(value);
 
   return (
-    <CommerceEditorSection title="Surfaces" description="Card and empty state styling.">
+    <CommerceEditorSection
+      id="product-gallery.visual.surfaces"
+      mode="visual"
+      role="visual"
+      title="Surfaces"
+      description="Card and empty state styling."
+    >
       <SharedColorControl
         controlId="product-gallery.visual.card-background"
         controlPath="style.cardBackground"
@@ -280,6 +299,9 @@ function ProductGalleryLayoutFields({
 
   return (
     <CommerceEditorSection
+      id="product-gallery.visual.presentation"
+      mode="visual"
+      role="visual"
       title="Presentation"
       description="Adjust the daily card density and card treatment."
     >
@@ -512,6 +534,9 @@ export function ProductGalleryWizardEditor({
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-gallery.wizard.product-source"
+        mode="wizard"
+        role="source"
         title="Product source"
         description="Select which products are loaded into this gallery."
       >
@@ -536,6 +561,9 @@ export function ProductGalleryWizardEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.wizard.price-filters"
+        mode="wizard"
+        role="source"
         title="Price filters"
         description="Use shopper-facing prices. The widget stores normalized commerce values."
       >
@@ -559,12 +587,51 @@ export function ProductGalleryWizardEditor({
 export function ProductGalleryVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
 }: WidgetEditorProps<ProductGalleryData>) {
   const normalized = normalizeProductGalleryData(value);
+  const resolvedVariant = variant === "compact" ? "compact" : "cards";
 
   return (
     <div className="space-y-4">
       <CommerceEditorSection
+        id="product-gallery.visual.variant-structure"
+        mode="visual"
+        role="visual"
+        title="Variant and structure"
+        description="Choose the card layout style for this widget."
+      >
+        <div className="space-y-2">
+          {variantOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onVariantChange?.(option.id)}
+              className={
+                resolvedVariant === option.id
+                  ? "w-full rounded-lg border border-primary bg-primary/5 p-3 text-left"
+                  : "w-full rounded-lg border bg-background p-3 text-left"
+              }
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">{option.label}</p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                </div>
+                <span className="rounded-full border px-2 py-0.5 text-xs font-medium">
+                  {resolvedVariant === option.id ? "Selected" : "Pick"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-gallery.visual.section-header"
+        mode="visual"
+        role="content"
         title="Section header"
         description="Optional title and supporting copy above the gallery cards."
       >
@@ -581,6 +648,9 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.visual.card-content"
+        mode="visual"
+        role="content"
         title="Card content"
         description="Choose product metadata visible on each card."
       >
@@ -635,6 +705,9 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.visual.product-links"
+        mode="visual"
+        role="content"
         title="Product links"
         description="Control product card calls to action without typing product-route paths."
       >
@@ -684,6 +757,9 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.visual.curated-products"
+        mode="visual"
+        role="content"
         title="Curated products"
         description="Optionally choose exact products by name."
       >
@@ -719,6 +795,9 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.visual.more-products-link"
+        mode="visual"
+        role="content"
         title="More products link"
         description="Send visitors to an existing page when there are more matching products."
       >
@@ -758,6 +837,9 @@ export function ProductGalleryVisualEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.visual.empty-state"
+        mode="visual"
+        role="content"
         title="Empty state"
         description="Shown when query returns no products."
       >
@@ -813,7 +895,15 @@ export function ProductGalleryAdvancedEditor({
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Advanced mode is read-only. Use Wizard or Visual for product source, curation, links, empty
+        state, and presentation changes.
+      </p>
+
       <CommerceEditorSection
+        id="product-gallery.advanced.product-behavior"
+        mode="advanced"
+        role="diagnostics"
         title="Product behavior"
         description="Read-only source, curation, route, and pagination diagnostics."
       >
@@ -848,6 +938,9 @@ export function ProductGalleryAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.advanced.source-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Source summary"
         description="Human-readable query state. Change product source and curation in Wizard or Visual."
       >
@@ -884,6 +977,9 @@ export function ProductGalleryAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.advanced.preview-status"
+        mode="advanced"
+        role="diagnostics"
         title="Preview status"
         description="Refresh preview data without publishing the page."
       >
@@ -921,6 +1017,9 @@ export function ProductGalleryAdvancedEditor({
       </CommerceEditorSection>
 
       <CommerceEditorSection
+        id="product-gallery.advanced.surface-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Surface summary"
         description="Read-only color state. Change card and empty-state colors in Visual."
       >
@@ -941,6 +1040,33 @@ export function ProductGalleryAdvancedEditor({
           label="Empty state colors"
           path="style"
           value={`Background: ${describeCommerceColor(normalized.style?.emptyBackground)}, border: ${describeCommerceColor(normalized.style?.emptyBorderColor)}`}
+        />
+      </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-gallery.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Product Gallery v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-contract-wizard"
+          label="Wizard owns"
+          path="source"
+          value="One-time product source setup and shopper-facing price filters."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-contract-visual"
+          label="Visual owns"
+          path="header"
+          value="Section header, card content, links, curation, more-products link, empty state, surfaces, and presentation."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="product-gallery-advanced-contract-advanced"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only product behavior, source summaries, preview status, surface diagnostics, and contract ownership."
         />
       </CommerceEditorSection>
     </div>

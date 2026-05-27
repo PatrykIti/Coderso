@@ -392,6 +392,8 @@ test("product gallery editors render expected panels", () => {
   );
   expect(wizard).toContain("Product source");
   expect(wizard).toContain("Price filters");
+  expect(wizard).toContain('data-widget-editor-section="product-gallery.wizard.product-source"');
+  expect(wizard).toContain('data-widget-editor-section="product-gallery.wizard.price-filters"');
   expect(wizard).not.toContain("Columns preview");
 
   const visual = renderToString(
@@ -403,10 +405,26 @@ test("product gallery editors render expected panels", () => {
     />
   );
   expect(visual).toContain("Section header");
+  expect(visual).toContain("Variant and structure");
+  expect(visual).toContain("Card content");
   expect(visual).toContain("Product links");
+  expect(visual).toContain("Curated products");
+  expect(visual).toContain("More products link");
+  expect(visual).toContain("Empty state");
   expect(visual).toContain("Presentation");
   expect(visual).toContain("Columns preview");
   expect(visual).toContain("Surfaces");
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.variant-structure"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.section-header"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.card-content"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.product-links"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.curated-products"');
+  expect(visual).toContain(
+    'data-widget-editor-section="product-gallery.visual.more-products-link"'
+  );
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.empty-state"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.surfaces"');
+  expect(visual).toContain('data-widget-editor-section="product-gallery.visual.presentation"');
 
   const advanced = renderToString(
     <ProductGalleryAdvancedEditor
@@ -420,6 +438,23 @@ test("product gallery editors render expected panels", () => {
   expect(advanced).toContain("Preview status");
   expect(advanced).toContain("Source summary");
   expect(advanced).toContain("Surface summary");
+  expect(advanced).toContain("Contract summary");
+  expect(advanced).toContain("Advanced mode is read-only.");
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-gallery.advanced.product-behavior"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-gallery.advanced.source-summary"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-gallery.advanced.preview-status"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-gallery.advanced.surface-summary"'
+  );
+  expect(advanced).toContain(
+    'data-widget-editor-section="product-gallery.advanced.contract-summary"'
+  );
   expect(advanced).not.toContain("Query preview");
   expect(advanced).not.toContain("<pre");
 });
