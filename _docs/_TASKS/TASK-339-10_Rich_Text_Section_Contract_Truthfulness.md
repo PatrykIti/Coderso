@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Large
 **Dependencies:** TASK-339-01
-**Status:** To Do
+**Status:** Done (2026-05-27)
 **Owners:** Codex implementation/tests/docs; Claude Playwright UI review
 
 ---
@@ -23,6 +23,8 @@ ships.
   `Advanced=2`.
 - The current UI already separates title copy, body content, structured blocks,
   reader options, and typography/colors; the contract simply lags behind.
+- Browser review also confirmed the old Advanced flow drifted from Hero because
+  it still exposed mutating normalize/reset support actions in the daily tab.
 
 ## Sub-Tasks
 
@@ -54,11 +56,17 @@ Data flow:
 
 - Preserve the current richer UI and sanitizer behavior.
 - Align the contract and stable DOM metadata to that UI.
+- Keep Hero-style ownership boundaries:
+  - Wizard seeds layout only,
+  - Visual owns daily content, source preference, reader options, and styling,
+  - Advanced stays read-only diagnostics only.
 
 Error handling:
 
 - Keep Advanced read-only and diagnostic.
 - Do not collapse the UI back to `Editorial content / Presentation`.
+- Do not keep mutating support actions in the daily Advanced tab once the
+  Hero-style diagnostics split is applied.
 
 ## Security Contract
 
@@ -84,6 +92,24 @@ No API routes are added.
 - Update `_docs/_TASKS/README.md` on status changes.
 - Update `_docs/_WIDGETS/RICH_TEXT_SECTION.md`.
 - Add a changelog entry and update `_docs/_CHANGELOG/README.md` when the leaf moves to Done.
+
+## Progress Notes
+
+- 2026-05-27: Rich Text Section now exports truthful Wizard/Visual/Advanced
+  section ids and roles instead of the old `Visual=2` / `Advanced=2` contract.
+- 2026-05-27: Wizard now seeds the rich text layout while keeping structured
+  block previews read-only.
+- 2026-05-27: Advanced is now fully read-only and split into output/source,
+  sanitizer, saved-content, and contract summaries to match the Hero
+  daily-tab pattern.
+- 2026-05-27: Main Rich Text selects, inputs, switches, and color controls now
+  expose stable accessible names aligned with the Hero review baseline.
+- 2026-05-27: Focused validation is green:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/ui/rich-text-section-editor-wave.test.tsx tests/vitest/widgets/richTextSection.test.tsx tests/vitest/ui/widget-template-editor.test.tsx tests/vitest/widgets/editorContract.test.ts`
+- 2026-05-27: Final Claude Playwright snapshot review returned
+  `VERDICT: NO BLOCKERS`.
 
 ## Acceptance Criteria
 

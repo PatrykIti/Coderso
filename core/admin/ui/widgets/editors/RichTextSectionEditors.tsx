@@ -26,7 +26,6 @@ import {
   resolveRichTextRenderedSource,
   resolveRichTextSectionVariant,
   richTextBlockMax,
-  richTextSectionDefaults,
   sanitizeRichTextHtmlWithDiagnostics,
   type RichTextRenderedSourceState,
   type RichTextSanitizerDiagnostic,
@@ -45,10 +44,14 @@ import {
   type RichTextSectionTitleHeadingLevel,
   type RichTextSectionVariantId,
 } from "../../../../widgets/core/richTextSection";
-import type { WidgetEditorProps } from "../../../../widgets/types";
+import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import { SharedColorControl } from "./SharedColorControl";
-import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
+import {
+  ReadonlyWidgetSummaryRow,
+  WidgetControlRow,
+  WidgetEditorSection,
+} from "./WidgetEditorControls";
 
 const variantOptions: Array<{
   id: RichTextSectionVariantId;
@@ -167,18 +170,28 @@ function normalizeValue(value: RichTextSectionData): RichTextSectionData {
 
 function EditorSection({
   id,
+  mode,
+  role,
   title,
   description,
   children,
 }: {
   id?: string;
+  mode?: "wizard" | "visual" | "advanced";
+  role?: WidgetEditorSectionRole;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   const resolvedId = id ?? title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
-    <WidgetEditorSection id={resolvedId} title={title} description={description}>
+    <WidgetEditorSection
+      id={resolvedId}
+      mode={mode}
+      role={role}
+      title={title}
+      description={description}
+    >
       {children}
     </WidgetEditorSection>
   );
@@ -566,6 +579,7 @@ function resolveBlockKindLabel(block: RichTextSectionBlock) {
 export function RichTextSectionWizardEditor({
   value,
   variant,
+  onVariantChange,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
   const source = resolveRichTextRenderedSource(normalized);
@@ -577,18 +591,36 @@ export function RichTextSectionWizardEditor({
       mode="wizard"
       role="setup"
       title="Starter copy"
-      description="Review the current layout and first structured text blocks. Title copy stays in Visual."
+      description="Seed the rich text layout and review the first structured text blocks. Title copy stays in Visual."
     >
       <div className="space-y-4">
-        <ReadonlyWidgetSummaryRow
+        <WidgetControlRow
           id="rich-text-section.wizard.variant"
           label="Rich text layout"
           path="variant"
-          value={
-            variantOptions.find((option) => option.id === resolveRichTextSectionVariant(variant))
-              ?.label ?? "Single column"
-          }
-        />
+        >
+          {(fieldProps) => (
+            <Select
+              value={resolveRichTextSectionVariant(variant)}
+              onValueChange={(next) => onVariantChange?.(next)}
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {variantOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
 
         <div className="space-y-2 rounded-md border bg-muted/20 px-3 py-2">
           <p className="text-sm font-medium">Output mode stays untouched in Wizard</p>
@@ -922,6 +954,9 @@ export function RichTextSectionVisualEditor({
   return (
     <div className="space-y-4">
       <EditorSection
+        id="rich-text-section.visual.variant-layout-structure"
+        mode="visual"
+        role="visual"
         title="Variant and layout structure"
         description="Choose reading layout and container width."
       >
@@ -935,7 +970,7 @@ export function RichTextSectionVisualEditor({
               updateOptions(value, onChange, { maxWidth: next as RichTextSectionMaxWidth })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Content max width">
               <SelectValue placeholder="Select max width" />
             </SelectTrigger>
             <SelectContent>
@@ -950,6 +985,9 @@ export function RichTextSectionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.title-block-copy"
+        mode="visual"
+        role="content"
         title="Title block copy"
         description="Edit the section eyebrow, title, and heading semantics."
       >
@@ -959,6 +997,7 @@ export function RichTextSectionVisualEditor({
             value={normalized.titleBlock?.eyebrow ?? ""}
             onChange={(event) => updateTitleBlock(value, onChange, { eyebrow: event.target.value })}
             placeholder="Editorial"
+            aria-label="Eyebrow"
           />
         </div>
         <div className="space-y-2">
@@ -967,6 +1006,7 @@ export function RichTextSectionVisualEditor({
             value={normalized.titleBlock?.title ?? ""}
             onChange={(event) => updateTitleBlock(value, onChange, { title: event.target.value })}
             placeholder="Long-form content section"
+            aria-label="Title"
           />
         </div>
         <div className="space-y-2">
@@ -979,7 +1019,7 @@ export function RichTextSectionVisualEditor({
               })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Title heading level">
               <SelectValue placeholder="Select title heading level" />
             </SelectTrigger>
             <SelectContent>
@@ -994,6 +1034,9 @@ export function RichTextSectionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.body-content"
+        mode="visual"
+        role="content"
         title="Body content"
         description="Edit the primary HTML source with safe rich-text authoring instead of raw HTML."
       >
@@ -1005,7 +1048,7 @@ export function RichTextSectionVisualEditor({
               updateOptions(value, onChange, { outputMode: next as RichTextSectionOutputMode })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Source preference">
               <SelectValue placeholder="Select source preference" />
             </SelectTrigger>
             <SelectContent>
@@ -1035,6 +1078,9 @@ export function RichTextSectionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.structured-content-blocks"
+        mode="visual"
+        role="content"
         title="Structured content blocks"
         description="Manage fallback blocks, inline media, attachments, and safe embed link cards."
       >
@@ -1046,7 +1092,7 @@ export function RichTextSectionVisualEditor({
             value={String(blocks.length)}
             onValueChange={(next) => handleRequestBlockCount(Number(next))}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Blocks count">
               <SelectValue placeholder="Select block count" />
             </SelectTrigger>
             <SelectContent>
@@ -1212,6 +1258,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="Heading"
+                          aria-label="Heading"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1230,7 +1277,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Heading level">
                             <SelectValue placeholder="Select heading level" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1309,6 +1356,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="Describe the image"
+                          aria-label="Alt text"
                         />
                       </div>
                       <div className="flex items-center justify-between rounded-md border px-3 py-2">
@@ -1320,6 +1368,7 @@ export function RichTextSectionVisualEditor({
                         </div>
                         <Switch
                           checked={Boolean(activeImageBlock.decorative)}
+                          aria-label="Decorative image"
                           onCheckedChange={(checked) =>
                             updateBlocks(value, onChange, (currentBlocks) => {
                               const nextBlocks = [...currentBlocks];
@@ -1348,6 +1397,7 @@ export function RichTextSectionVisualEditor({
                           })
                         }
                         placeholder="Optional caption"
+                        aria-label="Caption"
                       />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -1366,6 +1416,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="https://example.com/story"
+                          aria-label="Link URL"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1383,7 +1434,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Width">
                             <SelectValue placeholder="Select width" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1408,7 +1459,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Alignment">
                             <SelectValue placeholder="Select alignment" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1465,6 +1516,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="Download attachment"
+                          aria-label="Label"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1482,6 +1534,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="Optional context or summary"
+                          aria-label="Description"
                         />
                       </div>
                     </div>
@@ -1501,6 +1554,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="application/pdf"
+                          aria-label="MIME type"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1518,6 +1572,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="2.4 MB"
+                          aria-label="Size label"
                         />
                       </div>
                     </div>
@@ -1542,6 +1597,7 @@ export function RichTextSectionVisualEditor({
                           })
                         }
                         placeholder="https://www.youtube.com/watch?v=..."
+                        aria-label="Embed URL"
                       />
                       <p className="text-xs text-muted-foreground">
                         Safe embeds render as provider-validated link cards. Raw iframe HTML is
@@ -1565,6 +1621,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                           placeholder="Shared link title"
+                          aria-label="Card title"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1583,7 +1640,7 @@ export function RichTextSectionVisualEditor({
                             })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="Aspect ratio token">
                             <SelectValue placeholder="Select ratio" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1610,6 +1667,9 @@ export function RichTextSectionVisualEditor({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.reader-options"
+        mode="visual"
+        role="content"
         title="Reader options"
         description="Control dropcap and optional table of contents."
       >
@@ -1622,6 +1682,7 @@ export function RichTextSectionVisualEditor({
           </div>
           <Switch
             checked={Boolean(normalized.options?.dropcap)}
+            aria-label="Enable dropcap"
             onCheckedChange={(checked) =>
               updateOptions(value, onChange, { dropcap: Boolean(checked) })
             }
@@ -1643,12 +1704,16 @@ export function RichTextSectionVisualEditor({
           </div>
           <Switch
             checked={Boolean(normalized.options?.toc)}
+            aria-label="Show table of contents"
             onCheckedChange={(checked) => updateOptions(value, onChange, { toc: Boolean(checked) })}
           />
         </div>
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.visual.typography-colors"
+        mode="visual"
+        role="visual"
         title="Typography and colors"
         description="Adjust the reader-facing text scale, spacing, and color swatches."
       >
@@ -1660,7 +1725,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { fontScale: next as RichTextSectionFontScale })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Font scale">
               <SelectValue placeholder="Select font scale" />
             </SelectTrigger>
             <SelectContent>
@@ -1680,7 +1745,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { lineHeight: next as RichTextSectionLineHeight })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Line height">
               <SelectValue placeholder="Select line height" />
             </SelectTrigger>
             <SelectContent>
@@ -1700,7 +1765,7 @@ export function RichTextSectionVisualEditor({
               updateStyle(value, onChange, { spacing: next as RichTextSectionSpacing })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label="Spacing density">
               <SelectValue placeholder="Select spacing" />
             </SelectTrigger>
             <SelectContent>
@@ -1719,6 +1784,8 @@ export function RichTextSectionVisualEditor({
           onClear={() => clearStyleField(value, onChange, "textColor")}
           pickerFallback="#0f172a"
           showValueInput={false}
+          treatAsThemeDefaultValues={["var(--color-text)"]}
+          swatchAriaLabel="Text color"
         />
         <SharedColorControl
           label="Background color"
@@ -1727,6 +1794,8 @@ export function RichTextSectionVisualEditor({
           onClear={() => clearStyleField(value, onChange, "background")}
           pickerFallback="#ffffff"
           showValueInput={false}
+          allowTransparent
+          swatchAriaLabel="Background color"
         />
       </EditorSection>
 
@@ -1762,64 +1831,32 @@ export function RichTextSectionVisualEditor({
   );
 }
 
-type RichTextSectionAdvancedEditorContentProps = {
-  value: RichTextSectionData;
-  onChange: WidgetEditorProps<RichTextSectionData>["onChange"];
-  variant: WidgetEditorProps<RichTextSectionData>["variant"];
-  normalized: RichTextSectionData;
-  blocks: RichTextSectionBlock[];
-  source: RichTextRenderedSourceState;
-};
-
-type AdvancedSupportAction = "normalize" | "reset" | null;
-
 export function RichTextSectionAdvancedEditor({
   value,
-  onChange,
   variant,
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
   const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
   const source = resolveRichTextRenderedSource(normalized);
-
-  return (
-    <RichTextSectionAdvancedEditorContent
-      key={normalized.body?.html ?? "__empty__"}
-      value={value}
-      onChange={onChange}
-      variant={variant}
-      normalized={normalized}
-      blocks={blocks}
-      source={source}
-    />
-  );
-}
-
-function RichTextSectionAdvancedEditorContent({
-  value,
-  onChange,
-  variant,
-  normalized,
-  blocks,
-  source,
-}: RichTextSectionAdvancedEditorContentProps) {
-  const [pendingSupportAction, setPendingSupportAction] = useState<AdvancedSupportAction>(null);
   const htmlDiagnostics = sanitizeRichTextHtmlWithDiagnostics(normalized.body?.html ?? "");
   const mediaBlockCount = blocks.filter(
     (block) => block.kind === "image" || block.kind === "attachment"
   ).length;
   const embedBlockCount = blocks.filter((block) => block.kind === "embed").length;
-  const supportActionDescription =
-    pendingSupportAction === "reset"
-      ? "Reset this rich text section to the default sample content? This replaces the current title, body, blocks, options, and style."
-      : "Normalize this rich text section now? The current content is preserved while deterministic defaults are reapplied.";
 
   return (
     <div className="space-y-4">
       <EditorSection
+        id="rich-text-section.advanced.output-source-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Output mode and source diagnostics"
         description="Read-only output mode and rendered-source summary."
       >
+        <p className="text-sm text-muted-foreground">
+          Advanced mode is read-only. Use Visual for public-facing rich content, output preference,
+          structured blocks, reader options, and typography changes.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border bg-muted/20 p-3 text-sm">
             <p className="font-medium">Output mode</p>
@@ -1845,6 +1882,9 @@ function RichTextSectionAdvancedEditorContent({
       </EditorSection>
 
       <EditorSection
+        id="rich-text-section.advanced.sanitizer-diagnostics"
+        mode="advanced"
+        role="diagnostics"
         title="Sanitizer diagnostics"
         description="Read-only sanitizer status for the active HTML source."
       >
@@ -1872,24 +1912,9 @@ function RichTextSectionAdvancedEditorContent({
       </EditorSection>
 
       <EditorSection
-        title="Normalization and safeguards"
-        description="Confirmed support actions for deterministic cleanup."
-      >
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPendingSupportAction("normalize")}
-          >
-            Normalize now
-          </Button>
-          <Button type="button" variant="outline" onClick={() => setPendingSupportAction("reset")}>
-            Reset to defaults
-          </Button>
-        </div>
-      </EditorSection>
-
-      <EditorSection
+        id="rich-text-section.advanced.saved-content-summary"
+        mode="advanced"
+        role="diagnostics"
         title="Saved content summary"
         description="Human diagnostics only. Advanced does not show raw rich-text JSON."
       >
@@ -1911,27 +1936,32 @@ function RichTextSectionAdvancedEditorContent({
         </div>
       </EditorSection>
 
-      <ConfirmActionDialog
-        open={pendingSupportAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingSupportAction(null);
-        }}
-        title={
-          pendingSupportAction === "reset"
-            ? "Reset rich text section"
-            : "Normalize rich text section"
-        }
-        description={supportActionDescription}
-        confirmLabel={pendingSupportAction === "reset" ? "Reset" : "Normalize"}
-        onConfirm={() => {
-          if (pendingSupportAction === "reset") {
-            onChange(richTextSectionDefaults);
-          } else {
-            onChange(normalizeValue(value));
-          }
-          setPendingSupportAction(null);
-        }}
-      />
+      <EditorSection
+        id="rich-text-section.advanced.contract-summary"
+        mode="advanced"
+        role="summary"
+        title="Contract summary"
+        description="Editor ownership split for the Rich Text Section v2 contract."
+      >
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.wizard-owner"
+          label="Wizard owns"
+          path="variant"
+          value="One-time layout seed plus the first structured-block preview."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.visual-owner"
+          label="Visual owns"
+          path="titleBlock"
+          value="Title copy, rendered-source preference, structured blocks, reader options, typography, spacing, and colors."
+        />
+        <ReadonlyWidgetSummaryRow
+          id="rich-text-section.advanced.advanced-owner"
+          label="Advanced owns"
+          path="editorContract"
+          value="Read-only output/source diagnostics, sanitizer reporting, saved content summaries, and contract ownership."
+        />
+      </EditorSection>
     </div>
   );
 }

@@ -19,7 +19,7 @@ blocks, and bounded inline media/attachment/embed support.
 
 ### Wizard
 
-- Read-only current layout summary
+- One-time current layout seed
 - Read-only preview of the first two structured text blocks
 - Does not change `options.outputMode`; Wizard now leaves output ownership to
   Visual
@@ -51,17 +51,20 @@ Visual is the primary authoring surface. It now owns:
 - text color clearing and inherited/dropcap guidance
 - swatch-only color controls that preserve legacy custom/token values as
   replace-or-clear saved custom color state
+- accessible field naming that now stays aligned with the Hero editor review
+  baseline for the main Rich Text controls
 
 ### Advanced
 
 - Read-only output mode and rendered-source diagnostics
 - Read-only sanitizer diagnostics and sanitized preview
-- Confirm-gated normalization and reset support actions
+- Read-only contract summary
 - Saved content summary for structured blocks, media/embed counts, and sanitized HTML source length.
 - Advanced does not expose raw JSON snapshots or raw HTML authoring.
 
 Advanced intentionally stays diagnostic. Variant selection, output-mode changes,
-style duplication, and raw HTML authoring do not live here anymore.
+style duplication, mutating support utilities, and raw HTML authoring do not
+live here anymore.
 
 ## Data Model Summary
 
@@ -172,14 +175,16 @@ style duplication, and raw HTML authoring do not live here anymore.
   `var(--color-text)` behavior.
 - `style.background` is clearable; clearing removes the widget-local background
   override so the section surface falls back to transparent.
+- Background color now exposes the same transparent affordance pattern used in
+  Hero for comparable background fields.
 - Typography and spacing continue to use bounded token sets instead of freeform
   class names.
 
 ## TASK-336-18 Editor Contract
 
 - Exports `richTextSectionEditorContract` with `version: 2`.
-- Contract target: Wizard is a read-only starter summary; Visual owns daily
-  rich content, typography, spacing, and color; Advanced is read-only source,
-  sanitizer, and runtime diagnostics.
+- Contract target: Wizard seeds layout and previews structured blocks; Visual
+  owns daily rich content, typography, spacing, and color; Advanced is
+  read-only source, sanitizer, saved-content, and contract diagnostics.
 - TASK-336-19 closes raw HTML/output-mode authoring drift by keeping Advanced
   read-only and moving authoring through Visual rich-text/structured controls.

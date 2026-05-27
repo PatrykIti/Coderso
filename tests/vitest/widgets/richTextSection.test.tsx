@@ -419,22 +419,42 @@ test("rich text editors expose the updated wizard, visual, and advanced IA", () 
   );
 
   expect(wizardHtml).toContain("Output mode stays untouched in Wizard");
-  expect(wizardHtml).toContain("Single Column");
-  expect(wizardHtml).toContain('data-widget-control-readonly="true"');
+  expect(wizardHtml).toContain('data-widget-control="rich-text-section.wizard.variant"');
+  expect(wizardHtml).toContain(
+    'data-widget-editor-section="rich-text-section.wizard.starter-copy"'
+  );
   expect(wizardHtml).toContain("Use Visual to edit the eyebrow, title, heading level");
+  expect(visualHtml).toContain("Variant and layout structure");
+  expect(visualHtml).toContain("Title block copy");
   expect(visualHtml).toContain("Body content");
   expect(visualHtml).toContain("Structured content blocks");
+  expect(visualHtml).toContain("Reader options");
+  expect(visualHtml).toContain("Typography and colors");
   expect(visualHtml).toContain("Title heading level");
   expect(advancedHtml).toContain("Output mode and source diagnostics");
   expect(advancedHtml).toContain("Sanitizer diagnostics");
   expect(advancedHtml).toContain("Saved content summary");
+  expect(advancedHtml).toContain("Contract summary");
+  expect(advancedHtml).toContain("Advanced mode is read-only.");
   expect(advancedHtml).not.toContain("Raw payload snapshot");
   expect(advancedHtml).not.toContain("<pre");
   expect(visualHtml).not.toContain('placeholder="var(--color-text)"');
   expect(visualHtml).not.toContain('placeholder="transparent"');
   expect(advancedHtml).not.toContain("Raw HTML technical editor");
-  expect(advancedHtml).not.toContain("Sanitize and apply");
+  expect(advancedHtml).not.toContain("Normalize now");
+  expect(advancedHtml).not.toContain("Reset to defaults");
   expect(advancedHtml).not.toContain("<textarea");
   expect(advancedHtml).not.toContain("<select");
-  expect(advancedHtml).not.toContain("Technical typography tokens");
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="rich-text-section.advanced.output-source-diagnostics"'
+  );
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="rich-text-section.advanced.sanitizer-diagnostics"'
+  );
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="rich-text-section.advanced.saved-content-summary"'
+  );
+  expect(advancedHtml).toContain(
+    'data-widget-editor-section="rich-text-section.advanced.contract-summary"'
+  );
 });

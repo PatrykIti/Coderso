@@ -389,7 +389,7 @@ afterEach(() => {
   vi.resetModules();
 });
 
-test("RichTextSection wizard editor keeps output mode while block previews stay read-only", async () => {
+test("RichTextSection wizard editor seeds layout while block previews stay read-only", async () => {
   const { RichTextSectionWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
@@ -435,8 +435,12 @@ test("RichTextSection wizard editor keeps output mode while block previews stay 
     expect(view.container.textContent).toContain(
       "Use Visual to edit the eyebrow, title, heading level"
     );
-    expect(view.container.querySelector("button")).toBeNull();
+    expect(
+      findSectionByTitle(view.container, "Starter copy")?.getAttribute("data-widget-editor-section")
+    ).toBe("rich-text-section.wizard.starter-copy");
     expect(latestVariant).toBe("legacy-layout");
+    setSelectValue(view.container.querySelector("select"), "two-column");
+    expect(latestVariant).toBe("two-column");
 
     expect(findInputByPlaceholder(view.container, "Editorial")).toBeUndefined();
     expect(findInputByPlaceholder(view.container, "Long-form content section")).toBeUndefined();
@@ -512,6 +516,34 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
   const view = mount(<Harness />);
 
   try {
+    expect(
+      findSectionByTitle(view.container, "Variant and layout structure")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.visual.variant-layout-structure");
+    expect(
+      findSectionByTitle(view.container, "Title block copy")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.visual.title-block-copy");
+    expect(
+      findSectionByTitle(view.container, "Body content")?.getAttribute("data-widget-editor-section")
+    ).toBe("rich-text-section.visual.body-content");
+    expect(
+      findSectionByTitle(view.container, "Structured content blocks")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.visual.structured-content-blocks");
+    expect(
+      findSectionByTitle(view.container, "Reader options")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.visual.reader-options");
+    expect(
+      findSectionByTitle(view.container, "Typography and colors")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.visual.typography-colors");
     expect(view.container.textContent).toContain(
       "Rich text body is the only rendered source for this preference."
     );
@@ -769,7 +801,7 @@ test("RichTextSection visual editor pages long block lists and explains unavaila
   }
 });
 
-test("RichTextSection advanced editor keeps source diagnostics read-only with confirmed support actions", async () => {
+test("RichTextSection advanced editor keeps source diagnostics read-only with truthful summary sections", async () => {
   const { RichTextSectionAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
 
@@ -802,34 +834,50 @@ test("RichTextSection advanced editor keeps source diagnostics read-only with co
   const view = mount(<Harness />);
 
   try {
+    expect(view.container.textContent).toContain(
+      "Advanced mode is read-only. Use Visual for public-facing rich content, output preference, structured blocks, reader options, and typography changes."
+    );
     expect(view.container.textContent).toContain("Output mode and source diagnostics");
     expect(view.container.textContent).toContain("Sanitizer diagnostics");
     expect(view.container.textContent).toContain("Saved content summary");
-    expect(view.container.textContent).not.toContain("Technical typography tokens");
+    expect(view.container.textContent).toContain("Contract summary");
     expect(view.container.textContent).not.toContain("Raw HTML technical editor");
     expect(view.container.textContent).not.toContain("Raw payload snapshot");
-    expect(view.container.textContent).not.toContain("Sanitize and apply");
+    expect(view.container.textContent).not.toContain("Normalize now");
+    expect(view.container.textContent).not.toContain("Reset to defaults");
     expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.querySelectorAll("select")).toHaveLength(0);
     expect(view.container.querySelectorAll("textarea")).toHaveLength(0);
+    expect(
+      findSectionByTitle(view.container, "Output mode and source diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.advanced.output-source-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Sanitizer diagnostics")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.advanced.sanitizer-diagnostics");
+    expect(
+      findSectionByTitle(view.container, "Saved content summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.advanced.saved-content-summary");
+    expect(
+      findSectionByTitle(view.container, "Contract summary")?.getAttribute(
+        "data-widget-editor-section"
+      )
+    ).toBe("rich-text-section.advanced.contract-summary");
 
     const outputSection = findSectionByTitle(view.container, "Output mode and source diagnostics");
     expect(outputSection?.textContent).toContain("Rendered source");
     expect(outputSection?.textContent).toContain("Reason:");
     expect(outputSection?.textContent).toContain("blocks-fallback");
     expect(outputSection?.textContent).toContain("Rich content, output preference");
-
-    clickByText(view.container, "Normalize now");
-    expect(view.container.textContent).toContain("Normalize rich text section");
-    const normalizeDialog = view.container.querySelector('[data-confirm-dialog="true"]');
-    clickByText(normalizeDialog ?? view.container, "Normalize");
-    expect(latestValue.titleBlock?.title).toBe(richTextSectionDefaults.titleBlock?.title);
-
-    clickByText(view.container, "Reset to defaults");
-    expect(view.container.textContent).toContain("Reset rich text section");
-    const resetDialog = view.container.querySelector('[data-confirm-dialog="true"]');
-    clickByText(resetDialog ?? view.container, "Reset");
-    expect(latestValue).toEqual(richTextSectionDefaults);
+    expect(view.container.textContent).toContain("Wizard owns");
+    expect(view.container.textContent).toContain("Visual owns");
+    expect(view.container.textContent).toContain("Advanced owns");
+    expect(latestValue.body?.html).toBe("<p>Existing body</p>");
   } finally {
     view.cleanup();
   }
