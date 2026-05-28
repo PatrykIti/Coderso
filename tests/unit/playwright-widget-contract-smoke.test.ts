@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  buildCommerceFixtureProductPatch,
   classifyPublicStatus,
   createAdminFixtureGapMode,
   createFailedAdminMode,
@@ -11,7 +12,9 @@ import {
   isAdminFixtureUnopenableError,
   parseArgs,
   renderMarkdown,
+  resolveCommerceFixtureCollectionIds,
   resolvePlaywrightCliSessionName,
+  selectedCasesNeedCommerceFixtures,
   selectCases,
   shouldCountOverflowOwner,
   summarize,
@@ -173,6 +176,104 @@ describe("playwright widget contract smoke helpers", () => {
     expect(() => selectCases(inventory, parseArgs(["--widget", "missing"]))).toThrow(
       "widget_not_found:missing"
     );
+  });
+
+  test("detects when selected widget cases require commerce fixture bootstrap", () => {
+    expect(selectedCasesNeedCommerceFixtures(makeInventory().widgets)).toBe(false);
+    expect(
+      selectedCasesNeedCommerceFixtures([
+        {
+          widgetType: "product-gallery",
+          title: "Product Gallery",
+          adminInsertLabel: "Product Gallery",
+          adminFixtureSlug: "/ctr-product-gallery",
+          publicPath: "/product-gallery",
+          publicFixtureStatus: "published",
+          requiredModes: ["visual", "advanced"],
+        },
+      ])
+    ).toBe(true);
+  });
+
+  test("builds a commerce fixture patch only for fields that drifted", () => {
+    expect(
+      buildCommerceFixtureProductPatch(
+        {
+          id: "product-1",
+          slug: "fixture-starter-home",
+          title: "Fixture Starter Home",
+          status: "published",
+          excerpt: "Compact starter plan.",
+          description: "Fixture description.",
+          pricing: { amount: 19900, currency: "USD", compareAtAmount: 24900 },
+          stock: { state: "in_stock", quantity: 3 },
+          collectionIds: ["collection-1"],
+        },
+        {
+          slug: "fixture-starter-home",
+          title: "Fixture Starter Home",
+          status: "published",
+          excerpt: "Compact starter plan.",
+          description: "Fixture description.",
+          pricing: { amount: 19900, currency: "USD", compareAtAmount: 24900 },
+          stock: { state: "in_stock", quantity: 3 },
+          collectionSlugs: ["fixture-homes"],
+        }
+      )
+    ).toBeNull();
+
+    expect(
+      buildCommerceFixtureProductPatch(
+        {
+          id: "product-1",
+          slug: "fixture-starter-home",
+          title: "Old title",
+          status: "draft",
+          excerpt: null,
+          description: null,
+          pricing: { amount: 0, currency: "USD", compareAtAmount: null },
+          stock: { state: "backorder", quantity: 1 },
+          collectionIds: [],
+        },
+        {
+          slug: "fixture-starter-home",
+          title: "Fixture Starter Home",
+          status: "published",
+          excerpt: "Compact starter plan.",
+          description: "Fixture description.",
+          pricing: { amount: 19900, currency: "USD", compareAtAmount: 24900 },
+          stock: { state: "in_stock", quantity: 3 },
+          collectionSlugs: ["fixture-homes"],
+        }
+      )
+    ).toEqual({
+      title: "Fixture Starter Home",
+      status: "published",
+      excerpt: "Compact starter plan.",
+      description: "Fixture description.",
+      pricing: { amount: 19900, currency: "USD", compareAtAmount: 24900 },
+      stock: { state: "in_stock", quantity: 3 },
+    });
+  });
+
+  test("maps fixture collection slugs to deterministic ids", () => {
+    const collectionBySlug = new Map([
+      ["fixture-homes", { id: "collection-1", slug: "fixture-homes", name: "Fixture Homes" }],
+      ["fixture-lofts", { id: "collection-2", slug: "fixture-lofts", name: "Fixture Lofts" }],
+    ]);
+
+    expect(
+      resolveCommerceFixtureCollectionIds(collectionBySlug, {
+        slug: "fixture-garden-suite",
+        title: "Fixture Garden Suite",
+        excerpt: "Fixture",
+        description: "Fixture description.",
+        status: "published",
+        pricing: { amount: 15900, currency: "USD", compareAtAmount: 17900 },
+        stock: { state: "in_stock", quantity: 1 },
+        collectionSlugs: ["fixture-homes", "missing", "fixture-lofts"],
+      })
+    ).toEqual(["collection-1", "collection-2"]);
   });
 
   test("normalizes long playwright-cli session names for stable browser reuse", () => {

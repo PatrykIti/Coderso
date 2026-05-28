@@ -65,6 +65,7 @@ const playwrightCliSessionMaxLength = 64;
 type AdminAuthStateResult = {
   attempted: boolean;
   authenticated: boolean;
+  sessionValue?: string;
   error?: string;
 };
 
@@ -157,6 +158,98 @@ const screenOnlyWidgets = new Set([
   "screen-field-group",
   "screen-two-column",
 ]);
+const commerceFixtureWidgetTypes = new Set(["product-gallery", "product-compare", "product-table"]);
+
+type CommerceFixtureCollectionSeed = {
+  slug: string;
+  name: string;
+  description: string;
+};
+
+type CommerceFixtureProductSeed = {
+  slug: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  status: "published";
+  pricing: {
+    amount: number;
+    currency: string;
+    compareAtAmount: number | null;
+  };
+  stock: {
+    state: "in_stock" | "backorder";
+    quantity: number;
+  };
+  collectionSlugs: string[];
+};
+
+const commerceFixtureCollectionSeeds: CommerceFixtureCollectionSeed[] = [
+  {
+    slug: "fixture-homes",
+    name: "Fixture Homes",
+    description: "Deterministic homes collection for widget smoke fixtures.",
+  },
+  {
+    slug: "fixture-lofts",
+    name: "Fixture Lofts",
+    description: "Deterministic loft collection for widget smoke fixtures.",
+  },
+];
+
+const commerceFixtureProductSeeds: CommerceFixtureProductSeed[] = [
+  {
+    slug: "fixture-starter-home",
+    title: "Fixture Starter Home",
+    excerpt: "Compact starter plan for deterministic widget smoke coverage.",
+    description: "Deterministic fixture product for Product Gallery, Compare, and Table.",
+    status: "published",
+    pricing: {
+      amount: 19900,
+      currency: "USD",
+      compareAtAmount: 24900,
+    },
+    stock: {
+      state: "in_stock",
+      quantity: 3,
+    },
+    collectionSlugs: ["fixture-homes"],
+  },
+  {
+    slug: "fixture-urban-loft",
+    title: "Fixture Urban Loft",
+    excerpt: "City-forward loft listing for deterministic comparison coverage.",
+    description: "Second deterministic fixture product with a different stock state.",
+    status: "published",
+    pricing: {
+      amount: 29900,
+      currency: "USD",
+      compareAtAmount: 34900,
+    },
+    stock: {
+      state: "backorder",
+      quantity: 8,
+    },
+    collectionSlugs: ["fixture-lofts"],
+  },
+  {
+    slug: "fixture-garden-suite",
+    title: "Fixture Garden Suite",
+    excerpt: "Garden-facing suite used to keep product table fixtures populated.",
+    description: "Third deterministic fixture product to satisfy multi-row public widget proof.",
+    status: "published",
+    pricing: {
+      amount: 15900,
+      currency: "USD",
+      compareAtAmount: 17900,
+    },
+    stock: {
+      state: "in_stock",
+      quantity: 1,
+    },
+    collectionSlugs: ["fixture-homes", "fixture-lofts"],
+  },
+];
 
 function readFlagValue(argv: string[], index: number, flag: string): string {
   const value = argv[index + 1];
@@ -222,6 +315,69 @@ function parseArgs(argv: string[]): ParsedArgs {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+type CommerceCollectionListItem = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
+type CommerceProductListItem = {
+  id: string;
+  slug: string;
+  title: string;
+  status: string;
+  excerpt: string | null;
+  description: string | null;
+  pricing?: {
+    amount?: number;
+    currency?: string;
+    compareAtAmount?: number | null;
+  };
+  stock?: {
+    state?: string;
+    quantity?: number | null;
+  };
+  collectionIds?: string[];
+};
+
+export function selectedCasesNeedCommerceFixtures(cases: WidgetSmokeCase[]): boolean {
+  return cases.some((item) => commerceFixtureWidgetTypes.has(item.widgetType));
+}
+
+export function buildCommerceFixtureProductPatch(
+  existing: CommerceProductListItem,
+  seed: CommerceFixtureProductSeed
+): Record<string, unknown> | null {
+  const patch: Record<string, unknown> = {};
+  if (existing.title !== seed.title) patch.title = seed.title;
+  if ((existing.excerpt ?? null) !== seed.excerpt) patch.excerpt = seed.excerpt;
+  if ((existing.description ?? null) !== seed.description) patch.description = seed.description;
+  if (existing.status !== seed.status) patch.status = seed.status;
+  if (
+    existing.pricing?.amount !== seed.pricing.amount ||
+    existing.pricing?.currency !== seed.pricing.currency ||
+    (existing.pricing?.compareAtAmount ?? null) !== seed.pricing.compareAtAmount
+  ) {
+    patch.pricing = seed.pricing;
+  }
+  if (
+    existing.stock?.state !== seed.stock.state ||
+    (existing.stock?.quantity ?? null) !== seed.stock.quantity
+  ) {
+    patch.stock = seed.stock;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+export function resolveCommerceFixtureCollectionIds(
+  collectionBySlug: Map<string, CommerceCollectionListItem>,
+  productSeed: CommerceFixtureProductSeed
+): string[] {
+  return productSeed.collectionSlugs
+    .map((slug) => collectionBySlug.get(slug)?.id ?? "")
+    .filter((id) => id.length > 0);
 }
 
 function isEditorMode(value: unknown): value is EditorMode {
@@ -448,11 +604,173 @@ async function writeAdminAuthState(
     )}\n`
   );
   await chmodAuthState(authStatePath);
-  return { attempted: true, authenticated: true };
+  return { attempted: true, authenticated: true, sessionValue };
 }
 
 async function chmodAuthState(authStatePath: string) {
   await chmod(authStatePath, 0o600).catch(() => undefined);
+}
+
+async function requestAdminJson<T>({
+  adminUrl,
+  sessionValue,
+  path,
+  method = "GET",
+  body,
+  csrfToken,
+}: {
+  adminUrl: string;
+  sessionValue: string;
+  path: string;
+  method?: "GET" | "POST" | "PATCH" | "PUT";
+  body?: unknown;
+  csrfToken?: string;
+}): Promise<T> {
+  const adminBase = adminUrl.replace(/\/$/, "");
+  const headers = new Headers({
+    cookie: `session=${encodeURIComponent(sessionValue)}`,
+  });
+  if (body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (csrfToken) {
+    headers.set("X-CSRF-Token", csrfToken);
+  }
+  const response = await fetch(`${adminBase}${path}`, {
+    method,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  if (!response.ok) {
+    throw new Error(`commerce_fixture_request_failed:${method}:${path}:${response.status}`);
+  }
+  return (await response.json()) as T;
+}
+
+async function fetchAdminCsrfToken(adminUrl: string, sessionValue: string): Promise<string> {
+  const payload = await requestAdminJson<{ token?: string }>({
+    adminUrl,
+    sessionValue,
+    path: "/api/auth/csrf",
+  });
+  const token = typeof payload.token === "string" ? payload.token.trim() : "";
+  if (!token) {
+    throw new Error("commerce_fixture_csrf_missing");
+  }
+  return token;
+}
+
+async function ensureCommerceWidgetFixtures(
+  adminUrl: string,
+  sessionValue: string,
+  selectedCases: WidgetSmokeCase[]
+): Promise<void> {
+  if (!selectedCasesNeedCommerceFixtures(selectedCases)) {
+    return;
+  }
+
+  const collectionsPayload = await requestAdminJson<{ items?: CommerceCollectionListItem[] }>({
+    adminUrl,
+    sessionValue,
+    path: "/api/commerce/collections",
+  });
+  const collectionBySlug = new Map(
+    (collectionsPayload.items ?? []).map((item) => [item.slug, item] as const)
+  );
+
+  let csrfToken: string | null = null;
+  const ensureCsrf = async () => {
+    if (csrfToken) return csrfToken;
+    csrfToken = await fetchAdminCsrfToken(adminUrl, sessionValue);
+    return csrfToken;
+  };
+
+  for (const seed of commerceFixtureCollectionSeeds) {
+    if (collectionBySlug.has(seed.slug)) continue;
+    const created = await requestAdminJson<CommerceCollectionListItem>({
+      adminUrl,
+      sessionValue,
+      path: "/api/commerce/collections",
+      method: "POST",
+      body: {
+        name: seed.name,
+        slug: seed.slug,
+        description: seed.description,
+      },
+      csrfToken: await ensureCsrf(),
+    });
+    collectionBySlug.set(created.slug, created);
+  }
+
+  const productsPayload = await requestAdminJson<{ items?: CommerceProductListItem[] }>({
+    adminUrl,
+    sessionValue,
+    path: "/api/commerce/products",
+  });
+  const productBySlug = new Map(
+    (productsPayload.items ?? []).map((item) => [item.slug, item] as const)
+  );
+
+  for (const seed of commerceFixtureProductSeeds) {
+    const existing = productBySlug.get(seed.slug);
+    const collectionIds = resolveCommerceFixtureCollectionIds(collectionBySlug, seed);
+    if (!existing) {
+      const created = await requestAdminJson<CommerceProductListItem>({
+        adminUrl,
+        sessionValue,
+        path: "/api/commerce/products",
+        method: "POST",
+        body: {
+          title: seed.title,
+          slug: seed.slug,
+          status: seed.status,
+          excerpt: seed.excerpt,
+          description: seed.description,
+          pricing: seed.pricing,
+          stock: seed.stock,
+        },
+        csrfToken: await ensureCsrf(),
+      });
+      productBySlug.set(created.slug, created);
+      if (collectionIds.length > 0) {
+        await requestAdminJson<CommerceProductListItem>({
+          adminUrl,
+          sessionValue,
+          path: `/api/commerce/products/${created.id}/collections`,
+          method: "PUT",
+          body: { collectionIds },
+          csrfToken: await ensureCsrf(),
+        });
+      }
+      continue;
+    }
+
+    const patch = buildCommerceFixtureProductPatch(existing, seed);
+    if (patch) {
+      await requestAdminJson<CommerceProductListItem>({
+        adminUrl,
+        sessionValue,
+        path: `/api/commerce/products/${existing.id}`,
+        method: "PATCH",
+        body: patch,
+        csrfToken: await ensureCsrf(),
+      });
+    }
+    const existingCollections = Array.isArray(existing.collectionIds)
+      ? [...existing.collectionIds]
+      : [];
+    const expectedCollections = [...collectionIds].sort();
+    if (existingCollections.sort().join(",") !== expectedCollections.join(",")) {
+      await requestAdminJson<CommerceProductListItem>({
+        adminUrl,
+        sessionValue,
+        path: `/api/commerce/products/${existing.id}/collections`,
+        method: "PUT",
+        body: { collectionIds },
+        csrfToken: await ensureCsrf(),
+      });
+    }
+  }
 }
 
 function installAuthStateSignalCleanup(getPath: () => string | null) {
@@ -1133,6 +1451,16 @@ async function main() {
         report.admin.authenticated = authState.authenticated;
         if (!authState.authenticated) {
           report.admin.error = authState.error ?? "login_failed";
+        } else if (authState.sessionValue && !args.skipFront) {
+          try {
+            await ensureCommerceWidgetFixtures(
+              args.adminUrl,
+              authState.sessionValue,
+              selectedCases
+            );
+          } catch (error) {
+            report.public.error = error instanceof Error ? error.message : String(error);
+          }
         }
       }
       if (
