@@ -35,5 +35,7 @@ sl-*.yaml
 sl-*.yml
 rts-*.yaml
 rts-*.yml
+relogin*.yaml
+relogin*.yml
 _docs/PLAYWRIGHT/**/_raw/
 _docs/PLAYWRIGHT/screenshots/
