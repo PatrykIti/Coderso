@@ -29,6 +29,8 @@ hp-*.yaml
 hp-*.yml
 hp*.yaml
 hp*.yml
+pc-*.yaml
+pc-*.yml
 cl-*.yaml
 cl-*.yml
 sl-*.yaml
