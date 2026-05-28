@@ -4,6 +4,11 @@
 > **Sesja:** Playwright CLI (clean smoke: `widget-contract-smoke-2026-05-27-clean`)
 > **Srodowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Referencja historyczna:** `_docs/PLAYWRIGHT/23-05-2026-22-18/REPORT_PRODUCT_GALLERY_WIDGET.md`
+
+> **Status 2026-05-28:** superseded przez `TASK-342`; targeted rerun
+> `task-342-03-product-gallery` i final full rerun
+> `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.md`
+> potwierdzily populated public proof i `fixtureGaps=0`.
 ---
 ## 1. Zakres
 - **Typ widgetu:** `product-gallery`

@@ -6,7 +6,7 @@
 **Category:** Commerce + Widgets + Playwright + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-342-01, TASK-342-03
-**Status:** To Do
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -126,3 +126,14 @@ No API routes are added by default.
   after that shared fix produces populated proof for the Product Gallery route.
 - The final report no longer leaves Product Gallery in an ambiguous
   empty-state-only status.
+
+## Completion Notes (2026-05-28)
+
+- Product Gallery did not require widget-local runtime changes after the shared
+  commerce fixture bootstrap was restored.
+- Targeted proof passed:
+  - `bun scripts/playwright-widget-contract-smoke.ts --session task-342-03-product-gallery --widget product-gallery --admin http://localhost:5173/admin --front http://localhost:3000 --output-json .tmp/task-342-03-product-gallery.json --output-md .tmp/task-342-03-product-gallery.md --strict`
+- Direct public replay confirmed populated cards for:
+  - `Fixture Starter Home`
+  - `Fixture Urban Loft`
+  - `Fixture Garden Suite`

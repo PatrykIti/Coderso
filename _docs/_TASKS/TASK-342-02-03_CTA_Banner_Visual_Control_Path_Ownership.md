@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-342-01, TASK-342-02
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -139,3 +139,14 @@ No API routes are added.
 - `cta-banner` no longer reports `metadata-gap` in the targeted rerun.
 - The flagged Visual controls expose truthful persisted paths.
 - Existing CTA Banner swatch/clear/transparent UX remains intact.
+
+## Completion Notes (2026-05-28)
+
+- `CtaBannerEditors.tsx` now emits truthful persisted paths for the flagged
+  colors-borders and background-motion controls.
+- Targeted validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/ctaBanner.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/cta-banner-editor-wave.test.tsx`
+  - `bun scripts/playwright-widget-contract-smoke.ts --session task-342-02-cta-banner --widget cta-banner --admin http://localhost:5173/admin --front http://localhost:3000 --output-json .tmp/task-342-02-cta-banner.json --output-md .tmp/task-342-02-cta-banner.md --strict`

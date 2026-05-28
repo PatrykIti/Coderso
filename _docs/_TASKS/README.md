@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 15 tasks
-- **In Progress:** 11 tasks
-- **Done:** 1960 tasks
+- **To Do:** 10 tasks
+- **In Progress:** 4 tasks
+- **Done:** 1971 tasks
 
 ---
 
@@ -38,11 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-342-03 | Commerce Populated Fixture Wave | High | Medium | Shared commerce wave that first proves fixture/bootstrap ownership before touching Product Gallery, Product Compare, or Product Table runtime code |
-| TASK-342-03-01 | Product Gallery Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Gallery runtime on `/test-product-gallery-widget` or classify the issue as shared fixture/bootstrap drift |
-| TASK-342-03-02 | Product Compare Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Compare runtime on `/test-product-compare-0516` or classify the issue as shared fixture/bootstrap drift |
-| TASK-342-03-03 | Product Table Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Table runtime on `/producttabletestproducttabletest` or classify the issue as shared fixture/bootstrap drift |
-| TASK-342-04 | Report Docs Changelog and Closure | High | Medium | Final rerun, supersession notes, board sync, and changelog closure for the TASK-342 family |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -63,19 +58,24 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
-| TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | In progress: implementation starts from the metadata-gap wave while the commerce trio remains intentionally gated behind the shared fixture/bootstrap reconciliation branch. |
-| TASK-342-01 | Evidence Reconciliation for the 27-05-2026 Report Wave | High | Medium | In progress: current evidence now classifies the 4 admin outliers as real metadata regressions and the 3 commerce outliers as fixture-data drift with zero local products. |
-| TASK-342-02 | Metadata-Gap Admin Contract Wave | High | Medium | In progress: current code fix wave targets strict `data-widget-control-path` closure in pricing-plans, faq-accordion, cta-banner, and contact. |
-| TASK-342-02-01 | Pricing Plans Visual Control Path Ownership | High | Small | In progress: widget-local control rows now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
-| TASK-342-02-02 | FAQ Accordion Visual Control Path Ownership | High | Small | In progress: the remaining panel-radius and border-width rows now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
-| TASK-342-02-03 | CTA Banner Visual Control Path Ownership | High | Small | In progress: colors-borders and background-motion controls now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
-| TASK-342-02-04 | Contact Visual Control Path Ownership | High | Small | In progress: surface-styling controls now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
 ---
 
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | Done (2026-05-28): metadata-gap widgets were fixed in code, commerce public fixtures were repopulated through deterministic bootstrap, and the final 38-widget smoke rerun is fully green with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. |
+| TASK-342-04 | Report Docs Changelog and Closure | High | Medium | Done (2026-05-28): final smoke evidence is tracked, 27-05 Playwright reports now carry explicit supersession notes, and board/changelog/task docs are synchronized. |
+| TASK-342-03 | Commerce Populated Fixture Wave | High | Medium | Done (2026-05-28): the commerce trio was classified as fixture-data drift, the smoke harness now bootstraps deterministic products/collections, and public populated proof is restored for Product Gallery, Product Compare, and Product Table. |
+| TASK-342-03-03 | Product Table Populated Fixture and Runtime Replay | High | Medium | Done (2026-05-28): Product Table required no widget-local runtime code change after shared commerce bootstrap recovery, and both targeted and final reruns confirm populated public rows. |
+| TASK-342-03-02 | Product Compare Populated Fixture and Runtime Replay | High | Medium | Done (2026-05-28): Product Compare required no widget-local runtime code change after shared commerce bootstrap recovery, and both targeted and final reruns confirm populated public output. |
+| TASK-342-03-01 | Product Gallery Populated Fixture and Runtime Replay | High | Medium | Done (2026-05-28): Product Gallery required no widget-local runtime code change after shared commerce bootstrap recovery, and both targeted and final reruns confirm populated public cards. |
+| TASK-342-02 | Metadata-Gap Admin Contract Wave | High | Medium | Done (2026-05-28): strict `data-widget-control-path` coverage was restored across the four flagged Visual editor surfaces, and targeted plus final reruns confirm `metadataGaps=0`. |
+| TASK-342-02-04 | Contact Visual Control Path Ownership | High | Small | Done (2026-05-28): Contact surface-styling controls now emit truthful persisted paths and pass targeted smoke. |
+| TASK-342-02-03 | CTA Banner Visual Control Path Ownership | High | Small | Done (2026-05-28): CTA Banner colors-borders and background-motion controls now emit truthful persisted paths and pass targeted smoke. |
+| TASK-342-02-02 | FAQ Accordion Visual Control Path Ownership | High | Small | Done (2026-05-28): FAQ Accordion panel-radius and border-width rows now emit truthful persisted paths and pass targeted smoke. |
+| TASK-342-02-01 | Pricing Plans Visual Control Path Ownership | High | Small | Done (2026-05-28): Pricing Plans plan-surface and colors-emphasis controls now emit truthful persisted paths and pass targeted smoke. |
+| TASK-342-01 | Evidence Reconciliation for the 27-05-2026 Report Wave | High | Medium | Done (2026-05-28): the 27-05 outliers were classified into real metadata regressions and fixture-data drift, giving TASK-342 an exact owner matrix before implementation. |
 | TASK-341 | Widget Current-State Playwright Re-audit After TASK-339 | High | Medium | Done (2026-05-27): clean `playwright-cli` smoke plus focused replay produced a new `_docs/PLAYWRIGHT/27-05-2026/` report wave for all 38 page-builder widgets, with 4 automation metadata follow-ups and 3 empty-state fixture gaps called out explicitly. |
 | TASK-340 | Widget Contract Bun Expectation Drift Repair | High | Small | Done (2026-05-27): full `bun run test:bun` is green again after aligning stale `content-list` and `posts-feed` Bun expectations with the current TASK-339 editor-contract order and read-only Advanced diagnostics. |
 | TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | Done (2026-05-27): the full widget wave is closed with shared live-preview removal, hero-parity color/section alignment across the dedicated leaves, residual contract sweep cleanup, and recorded Claude Playwright evidence per widget slice. |

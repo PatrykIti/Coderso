@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Commerce + Playwright + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-339, TASK-341
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 **Owners:** Codex implementation/tests/docs; Claude headless consult when root cause stays ambiguous after a local fix; agent refinement before implementation batches
 
 ---
@@ -238,3 +238,21 @@ Family execution baseline:
     issue was data/harness drift rather than widget runtime failure.
 - Closure documentation makes it explicit whether the 2026-05-26 or
   2026-05-27 evidence is now superseded.
+
+## Completion Notes (2026-05-28)
+
+- The metadata-gap wave was closed in code for `pricing-plans`,
+  `faq-accordion`, `cta-banner`, and `contact`.
+- The commerce wave was closed by deterministic fixture bootstrap for
+  `product-gallery`, `product-compare`, and `product-table`.
+- Final full rerun evidence:
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.md`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.json`
+- Final summary:
+  - `adminFailures: 0`
+  - `publicFailures: 0`
+  - `fixtureGaps: 0`
+  - `metadataGaps: 0`
+- External note: local `claude` CLI remained unavailable in this environment
+  (`Not logged in`), so widget-by-widget verification was executed with the
+  repo-owned Playwright harness and direct public replay instead.

@@ -6,7 +6,7 @@
 **Category:** Commerce + Widgets + Playwright + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-342-01
-**Status:** To Do
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -140,3 +140,15 @@ Out of scope:
   - this branch should therefore start from deterministic product/bootstrap
     recovery and only touch widget-local runtime code if populated replay still
     fails after the shared data owner is restored.
+
+## Completion Notes (2026-05-28)
+
+- The shared owner was confirmed as fixture-data/bootstrap, not widget-local
+  runtime logic.
+- `scripts/playwright-widget-contract-smoke.ts` now ensures a deterministic
+  commerce fixture dataset exists before public proof for the three commerce
+  widget cases.
+- Final branch result:
+  - `product-gallery` populated proof restored
+  - `product-compare` populated proof restored
+  - `product-table` populated proof restored

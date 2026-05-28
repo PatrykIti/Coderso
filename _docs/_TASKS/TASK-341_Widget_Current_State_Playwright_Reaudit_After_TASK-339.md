@@ -121,3 +121,14 @@ No API routes are added.
 - Focused public replay confirmed the three commerce outliers are empty-state
   fixtures that return `200` and render stable empty-state copy rather than
   crashing.
+
+## Supersession Note (2026-05-28)
+
+- `TASK-342` supersedes the seven outlier conclusions recorded here.
+- Final rerun evidence is tracked in
+  `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.{md,json}`.
+- Superseded deltas:
+  - metadata-gap widgets (`pricing-plans`, `faq-accordion`, `cta-banner`,
+    `contact`) now pass with `metadataGaps=0`
+  - commerce fixture-gap widgets (`product-gallery`, `product-compare`,
+    `product-table`) now pass with populated public proof and `fixtureGaps=0`

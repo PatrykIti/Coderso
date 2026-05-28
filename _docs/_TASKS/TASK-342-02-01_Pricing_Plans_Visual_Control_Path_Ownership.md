@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-342-01, TASK-342-02
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -129,3 +129,14 @@ No API routes are added.
 - `pricing-plans` no longer reports `metadata-gap` in the targeted rerun.
 - The flagged controls expose truthful persisted paths.
 - No user-facing Pricing Plans editing behavior regresses.
+
+## Completion Notes (2026-05-28)
+
+- `PricingPlansEditors.tsx` now emits truthful persisted paths for the flagged
+  plan-surface and colors-emphasis controls.
+- Targeted validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+  - `bun scripts/playwright-widget-contract-smoke.ts --session task-342-02-pricing-plans --widget pricing-plans --admin http://localhost:5173/admin --front http://localhost:3000 --output-json .tmp/task-342-02-pricing-plans.json --output-md .tmp/task-342-02-pricing-plans.md --strict`

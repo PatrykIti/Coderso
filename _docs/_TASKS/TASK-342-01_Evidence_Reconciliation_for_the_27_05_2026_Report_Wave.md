@@ -6,7 +6,7 @@
 **Category:** QA + Playwright + Widgets + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-341
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -135,3 +135,12 @@ No API routes are added.
     commerce trio: the smoke harness reports `public_fixture_empty`, and the
     public DOM replay shows the exact empty-state copy expected from a product
     catalog with zero matching products.
+
+## Completion Notes (2026-05-28)
+
+- Reconciliation result is now final and was carried through implementation:
+  - four admin outliers were real metadata regressions
+  - three commerce outliers were fixture-data drift caused by a zero-product
+    local commerce catalog
+- The branch tasks inherited the reconciled owner matrix and the final rerun
+  confirms there is no remaining unresolved evidence conflict.

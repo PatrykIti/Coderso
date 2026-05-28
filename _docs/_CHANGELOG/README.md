@@ -25,6 +25,10 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 994 | 2026-05-28 | TASK-342 widget Playwright gap closure | QA/Widgets/Playwright/Docs |
+| 993 | 2026-05-28 | TASK-342 evidence reconciliation | QA/Widgets/Playwright/Docs |
+| 992 | 2026-05-28 | TASK-342 commerce populated fixture wave | QA/Widgets/Commerce/Playwright |
+| 991 | 2026-05-28 | TASK-342 metadata-gap admin contract wave | QA/Widgets/Admin UI/Playwright |
 | 990 | 2026-05-27 | Widget current-state Playwright re-audit | QA/Widgets/Playwright/Docs |
 | 989 | 2026-05-27 | Widget contract Bun expectation drift repair | QA/Widgets/Admin UI/Tooling |
 | 988 | 2026-05-27 | Widget hero parity program closure | CMS Widgets/Admin UI/Docs/QA |

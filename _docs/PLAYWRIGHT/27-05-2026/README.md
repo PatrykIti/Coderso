@@ -1,5 +1,25 @@
 # Sesja weryfikacji widgetow — 27-05-2026
 
+## Status 2026-05-28 — TASK-342 superseded
+
+Ta fala pozostaje historycznym snapshotem stanu z 2026-05-27. Po `TASK-342`
+aktualny stan jest juz inny:
+
+- full rerun evidence: `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.{md,json}`
+- final summary:
+  - `adminFailures: 0`
+  - `publicFailures: 0`
+  - `fixtureGaps: 0`
+  - `metadataGaps: 0`
+
+Najwazniejsza zmiana wzgledem tego katalogu:
+
+- `pricing-plans`, `faq-accordion`, `cta-banner`, i `contact` nie maja juz
+  metadata-gap po naprawie `data-widget-control-path`.
+- `product-gallery`, `product-compare`, i `product-table` nie sa juz
+  fixture-gap; local commerce fixture bootstrap przywrocil populated public
+  proof.
+
 ## Cel
 
 Zweryfikowac current state widgetow po TASK-339 przez `playwright-cli`, z clean smoke dla calej listy widgetow oraz focusowanymi replayami tam, gdzie smoke pokazal follow-up.

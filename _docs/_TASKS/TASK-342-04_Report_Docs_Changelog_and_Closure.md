@@ -6,7 +6,7 @@
 **Category:** Widgets + Playwright + Docs + Changelog
 **Estimated Effort:** Medium
 **Dependencies:** TASK-342-01, TASK-342-02, TASK-342-02-01, TASK-342-02-02, TASK-342-02-03, TASK-342-02-04, TASK-342-03, TASK-342-03-01, TASK-342-03-02, TASK-342-03-03
-**Status:** To Do
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -95,3 +95,16 @@ No API routes are added.
   public proof for the three commerce routes.
 - The report wave, task board, and changelog are synchronized.
 - Supersession of older evidence is explicit rather than implied.
+
+## Completion Notes (2026-05-28)
+
+- Final smoke evidence:
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.md`
+  - `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.json`
+- Final summary:
+  - `adminFailures: 0`
+  - `publicFailures: 0`
+  - `fixtureGaps: 0`
+  - `metadataGaps: 0`
+- `_docs/PLAYWRIGHT/27-05-2026/README.md` and the seven outlier reports now
+  carry explicit supersession notes.

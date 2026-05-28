@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-342-01
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -136,3 +136,13 @@ Out of scope:
     `ClearableFields.tsx`, or `WidgetEditorControls.tsx` for the first fix.
   - Targeted widget smoke reruns after the patch produced `metadataGaps=0` for
     `pricing-plans`, `faq-accordion`, `cta-banner`, and `contact`.
+
+## Completion Notes (2026-05-28)
+
+- Final targeted proofs:
+  - `.tmp/task-342-02-pricing-plans.{md,json}`
+  - `.tmp/task-342-02-faq-accordion.{md,json}`
+  - `.tmp/task-342-02-cta-banner.{md,json}`
+  - `.tmp/task-342-02-contact.{md,json}`
+- The final full rerun `_docs/PLAYWRIGHT/widget-contract-smoke-task-342-final-2026-05-28.md`
+  also confirms these four widgets pass with `metadataGaps=0`.

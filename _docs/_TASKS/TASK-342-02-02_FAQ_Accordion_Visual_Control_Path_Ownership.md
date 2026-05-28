@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-342-01, TASK-342-02
-**Status:** In Progress (2026-05-28)
+**Status:** Done (2026-05-28)
 
 ---
 
@@ -111,3 +111,14 @@ No API routes are added.
 
 - `faq-accordion` no longer reports `metadata-gap` in the targeted rerun.
 - `panelRadius` and `borderWidth` expose truthful persisted paths.
+
+## Completion Notes (2026-05-28)
+
+- `FaqAccordionEditors.tsx` now emits truthful persisted paths for
+  `style.panelRadius` and `style.borderWidth`.
+- Targeted validation passed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx`
+  - `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+  - `bun scripts/playwright-widget-contract-smoke.ts --session task-342-02-faq-accordion --widget faq-accordion --admin http://localhost:5173/admin --front http://localhost:3000 --output-json .tmp/task-342-02-faq-accordion.json --output-md .tmp/task-342-02-faq-accordion.md --strict`
