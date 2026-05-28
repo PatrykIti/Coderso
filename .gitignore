@@ -29,5 +29,11 @@ hp-*.yaml
 hp-*.yml
 hp*.yaml
 hp*.yml
+cl-*.yaml
+cl-*.yml
+sl-*.yaml
+sl-*.yml
+rts-*.yaml
+rts-*.yml
 _docs/PLAYWRIGHT/**/_raw/
 _docs/PLAYWRIGHT/screenshots/
