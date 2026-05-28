@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Commerce + Playwright + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-339, TASK-341
-**Status:** To Do
+**Status:** In Progress (2026-05-28)
 **Owners:** Codex implementation/tests/docs; Claude headless consult when root cause stays ambiguous after a local fix; agent refinement before implementation batches
 
 ---
@@ -72,6 +72,19 @@ files, and different rerun evidence.
     rendering paths in code, which strongly suggests that the current commerce
     smoke issue is fixture/bootstrap determinism rather than a basic renderer
     crash.
+
+## Reconciled Status Notes
+
+- 2026-05-28:
+  - Metadata-gap branch classification is no longer ambiguous. The four admin
+    outliers were real current-tree editor metadata regressions and have
+    targeted smoke proof with `metadataGaps=0` after the local wrapper/path
+    fixes.
+  - Commerce branch classification is now narrowed to fixture-data drift first:
+    the local environment currently has zero commerce products, while the public
+    smoke routes remain published and therefore truthfully render empty states.
+  - The next implementation step is deterministic commerce fixture/bootstrap
+    recovery, not more admin metadata work.
 
 ## Widget Matrix
 

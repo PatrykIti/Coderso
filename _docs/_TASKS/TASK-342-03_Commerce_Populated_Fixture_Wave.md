@@ -128,3 +128,15 @@ Out of scope:
 - Each widget leaf ends with populated public-route proof after the shared fix
   and/or widget-local fix lands.
 - Widget-local code is not changed unless the shared fixture owner is ruled out.
+
+## Progress Notes
+
+- 2026-05-28 reconciliation evidence points to fixture-data drift as the
+  current primary owner:
+  - `GET /admin/api/commerce/products` returned `0` products in the local
+    environment.
+  - the three public smoke routes are published and reachable, but they render
+    stable empty-state copy instead of populated product output.
+  - this branch should therefore start from deterministic product/bootstrap
+    recovery and only touch widget-local runtime code if populated replay still
+    fails after the shared data owner is restored.

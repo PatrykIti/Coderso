@@ -6,7 +6,7 @@
 **Category:** QA + Playwright + Widgets + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-341
-**Status:** To Do
+**Status:** In Progress (2026-05-28)
 
 ---
 
@@ -111,3 +111,27 @@ No API routes are added.
   theories in one flat scope.
 - The implementation leaves inherit an exact owner/test matrix rather than a
   speculative one.
+
+## Progress Notes
+
+- 2026-05-28 reconciliation result from current local evidence:
+  - `pricing-plans`, `faq-accordion`, `cta-banner`, and `contact` were **real
+    current-tree metadata regressions** in the editor DOM ownership contract.
+    The flagged controls rendered without truthful `data-widget-control-path`
+    metadata in the current codebase and were closed by the metadata patch wave
+    verified through targeted smoke reruns with `metadataGaps=0`.
+  - `product-gallery`, `product-compare`, and `product-table` are currently
+    classified as **fixture-data drift**, not proven renderer regressions:
+    - `GET /admin/api/commerce/products` returned `0` products in the local
+      environment.
+    - the published public routes still exist:
+      - `/test-product-gallery-widget`
+      - `/test-product-compare-0516`
+      - `/producttabletestproducttabletest`
+    - the admin fixture slug `/ctr-product-gallery-2305` currently resolves to
+      a draft page whose block data is empty, which further supports a fixture /
+      environment drift rather than a runtime crash.
+  - No strong evidence currently points to a harness-classification bug for the
+    commerce trio: the smoke harness reports `public_fixture_empty`, and the
+    public DOM replay shows the exact empty-state copy expected from a product
+    catalog with zero matching products.
