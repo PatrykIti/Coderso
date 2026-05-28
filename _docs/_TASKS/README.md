@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
+- **To Do:** 22 tasks
 - **In Progress:** 4 tasks
 - **Done:** 1960 tasks
 
@@ -38,6 +38,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | Current 27-05 report wave follow-up for 4 admin metadata gaps and 3 commerce fixture gaps; scope is intentionally limited to the 7 outliers plus smoke/fixture owners |
+| TASK-342-01 | Evidence Reconciliation for the 27-05-2026 Report Wave | High | Medium | Compare TASK-336-19 final smoke against the 27-05 rerun and classify each outlier as repo regression, harness drift, or fixture-data drift before implementation |
+| TASK-342-02 | Metadata-Gap Admin Contract Wave | High | Medium | Shared admin-only wave for strict `data-widget-control-path` closure in pricing-plans, faq-accordion, cta-banner, and contact |
+| TASK-342-02-01 | Pricing Plans Visual Control Path Ownership | High | Small | Close the Pricing Plans Visual ownership gaps for plan surface plus colors-emphasis controls without changing the current swatch-first UX |
+| TASK-342-02-02 | FAQ Accordion Visual Control Path Ownership | High | Small | Add persisted-path ownership to the remaining FAQ Visual panel-radius and border-width controls |
+| TASK-342-02-03 | CTA Banner Visual Control Path Ownership | High | Small | Close CTA Banner Visual ownership gaps in colors-borders and background-motion controls while preserving Hero-style clear/transparent behavior |
+| TASK-342-02-04 | Contact Visual Control Path Ownership | High | Small | Close Contact Visual ownership gaps in the surface-styling section without changing current theme-default and transparent behavior |
+| TASK-342-03 | Commerce Populated Fixture Wave | High | Medium | Shared commerce wave that first proves fixture/bootstrap ownership before touching Product Gallery, Product Compare, or Product Table runtime code |
+| TASK-342-03-01 | Product Gallery Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Gallery runtime on `/test-product-gallery-widget` or classify the issue as shared fixture/bootstrap drift |
+| TASK-342-03-02 | Product Compare Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Compare runtime on `/test-product-compare-0516` or classify the issue as shared fixture/bootstrap drift |
+| TASK-342-03-03 | Product Table Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Table runtime on `/producttabletestproducttabletest` or classify the issue as shared fixture/bootstrap drift |
+| TASK-342-04 | Report Docs Changelog and Closure | High | Medium | Final rerun, supersession notes, board sync, and changelog closure for the TASK-342 family |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
