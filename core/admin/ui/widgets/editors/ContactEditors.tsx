@@ -786,6 +786,7 @@ function FieldOrderList({
 
 function ColorField({
   id,
+  path,
   label,
   value,
   onChange,
@@ -795,6 +796,7 @@ function ColorField({
   treatAsThemeDefaultValues,
 }: {
   id: string;
+  path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -821,6 +823,7 @@ function ColorField({
   return (
     <WidgetControlRow
       id={id}
+      path={path}
       label={label}
       actions={
         <Button
@@ -1832,6 +1835,7 @@ export function ContactVisualEditor({
         </div>
         <ColorField
           id="contact.style.background"
+          path="style.background"
           label="Section background"
           value={normalized.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
@@ -1841,6 +1845,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.surfaceColor"
+          path="style.surfaceColor"
           label="Card surface color"
           value={normalized.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
@@ -1850,6 +1855,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.borderColor"
+          path="style.borderColor"
           label="Card border color"
           value={normalized.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
@@ -1859,6 +1865,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.textColor"
+          path="style.textColor"
           label="Heading color"
           value={normalized.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
@@ -1868,6 +1875,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.mutedTextColor"
+          path="style.mutedTextColor"
           label="Supporting text color"
           value={normalized.style?.mutedTextColor}
           onChange={(next) => updateStyle(value, onChange, { mutedTextColor: next })}
@@ -1876,6 +1884,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.buttonBackgroundColor"
+          path="style.buttonBackgroundColor"
           label="Submit button background"
           value={normalized.style?.buttonBackgroundColor}
           onChange={(next) => updateStyle(value, onChange, { buttonBackgroundColor: next })}
@@ -1886,6 +1895,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.buttonTextColor"
+          path="style.buttonTextColor"
           label="Submit button text"
           value={normalized.style?.buttonTextColor}
           onChange={(next) => updateStyle(value, onChange, { buttonTextColor: next })}
@@ -1895,6 +1905,7 @@ export function ContactVisualEditor({
         />
         <ColorField
           id="contact.style.buttonBorderColor"
+          path="style.buttonBorderColor"
           label="Submit button border"
           value={normalized.style?.buttonBorderColor}
           onChange={(next) => updateStyle(value, onChange, { buttonBorderColor: next })}
@@ -1902,7 +1913,11 @@ export function ContactVisualEditor({
           pickerFallback="#2563eb"
           allowTransparent
         />
-        <WidgetControlRow id="contact.style.borderWidth" label="Card border width">
+        <WidgetControlRow
+          id="contact.style.borderWidth"
+          path="style.borderWidth"
+          label="Card border width"
+        >
           {(fieldProps) => (
             <Select
               value={normalized.style?.borderWidth ?? "1"}
@@ -1927,7 +1942,11 @@ export function ContactVisualEditor({
             </Select>
           )}
         </WidgetControlRow>
-        <WidgetControlRow id="contact.style.panelRadius" label="Card radius">
+        <WidgetControlRow
+          id="contact.style.panelRadius"
+          path="style.panelRadius"
+          label="Card radius"
+        >
           {(fieldProps) => (
             <Select
               value={normalized.style?.panelRadius ?? "xl"}
@@ -1952,7 +1971,11 @@ export function ContactVisualEditor({
             </Select>
           )}
         </WidgetControlRow>
-        <WidgetControlRow id="contact.style.buttonRadius" label="Submit button radius">
+        <WidgetControlRow
+          id="contact.style.buttonRadius"
+          path="style.buttonRadius"
+          label="Submit button radius"
+        >
           {(fieldProps) => (
             <Select
               value={normalized.style?.buttonRadius ?? "md"}

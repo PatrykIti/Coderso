@@ -260,6 +260,7 @@ function VariantCards({
 
 function ColorField({
   id,
+  path,
   label,
   value,
   onChange,
@@ -268,6 +269,7 @@ function ColorField({
   treatAsThemeDefaultValues,
 }: {
   id: string;
+  path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -290,6 +292,7 @@ function ColorField({
   return (
     <WidgetControlRow
       id={id}
+      path={path}
       label={label}
       actions={
         <Button
@@ -1325,6 +1328,7 @@ export function PricingPlansVisualEditor({
 
             <ColorField
               id={`pricing-plans.plan.${planIndex + 1}.surface`}
+              path={`plans.${planIndex}.surface`}
               label="Plan surface"
               value={plan.surface}
               onChange={(next) => updatePlan(value, onChange, planIndex, { surface: next })}
@@ -1620,6 +1624,7 @@ export function PricingPlansVisualEditor({
       >
         <ColorField
           id="pricing-plans.style.cardSurface"
+          path="style.cardSurface"
           label="Card surface"
           value={normalized.style?.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
@@ -1630,6 +1635,7 @@ export function PricingPlansVisualEditor({
 
         <ColorField
           id="pricing-plans.style.cardBorder"
+          path="style.cardBorder"
           label="Card border"
           value={normalized.style?.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
@@ -1640,6 +1646,7 @@ export function PricingPlansVisualEditor({
 
         <ColorField
           id="pricing-plans.style.highlightRing"
+          path="style.highlightRing"
           label="Highlight ring"
           value={normalized.style?.highlightRing}
           onChange={(next) => updateStyle(value, onChange, { highlightRing: next })}
@@ -1649,7 +1656,7 @@ export function PricingPlansVisualEditor({
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <WidgetControlRow id="pricing-plans.style.spacing" label="Spacing">
+          <WidgetControlRow id="pricing-plans.style.spacing" path="style.spacing" label="Spacing">
             {(fieldProps) => (
               <Select
                 value={normalized.style?.spacing ?? pricingPlansDefaults.style?.spacing ?? "md"}
@@ -1675,7 +1682,7 @@ export function PricingPlansVisualEditor({
             )}
           </WidgetControlRow>
 
-          <WidgetControlRow id="pricing-plans.style.radius" label="Radius">
+          <WidgetControlRow id="pricing-plans.style.radius" path="style.radius" label="Radius">
             {(fieldProps) => (
               <Select
                 value={normalized.style?.radius ?? pricingPlansDefaults.style?.radius ?? "lg"}
@@ -1701,7 +1708,11 @@ export function PricingPlansVisualEditor({
             )}
           </WidgetControlRow>
 
-          <WidgetControlRow id="pricing-plans.style.featureMarker" label="Feature marker">
+          <WidgetControlRow
+            id="pricing-plans.style.featureMarker"
+            path="style.featureMarker"
+            label="Feature marker"
+          >
             {(fieldProps) => (
               <Select
                 value={

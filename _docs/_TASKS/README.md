@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 22 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 16 tasks
+- **In Progress:** 10 tasks
 - **Done:** 1960 tasks
 
 ---
@@ -38,13 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | Current 27-05 report wave follow-up for 4 admin metadata gaps and 3 commerce fixture gaps; scope is intentionally limited to the 7 outliers plus smoke/fixture owners |
 | TASK-342-01 | Evidence Reconciliation for the 27-05-2026 Report Wave | High | Medium | Compare TASK-336-19 final smoke against the 27-05 rerun and classify each outlier as repo regression, harness drift, or fixture-data drift before implementation |
-| TASK-342-02 | Metadata-Gap Admin Contract Wave | High | Medium | Shared admin-only wave for strict `data-widget-control-path` closure in pricing-plans, faq-accordion, cta-banner, and contact |
-| TASK-342-02-01 | Pricing Plans Visual Control Path Ownership | High | Small | Close the Pricing Plans Visual ownership gaps for plan surface plus colors-emphasis controls without changing the current swatch-first UX |
-| TASK-342-02-02 | FAQ Accordion Visual Control Path Ownership | High | Small | Add persisted-path ownership to the remaining FAQ Visual panel-radius and border-width controls |
-| TASK-342-02-03 | CTA Banner Visual Control Path Ownership | High | Small | Close CTA Banner Visual ownership gaps in colors-borders and background-motion controls while preserving Hero-style clear/transparent behavior |
-| TASK-342-02-04 | Contact Visual Control Path Ownership | High | Small | Close Contact Visual ownership gaps in the surface-styling section without changing current theme-default and transparent behavior |
 | TASK-342-03 | Commerce Populated Fixture Wave | High | Medium | Shared commerce wave that first proves fixture/bootstrap ownership before touching Product Gallery, Product Compare, or Product Table runtime code |
 | TASK-342-03-01 | Product Gallery Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Gallery runtime on `/test-product-gallery-widget` or classify the issue as shared fixture/bootstrap drift |
 | TASK-342-03-02 | Product Compare Populated Fixture and Runtime Replay | High | Medium | Re-prove populated Product Compare runtime on `/test-product-compare-0516` or classify the issue as shared fixture/bootstrap drift |
@@ -70,6 +64,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
+| TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | In progress: implementation starts from the metadata-gap wave while the commerce trio remains intentionally gated behind the shared fixture/bootstrap reconciliation branch. |
+| TASK-342-02 | Metadata-Gap Admin Contract Wave | High | Medium | In progress: current code fix wave targets strict `data-widget-control-path` closure in pricing-plans, faq-accordion, cta-banner, and contact. |
+| TASK-342-02-01 | Pricing Plans Visual Control Path Ownership | High | Small | In progress: widget-local control rows now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
+| TASK-342-02-02 | FAQ Accordion Visual Control Path Ownership | High | Small | In progress: the remaining panel-radius and border-width rows now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
+| TASK-342-02-03 | CTA Banner Visual Control Path Ownership | High | Small | In progress: colors-borders and background-motion controls now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
+| TASK-342-02-04 | Contact Visual Control Path Ownership | High | Small | In progress: surface-styling controls now carry persisted paths and targeted smoke is green; docs/changelog closure is still pending. |
 ---
 
 ## Done

@@ -380,6 +380,11 @@ test("cta banner visual renders section-based IA", () => {
   expect(html).toContain('data-widget-editor-section="cta-banner.visual.background-motion"');
   expect(html).toContain("Background and motion");
   expect(html).toContain("Theme default");
+  expect(html).toContain('data-widget-control-path="style.text"');
+  expect(html).toContain('data-widget-control-path="style.primaryButtonBg"');
+  expect(html).toContain('data-widget-control-path="style.border"');
+  expect(html).toContain('data-widget-control-path="background.color"');
+  expect(html).toContain('data-widget-control-path="background.gradient"');
   expect(html).not.toContain('placeholder="var(--color-text)"');
   expect(html).not.toContain('placeholder="var(--color-primary)"');
   expect(html).not.toContain('placeholder="var(--color-bg)"');

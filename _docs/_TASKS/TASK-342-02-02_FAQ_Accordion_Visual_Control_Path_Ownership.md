@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Small
 **Dependencies:** TASK-342-01, TASK-342-02
-**Status:** To Do
+**Status:** In Progress (2026-05-28)
 
 ---
 

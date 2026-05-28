@@ -746,6 +746,11 @@ test("contact editor render smoke reflects the new IA", () => {
   expect(visualHtml).toContain("Submit button radius");
   expect(visualHtml).toContain('data-widget-control="contact.style.background"');
   expect(visualHtml).toContain('data-widget-control="contact.style.textColor"');
+  expect(visualHtml).toContain('data-widget-control-path="style.background"');
+  expect(visualHtml).toContain('data-widget-control-path="style.textColor"');
+  expect(visualHtml).toContain('data-widget-control-path="style.borderWidth"');
+  expect(visualHtml).toContain('data-widget-control-path="style.panelRadius"');
+  expect(visualHtml).toContain('data-widget-control-path="style.buttonRadius"');
 
   const advancedHtml = renderToString(
     <ContactAdvancedEditor

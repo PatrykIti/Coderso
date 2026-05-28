@@ -282,12 +282,14 @@ function VariantCards({
 
 function GradientField({
   id,
+  path,
   label,
   value,
   onChange,
   onClear,
 }: {
   id: string;
+  path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -306,6 +308,7 @@ function GradientField({
   return (
     <WidgetControlRow
       id={id}
+      path={path}
       label={label}
       actions={
         <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!value?.trim()}>
@@ -368,6 +371,7 @@ function GradientField({
 
 function ColorField({
   id,
+  path,
   label,
   value,
   onChange,
@@ -377,6 +381,7 @@ function ColorField({
   treatAsThemeDefaultValues,
 }: {
   id: string;
+  path: string;
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
@@ -404,6 +409,7 @@ function ColorField({
   return (
     <WidgetControlRow
       id={id}
+      path={path}
       label={label}
       actions={
         <Button
@@ -1092,6 +1098,7 @@ export function CtaBannerVisualEditor({
         </div>
         <ColorField
           id="cta-banner.style.text"
+          path="style.text"
           label="Text color"
           value={normalized.style?.text}
           onChange={(next) => updateStyle(value, onChange, { text: next })}
@@ -1101,6 +1108,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.badgeBackground"
+          path="style.badgeBackground"
           label="Badge background"
           value={normalized.style?.badgeBackground}
           onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
@@ -1110,6 +1118,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.badgeText"
+          path="style.badgeText"
           label="Badge text"
           value={normalized.style?.badgeText}
           onChange={(next) => updateStyle(value, onChange, { badgeText: next })}
@@ -1119,6 +1128,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.primaryButtonBg"
+          path="style.primaryButtonBg"
           label="Primary button background"
           value={normalized.style?.primaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
@@ -1128,6 +1138,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.primaryButtonText"
+          path="style.primaryButtonText"
           label="Primary button text"
           value={normalized.style?.primaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonText: next })}
@@ -1137,6 +1148,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.primaryButtonBorder"
+          path="style.primaryButtonBorder"
           label="Primary button border"
           value={normalized.style?.primaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
@@ -1146,6 +1158,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.secondaryButtonBg"
+          path="style.secondaryButtonBg"
           label="Secondary button background"
           value={normalized.style?.secondaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
@@ -1155,6 +1168,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.secondaryButtonText"
+          path="style.secondaryButtonText"
           label="Secondary button text"
           value={normalized.style?.secondaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
@@ -1164,6 +1178,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.secondaryButtonBorder"
+          path="style.secondaryButtonBorder"
           label="Secondary button border"
           value={normalized.style?.secondaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
@@ -1173,6 +1188,7 @@ export function CtaBannerVisualEditor({
         />
         <ColorField
           id="cta-banner.style.border"
+          path="style.border"
           label="Border color"
           value={normalized.style?.border}
           onChange={(next) => updateStyle(value, onChange, { border: next })}
@@ -1308,6 +1324,7 @@ export function CtaBannerVisualEditor({
       >
         <ColorField
           id="cta-banner.background.color"
+          path="background.color"
           label="Background color"
           value={normalized.background?.color ?? normalized.style?.background}
           onChange={(next) => updateSurfaceColor(value, onChange, next)}
@@ -1319,6 +1336,7 @@ export function CtaBannerVisualEditor({
 
         <GradientField
           id="cta-banner.background.gradient"
+          path="background.gradient"
           label="Background gradient"
           value={normalized.background?.gradient}
           onChange={(next) => updateBackground(value, onChange, { gradient: next })}

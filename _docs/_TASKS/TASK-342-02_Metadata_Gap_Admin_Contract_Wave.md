@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Playwright + QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-342-01
-**Status:** To Do
+**Status:** In Progress (2026-05-28)
 
 ---
 
@@ -123,3 +123,16 @@ Out of scope:
 - No leaf fixes the smoke result by weakening the ownership contract or hiding
   real controls from the metadata scan.
 - Public runtime behavior remains unchanged unless a real regression is proven.
+
+## Progress Notes
+
+- 2026-05-28: shared-vs-local decision recorded for the current tree:
+  - `pricing-plans`, `cta-banner`, and `contact` were repaired by adding
+    truthful `path` ownership to the existing widget-local color/control
+    wrappers instead of extracting a new shared helper first.
+  - `faq-accordion` was repaired widget-locally by adding explicit `path`
+    ownership to the remaining radius and border-width rows.
+  - The branch did not need to touch `SharedColorControl.tsx`,
+    `ClearableFields.tsx`, or `WidgetEditorControls.tsx` for the first fix.
+  - Targeted widget smoke reruns after the patch produced `metadataGaps=0` for
+    `pricing-plans`, `faq-accordion`, `cta-banner`, and `contact`.

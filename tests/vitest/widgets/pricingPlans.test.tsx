@@ -583,6 +583,11 @@ test("pricing plans visual renders section-based IA", () => {
   expect(html).toContain('data-widget-editor-section="pricing-plans.visual.plan-actions"');
   expect(html).toContain('data-widget-editor-section="pricing-plans.visual.layout-notes"');
   expect(html).toContain('data-widget-editor-section="pricing-plans.visual.colors-emphasis"');
+  expect(html).toContain('data-widget-control-path="plans.0.surface"');
+  expect(html).toContain('data-widget-control-path="style.cardSurface"');
+  expect(html).toContain('data-widget-control-path="style.spacing"');
+  expect(html).toContain('data-widget-control-path="style.radius"');
+  expect(html).toContain('data-widget-control-path="style.featureMarker"');
 });
 
 test("pricing plans advanced keeps technical-only scope", () => {

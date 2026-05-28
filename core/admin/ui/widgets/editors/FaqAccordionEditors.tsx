@@ -1246,7 +1246,11 @@ export function FaqAccordionVisualEditor({
         />
 
         <div className="grid gap-3 md:grid-cols-2">
-          <WidgetControlRow id="faq-accordion.style.panelRadius" label="Panel radius">
+          <WidgetControlRow
+            id="faq-accordion.style.panelRadius"
+            path="style.panelRadius"
+            label="Panel radius"
+          >
             {(fieldProps) => (
               <Select
                 value={normalized.style?.panelRadius ?? "lg"}
@@ -1274,7 +1278,11 @@ export function FaqAccordionVisualEditor({
             )}
           </WidgetControlRow>
 
-          <WidgetControlRow id="faq-accordion.style.borderWidth" label="Border width">
+          <WidgetControlRow
+            id="faq-accordion.style.borderWidth"
+            path="style.borderWidth"
+            label="Border width"
+          >
             {(fieldProps) => (
               <Select
                 value={normalized.style?.borderWidth ?? "1"}

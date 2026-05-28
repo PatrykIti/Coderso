@@ -314,6 +314,8 @@ test("faq accordion visual renders section-based IA", () => {
   expect(html).toContain('data-widget-editor-section="faq-accordion.visual.layout-typography"');
   expect(html).toContain('data-widget-editor-section="faq-accordion.visual.colors-panel-style"');
   expect(html).toContain('data-widget-editor-section="faq-accordion.visual.search-visibility"');
+  expect(html).toContain('data-widget-control-path="style.panelRadius"');
+  expect(html).toContain('data-widget-control-path="style.borderWidth"');
 });
 
 test("faq accordion visual keeps custom color tokens behind swatch-only controls", () => {
