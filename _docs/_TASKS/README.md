@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 10 tasks
 - **In Progress:** 4 tasks
-- **Done:** 1959 tasks
+- **Done:** 1960 tasks
 
 ---
 
@@ -64,6 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-341 | Widget Current-State Playwright Re-audit After TASK-339 | High | Medium | Done (2026-05-27): clean `playwright-cli` smoke plus focused replay produced a new `_docs/PLAYWRIGHT/27-05-2026/` report wave for all 38 page-builder widgets, with 4 automation metadata follow-ups and 3 empty-state fixture gaps called out explicitly. |
 | TASK-340 | Widget Contract Bun Expectation Drift Repair | High | Small | Done (2026-05-27): full `bun run test:bun` is green again after aligning stale `content-list` and `posts-feed` Bun expectations with the current TASK-339 editor-contract order and read-only Advanced diagnostics. |
 | TASK-339 | Widget Hero Parity and Contract Truthfulness Program | High | Very Large | Done (2026-05-27): the full widget wave is closed with shared live-preview removal, hero-parity color/section alignment across the dedicated leaves, residual contract sweep cleanup, and recorded Claude Playwright evidence per widget slice. |
 | TASK-339-16 | Report Docs Changelog and Closure | High | Medium | Done (2026-05-27): umbrella docs, task board, changelog indexes, and final evidence notes are synchronized for the full TASK-339 family, with broader security/perf scans explicitly left to the user. |

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 990 | 2026-05-27 | Widget current-state Playwright re-audit | QA/Widgets/Playwright/Docs |
 | 989 | 2026-05-27 | Widget contract Bun expectation drift repair | QA/Widgets/Admin UI/Tooling |
 | 988 | 2026-05-27 | Widget hero parity program closure | CMS Widgets/Admin UI/Docs/QA |
 | 987 | 2026-05-27 | Residual widget contract truthfulness sweep | CMS Widgets/Admin UI/Contracts/QA/Docs |
