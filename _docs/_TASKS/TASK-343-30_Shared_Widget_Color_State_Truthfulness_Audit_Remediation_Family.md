@@ -27,6 +27,11 @@ on the widget without enough local explanation.
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_NAVIGATION_WIDGET.md:318-333`
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_SEARCH_BOX_WIDGET.md:284-390`
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_TABS_WIDGET.md:205-215`
+- Secondary/shared-only notes from deferred/current-state reports:
+  `_docs/PLAYWRIGHT/28-05-2026/REPORT_DIVIDER_WIDGET.md`,
+  `_docs/PLAYWRIGHT/28-05-2026/REPORT_GRID_COLUMNS_WIDGET.md`,
+  `_docs/PLAYWRIGHT/28-05-2026/REPORT_SECTION_WIDGET.md`, and
+  `_docs/PLAYWRIGHT/28-05-2026/REPORT_TESTIMONIALS_WIDGET.md`.
 
 ## Sub-Tasks
 
@@ -44,9 +49,11 @@ on the widget without enough local explanation.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/ClearableFields.tsx` | Standardize clear/default labels and contextual accessible names. |
-| Shared color control modules under `core/admin/ui/widgets/editors/` | Distinguish token, fallback, custom, transparent, and cleared states. |
+| `core/admin/ui/widgets/editors/SharedColorControl.tsx` | Distinguish token, fallback, custom, transparent, and cleared states in the shared color control. |
 | Affected widget editors | Adopt the shared vocabulary without duplicating local color logic. |
-| `tests/vitest/ui/shared-widget-color-state-wave.test.tsx` | Cover cross-widget color-state truthfulness. |
+| `tests/vitest/ui/shared-color-control.test.tsx` | Extend existing shared color-control coverage for token/default/fallback truthfulness. |
+| `tests/vitest/ui/clearable-fields.test.tsx` | Extend existing clearable-field coverage for contextual Clear labels and semantics. |
+| Optional new cross-widget UI suite | Add only if cross-widget editor integration cannot be covered cleanly in the existing shared-control suites. |
 
 ## Implementation Pseudocode
 
@@ -58,7 +65,7 @@ type WidgetColorState =
   | { kind: "cleared"; fallback: "theme" | "transparent" | "inherit" }
   | { kind: "saved_custom"; value: string };
 
-function describeWidgetColorState(value: string | undefined, defaults: ColorDefaults): WidgetColorState {
+function describeSharedColorControlState(value: string | undefined, defaults: ColorDefaults): WidgetColorState {
   if (value === undefined || value === "") return { kind: "cleared", fallback: defaults.fallback };
   if (value === "transparent") return { kind: "transparent" };
   if (value.startsWith("var(") || value.startsWith("color-mix(")) {
@@ -67,6 +74,11 @@ function describeWidgetColorState(value: string | undefined, defaults: ColorDefa
   return isHexColor(value) ? { kind: "selected_swatch", value } : { kind: "saved_custom", value };
 }
 ```
+
+Build this helper on the existing shared-control primitives
+`hasClearableFieldValue`, `isHexColorValue`, `resolveColorSwatchValue`, and the
+per-widget `treatAsThemeDefaultValues` patterns instead of duplicating local
+color parsing in every widget editor.
 
 ## Regression Test Shape
 
@@ -84,7 +96,9 @@ existing schema/normalizer allowlist.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/ui/shared-widget-color-state-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/clearable-fields.test.tsx`
+- Run the new cross-widget integration suite if one is added.
 - Targeted widget tests for each touched widget surface.
 - `git diff --check`
 

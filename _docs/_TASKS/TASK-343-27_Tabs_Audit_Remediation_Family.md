@@ -30,7 +30,9 @@ inconsistent.
 - [ ] Align Wizard count ownership with slot-rendered tabs, following the
   Accordion decision from `TASK-343-04`.
 - [ ] Add a consistent destructive confirmation/recovery path for Structure
-  removal and Wizard count reduction.
+  removal and Wizard count reduction; if Structure removal is owned by shared
+  slot controls, coordinate the change in `BlockSettings`/`VisualPanel` instead
+  of hiding it inside Tabs-only editors.
 - [ ] Coordinate color default/Clear semantics with `TASK-343-30`.
 
 ## Files To Change
@@ -38,6 +40,8 @@ inconsistent.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/TabsEditors.tsx` | Fix count ownership, destructive confirmation, and color-state copy. |
+| `core/admin/ui/pages/builder/BlockSettings.tsx` | Touch if repeatable slot removal confirmation is shared slot-control behavior. |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | Touch if Structure removal messaging/confirmation is rendered by shared Visual slot controls. |
 | `core/widgets/core/tabs.tsx` | Implement or reject `triggerOverflow=scroll` truthfully. |
 | `tests/vitest/widgets/tabs.test.tsx` | Cover overflow normalization/rendering and slot-count semantics. |
 | `tests/vitest/ui/tabs-editor-wave.test.tsx` | Cover Wizard/Structure count and confirmation behavior. |
@@ -54,6 +58,10 @@ function resolveTabsCountOwner(mode: "wizard" | "structure") {
   return mode === "structure" ? "slots" : "guidance_only";
 }
 ```
+
+`supportsScrollableTabs` and `resolveTabsCountOwner` are implementation targets,
+not current helpers. If scroll support is not implemented, replace the branch
+with a migration-safe reject/normalize adapter.
 
 ## Regression Test Shape
 

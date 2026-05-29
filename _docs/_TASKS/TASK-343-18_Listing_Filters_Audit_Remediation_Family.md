@@ -59,6 +59,11 @@ function resolveListingFiltersA11y(data: ListingFiltersData, blockId: string) {
 }
 ```
 
+These helpers are new task-level implementation targets. If bounded option
+authoring is not added, replace current "re-open setup to add option rows" copy
+with explicit runtime/support-owned wording so the editor does not promise a
+non-existent daily authoring path.
+
 ## Regression Test Shape
 
 - Empty checkbox/radio/taxonomy facets show actionable guidance in canvas.

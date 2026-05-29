@@ -17,7 +17,7 @@ visible effect because a hard-coded `text-xs` always wins.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/28-05-2026/REPORT_COMPARE_TIMELINE_WIDGET.md:212-214`
+- `_docs/PLAYWRIGHT/28-05-2026/REPORT_COMPARE_TIMELINE_WIDGET.md:214-239`
 - `core/widgets/core/compareTimeline.tsx:144-146,899-910,1045-1050`
 
 ## Sub-Tasks
@@ -44,8 +44,10 @@ const segmentLabelSizeClass = segmentLabelSizeClassMap[style.segmentLabelSize ??
 
 ## Regression Test Shape
 
-- `xs`, `sm`, and `base` each produce distinct class output.
-- `none` does not silently fall back to `text-xs`.
+- The segment badge element itself is asserted for `none`, `xs`, `sm`, and
+  `base`; do not rely on global HTML substring checks.
+- `none` and `base` do not retain a base `text-xs` class from the shared badge
+  base class.
 
 ## Security Contract
 
@@ -67,4 +69,3 @@ No API routes are added and no schema widening is needed.
 
 - `Segment label size` visibly changes the rendered label size.
 - `Hidden` no longer behaves like `text-xs`.
-

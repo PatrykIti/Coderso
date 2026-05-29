@@ -50,13 +50,25 @@ function normalizePhoneValidation(data: AppointmentFormData) {
       : text(data.phonePatternMessage, appointmentFormDefaults.phonePatternMessage);
   return { phonePattern, phonePatternMessage };
 }
+
+function resolvePhoneValidationAttrs(data: AppointmentFormData) {
+  if (data.phonePattern === "") {
+    return { pattern: undefined, title: undefined, helpText: undefined };
+  }
+  return {
+    pattern: data.phonePattern,
+    title: data.phonePatternMessage,
+    helpText: data.phonePatternMessage,
+  };
+}
 ```
 
 ## Regression Test Shape
 
 - Selecting `No extra validation` persists `pattern=""`.
 - The editor keeps the `not-required` preset selected after normalization.
-- Runtime omits the restrictive phone `pattern` when the preset is blank.
+- Runtime omits the restrictive phone `pattern`, empty `title`, and validation
+  help text when the preset is blank; it must not render `pattern=""`.
 
 ## Security Contract
 
@@ -80,4 +92,3 @@ pattern/message fields.
 
 - `No extra validation` no longer snaps back to the default preset.
 - Runtime and editor state agree on whether phone validation is active.
-

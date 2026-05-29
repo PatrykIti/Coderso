@@ -32,6 +32,9 @@ color pair and document the admin preview's non-interactive runtime boundary.
   React-local preview switcher if product scope requires interaction there.
 - [ ] Clean up duplicated `shadow-sm` when pane surface and border emphasis both
   contribute the same class.
+- [ ] Route any remaining shared color/default wording from the report to
+  `TASK-343-30` and any shared wrapper/visibility wording to `TASK-343-21` so
+  Toggle-local scope does not hide shared follow-ups.
 - [ ] Add renderer regression coverage for contrast and class composition.
 
 ## Files To Change
@@ -53,6 +56,10 @@ function resolveTriggerStyle(style: ToggleBlockStyle, isActive: boolean): CSSPro
 }
 ```
 
+This helper is new. The current renderer has one trigger style object; the fix
+must split active foreground from inactive/accent styling instead of reusing the
+same inline color for both states.
+
 ## Regression Test Shape
 
 - Active trigger text uses contrast color when accent is set.
@@ -63,6 +70,8 @@ function resolveTriggerStyle(style: ToggleBlockStyle, isActive: boolean): CSSPro
 - Admin preview either switches panels locally or clearly states that public
   runtime interactivity is not mounted in the editor preview.
 - Pane class output does not duplicate `shadow-sm`.
+- Active trigger output is asserted directly so it cannot receive inline
+  `color: accentColor` again.
 
 ## Security Contract
 

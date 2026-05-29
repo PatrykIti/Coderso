@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
-**Dependencies:** TASK-343, TASK-343-30
+**Dependencies:** TASK-343, TASK-343-30, TASK-343-31
 **Status:** To Do
 
 ---
@@ -32,6 +32,8 @@ misclassified as custom values.
   is off.
 - [ ] Route default color state truthfulness through `TASK-343-30` and keep
   Logo Cloud-specific regression coverage.
+- [ ] Route the shared MediaPicker dialog warning from this report through
+  `TASK-343-31`; do not duplicate the fix in Logo Cloud.
 
 ## Files To Change
 
@@ -46,14 +48,14 @@ misclassified as custom values.
 
 ```ts
 function updateLogoCount(current: LogoCloudData, nextCount: number) {
-  if (nextCount < current.items.length && hasAuthoredLogoData(current.items.slice(nextCount))) {
+  if (nextCount < current.logos.length && hasAuthoredLogoData(current.logos.slice(nextCount))) {
     return { mode: "confirm_truncate", nextCount };
   }
-  return { mode: "apply", items: resizeLogoItems(current.items, nextCount) };
+  return { mode: "apply", logos: resizeLogoItems(current.logos, nextCount) };
 }
 
 function resolveLogoCloudEffectiveMotion(data: LogoCloudData) {
-  return data.variant === "strip" ? data.stripMotion : "not_applicable_in_grid";
+  return data.variant === "strip" ? data.style?.motionMode : "not_applicable_in_grid";
 }
 ```
 

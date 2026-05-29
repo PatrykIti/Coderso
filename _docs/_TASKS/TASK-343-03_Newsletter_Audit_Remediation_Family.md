@@ -44,30 +44,38 @@ though the widget is visually presented as not connected.
 ## Implementation Pseudocode
 
 ```tsx
-function canUseNewsletterRuntime(state: NewsletterResolvedState): boolean {
-  return state.submissionMode === "forms-runtime" && state.submitReady === true;
+function canSubmitNewsletter(state: NewsletterResolvedState): boolean {
+  return (
+    (state.submissionMode === "forms-runtime" && state.canUseFormsRuntime) ||
+    (state.submissionMode === "action-url" && state.canUseNativeAction)
+  );
 }
 
 function handleNewsletterSubmit(event: FormEvent<HTMLFormElement>, state: NewsletterResolvedState) {
-  if (!canUseNewsletterRuntime(state)) {
+  if (!canSubmitNewsletter(state)) {
     event.preventDefault();
     return;
   }
 }
 
 function resolveSubmitButtonProps(state: NewsletterResolvedState) {
-  if (!canUseNewsletterRuntime(state)) {
+  if (!canSubmitNewsletter(state)) {
     return { type: "button" as const, disabled: true, "aria-disabled": true };
   }
   return { type: "submit" as const, disabled: false };
 }
 ```
 
+Keep the existing distinction between connection readiness and submit readiness:
+valid `forms-runtime` and valid native `action-url` submit paths remain
+supported, while disconnected states always get an explicit submit guard.
+
 ## Regression Test Shape
 
 - Enter in the email field does not change the URL or submit when disconnected.
 - Disconnected state renders truthful disabled semantics and copy.
-- Bound runtime state still renders a normal submit path.
+- Bound forms-runtime and native action-url states still render normal submit
+  paths.
 
 ## Security Contract
 
@@ -97,5 +105,4 @@ No new API route. Public write security posture must not weaken.
 - Disconnected Newsletter forms no longer submit natively with Enter.
 - The widget no longer leaks email values into the public query string when it
   is not connected.
-- Connected forms-runtime behavior remains intact.
-
+- Connected forms-runtime and native action-url behavior remains intact.

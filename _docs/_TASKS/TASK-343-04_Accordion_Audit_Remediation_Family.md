@@ -38,21 +38,25 @@ between canvas and live preview, and stale `aria-expanded` in admin preview.
 |---|---|
 | `core/admin/ui/widgets/editors/AccordionEditors.tsx` | Remove misleading Wizard count ownership or redirect it to truthful structure guidance. |
 | `core/widgets/core/accordion.tsx` | Isolate group names per preview instance and keep ARIA state truthful in admin preview. |
-| `tests/vitest/widgets/accordion.test.tsx` | Cover group-name isolation and render semantics. |
+| `tests/vitest/widgets/accordionWidget.test.tsx` | Extend existing Accordion renderer coverage for group-name isolation and render semantics. |
 | `tests/vitest/ui/accordion-editor-wave.test.tsx` | Cover Wizard truthfulness and admin-preview ARIA updates. |
 
 ## Implementation Pseudocode
 
 ```ts
-function resolveAccordionGroupName(blockId: string, instanceId: string) {
-  return `accordion-${blockId}-${instanceId}-group`;
+function resolveAccordionGroupName(blockId: string, renderInstanceId: string, itemScope: string) {
+  return `accordion-${blockId}-${renderInstanceId}-${itemScope}-group`;
 }
 
 function syncAccordionAria(details: HTMLDetailsElement) {
-  const trigger = details.querySelector("[data-coderso-accordion-trigger]");
-  trigger?.setAttribute("aria-expanded", details.open ? "true" : "false");
+  const summary = details.querySelector("[data-coderso-accordion-summary]");
+  summary?.setAttribute("aria-expanded", details.open ? "true" : "false");
 }
 ```
+
+The render instance id must differ between canvas and wizard live preview. A
+group name based only on `blockId` and stable item ids can still collide across
+the two admin renders.
 
 Preferred UX decision:
 
@@ -73,7 +77,7 @@ No API routes are added. Schema stays strict; no raw HTML or script widening.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/widgets/accordion.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/accordion-editor-wave.test.tsx`
 - `git diff --check`
 
@@ -88,4 +92,3 @@ No API routes are added. Schema stays strict; no raw HTML or script widening.
 - Accordion no longer presents two conflicting owners for item count.
 - Canvas and wizard preview are isolated in single-open mode.
 - Admin preview ARIA state matches visible open/closed state.
-

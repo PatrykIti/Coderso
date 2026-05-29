@@ -23,6 +23,9 @@ all devices" without actually hiding public SSR output.
 - Repeated shared visibility notes in reports for appointment-form,
   form-embed, navigation, template-section, timeline, toggle-block, and others.
 - `core/admin/ui/pages/builder/blockUtils.ts`
+- `core/admin/ui/pages/builder/AdvancedPanel.tsx`
+- `core/admin/ui/pages/builder/VisualPanel.tsx`
+- `core/admin/ui/pages/builder/LayoutPanel.tsx`
 - `core/widgets/renderers/widgetRenderer.tsx`
 
 ## Sub-Tasks
@@ -40,10 +43,13 @@ all devices" without actually hiding public SSR output.
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/pages/builder/blockUtils.ts` | Distinguish inherited vs saved layout/visibility state. |
-| `core/widgets/renderers/widgetRenderer.tsx` | Align public SSR visibility filtering with editor summaries or document no-op behavior. |
-| `tests/vitest/ui/block-layout-shared-wave.test.tsx` | Cover inherited layout copy and first-edit override behavior. |
-| `tests/vitest/widgets/widgetRenderer.test.tsx` | Cover public visibility filtering semantics. |
+| `core/admin/ui/pages/builder/blockUtils.ts` | Preserve `inherit` layout tokens and expose helper state that distinguishes inherited effective values from saved overrides. |
+| `core/admin/ui/pages/builder/AdvancedPanel.tsx` | Stop summarizing inherited layout as saved `MD` values and label visibility semantics from the normalized helper. |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | Keep device toggles and first-edit layout behavior aligned with the shared helper state. |
+| `core/admin/ui/pages/builder/LayoutPanel.tsx` | Apply explicit override semantics when an inherited value is changed from the UI. |
+| `core/widgets/renderers/widgetRenderer.tsx` | Align preview/public visibility filtering with editor summaries or document the public SSR no-device boundary in the UI. |
+| `tests/vitest/ui/block-layout-shared-wave.test.tsx` | Create a new shared builder UI suite for inherited layout copy and first-edit override behavior. |
+| `tests/vitest/widgets/renderer.test.tsx` | Extend existing WidgetRenderer coverage for public/preview visibility semantics. |
 
 ## Implementation Pseudocode
 
@@ -60,9 +66,16 @@ function resolveSharedBlockLayoutState(block: WidgetBlock, defaults: BlockLayout
   };
 }
 
-function shouldRenderForDevice(visibility: BlockVisibility, device: PreviewDevice | "public") {
-  if (!visibility.devices?.length) return true;
-  return !visibility.devices.includes(device);
+function isVisibleInPreviewDevice(visibility: BlockVisibility, device: PreviewDevice) {
+  if (visibility.enabled === false) return false;
+  const shownDevices = visibility.devices ?? ["desktop", "tablet", "mobile"];
+  return shownDevices.includes(device);
+}
+
+function resolvePublicVisibilityPolicy(visibility: BlockVisibility) {
+  if (visibility.enabled === false) return { render: false };
+  if (visibility.devices?.length === 0) return { render: false };
+  return { render: true, deviceSpecific: Boolean(visibility.devices) };
 }
 ```
 
@@ -71,8 +84,8 @@ function shouldRenderForDevice(visibility: BlockVisibility, device: PreviewDevic
 - Advanced cannot label inherited padding as a saved `MD` override when runtime
   renders inherited `XL`.
 - First layout edit has explicit override semantics.
-- Empty Device Visibility renders as "visible on all devices" or equivalent,
-  and public SSR behavior matches the label.
+- Empty Device Visibility either hides the block consistently or is relabeled so
+  the public SSR no-device boundary is explicit and not presented as live hiding.
 
 ## Security Contract
 
@@ -83,8 +96,8 @@ content in admin-only previews; public SSR behavior must be deterministic.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/ui/block-layout-shared-wave.test.tsx`
-- `bun run test:vitest -- tests/vitest/widgets/widgetRenderer.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/block-layout-shared-wave.test.tsx` after adding the new shared builder UI suite.
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
 - `git diff --check`
 
 ## Documentation Updates Required

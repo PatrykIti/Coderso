@@ -27,8 +27,8 @@ theme colors are labeled as custom, and `compact` display is nearly inert in
 
 - [ ] Add a stable accessible name for the Search Box section and a real label
   or `aria-label`/`aria-labelledby` for the search input.
-- [ ] Make source checkbox toggles visually reflect current state immediately,
-  not only through emitted markup or reload.
+- [ ] Make source checkbox toggles in the rendered global branch visually
+  reflect current state immediately, not only through emitted markup or reload.
 - [ ] Route theme-token color label fixes through the shared color-state owner
   in `TASK-343-30`, while preserving Search Box-specific tests for the surface.
 - [ ] Make `compact` in `listing` mode either visibly meaningful or explicitly
@@ -38,8 +38,8 @@ theme colors are labeled as custom, and `compact` display is nearly inert in
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` | Fix checkbox state truthfulness, compact/listing copy, and color-state integration points. |
-| `core/widgets/core/searchBox.tsx` | Add section/input accessible names and compact-mode truthfulness. |
+| `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` | Fix compact/listing copy and color-state integration points. |
+| `core/widgets/core/searchBox.tsx` | Add section/input accessible names, fix global source checkbox state truthfulness, and make compact-mode semantics truthful. |
 | `tests/vitest/widgets/searchBox.test.tsx` | Cover public a11y and compact/listing render semantics. |
 | `tests/vitest/ui/search-box-editor-wave.test.tsx` | Cover source toggle state and color/default messaging. |
 
@@ -58,6 +58,11 @@ function resolveCompactModeNotice(mode: SearchBoxMode, displayMode: SearchBoxDis
   return mode === "listing" && displayMode === "compact" ? "limited_in_listing_runtime" : "active";
 }
 ```
+
+The stale checkbox finding is in `SearchBoxBlock`'s global render branch
+(`defaultChecked` state), not only in the editor component. The implementation
+may add these helpers or fix the branch inline, but tests must exercise the
+renderer path.
 
 ## Regression Test Shape
 

@@ -18,7 +18,7 @@ image overlay composition outside the centered-image branch.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/28-05-2026/REPORT_HERO_WIDGET.md:179-197`
+- `_docs/PLAYWRIGHT/28-05-2026/REPORT_HERO_WIDGET.md:181-214`
 - `core/admin/ui/widgets/editors/HeroEditors.tsx:1192-1222,1293-1457,1936-2021`
 - `core/widgets/core/hero.tsx:329,797,860-871,1032-1058,1174-1184`
 
@@ -44,9 +44,12 @@ image overlay composition outside the centered-image branch.
 ## Implementation Pseudocode
 
 ```ts
-function resolvePersistedSecondaryCta(data: HeroData): HeroCta | undefined {
-  if (data.ctaLayout === "single") return undefined;
-  return normalizeHeroCta(data.secondaryCta);
+function resolvePersistedSecondaryCta(
+  rawData: Partial<HeroData>,
+  editorCtaMode: "single" | "dual"
+): HeroCta | undefined {
+  if (editorCtaMode === "single") return undefined;
+  return normalizeHeroCta(rawData.secondaryCta);
 }
 
 function updateOverlayStrength(savedColor: string | undefined, nextStrength: number): string {
@@ -54,15 +57,26 @@ function updateOverlayStrength(savedColor: string | undefined, nextStrength: num
   return toRgba(parsed.rgb, nextStrength);
 }
 
-function resolveBackgroundImageLayer(background: HeroBackground): string | undefined {
-  if (background.media?.type !== "image") return resolvePlainBackgroundImage(background);
+function resolveBackgroundImageLayer(input: {
+  resolvedVariant: HeroVariantId;
+  background: HeroBackground;
+  media?: HeroMedia;
+  backgroundMedia?: HeroBackgroundMedia;
+}): string | undefined {
+  if (!hasResolvedHeroImage(input)) return resolvePlainBackgroundImage(input.background);
   return joinLayers([
-    background.overlay ? buildLinearGradientOverlay(background.overlay) : undefined,
-    resolveGradientLayer(background),
-    resolveImageUrlLayer(background.media),
+    input.background.overlay ? buildLinearGradientOverlay(input.background.overlay) : undefined,
+    resolveGradientLayer(input.background),
+    resolveImageUrlLayer(input),
   ]);
 }
 ```
+
+Do not reference a non-existing `HeroData.ctaLayout` field unless the fix
+intentionally widens the schema/defaults/editor contract. The current editor
+derives single/dual mode from the secondary CTA control state, so the
+normalizer must preserve the raw "secondary CTA absent" state before default
+merge restores `heroDefaults.secondaryCta`.
 
 ## Regression Test Shape
 
@@ -100,4 +114,3 @@ No API routes are added.
 - Overlay strength changes preserve the chosen color.
 - Background image overlay works on non-centered variants and never wipes the
   image on fresh render.
-

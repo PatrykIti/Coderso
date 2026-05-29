@@ -32,6 +32,8 @@ actions have no visible feedback.
 - [ ] Decide whether `Reset to defaults` should also reset the block variant and
   implement/copy-test that decision.
 - [ ] Add visible feedback for `Normalize now`.
+- [ ] Record the report's `120++` fixture seed issue as deferred seed cleanup
+  unless this family also owns fixture data changes.
 
 ## Files To Change
 
@@ -53,6 +55,10 @@ function resetStatsKpiToDefaults(options: { resetVariant: boolean }) {
   return options.resetVariant ? { data: statsKpiDefaults, variant: "cards" } : { data: statsKpiDefaults };
 }
 ```
+
+If reset is meant to change the block variant, implement it through the existing
+block patch/variant-change pathway; a data-only `onChange(statsKpiDefaults)`
+cannot reset `variant`.
 
 ## Regression Test Shape
 

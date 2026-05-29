@@ -29,6 +29,10 @@ handles and the Wizard silently truncates members when switching to Spotlight.
   reduce the member set.
 - [ ] Clean up misleading member-insert copy and, if retained, document the real
   append behavior.
+- [ ] Review the report's heading-hierarchy note (`H2 -> H4`) and either fix
+  the member heading level or document the product decision.
+- [ ] Route shared color-clear/default wording to `TASK-343-30` and placeholder
+  link polish outside this high-risk handle/truncation fix if not addressed here.
 - [ ] Add regression coverage for platform switching and Spotlight transitions.
 
 ## Files To Change
@@ -43,9 +47,10 @@ handles and the Wizard silently truncates members when switching to Spotlight.
 ## Implementation Pseudocode
 
 ```ts
-function extractPortableSocialHandle(platform: TeamSocialPlatform, url: string): string {
-  if (platform === "linkedin") return readLinkedInHandle(url);
-  return readPortableHandle(url);
+function updateMemberSocialPlatform(member: TeamMember, nextPlatform: TeamSocialPlatform) {
+  const currentProfile = readTeamSocialProfile(member.social.href);
+  const handle = currentProfile.handle === "in" ? readPortableHandle(member.social.href) : currentProfile.handle;
+  return buildTeamSocialHref(nextPlatform, handle);
 }
 
 function changeVariantWithGuard(current: TeamData, next: TeamVariantId) {
@@ -59,6 +64,9 @@ function changeVariantWithGuard(current: TeamData, next: TeamVariantId) {
 ## Regression Test Shape
 
 - LinkedIn -> GitHub keeps the human handle instead of `in`.
+- The regression seed must start with an existing LinkedIn URL such as
+  `https://www.linkedin.com/in/anna-kowalska`, then switch to GitHub and assert
+  `anna-kowalska`, not add a blank link first.
 - Spotlight transition does not silently discard members.
 
 ## Security Contract
@@ -83,4 +91,3 @@ No API routes are added. Existing safe-link and media rules remain unchanged.
 
 - Platform switching preserves the intended profile handle.
 - Spotlight no longer truncates members silently.
-

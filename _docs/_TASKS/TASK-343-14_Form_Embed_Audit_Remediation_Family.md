@@ -30,6 +30,9 @@ public empty-state messaging.
   and Advanced summary.
 - [ ] Make `Clear` genuinely return affected colors to `Theme default`.
 - [ ] Fix TTL lower-bound coercion and public empty-state/error messaging.
+- [ ] Route report items I5/I7/I8/I9/N3/N4 explicitly: either add local
+  follow-up acceptance here or mark them deferred/shared in the implementation
+  notes so they are not silently lost.
 
 ## Files To Change
 
@@ -57,11 +60,16 @@ function clampSavedProgressTtl(raw: string | number | undefined): number {
 }
 ```
 
+`clampSavedProgressTtl` must be used consistently by the editor input path and
+the persisted normalizer; otherwise `0` can still round-trip to the default `7`.
+
 ## Regression Test Shape
 
 - `Spacing` has a visible effect or is no longer mislabeled.
 - `Clear` moves affected controls back to `Theme default`.
 - Pristine color counters do not claim saved overrides.
+- Existing UI tests that assert `Saved custom color` for pristine
+  theme-default values must be updated to the shared `TASK-343-30` vocabulary.
 - `0` days TTL clamps to `1`, not `7`.
 
 ## Security Contract
@@ -87,4 +95,3 @@ codes if a friendlier safe message can be used.
 
 - Form Embed controls describe and reset real state truthfully.
 - Empty-state/runtime messaging is user-facing rather than raw-code-facing.
-

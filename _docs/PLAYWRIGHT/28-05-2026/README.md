@@ -60,3 +60,6 @@ families were under-scoped. Authoritative routing now lives in
   (`TASK-343-31`).
 - Current-state/deferred reports are explicitly documented in the umbrella so
   lower-risk notes are not mistaken for lost findings.
+- A follow-up code-level reconciliation on 2026-05-29 checked the task leaves
+  against current widget/editor/test ownership and corrected stale helper names,
+  missing source owners, and test-lane drift in the task breakdowns.

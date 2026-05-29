@@ -29,7 +29,11 @@ silent non-recoverable media/content loss when the count is restored.
 - [ ] Add accessible section naming in admin and public output.
 - [ ] Add destructive-state confirmation/recovery for count reductions that
   discard tile media, links, or captions.
+- [ ] Apply the guard to Wizard count changes too; current Visual confirmation
+  alone is insufficient if Wizard count can still truncate without recovery.
 - [ ] Fix singular/plural link-warning copy while touching the affected summary.
+- [ ] Explicitly route report notes N3/N6/N8/N9 as deferred/product decisions if
+  they are not fixed in this family.
 
 ## Files To Change
 
@@ -59,7 +63,8 @@ function resolveGalleryMosaicA11y(data: GalleryMosaicData, blockId: string) {
 ## Regression Test Shape
 
 - Lightbox-enabled admin previews either bind or clearly say they are static.
-- Reducing/restoring count does not silently discard authored tile data.
+- Reducing/restoring count does not silently discard authored tile data from
+  either Visual or Wizard count controls.
 - Section naming exists with and without a visible heading.
 
 ## Security Contract

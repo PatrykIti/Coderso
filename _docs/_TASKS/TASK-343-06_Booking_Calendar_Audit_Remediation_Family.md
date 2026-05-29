@@ -34,14 +34,20 @@ clear behavior and misleading Advanced booking-flow matching.
 |---|---|
 | `core/widgets/core/bookingCalendar.tsx` | Reconcile legacy fallback classes with partially cleared surface styles. |
 | `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` | Keep flow summary truthful and aligned with the same filtering logic as Wizard. |
-| `tests/vitest/widgets/bookingCalendar.test.tsx` | Cover surface clear and flow-summary runtime semantics. |
+| `tests/vitest/widgets/bookingCalendar.test.tsx` | Cover legacy class and surface-style render semantics. |
 | `tests/vitest/ui/booking-calendar-editor-wave.test.tsx` | Cover Advanced flow-summary truthfulness. |
 
 ## Implementation Pseudocode
 
 ```ts
 function hasAnySurfaceOverride(style: BookingCalendarStyle): boolean {
-  return Boolean(style.frameBackground || style.frameBorderColor || style.selectedSlotBackground);
+  return Boolean(
+    style.frameBackground ||
+      style.frameBorderColor ||
+      style.selectedSlotBackground ||
+      style.selectedSlotBorderColor ||
+      style.slotHoverBorderColor
+  );
 }
 
 function resolveBookingFlowSummary(context: EditorContext, calendars: CalendarSummary[]) {
@@ -76,4 +82,3 @@ No API routes are added.
 
 - Surface clear behavior is truthful and visually consistent.
 - Advanced no longer implies a self-matched booking flow.
-

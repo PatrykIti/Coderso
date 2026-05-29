@@ -20,6 +20,7 @@ lost behind the main mode-control fix.
 ## Drift Evidence
 
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_TIMELINE_WIDGET.md:184-202`
+- `_docs/PLAYWRIGHT/28-05-2026/REPORT_TIMELINE_WIDGET.md:210-220`
 - `core/admin/ui/widgets/editors/TimelineEditors.tsx:507-519,767-770,1479-1488`
 - `core/widgets/core/timeline.tsx:606-627,1389-1423`
 
@@ -41,6 +42,7 @@ lost behind the main mode-control fix.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | Unify mode-card and mode-select behavior. |
+| `core/widgets/core/timeline.tsx` | Keep description, marker icon fallback, and max-width diagnostics truthful. |
 | `tests/vitest/ui/timeline-editor-wave.test.tsx` | Cover select/card parity. |
 | `tests/vitest/widgets/timeline.test.tsx` | Cover normalized mode/variant output plus icon/description/max-width truthfulness. |
 

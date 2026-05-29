@@ -36,6 +36,8 @@ runtime boundaries and theme-token color state need truthful copy.
 - [ ] Fix `Clear image` so image mode does not fall back to a broken `"Coderso"`
   `src`.
 - [ ] Decide and ship a consistent reset policy for the remaining color fields.
+- [ ] Route report notes N2/N4/N7 explicitly: either cover them in this family
+  or mark them deferred/shared with owner task IDs.
 
 ## Files To Change
 
@@ -58,6 +60,11 @@ function normalizeNavigationItems(items: NavigationItemInput[]) {
   return items.filter((item) => hasRenderableNavigationDestination(item));
 }
 ```
+
+The logo-image fix belongs in the existing `normalizeNavigationData` logo
+fallback and `NavigationLogoSourceFields` clear handler, not in a duplicate
+route/editor-only adapter. `normalizeNavigationItems` already exists; extend it
+only if item removal semantics need to change.
 
 ## Regression Test Shape
 

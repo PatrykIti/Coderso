@@ -34,6 +34,8 @@ destructive actions use inconsistent confirmation patterns, and the public
 - [ ] Make the static billing cycle display look non-interactive, or add a
   runtime-safe interactive contract if product scope requires it.
 - [ ] Coordinate color-clear/default state copy with `TASK-343-30`.
+- [ ] Record report N0 fixture drift as a fixture caveat and explicitly defer or
+  fix the hidden-badge renderer note (N9) so it is not lost.
 
 ## Files To Change
 
@@ -53,9 +55,16 @@ function describePlanCapacity(variant: PricingVariant, plans: PricingPlan[]) {
 }
 
 function resolveBillingDisplay(data: PricingPlansData) {
-  return data.billingToggleInteractive ? { role: "tablist" } : { role: "status", "aria-live": "polite" };
+  if (data.billing?.enabled) {
+    return { role: "status", "aria-live": "polite", mode: "static-cycle-display" };
+  }
+  return { role: "presentation", mode: "hidden" };
 }
 ```
+
+Do not reference a non-existing `billingToggleInteractive` field unless this
+task intentionally widens `PricingPlansData`, schema/defaults, editor contract,
+and renderer tests. The current public contract is a static billing status.
 
 ## Regression Test Shape
 

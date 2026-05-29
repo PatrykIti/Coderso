@@ -33,7 +33,8 @@ preview with useful diagnostics.
 - [ ] Surface `metadata.category` and `metadata.version` truthfully instead of
   half-owning them across Visual and Advanced.
 - [ ] Route shared `visibility.devices` wording separately if that remains the
-  real owner.
+  real owner; do not fix shared renderer visibility semantics in this
+  widget-local family.
 
 ## Files To Change
 
@@ -42,7 +43,7 @@ preview with useful diagnostics.
 | `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` | Fix preview/diagnostic truthfulness and metadata surface ownership. |
 | `core/widgets/core/templateSection.tsx` | Touch if runtime summary or rendered metadata contract needs alignment. |
 | `tests/vitest/widgets/templateSection.test.tsx` | Cover truthful diagnostics and rendered metadata behavior. |
-| `tests/vitest/ui/template-section-editor-wave.test.tsx` | Cover preview/diagnostic states and metadata surface output. |
+| `tests/vitest/ui/template-section-editor-wave.test.tsx` | Cover preview/diagnostic states and metadata surface output; reverse any expectation that unresolved content is reported as "No resolution problem detected". |
 
 ## Implementation Pseudocode
 
@@ -60,6 +61,8 @@ function resolveTemplatePreviewState(data: TemplateSectionData): TemplatePreview
 ## Regression Test Shape
 
 - Selecting a draft template does not yield false-zero diagnostics.
+- Existing tests that assert `No resolution problem detected` for unresolved
+  content must be updated to expect the real unresolved/draft problem class.
 - `category` and `version` ownership is explicit and visible where intended.
 
 ## Security Contract
@@ -87,4 +90,3 @@ Contract.
 - Template Section preview and diagnostics stop implying resolved content when
   none exists.
 - Category/version ownership is explicit and visible.
-

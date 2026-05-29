@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 997 | 2026-05-29 | TASK-343 code alignment audit | QA/Widgets/Docs |
 | 996 | 2026-05-29 | TASK-343 shared MediaPicker routing | QA/Widgets/Admin UI/Accessibility/Docs |
 | 995 | 2026-05-29 | TASK-343 report classification correction | QA/Widgets/Playwright/Docs |
 | 994 | 2026-05-28 | TASK-342 widget Playwright gap closure | QA/Widgets/Playwright/Docs |

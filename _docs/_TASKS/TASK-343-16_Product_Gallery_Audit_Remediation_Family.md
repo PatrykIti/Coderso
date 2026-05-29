@@ -19,7 +19,7 @@ requires public section naming and truthful `view all` disappearance handling.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/28-05-2026/REPORT_PRODUCT_GALLERY_WIDGET.md:203-211`
+- `_docs/PLAYWRIGHT/28-05-2026/REPORT_PRODUCT_GALLERY_WIDGET.md:203-214`
 - `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx:393-395,886,928-930,1010`
 - `core/widgets/core/productGallery.tsx:239,313,521,645,752-756,888,988`
 
@@ -69,6 +69,9 @@ function resolveViewAllVisibility(data: ProductGalleryData, total: number, shown
 
 - Visual/Wizard no longer open on a misleading empty preview when products are
   resolvable.
+- The existing editor test that expects preview hydration to be deferred until
+  Advanced is opened must be rewritten or inverted if the product decision is
+  to hydrate daily modes.
 - Missing route configuration is explicitly reflected in card/CTA guidance.
 - `view all` disappearance and section accessible naming are covered in renderer
   tests.

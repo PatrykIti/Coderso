@@ -44,7 +44,7 @@ visible feedback.
 ## Implementation Pseudocode
 
 ```ts
-function resolveCtaBannerVariant(variant: CtaBannerVariant, badgeEnabled: boolean) {
+function resolveCtaBannerVariantPresentation(variant: CtaBannerVariant, badgeEnabled: boolean) {
   if (variant === "with-badge" && !badgeEnabled) return { mode: "centered", notice: "badge_disabled" };
   return { mode: variant, notice: undefined };
 }
@@ -54,6 +54,9 @@ function resolveCtaActionState(action: CtaAction) {
   return { render: "link" };
 }
 ```
+
+Use a new presentation helper name. `resolveCtaBannerVariant` already exists in
+the runtime as a variant normalizer with a different signature.
 
 ## Regression Test Shape
 

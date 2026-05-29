@@ -19,7 +19,6 @@ preview ARIA still drifts from runtime behavior.
 ## Drift Evidence
 
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_FAQ_ACCORDION_WIDGET.md:165-175`
-- `_docs/PLAYWRIGHT/28-05-2026/REPORT_FAQ_ACCORDION_WIDGET.md:1-8` (section 5 findings)
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx:623,1008+`
 - `core/widgets/core/faqAccordion.tsx:88-95,164,384-387,1001-1205`
 
@@ -46,12 +45,16 @@ preview ARIA still drifts from runtime behavior.
 ```ts
 function renderFaqSpacingControl(value: FaqAccordionData) {
   return (
-    <WidgetControlRow id="faq-accordion.spacing" label="Spacing" path="style.spacing">
+    <WidgetControlRow id="faq-accordion.visual.spacing" label="Spacing" path="style.spacing">
       <Select value={value.style?.spacing ?? "md"} />
     </WidgetControlRow>
   );
 }
 ```
+
+Place the control in the existing
+`faq-accordion.visual.layout-typography` section next to `Max width`, because
+that section already promises spacing ownership.
 
 ## Regression Test Shape
 

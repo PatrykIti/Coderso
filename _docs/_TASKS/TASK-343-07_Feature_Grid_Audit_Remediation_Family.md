@@ -49,11 +49,18 @@ function setItemsCountSafely(current: FeatureGridData, nextCount: number) {
   }
   return expandItemsPreservingExistingData(current.items, nextCount);
 }
+
+function resolveFeatureGridSectionA11y(data: FeatureGridData, blockId: string) {
+  const titleId = data.title ? `feature-grid-${blockId}-title` : undefined;
+  return titleId ? { "aria-labelledby": titleId } : { "aria-label": "Feature grid" };
+}
 ```
 
 ## Regression Test Shape
 
-- Real mouse clicks reach every emoji quick button.
+- Browser-level mouse clicks reach every emoji quick button; happy-dom/Vitest
+  click tests are not enough because the reported failure is CSS hit-target
+  overlap detected with `elementFromPoint` and pointer interception.
 - Reducing card count does not silently destroy card content.
 - The rendered section has an accessible name.
 
@@ -67,6 +74,8 @@ No API routes are added. Existing URL/media safety checks stay intact.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/featureGrid.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- Browser smoke/Playwright check for emoji quick-button hit targets at the
+  audited desktop width.
 - `git diff --check`
 
 ## Documentation Updates Required
@@ -80,4 +89,3 @@ No API routes are added. Existing URL/media safety checks stay intact.
 - Emoji quick actions are directly clickable.
 - Count reduction is no longer a silent destructive path.
 - Public Feature Grid sections expose an accessible name.
-

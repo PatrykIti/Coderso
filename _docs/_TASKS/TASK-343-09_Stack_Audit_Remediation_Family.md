@@ -46,12 +46,22 @@ const gapClassMap = {
   tablet: { "4": "md:gap-4", "6": "md:gap-6", "8": "md:gap-8", "10": "md:gap-10", "12": "md:gap-12" },
   desktop: { "4": "lg:gap-4", "6": "lg:gap-6", "8": "lg:gap-8", "10": "lg:gap-10", "12": "lg:gap-12" },
 } as const;
+
+const directionClassMap = { /* mobile/tablet/desktop literal maps */ } as const;
+const alignClassMap = { /* mobile/tablet/desktop literal maps */ } as const;
+const justifyClassMap = { /* mobile/tablet/desktop literal maps */ } as const;
+const wrapClassMap = { /* mobile/tablet/desktop literal maps */ } as const;
 ```
+
+The fix must remove `prefixClassMap`-style runtime prefix composition for every
+responsive dimension, not only gap.
 
 ## Regression Test Shape
 
 - Public-class output contains every responsive literal that the editor can
   choose.
+- Coverage proves every Visual option is represented by source literals or an
+  explicit Tailwind safelist entry.
 - Default tablet/desktop gap no longer collapses to the mobile gap.
 - Admin and public render agree for the same data.
 
@@ -76,4 +86,3 @@ No API routes are added. This is a deterministic CSS-class generation fix only.
 
 - Tablet/desktop Stack controls render the same on admin and public.
 - No Stack responsive utility depends on runtime-composed Tailwind literals.
-

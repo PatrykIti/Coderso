@@ -45,7 +45,7 @@ the effective desktop ratio.
 ## Implementation Pseudocode
 
 ```ts
-function resolveSplitRatioDisclosure(ratio: SplitRatio, starter: SplitRatio) {
+function getSplitLayoutRatioDisclosure(ratio: SplitRatio, starter: SplitRatio) {
   const explicit = hasExplicitDeviceRatio(ratio);
   const effectiveMatch = ratiosEqual(resolveEffectiveRatio(ratio), starter);
   return { explicit, effectiveMatch };
@@ -58,6 +58,10 @@ function applySplitPresetWithGuard(current: SplitLayoutData, preset: SplitPreset
   return { mode: "apply", data: applySplitPreset(current, preset) };
 }
 ```
+
+Extend the existing disclosure helper instead of adding a parallel summary
+path. Guard preset application around the current variant/preset sync flow so
+`buildVariantSyncedSplitLayoutData` cannot silently wipe device overrides.
 
 ## Regression Test Shape
 

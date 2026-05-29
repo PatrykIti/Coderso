@@ -43,25 +43,30 @@ accessible description or explicit `aria-describedby={undefined}` policy.
 |---|---|
 | `core/admin/ui/media/MediaPicker.tsx` | Add or explicitly configure dialog description semantics. |
 | Shared dialog primitives if applicable | Keep Radix description policy consistent across dialog consumers. |
-| `tests/vitest/ui/media-picker-dialog-a11y.test.tsx` | Cover warning-free MediaPicker dialog open from widget editor flows. |
+| `tests/vitest/ui/media-picker.test.tsx` | Extend existing MediaPicker coverage for warning-free dialog description semantics. |
+| Optional new MediaPicker dialog a11y suite | Add only if cross-widget entry-point coverage becomes too broad for the existing MediaPicker suite. |
 | Affected widget editor tests | Add smoke coverage only where needed to prove entry-point integration. |
 
 ## Implementation Pseudocode
 
 ```tsx
-function MediaLibraryDialogContent(props: MediaLibraryDialogProps) {
-  const descriptionId = `${props.dialogId}-description`;
+function MediaPicker(props: MediaPickerProps) {
+  const descriptionId = useId();
   return (
     <DialogContent aria-describedby={descriptionId}>
       <DialogTitle>Media library</DialogTitle>
       <DialogDescription id={descriptionId}>
         Choose an existing media asset for the selected widget field.
       </DialogDescription>
-      {props.children}
+      { /* existing MediaPicker content remains unchanged */ }
     </DialogContent>
   );
 }
 ```
+
+Apply the change inline in `core/admin/ui/media/MediaPicker.tsx` unless the
+implementation intentionally extracts a reusable dialog-content component. The
+current code imports `DialogTitle` but not `DialogDescription`.
 
 ## Regression Test Shape
 
@@ -80,7 +85,8 @@ public URL handling, and upload restrictions remain unchanged.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `bun run test:vitest -- tests/vitest/ui/media-picker-dialog-a11y.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx`
+- Run the new MediaPicker dialog a11y suite if one is added.
 - Relevant widget editor smoke tests for touched entry points.
 - `git diff --check`
 

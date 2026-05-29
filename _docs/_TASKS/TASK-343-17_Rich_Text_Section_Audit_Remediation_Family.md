@@ -36,6 +36,8 @@ inert embed aspect controls and sanitizer shadowing to this family.
   only as link cards.
 - [ ] Preserve or surface `href_rewritten` and other sanitizer events that are
   currently shadowed by the upstream editor serializer.
+- [ ] Route report notes N2/N4/N6 explicitly as local fixes or documented
+  product decisions; do not leave them implicit behind the sanitizer/TOC work.
 
 ## Files To Change
 
@@ -63,6 +65,9 @@ function resolveEmbedAspectControl(renderMode: RichTextEmbedRenderMode) {
 ## Regression Test Shape
 
 - Wizard preview shows text for blocks backed by `contentHtml`.
+- The Wizard regression must seed `contentHtml` (for example
+  `<p>Alpha</p>`) and expect stripped preview text, not only seed plain
+  `content`.
 - TOC behavior for the section heading is explicit and tested.
 - Sanitizer diagnostics surface real rewritten/removed content events.
 - Embed aspect-ratio controls do not appear writable when the renderer cannot

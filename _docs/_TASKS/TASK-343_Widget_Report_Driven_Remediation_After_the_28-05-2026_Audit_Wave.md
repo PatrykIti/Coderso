@@ -36,6 +36,12 @@ all `38/38` reports into:
   **truthfulness and UX fidelity**: controls that exist but mislead, controls
   that are visually inert, admin previews that hide runtime limits, and saved
   states that do not round-trip cleanly.
+- Code-level reconciliation on 2026-05-29 compared the physical `TASK-343-*`
+  leaves with current widget sources, editor sources, and existing test lanes.
+  The leaf tasks now distinguish existing owner files from planned new tests,
+  avoid stale helper/test names where current code already has owners, and call
+  out shared-control routing instead of hiding shared drift in widget-local
+  families.
 
 ## Report Classification
 
@@ -84,13 +90,13 @@ task breakdown promotes `31` physical families: `28` widget-local families plus
 | Widget | Classification |
 |---|---|
 | `contact` | Current-state sufficient: report found no widget-local functional defect; remaining limitations are fixture/runtime branches. |
-| `divider` | Deferred minor UX/a11y notes only: no functional defect; labeled separator semantics can be revisited outside this wave. |
-| `footer` | Current-state sufficient for footer-local scope; shared MediaPicker dialog warning is routed to `TASK-343-31`. |
-| `grid-columns` | Current-state sufficient: report explicitly found no functional/rendering bugs. |
+| `divider` | Deferred minor widget-local UX/a11y notes only: no functional defect; labeled separator semantics can be revisited outside this wave, while shared color wording is covered by `TASK-343-30` if touched. |
+| `footer` | Current-state sufficient for footer-local functional scope; footer-local destination/page-picker polish is deferred, and the shared MediaPicker dialog warning is routed to `TASK-343-31`. |
+| `grid-columns` | Current-state sufficient for widget-local scope: report found no functional/rendering bugs; shared visibility wording routes to `TASK-343-21` and shared color wording to `TASK-343-30` if touched. |
 | `product-table` | Current-state/environment-only: current report supersedes the stale second-wave classification and found no functional defect; missing route effects are settings/fixture limitations. |
-| `section` | Current-state sufficient: no functional defect; media diagnostics polish is low-priority documentation debt. |
-| `spacer` | Current-state sufficient: report found full editor/runtime consistency; custom length UI remains an intentional product limit. |
-| `testimonials` | Deferred minor UX notes only: no functional defect; formatted quote `<br>` behavior and CTA hint can be revisited after higher-risk families. |
+| `section` | Current-state sufficient: no functional defect; media diagnostics polish such as position/blend/layer details is low-priority documentation debt, with shared color wording covered by `TASK-343-30` if touched. |
+| `spacer` | Current-state sufficient: report found full editor/runtime consistency; custom length UI remains intentional product limit, and shared visibility wording is not Spacer-local. |
+| `testimonials` | Deferred minor widget-local UX notes only: formatted quote `<br>` behavior and CTA hint can be revisited after higher-risk families; shared color fallback wording is covered by `TASK-343-30` if touched. |
 
 These reports still contain useful notes, but the current branch evidence does
 not justify a physical implementation family in `TASK-343`.
@@ -139,11 +145,11 @@ not justify a physical implementation family in `TASK-343`.
 | `core/admin/ui/widgets/editors/*.tsx` | Widget-local editor truthfulness fixes owned by the promoted families. |
 | `core/widgets/core/*.tsx` | Widget-local runtime fixes owned by the promoted families. |
 | `core/widgets/renderers/widgetRenderer.tsx` | Shared wrapper visibility/rendering fixes owned by `TASK-343-21` where proven shared. |
-| `core/admin/ui/pages/builder/blockUtils.ts` | Shared layout/visibility fixes owned by `TASK-343-21`. |
-| Shared color/clearable editor controls | Shared color-state fixes owned by `TASK-343-30`. |
+| `core/admin/ui/pages/builder/blockUtils.ts`, `AdvancedPanel.tsx`, `VisualPanel.tsx`, `LayoutPanel.tsx` | Shared layout/visibility UI and helper fixes owned by `TASK-343-21`. |
+| `core/admin/ui/widgets/editors/ClearableFields.tsx`, `SharedColorControl.tsx` | Shared color-state fixes owned by `TASK-343-30`. |
 | `core/admin/ui/media/MediaPicker.tsx` | Shared dialog accessibility fixes owned by `TASK-343-31`. |
 | `tests/vitest/ui/*.test.tsx` | Add targeted editor/admin-preview coverage for each promoted family. |
-| `tests/vitest/widgets/*.test.tsx` | Add targeted renderer/runtime coverage for each promoted family. |
+| `tests/vitest/widgets/*.test.tsx`, `tests/unit/widgets/*.test.tsx` | Add targeted renderer/runtime coverage in the lane already owning that surface. |
 
 ## Implementation Order
 

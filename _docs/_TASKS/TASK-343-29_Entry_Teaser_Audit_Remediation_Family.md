@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Widgets + Entry Teaser + Accessibility + Admin UI + QA + Docs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-343
+**Dependencies:** TASK-343, TASK-343-30
 **Status:** To Do
 
 ---
@@ -27,7 +27,7 @@ guidance, and repeated `Clear` buttons are hard to target by accessible name.
 - [ ] Add `aria-labelledby`/`aria-label` for the public Entry Teaser section.
 - [ ] Add inline guidance when CTA destination mode cannot produce a safe link.
 - [ ] Give color/action `Clear` buttons accessible names that include the field
-  context.
+  context; shared Clear-label semantics are owned by `TASK-343-30`.
 - [ ] Keep listing-query populated rendering explicitly deferred to data-fixture
   work unless stable entry-backed listing rows are added.
 
@@ -48,9 +48,10 @@ function resolveEntryTeaserA11y(data: EntryTeaserData, blockId: string) {
   return headingId ? { "aria-labelledby": headingId } : { "aria-label": "Entry teaser" };
 }
 
-function resolveEntryTeaserCtaState(data: EntryTeaserData, resolved: EntryTeaserResolvedState) {
-  if (!resolved.ctaHref) return { mode: "non_link", reason: "missing_safe_destination" };
-  return { mode: "link", href: resolved.ctaHref };
+function resolveEntryTeaserCtaRenderState(data: EntryTeaserData, resolved: EntryTeaserResolvedState) {
+  const linkAttrs = resolveWidgetLinkAttrs(resolved.ctaHref);
+  if (!linkAttrs) return { mode: "non_link", reason: "missing_safe_destination" };
+  return { mode: "link", linkAttrs };
 }
 ```
 
