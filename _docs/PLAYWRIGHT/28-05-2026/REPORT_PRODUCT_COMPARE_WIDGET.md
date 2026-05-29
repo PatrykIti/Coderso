@@ -1,380 +1,342 @@
-# RAPORT: Product Compare Widget — wyczerpujący audyt (29-05-2026)
+# RAPORT: Product Compare Widget — wyczerpujący audyt (domknięcie luki, 29-05-2026)
 
-> **Status:** Zakończony — wyczerpujący audyt Wizard / Visual / Advanced + frontend SSR
+> **Status:** Zakończony — pełny re-audyt Wizard / Visual / Advanced + frontend SSR, z **wyczerpującym** przeklikaniem współdzielonych kontrolek blokowych (Block layout, Device visibility), które wcześniej były tylko próbkowane.
 > **Data testu:** 2026-05-29
-> **Sesja przeglądarki:** `claude-29-05-product-compare-exhaustive` (izolowana, oddzielna od innych agentów)
+> **Sesja przeglądarki:** `claude-29-05-product-compare-gap-close` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Strona admin:** „Contract Test - product-compare" (`3beb58fc-0d9a-4bd9-ae92-c1d2f83de65e`)
 > **Trasa publiczna:** `/test-product-compare-0516` (tytuł strony: `TEST-PRODUCT-COMPARE-0516`)
-> **Poprzednia wersja raportu:** zastąpiona — ten przebieg jest bardziej szczegółowy i nie korzysta ze skrótów „reprezentatywnych", gdy opcję faktycznie dało się kliknąć.
+> **Poprzednia wersja raportu:** zastąpiona. Ten przebieg domyka jedyną pozostałą lukę poprzedniej wersji („jedna kontrola reprezentatywna wokół widocznych współdzielonych kontrolek") i dokłada dwie nowe, istotne obserwacje korektności.
 
 ---
 
-## 0. Metoda, zakres i różnice względem poprzedniego audytu
+## 0. Czym ten przebieg różni się od poprzedniego (domknięcie luki)
 
-Audyt wykonano na **uruchomionej lokalnie aplikacji** przez `playwright-cli`
-(izolowana sesja). Weryfikacja opierała się na rzeczywistych interakcjach z UI
-edytora oraz na asercjach DOM (`eval`) na żywym podglądzie admin i na statycznym
-renderze SSR trasy publicznej.
+Poprzedni raport zostawiał jedno miejsce „reprezentatywne": współdzielone kontrolki
+**Block layout** (paddingi/marginesy) były testowane tylko na jednym selekcie, bo nie
+należą do kontraktu `product-compare`. Ten przebieg **eliminuje to próbkowanie**:
 
-**Czym ten przebieg różni się od poprzedniego (kluczowe ulepszenia):**
+- **Block layout — przeklikane WSZYSTKIE opcje WSZYSTKICH selectów** (31 dyskretnych
+  asercji DOM, sekcja 3):
+  - Content width: 3/3 opcje (`default`, `narrow`, `full`),
+  - Top padding: 7/7 tokenów, Bottom padding: 7/7, Top margin: 7/7, Bottom margin: 7/7,
+  - każda opcja zweryfikowana **mapowaniem na dokładną klasę Tailwind** w realnym DOM podglądu.
+- **Device visibility — wszystkie 3 przełączniki** klikane pojedynczo (Desktop/Tablet/Mobile),
+  z weryfikacją `aria-checked` (sekcja 3.6).
 
-- **Surfaces (5 kolorów) — DOTYCHCZAS niezweryfikowane, teraz POTWIERDZONE.** Poprzedni
-  raport nie umiał wysterować natywnego `<input type="color">`. W tym przebiegu użyto
-  poprawnego dla Reacta natywnego settera (`HTMLInputElement.prototype.value` +
-  zdarzenie `input`), co **wywołało handler** i pozwoliło zweryfikować wszystkie 5 barw
-  oraz wszystkie 5 przycisków „Clear" (sekcja 4.6).
-- **Filtr kolekcji — DOTYCHCZAS nieprzełączany, teraz zweryfikowany z realnym efektem**
-  (Fixture Homes → 2 produkty, +Fixture Lofts → 3) (sekcja 3.6).
-- **Wszystkie 8 pól sortowania, oba kierunki, wszystkie 3 statusy** klikane pojedynczo
-  (a nie reprezentatywnie) (sekcje 3.4–3.5).
-- **Wszystkie 4 locale waluty, oba tryby ilości, wszystkie 4 opcje „Featured product",
-  wszystkie 10 pól etykiet, wszystkie 6 przełączników wierszy** — przeklikane do końca.
-- **Empty state z niestandardową treścią PL + kolorami** zweryfikowany przez wymuszenie
-  pustego wyniku (sekcja 4.7).
+Przy okazji domknięcia luki ujawniły się **dwie nowe obserwacje korektności**, których
+poprzedni raport nie miał (bo nie sterował tymi kontrolkami do końca):
 
-**Czego ŚWIADOMIE nie robiono — patrz sekcja 7:**
+1. **Niespójność paddingu (kontrolka „kłamie").** Zarówno selecty w Visual, jak i podsumowanie
+   read-only w Advanced pokazują padding `MD`, podczas gdy blok **realnie renderuje się z `XL`
+   (`pt-12 pb-12`)** — i w podglądzie admin, i na publicznym SSR. Powód: zapisany padding to
+   `inherit` (dziedziczenie domyślnej wartości strony = `xl`), a obie powierzchnie edytora
+   zwijają `inherit → md` przy wyświetlaniu (sekcje 6.B1 i 7.U8/U9).
+2. **Device visibility = „Hidden on all devices", a blok i tak się renderuje publicznie.**
+   Zapisana fixtura ma pustą listę urządzeń (wszystkie 3 przełączniki OFF), Advanced wprost
+   raportuje „Hidden on all devices", a mimo to blok renderuje się na froncie (`count=3`).
+   Ukrywanie jest bramkowane przez `previewDevice` i na publicznym SSR nie działa (sekcja 6.B2).
 
-- **Nie zapisywano** (`Save draft` / `Publish`). Powód: ochrona współdzielonej fixtury i
-  trasy publicznej przed mutacją; zapis jest akcją trudną do cofnięcia i nie był zlecony.
-  Wszystkie eksperymenty admin pozostały w pamięci edytora; frontend odzwierciedla
-  wyłącznie wcześniej zapisaną konfigurację (potwierdzone w sekcji 5).
+**Czego ŚWIADOMIE nie robiono:** patrz sekcja 8. Kluczowo — **nie zapisywano** (`Save draft` /
+`Publish`), by nie mutować współdzielonej fixtury/trasy. Wszystkie eksperymenty pozostały
+in-memory; front odzwierciedla wyłącznie wcześniej zapisaną konfigurację (potwierdzone w sekcji 6).
 
-**Screenshoty:** nie przechwytywano plików PNG; weryfikacja odbyła się przez asercje
-DOM/`eval`. Ewentualne zrzuty Playwright byłyby **wyłącznie lokalnymi etykietami**
-(ignorowane przez Git), nie stanowiłyby evidence w repo.
+**Screenshoty:** nie przechwytywano plików PNG; weryfikacja przez asercje DOM/`eval`. Ewentualne
+zrzuty Playwright byłyby **wyłącznie etykietami lokalnymi** (ignorowane przez Git), nie stanowiłyby
+evidence w repozytorium.
 
-**Pliki źródłowe (przejrzane):**
+**Pliki źródłowe (przejrzane w tym przebiegu):**
 
 - `core/widgets/core/productCompare.tsx` — renderer, model danych, normalizacja, schemat.
-- `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` — edytory Wizard / Visual / Advanced.
-- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` — wspólne pola źródła/produktów.
-- `core/admin/ui/widgets/editors/SharedColorControl.tsx` + `ClearableFields.tsx` — kontrolki koloru.
+- `core/widgets/renderers/widgetRenderer.tsx` — wrapper bloku: mapy klas container/padding/margin
+  (`containerClassMap`, `paddingTopClassMap`…) oraz bramka widoczności (`visibility?.enabled`,
+  `visibility.devices` + `previewDevice`).
+- `core/admin/ui/pages/builder/LayoutPanel.tsx` — selecty Content width / padding / margin.
+- `core/admin/ui/pages/builder/VisualPanel.tsx` — sekcja Block layout + Device visibility (3 switche).
+- `core/admin/ui/pages/builder/blockUtils.ts` — `sanitizeLayout` (zwijanie `inherit → md/none`).
+- `core/widgets/types.ts` — `containerTokens`, `spacingTokens`, typy `Inheritable…Token`, `WidgetVisibility`.
 
-**Stan fixtury (zapisany, niezmieniony):** 3 opublikowane produkty rozwiązywane przez
-zapytanie (bez kuracji): „Fixture Garden Suite" (159,00 / 179,00, in stock, qty 1),
-„Fixture Starter Home" (199,00 / 249,00, in stock, qty 3),
-„Fixture Urban Loft" (299,00 / 349,00, backorder, qty 8). Wariant `matrix`,
-4 widoczne wiersze (Price / Compare at / Stock / Quantity), caption sr-only.
-
----
-
-## 1. Przegląd widgetu
-
-**Typ:** `product-compare` (kategoria: content / commerce)
-**Warianty:** `matrix` (domyślny), `compact`, `cards`
-**Tryby edytora:** Wizard (setup źródła), Visual (codzienna edycja), Advanced (diagnostyka read-only)
-**Maks. produktów:** 12 (`PRODUCT_COMPARE_MAX_PRODUCTS`)
-
-Widget renderuje macierz porównania produktów ze źródła commerce (zapytanie filtrowe
-albo ręczna kuracja `source.productIds` z zachowaniem kolejności kolumn). Atrybuty
-(cena, compare-at, stan, ilość, slug, excerpt) renderowane są jako wiersze (matrix/compact)
-albo pary `dt/dd` w kartach (cards).
+**Stan fixtury (zapisany, niezmieniony):** wariant `matrix`, 3 opublikowane produkty rozwiązywane
+zapytaniem (bez kuracji): „Fixture Garden Suite" (159,00 / 179,00, in stock, qty 1),
+„Fixture Starter Home" (199,00 / 249,00, in stock, qty 3), „Fixture Urban Loft" (299,00 / 349,00,
+backorder, qty 8). 4 widoczne wiersze (Price / Compare at / Stock / Quantity), caption sr-only,
+brak tytułu sekcji, locale en-US, Device visibility = pusta (wszystkie OFF), Block layout = padding
+dziedziczony (render `xl`).
 
 ---
 
-## 2. Mapa kontrolek (z kodu) — co próbowano przeklikać
+## 1. Co przetestowano w tym przebiegu (lista pierwszorękich interakcji)
+
+| Obszar | Zakres przeklikania | Sposób weryfikacji |
+|--------|---------------------|--------------------|
+| **Block layout (współdzielone)** | Content width 3/3; padding top/bottom 7/7; margin top/bottom 7/7 | asercja klasy Tailwind sekcji/wrappera w DOM podglądu |
+| **Device visibility (współdzielone)** | 3 przełączniki (Desktop/Tablet/Mobile) ON pojedynczo + powrót | `aria-checked` + etykieta „Shown/Hidden" |
+| Wizard — Search | „zzzznomatch" → 0 (empty state), wyczyszczenie → 3 | `data-product-compare-count`, `role=status` |
+| Wizard — Status | „draft" → 0; +„published" → 3; wyczyszczenie → 3 | count |
+| Wizard — Collections | „Fixture Homes" → 2; wyczyszczenie → 3 | count |
+| Wizard — Sort | pole „Price" ASC → 159/199/299; DESC → 299/199/159 | kolejność kolumn `thead` |
+| Wizard — Advanced przejście | „Finish setup and open Visual", zakładka Advanced | nawigacja |
+| Visual — Wariant | matrix / compact / cards | klasa `table` (text-sm/text-xs) / `article[data-product-id]` |
+| Visual — Money locale | 4/4 (en-US, pl-PL, de-DE, fr-FR) | wartości wiersza Price |
+| Visual — Quantity display | exact / compact + próg (limit 2) | wartości wiersza Quantity |
+| Visual — Attribute rows | toggle „Show product URL path" (wiersz Slug) on/off | obecność wiersza + wartości slug |
+| Visual — Surfaces | Table background (`#ff8800`) + „Clear" | inline-style na wrapperze scrolla |
+| Visual — Layout | Featured = Urban Loft / None; Sticky header on/off | klasa `emerald`, badge „Featured", `sticky left-0 top-0 z-20` |
+| Visual — Section copy | Title „Porównanie produktów" | wiązanie a11y (h2/`aria-labelledby`) |
+| Advanced | nota read-only, preview status, **Refresh preview**, source/surface/contract/block-layout/visibility summary | tekst + zmiana timestampu |
+| Frontend SSR | render, etykiety/locale, a11y, konsola, 375px | DOM + console |
+
+Pozostałe rodziny kontrolek widgetu (limit+clamp, pełna macierz 8 pól sortu, wszystkie 10 etykiet,
+4 opcje featured, wszystkie 5 barw + 5× Clear, hide-caption round-trip, empty-state custom copy)
+zostały **wyczerpująco przeklikane w bezpośrednio poprzednim przebiegu** i pozostają aktualne —
+renderer i kontrakt są niezmienione. W tym przebiegu potwierdzono ich krytyczne ścieżki na nowo
+(resolver realnie sortuje/filtruje, formatowanie liczb, toggling wierszy, inline-style barwy,
+empty state, a11y tytułu) — wszystkie zgodne.
+
+---
+
+## 2. Mapa kontrolek (z kodu)
 
 | Sekcja | Tryb | Kontrolki | Rodzina |
 |--------|------|-----------|---------|
-| Comparison source | Wizard | limit (spinbutton), search, 2× kolekcje (checkbox), sort field (combobox, 8 opcji), sort dir (combobox, 2), 3× status (checkbox) | number / text / select / checkbox |
+| Comparison source | Wizard | limit (spinbutton), search, 2× kolekcje (checkbox), sort field (8 opcji), sort dir (2), 3× status (checkbox) | number / text / select / checkbox |
 | Limit guidance | Wizard | tekst reaktywny (read-only) | — |
-| Variant and structure | Visual | 3× karta wariantu (radio-like button) | radio cards |
-| Compared products | Visual | N× checkbox produktu + Up/Down/Remove na zaznaczonych | checkbox + reorder/remove |
-| Section copy | Visual | title, description, caption (text) + „Hide caption" (toggle) | text / switch |
+| Variant and structure | Visual | 3× karta wariantu | radio cards |
+| Compared products | Visual | N× checkbox + Up/Down/Remove | checkbox + reorder/remove |
+| Section copy | Visual | title, description, caption + „Hide caption" | text / switch |
 | Attribute rows | Visual | 6× toggle widoczności | switch |
-| Labels | Visual | 10× text (attribute header + 6 atrybutów + in/out/backorder) | text |
-| Product columns | Visual | „Show images", „Link titles" (toggle), „CTA mode" (combobox 2 opcje), „CTA label" (text, warunkowy) | switch / select / text |
-| Formatting | Visual | money locale (combobox 4), quantity display (combobox 2), compact limit (number) | select / number |
-| Layout | Visual | featured product (combobox: None + N produktów), „Sticky header" (toggle) | select / switch |
-| Empty state | Visual | title, description (text) | text |
+| Labels | Visual | 10× text | text |
+| Product columns | Visual | „Show images", „Link titles" (toggle), „CTA mode" (2 opcje), „CTA label" (warunkowy) | switch / select / text |
+| Formatting | Visual | money locale (4), quantity display (2), compact limit (number) | select / number |
+| Layout | Visual | featured product (None + N), „Sticky header" (toggle) | select / switch |
+| Empty state | Visual | title, description | text |
 | Surfaces | Visual | 5× swatch koloru (`<input type=color>`) + 5× „Clear" | color picker + clear |
-| Preview status / Source / Surface / Contract summary | Advanced | read-only + „Refresh preview" | diagnostyka |
-
-Dodatkowo w fixturze widoczne są **kontrolki blokowe wspólne** (poza kontraktem widgetu):
-„Block layout" (content width / paddings / margins — selecty) oraz „Device visibility"
-(3× switch). Przetestowano je lekko (sekcja 4.9).
+| Advanced | Advanced | preview status, source/surface/contract/**block-layout**/**visibility** summary + „Refresh preview" | diagnostyka read-only |
+| **Block layout (współdzielone, poza kontraktem)** | Visual | Content width (3), Top/Bottom padding (7), Top/Bottom margin (7) | select |
+| **Device visibility (współdzielone, poza kontraktem)** | Visual | 3× switch (Desktop/Tablet/Mobile) | switch |
 
 ---
 
-## 3. WIZARD — wyniki (każda opcja klikana pojedynczo)
+## 3. WSPÓŁDZIELONE KONTROLKI BLOKOWE — wyczerpująco (domknięcie luki)
 
-### 3.1 Limit (spinbutton) + reaktywna wskazówka gęstości — DZIAŁA
+> To jest centralny wkład tego przebiegu. Każda opcja każdego selecta przeklikana pojedynczo,
+> z odczytem realnej klasy w DOM podglądu admin. Wrapper renderera:
+> `…<section class="{padding+margin}"> <div class="{container}"> [widget] …`
+> (potwierdzone przejściem po przodkach `[data-widget="product-compare"]`).
 
-| Wartość | Tekst „Limit guidance" |
-|---------|------------------------|
-| 5 | „Current limit: 5. A curated set of 2-5 products stays easiest…" (spokojny) |
-| 6 | „Current compare density can be hard to read on mobile (6 products in play)…" (ostrzeżenie) |
-| 8 | ostrzeżenie gęstości (8 products in play) |
+### 3.1 Content width (`layout.container`) — 3/3 DZIAŁA
 
-Próg dokładnie zgodny z kodem (`dense = limit > 5`). **Clamp:** wpisanie `99` → spinbutton
-ustawia `12`; wpisanie `0` → `1` (zakres 1–12 wymuszony przez edytor).
+| Opcja | Klasa wrappera (`div`) | Zweryfikowano |
+|-------|------------------------|---------------|
+| default | `mx-auto w-full max-w-5xl` | ✓ |
+| narrow | `mx-auto w-full max-w-3xl` | ✓ |
+| full | `w-full` | ✓ |
 
-### 3.2 Search → filtrowanie zapytania — DZIAŁA
+### 3.2 Top padding (`layout.padding.top`) — 7/7 DZIAŁA
 
-- „Garden" → resolved zawężone do **1** produktu (tylko Garden Suite).
-- „zzzznomatch" → **0** produktów → empty state (`role="status"`, `aria-live="polite"`,
-  tekst domyślny). Po wyczyszczeniu → ponownie 3.
+| Token | Klasa sekcji | | Token | Klasa sekcji |
+|-------|--------------|-|-------|--------------|
+| none | `pt-0` | | lg | `pt-8` |
+| xs | `pt-2` | | xl | `pt-12` |
+| sm | `pt-4` | | 2xl | `pt-16` |
+| md | `pt-6` | | | |
 
-### 3.3 — (numeracja scalona z 3.2)
+### 3.3 Bottom padding (`layout.padding.bottom`) — 7/7 DZIAŁA
 
-### 3.4 Sort field — wszystkie 8 opcji klikane, realny efekt resolvera
+`none → pb-0`, `xs → pb-2`, `sm → pb-4`, `md → pb-6`, `lg → pb-8`, `xl → pb-12`, `2xl → pb-16`. ✓
 
-| Sort field (asc) | Kolejność kolumn w podglądzie |
-|------------------|-------------------------------|
-| Title | Garden, Starter, Urban |
-| Slug | Garden, Starter, Urban |
-| Status | Starter, Urban, Garden |
-| Price | Garden, Starter, Urban (159→199→299) |
-| Stock | Urban, Starter, Garden (Urban = backorder) |
-| Created | Starter, Urban, Garden |
-| Updated | Starter, Urban, Garden |
-| Published | Starter, Urban, Garden |
+### 3.4 Top margin (`layout.margin.top`) — 7/7 DZIAŁA
 
-Różne uporządkowania potwierdzają, że sort faktycznie trafia do resolvera (nie jest tylko
-zapisem do stanu).
+`none → mt-0`, `xs → mt-2`, `sm → mt-4`, `md → mt-6`, `lg → mt-8`, `xl → mt-12`, `2xl → mt-16`. ✓
 
-### 3.5 Sort direction — oba kierunki, widoczny flip
+### 3.5 Bottom margin (`layout.margin.bottom`) — 7/7 DZIAŁA
 
-Na polu „Price": **Descending** → Urban, Starter, Garden (299→199→159); **Ascending** →
-Garden, Starter, Urban. ✓
+`none → mb-0`, `xs → mb-2`, `sm → mb-4`, `md → mb-6`, `lg → mb-8`, `xl → mb-12`, `2xl → mb-16`. ✓
 
-### 3.6 Status filter — wszystkie 3 checkboxy, realny efekt
+> Wszystkie 28 tokenów spacingu (4 selecty × 7) + 3 container = **31 dyskretnych asercji**,
+> każda zgodna z mapami w `widgetRenderer.tsx`. Brak próbkowania — luka domknięta.
 
-| Akcja | Count | Interpretacja |
-|-------|-------|---------------|
-| zaznacz „draft" | **0** | brak produktów draft w fixturze → filtr realnie zawęża |
-| dołóż „published" | **3** | draft∨published → 3 published produkty |
-| dołóż „archived" | **3** | brak archived → bez zmian |
+### 3.6 Device visibility — 3/3 przełączniki (stan) DZIAŁA, efekt renderu — patrz 6.B2 / 8
 
-Po odznaczeniu wszystkich → 3 (domyślny runtime). To dowodzi, że filtr statusu działa
-(samo „draft" daje 0, a nie 3).
+| Akcja | `aria-checked` (Desktop, Tablet, Mobile) |
+|-------|------------------------------------------|
+| stan zapisany | `false, false, false` (etykieta „Hidden") |
+| Desktop ON | `true, false, false` |
+| + Tablet ON | `true, true, false` |
+| + Mobile ON | `true, true, true` (etykieta „Shown") |
+| powrót OFF×3 | `false, false, false` |
 
-### 3.7 Collections — oba checkboxy, realny efekt (NOWE)
-
-| Akcja | Count | Produkty |
-|-------|-------|----------|
-| „Fixture Homes" | **2** | Garden Suite, Starter Home |
-| dołóż „Fixture Lofts" | **3** | + Urban Loft |
-
-Po odznaczeniu → 3. Filtr kolekcji **faktycznie zawęża** wynik (Garden/Starter należą do
-Homes, Urban do Lofts).
-
-### 3.8 Przejścia trybów — DZIAŁA
-
-„Run setup again" wchodzi do Wizard; „Finish setup and open Visual" wychodzi do Visual.
-Stan in-memory zachowany przy przełączaniu (oba podglądy współdzielą payload).
+Każdy przełącznik zmienia stan **niezależnie** i poprawnie aktualizuje etykietę „Shown/Hidden".
+**Ale** rzeczywisty efekt ukrywania bloku nie jest tu obserwowalny (sekcja 6.B2 i 8).
 
 ---
 
-## 4. VISUAL — wyniki (kontrolki przeklikane do końca)
+## 4. WIZARD — re-weryfikacja resolvera (pierwszoręka, ten przebieg)
 
-### 4.1 Wariant i struktura — wszystkie 3 DZIAŁAJĄ
-
-| Wariant | Render |
-|---------|--------|
-| Matrix | `<table class="min-w-full text-sm">` |
-| Compact | `<table class="min-w-full text-xs">` (gęstszy) |
-| Cards | brak tabeli; 3× `<article data-product-id>` |
-
-**Uwaga techniczna (nie bug):** karty wyboru wariantu re-renderują się po kliknięciu i
-**dostają nowe refy DOM**. Pojedyncza próba kliknięcia po starym refie nie zadziałała,
-dopóki nie odświeżono refów. Z perspektywy użytkownika wybór działa natychmiast.
-
-### 4.2 Compared products — select / reorder / remove — DZIAŁA
-
-- Zaznaczenie Garden → count 1; dołożenie Urban → count 2, **kolejność = kolejność
-  zaznaczania** [Garden, Urban] (nie kolejność zapytania).
-- „Up" na Urban → [Urban, Garden]; „Down" na Urban → [Garden, Urban]. ✓
-- Przyciski poprawnie wyłączane: „Up" na pierwszym, „Down" na ostatnim (`disabled`).
-- „Remove" → usuwa z kuracji; usunięcie wszystkich → powrót do ścieżki zapytania (count 3).
-
-### 4.3 Section copy — DZIAŁA
-
-- Title „Porównanie produktów" → dodaje `<h2 id="blk-1-product-compare-heading">`,
-  ustawia `aria-labelledby` na ten id i **usuwa** fallback `aria-label`. Poprawne wiązanie a11y.
-- Description → renderuje `<p>` pod tytułem.
-- Table caption → tekst zmienia się na żywo.
-- „Hide caption visually": odznaczenie → `<caption>` z `sr-only` na widoczny
-  (`px-3 py-2 text-left text-sm…`); ponowne zaznaczenie → z powrotem `sr-only`. Round-trip OK.
-
-### 4.4 Attribute rows — wszystkie 6 przełączników, oba kierunki — DZIAŁA
-
-- Włączenie „Show product URL path" + „Show excerpt" → wiersze **Slug** (wartości
-  `fixture-garden-suite` itd.) i **Excerpt** (rzeczywista treść excerptu).
-- Wyłączenie price/compareAt/stock/quantity → te wiersze znikają (zostają tylko Slug/Excerpt).
-- Przywrócono domyślne (4 on, slug/excerpt off).
-
-### 4.5 Labels — wszystkie 10 pól wpisane — DZIAŁA (z jednym wyjątkiem środowiskowym)
-
-| Pole | Efekt w podglądzie |
-|------|--------------------|
-| Attribute column → „Cecha" | nagłówek kolumny atrybutu |
-| Price → „Cena" | etykieta wiersza |
-| Compare at → „Cena katalogowa" | etykieta wiersza |
-| Stock → „Dostępność" | etykieta wiersza |
-| Quantity → „Ilość" | etykieta wiersza |
-| Slug → „Adres URL" | etykieta wiersza (po włączeniu wiersza) |
-| Excerpt → „Opis" | etykieta wiersza (po włączeniu wiersza) |
-| In-stock → „Dostępny" | komórki Stock dla in_stock |
-| Backorder → „Na zamówienie" | komórka Stock dla Urban (backorder) |
-| Out-of-stock → „Niedostępny" | **wpisane, ale niewidoczne** — patrz 6.N1 |
-
-### 4.6 Surfaces — wszystkie 5 barw + wszystkie 5 „Clear" — DZIAŁA (NOWE)
-
-Sterowanie przez natywny setter Reacta (poprzednio nieosiągalne):
-
-| Kontrolka | Cel inline-style | Zweryfikowano |
-|-----------|------------------|---------------|
-| Table background | wrapper scrolla: `background-color: rgb(255,136,0)` | ✓ |
-| Table border | wrapper scrolla: `border-color: rgb(17,34,51)` | ✓ |
-| Header background | `<thead><tr>`: `background-color: rgb(68,85,102)` | ✓ |
-| Empty background | div empty state: `background-color: rgb(34,34,68)` | ✓ (w empty state) |
-| Empty border | div empty state: `border-color: rgb(136,136,255)` | ✓ (w empty state) |
-
-Po ustawieniu każda kontrolka pokazuje stan „Selected color", a przycisk „Clear"
-przechodzi z `disabled` na aktywny. **„Clear"**: kliknięcie zeruje barwę → stan „Theme
-default", swatch wraca do `pickerFallback` (np. `#ffffff`), inline-style znika. Wszystkie 5
-„Clear" przetestowane (po wyczyszczeniu wrappera `style=""`, wszystkie 5 stanów „Theme default").
-
-**Brak przycisku „transparent"** dla tego widgetu — `SharedColorControl` używa domyślnego
-`allowTransparent=false`, więc opcja przezroczystości nie jest renderowana (jest to zgodne z
-kodem, nie brak). Dostępny jest tylko „Clear".
-
-### 4.7 Empty state (copy) — DZIAŁA
-
-Ustawiono niestandardowe PL: title „Brak produktów do porównania", description „Zmień
-filtry źródła lub opublikuj produkty." Następnie wymuszono pusty wynik (search bez trafień).
-Render empty state pokazał **dokładnie tę treść** oraz inline-kolory empty bg/border. Pełne
-domknięcie ścieżki empty state + powierzchni.
-
-### 4.8 Formatting — wszystkie opcje — DZIAŁA
-
-| Money locale | Wiersz Price |
-|--------------|--------------|
-| English (US) | `$159.00 / $199.00 / $299.00` |
-| Polish (PL) | `159,00 USD / 199,00 USD / 299,00 USD` |
-| German (DE) | `159,00 $ / 199,00 $ / 299,00 $` |
-| French (FR) | `159,00 $US / 199,00 $US / 299,00 $US` |
-
-**Quantity display:** compact + limit 2 → `1 / 2+ / 2+`; compact + limit 99 → `1 / 3 / 8`;
-exact → `1 / 3 / 8`. Próg działa zgodnie z `quantityCompactLimit`.
-
-### 4.9 Layout — DZIAŁA
-
-- **Featured product** (wszystkie 4 opcje): Garden → badge „Featured" + klasa `emerald`
-  w kolumnie 1; Urban → kolumna 3; Starter → kolumna 2; „No featured product" → brak
-  badge i brak `emerald`. Wyróżnienie trafia we właściwą kolumnę.
-- **Sticky table header:** ON → pierwszy `<th>` dostaje `sticky left-0 top-0 z-20`;
-  OFF → klasy znikają.
-
-### 4.10 Kontrolki blokowe wspólne (poza kontraktem widgetu) — DZIAŁA
-
-- „Content width" (select: default / narrow / full) — zmiana na „narrow" i powrót do „default".
-- „Device visibility" switch (Desktop) — `aria-checked` false→true→false.
-
-Pozostałe selecty (paddings/margins) to identyczne komponenty Radix; przetestowano
-reprezentatywnie jeden, bo nie należą do kontraktu product-compare (oznaczone wprost).
+| Test | Wynik | Interpretacja |
+|------|-------|---------------|
+| Search „zzzznomatch" | count **0**, `role="status"`, `aria-live="polite"`, tekst domyślny „No products to compare / Update source filters or publish products." | empty state realny |
+| Search wyczyszczony | count wraca do **3** (z ~1 s opóźnieniem, U1) | recovery OK |
+| Status „draft" | count **0** | brak produktów draft → filtr realnie zawęża |
+| Status „draft"+„published" | count **3** | OR statusów |
+| Status wyczyszczony | count **3** | runtime default |
+| Collection „Fixture Homes" | count **2** (Garden, Starter) | filtr kolekcji zawęża |
+| Collection wyczyszczona | count **3** | |
+| Sort „Price" ASC | kolumny: Garden, Starter, Urban (159→199→299) | sort trafia do resolvera |
+| Sort „Price" DESC | kolumny: Urban, Starter, Garden (299→199→159) | flip kierunku działa |
 
 ---
 
-## 5. ADVANCED (read-only) — wyniki
+## 5. VISUAL — re-weryfikacja (pierwszoręka, ten przebieg)
+
+| Kontrolka | Wynik |
+|-----------|-------|
+| **Wariant** | matrix → `table.min-w-full.text-sm`; compact → `text-xs`; cards → brak `table`, 3× `article[data-product-id]` ✓ |
+| **Money locale** | en-US `$159.00 / $199.00 / $299.00`; pl-PL `159,00 USD …`; de-DE `159,00 $ …`; fr-FR `159,00 $US …` ✓ |
+| **Quantity display** | exact → `1 / 3 / 8`; compact+limit 2 → `1 / 2+ / 2+`; exact → `1 / 3 / 8` (próg `quantityCompactLimit` działa) ✓ |
+| **Attribute rows** | „Show product URL path" ON → wiersz **Slug** z wartościami `fixture-garden-suite / fixture-starter-home / fixture-urban-loft`; OFF → wiersz znika ✓ |
+| **Surfaces — Table background** | ustawienie `#ff8800` przez natywny setter Reacta → `style="background-color: rgb(255, 136, 0);"` na `[data-product-compare-scroll-region="table"]`; stan „Selected color", „Clear" aktywne ✓ |
+| **Surfaces — Clear** | klik „Clear" → inline-style znika (`style=""`), stan wraca do „Theme default" ✓ |
+| **Featured product** | „Fixture Urban Loft" → kolumna 3 dostaje klasę `emerald` + badge „Featured" (1 szt.); „No featured product" → 0 badge, 0 `emerald` ✓ |
+| **Sticky table header** | ON → pierwszy `<th>` = `px-3 py-2 sticky left-0 top-0 z-20 …`; OFF → klasy znikają ✓ |
+| **Section title (a11y)** | wpis „Porównanie produktów" → dodaje `<h2 id="blk-1-product-compare-heading">`, ustawia `aria-labelledby` na ten id i **usuwa** `aria-label` ✓ |
+
+---
+
+## 6. ADVANCED + FRONTEND — re-weryfikacja i nowe ustalenia
+
+### 6.A Advanced (read-only) — DZIAŁA
 
 | Funkcja | Wynik |
 |---------|-------|
-| Notka read-only | „Advanced mode is read-only. Use Wizard or Visual…" ✓ |
+| Nota read-only | „Advanced mode is read-only. Use Wizard or Visual…" ✓ |
 | Preview status | „Resolved rows: 3 of 3", „Selected products: None · Limit: 3", „Resolved at <ts>" ✓ |
-| **Refresh preview** | timestamp 07:16:35.332Z → 07:16:55.436Z — realny re-resolve backendu ✓ |
-| Source summary (zapytanie) | mode „Query results", limit „3 products", Search „None", Collections „No collection filter", Status „Public-ready default", Sort „Title, A to Z" ✓ |
-| Source summary (kuracja) | mode „1 selected product in manual order", limit „1 product", Sort „Ignored while selected products are used" ✓ |
-| Surface summary | „Theme default" / „Selected swatch" zależnie od stanu (empty kolory → „Selected swatch") ✓ |
+| **Refresh preview** | timestamp `…16:27:42.410Z` → `…16:27:55.974Z` — **realny re-resolve backendu** ✓ |
+| Source summary | odzwierciedla **bieżący stan in-memory** (po teście sortu pokazał „Sort: Price, high to low") ✓ |
+| Surface summary | „Theme default" dla wszystkich powierzchni po wyczyszczeniu barwy ✓ |
 | Contract summary | poprawny podział Wizard / Visual / Advanced ✓ |
-| Pola zapisywalne | brak — panel czysto diagnostyczny ✓ |
+| **Block layout summary** | Content width „default", Padding „Top MD, bottom MD", Margin „Top None, bottom None" — patrz 6.B1 |
+| **Visibility summary** | „Shown on: **Hidden on all devices**" — patrz 6.B2 |
 
----
-
-## 6. FRONTEND (trasa publiczna, SSR)
+### 6.B Frontend (trasa publiczna, SSR)
 
 | Aspekt | Wynik |
 |--------|-------|
 | Render | 1 instancja, wariant matrix (`text-sm`), **count = 3** (ścieżka zapytania z zapisanej konfiguracji) |
-| Zgodność z zapisem | **domyślne etykiety EN** (Price/Compare at/Stock/Quantity), **locale en-US** (`$159.00`), **brak tytułu** → `aria-label="Product comparison"`, caption `sr-only`. → **Moje edycje in-memory NIE wyciekły** (brak Save/Publish). |
-| Semantyka tabeli | wszystkie `<th scope="col">` (4 nagłówki), `<caption>` (sr-only) „Product comparison" |
+| Brak wycieku edycji | domyślne etykiety EN (Price/Compare at/Stock/Quantity), locale en-US (`$159.00`), brak tytułu → `aria-label="Product comparison"`, caption `sr-only`. **Moje edycje in-memory NIE wyciekły** (brak Save/Publish). |
+| Semantyka tabeli | 4× `<th scope="col">`, `<caption class="sr-only">` „Product comparison" |
 | Region przewijania | `tabindex="0"`, `aria-label="Product comparison"`, `aria-describedby` → id podpowiedzi scrolla, `data-overflow-intentional="true"` |
-| Konsola | **0 błędów, 0 ostrzeżeń** |
-| Mobile 375px | brak overflow strony (`bodyScrollW == windowW == 375`, `hasHScroll=false`) |
-| Scroll regionu tabeli @375px | `scrollWidth == clientWidth == 373` → **realnie NIE przepełnia**, ale podpowiedź „Scroll horizontally…" **i tak jest widoczna** (patrz U3) |
+| Konsola | **0 błędów, 0 ostrzeżeń** (2 wiadomości łącznie, wszystkie poniżej poziomu warning) |
+| Mobile 375px | brak overflow strony (`bodyScrollW == windowW == 375`); region tabeli **NIE przepełnia** (`scrollWidth == clientWidth == 373`), a podpowiedź „Scroll horizontally…" **i tak widoczna** (U3) |
+| Obrazy / linki w nagłówku | 0× `<img>`, 0× `<a>` → metadane `imageUrl/productHref = null` (brak trasy detalu) |
+| Stany stocku | „In stock", „In stock", „Backorder" — brak `out_of_stock` w fixturze |
+
+### 6.B1 NOWE — Niespójność paddingu (kontrolka/Advanced pokazują MD, render to XL)
+
+Stan **nietknięty** od reloadu (padding dziedziczony):
+
+- Visual select „Top/Bottom padding" wyświetla: **`md`**
+- Advanced „Block layout summary" wyświetla: **„Top MD, bottom MD"**
+- Realny render (admin podgląd **i** publiczny SSR): **`pt-12 pb-12` = `xl`**
+
+Mechanizm (potwierdzony w kodzie): zapisany `layout.padding.*` to `inherit`. Renderer
+(`resolveSpacingToken`) zamienia `inherit` na **domyślną wartość strony** (tu `xl` → `pt-12`),
+natomiast edytorowe `sanitizeLayout` zwija `inherit → md` (bo `"inherit"` nie jest w
+`spacingTokens`). W efekcie **obie powierzchnie edytora błędnie raportują efektywny padding**.
+Dodatkowo (U8): dotknięcie dowolnej kontrolki layoutu zapisuje zsanityzowaną wartość `md`,
+**po cichu zmniejszając** padding renderu z `xl` na `md`.
+
+### 6.B2 NOWE — „Hidden on all devices", a blok renderuje się publicznie
+
+Zapisana fixtura: Device visibility = pusta lista (wszystkie 3 OFF), Advenced raportuje wprost
+„Shown on: **Hidden on all devices**". Mimo to blok **renderuje się** w podglądzie admin i na
+publicznym SSR (`count=3`). Powód (kod `widgetRenderer.tsx`): blok jest ukrywany **tylko** gdy
+ustawiono `previewDevice` i lista `devices` jest pusta lub nie zawiera tego urządzenia. Publiczny
+SSR nie przekazuje `previewDevice`, więc gałąź ukrywania nigdy się nie wykonuje. Praktycznie:
+**ustawienie „Hidden on all devices" nie ukrywa bloku na żywej stronie** — komunikat jest mylący.
 
 ---
 
-## 7. Co NIE działa / wymaga uwagi (klasyfikacja uczciwa)
+## 7. Klasyfikacja: DZIAŁA / WĄTPLIWE-BROKEN / UWAGI
+
+### 7.1 DZIAŁA (potwierdzone bez zastrzeżeń)
+
+Wszystkie kontrolki widgetu z danymi do działania (sekcje 3–6): Block layout (31/31 opcji),
+Device visibility (stan przełączników), resolver (sort/status/collection/search), warianty,
+formatowanie liczb (4 locale + tryby ilości + próg), toggling wierszy, surfaces (barwa + Clear),
+featured + sticky, a11y tytułu, Advanced (w tym realny Refresh), frontend SSR (a11y, konsola czysta, 375px).
+**Zero twardych bugów renderera, zero błędów/ostrzeżeń konsoli.**
+
+### 7.2 WĄTPLIWE / na granicy defektu (do decyzji produktowej)
 
 | # | Obserwacja | Klasyfikacja |
 |---|------------|--------------|
-| N1 | **Etykieta „Out of stock" niemożliwa do zobaczenia** — w fixturze nie ma produktu o stanie `out_of_stock` (są tylko in_stock i backorder). Pole etykiety przyjmuje wpis, ale efekt wizualny nieosiągalny w tym zbiorze danych. | Niewidoczne w tej fixturze (nie defekt) |
-| N2 | **Images / Link titles / CTA bez widocznego efektu** — resolved rows mają `imageUrl=null` i `productHref=null` (brak skonfigurowanej trasy detalu produktu w Site Settings). Render celowo degraduje do tekstu (tytuł = `<span>`, 0× `<img>`, 0× `<a>`, brak CTA). Konfiguracja zapisuje się w stanie. Edytor ostrzega tekstem, ale sam podgląd nie sygnalizuje „dlaczego nic się nie dzieje". | Działa warunkowo / luka feedbacku |
-| N3 | **Warianty inne niż matrix, niestandardowe etykiety/locale/kolory niewidoczne na froncie** — wymaga zapisu, którego świadomie nie wykonano (sekcja 0). | Nietestowalne bez zapisu |
+| B1 | **Padding: edytor „kłamie".** Visual select i Advance summary pokazują `MD`, a blok renderuje `XL` (dziedziczone). Edycja jakiejkolwiek kontrolki layoutu cicho zmniejsza padding `xl→md`. | Niespójność stanu UI vs render — realny problem korektności (nie crash) |
+| B2 | **Device visibility nie ukrywa na publicznym SSR.** „Hidden on all devices" nie ma efektu na żywej stronie; ukrywanie działa wyłącznie przy aktywnym `previewDevice`. | Mylący komunikat / funkcja efektywnie nieaktywna publicznie (możliwe „by design", ale UI sugeruje inaczej) |
 
-> Nie stwierdzono żadnego twardego buga renderera ani błędu konsoli. Każda kontrolka,
-> która miała dane do działania, aktualizowała podgląd. Pozycje N1–N3 to ograniczenia
-> środowiska/decyzji, nie potwierdzone defekty.
+> Uwaga: B1 i B2 dotyczą **współdzielonych kontrolek blokowych**, nie samego kontraktu
+> `product-compare`. Zgłaszam je, bo to widoczne kontrolki na tej fixturze i wpływają na to,
+> co użytkownik realnie zobaczy.
 
 ---
 
-## 8. Czego NIE dało się przetestować i DLACZEGO (precyzyjnie)
+## 8. Czego NIE dało się w pełni zweryfikować i DLACZEGO (precyzyjnie, z nazwą kontrolki)
 
-- **Zapis / publikacja (Save draft / Publish):** świadomie pominięte, by nie mutować
-  współdzielonej fixtury ani trasy publicznej (akcja trudna do cofnięcia, niezlecona).
-  Konsekwencja: front pokazuje wyłącznie wcześniej zapisany stan.
-- **Wizualny efekt etykiety „Out of stock":** brak produktu `out_of_stock` w fixturze (N1).
-- **Wizualny efekt obrazów / linków tytułów / CTA:** brak trasy detalu produktu →
-  `imageUrl`/`productHref` = `null` (N2). Renderer poprawnie degraduje do tekstu.
-- **Picker barwy przez natywny dialog OS:** niesterowalny przez automat; obejście przez
-  natywny setter Reacta **zadziałało** i pozwoliło zweryfikować logikę onChange/Clear
-  (sekcja 4.6). Realnego klikania w systemowy color-picker nie da się zautomatyzować — to
-  ograniczenie narzędziowe, nie produktu.
+- **Kontrolka „Device visibility" — rzeczywisty efekt ukrywania/pokazywania renderu.** Bramkowany
+  przez `previewDevice` (`widgetRenderer.tsx`, gałąź `visibility.devices`). Ten edytor strony **nie
+  udostępnia przełącznika podglądu urządzenia** (pasek narzędzi ma tylko motyw / powiadomienia /
+  pomoc), a publiczny SSR nie przekazuje `previewDevice`. Zweryfikowano **stan** przełączników
+  (sekcja 3.6), ale **nie da się tu zaobserwować realnego ukrycia bloku** — brak afordancji.
+- **Zapis / publikacja (Save draft / Publish).** Świadomie pominięte — ochrona współdzielonej
+  fixtury i trasy (akcja trudna do cofnięcia, niezlecona). Konsekwencja: front pokazuje wyłącznie
+  wcześniej zapisany stan; wpływ wariantów/etykiet/locale/kolorów na publiczny render — nietestowalny bez zapisu.
+- **Etykieta „Out of stock" (wizualnie).** W fixturze nie ma produktu `out_of_stock` (są tylko
+  `in_stock` i `backorder`). Pole etykiety przyjmuje wpis, lecz nie ma komórki, która by ją pokazała.
+- **„Show images" / „Link titles" / „CTA mode" (wizualnie).** Resolved rows mają `imageUrl=null`
+  i `productHref=null` (brak skonfigurowanej trasy detalu produktu). Render degraduje do tekstu
+  (0× `<img>`, 0× `<a>`). Konfiguracja zapisuje się w stanie, ale brak widocznego efektu.
+- **Natywny dialog systemowy color-pickera.** Nieautomatyzowalny; obejście natywnym setterem Reacta
+  **zadziałało** i pozwoliło zweryfikować logikę onChange/Clear (sekcja 5). To ograniczenie narzędzia, nie produktu.
 
 ---
 
 ## 9. UX / UI — nuty
 
-- **U1 — Asynchroniczny refresh podglądu (~1 s).** Zmiana źródła/kuracji odpytuje backend;
-  świeży odczyt DOM tuż po kliknięciu bywa o jedną klatkę spóźniony. Nie błąd, ale ważne
-  przy szybkich testach.
-- **U2 — Karty wariantu re-renderują się i zmieniają refy DOM** po wyborze. Dla człowieka
-  bez znaczenia; dla automatyzacji wymaga ponownego pobrania refów.
-- **U3 — Podpowiedź „Scroll horizontally…" zawsze widoczna**, nawet gdy tabela realnie się
-  mieści (potwierdzone @375px: region nie przepełnia, a podpowiedź wciąż jest). Nie jest
-  warunkowana faktycznym overflow.
-- **U4 — Dwuznaczność słowa „Limit".** Visual „Compared products" pokazuje „Limit: 12"
-  (maks. liczba zaznaczalnych produktów), a Advanced „Preview status" „Limit: 3"
-  (`source.limit` zapytania). To samo słowo, dwa znaczenia.
-- **U5 — Featured highlight zahardkodowany na `emerald`** (klasy `bg-emerald-…`), nie podąża
-  za motywem powierzchni.
-- **U6 — Puste pola etykiet vs wypełniony podgląd.** Pola atrybutów w UI są puste
-  (placeholder), a podgląd pokazuje wartości domyślne — poprawne (pusty input = fallback),
-  ale wizualnie bywa mylące.
-- **U7 — Brak feedbacku przy bezczynnych obrazach/CTA** (N2): edytor ostrzega tekstem, ale
-  podgląd nie pokazuje, że opcja jest nieaktywna z powodu braku trasy detalu.
+- **U1 — Asynchroniczny refresh podglądu (~1 s).** Po zmianie źródła/kuracji `count` bywa o klatkę
+  spóźniony (po wyczyszczeniu search chwilowo `0`, po ~1 s wraca `3`). Nie błąd, ale ważne przy szybkich testach.
+- **U2 — Karty wariantu re-renderują się i zmieniają refy DOM** po wyborze. Dla człowieka bez znaczenia.
+- **U3 — Podpowiedź „Scroll horizontally…" zawsze widoczna**, nawet gdy tabela się mieści
+  (potwierdzone @375px: region nie przepełnia, podpowiedź wciąż jest). Nie warunkowana faktycznym overflow.
+- **U4 — Dwuznaczność słowa „Limit".** Visual „Compared products" → „Limit: 12" (maks. zaznaczalnych),
+  Advanced „Preview status" → „Limit: 3" (`source.limit`). To samo słowo, dwa znaczenia.
+- **U5 — Featured highlight zahardkodowany na `emerald`** (`bg-emerald-…`), nie podąża za motywem powierzchni.
+- **U6 — Puste pola etykiet vs wypełniony podgląd.** Pola atrybutów w UI są puste (placeholder), a podgląd
+  pokazuje wartości domyślne (pusty input = fallback) — poprawne, ale wizualnie bywa mylące.
+- **U7 — Brak feedbacku przy bezczynnych obrazach/CTA** (sekcja 8): edytor ostrzega tekstem, ale podgląd
+  nie sygnalizuje, że opcja jest nieaktywna z powodu braku trasy detalu.
+- **U8 — NOWE: dotknięcie kontrolki layoutu zwija `inherit → md`.** Zmiana np. marginesu po cichu
+  zmienia też padding renderu (`xl → md`), bo `sanitizeLayout` zapisuje cały zsanityzowany obiekt.
+- **U9 — NOWE: edytor nie pokazuje efektywnego (dziedziczonego) paddingu.** Visual select i Advanced
+  „Block layout summary" raportują `md`, podczas gdy realny render to `xl` (sekcja 6.B1).
 
 ---
 
 ## 10. Pokrycie testu — podsumowanie
 
-**Przetestowano interaktywnie z asercją DOM (każda dostępna opcja klikana, nie reprezentatywnie):**
-logowanie, otwarcie fixtury; Wizard (limit + clamp + reaktywna gęstość, search→1/→0,
-**wszystkie 8 sortów**, **oba kierunki**, **wszystkie 3 statusy**, **oba filtry kolekcji**,
-przejścia trybów); Visual (**3 warianty**, kuracja select/Up/Down/Remove, section copy +
-a11y, **6 przełączników wierszy**, **10 pól etykiet**, product columns + warunkowe pole CTA,
-**4 locale**, tryby ilości + próg, **4 opcje featured** + sticky, empty state copy,
-**5 barw + 5× Clear**, kontrolki blokowe); Advanced (diagnostyka, **refresh = realny
-re-resolve**, source summary w trybie zapytania i kuracji, surface/contract summary);
-Frontend (SSR, a11y `th scope`/caption/region, konsola czysta, 375px).
+**Przetestowano interaktywnie z asercją DOM w tym przebiegu (każda dostępna opcja klikana, nie
+reprezentatywnie):** **Block layout — 31/31 opcji** (Content width 3, paddingi 14, marginesy 14)
+z mapowaniem na dokładne klasy Tailwind; **Device visibility — 3/3 przełączniki**; Wizard
+(search→0/→3, status draft/+published, collection Homes, sort Price ASC/DESC); Visual (3 warianty,
+4 locale, tryby ilości + próg, toggle wiersza Slug, surfaces barwa + Clear, featured + None, sticky
+on/off, a11y tytułu); Advanced (read-only, **Refresh = realny re-resolve**, wszystkie 6 podsumowań,
+w tym block-layout i visibility summary); Frontend (SSR, a11y `th scope`/caption/region, konsola
+czysta, 375px). Rodziny widgetu wyczerpane już wcześniej (clamp limitu, pełna macierz 8 sortów,
+10 etykiet, 5 barw + 5 Clear, hide-caption, empty-state custom copy) — niezmienione i potwierdzone na ścieżkach krytycznych.
 
-**Nie przetestowano (świadomie / środowiskowo):** zapis/publikacja (ochrona fixtury);
-widoczny efekt etykiety out-of-stock (brak takiego produktu); widoczny efekt
-obrazów/CTA/linków (brak trasy detalu → null metadata); warianty/etykiety/locale/kolory na
-froncie (wymaga zapisu).
+**Nie przetestowano (świadomie / środowiskowo) — z dokładną przyczyną w sekcji 8:** realny efekt
+ukrycia przez Device visibility (brak afordancji `previewDevice`); zapis/publikacja (ochrona
+fixtury); widoczna etykieta out-of-stock (brak takiego produktu); widoczny efekt obrazów/linków/CTA
+(metadane null); natywny dialog OS color-pickera (obejście setterem zadziałało).
 
 ---
 
@@ -382,9 +344,12 @@ froncie (wymaga zapisu).
 
 | Kategoria | Liczba |
 |-----------|--------|
-| Rodziny kontrolek widgetu przeklikane do końca | wszystkie obecne w tej fixturze |
-| Funkcje zweryfikowane jako działające | ~55 dyskretnych asercji |
-| Pozycje niewidoczne/nietestowalne w tym środowisku | 3 (N1 out-of-stock, N2 obrazy/CTA, N3 brak zapisu) |
-| Nuty UX | 7 (U1–U7) |
+| Współdzielone kontrolki blokowe przeklikane do końca (Block layout) | **31/31 opcji** (3 + 14 + 14) |
+| Device visibility — przełączniki zweryfikowane (stan) | 3/3 |
+| Rodziny kontrolek widgetu zweryfikowane w tym przebiegu | warianty, locale, ilość, wiersze, surfaces, featured, sticky, a11y, wizard-resolver, advanced |
+| Nowe obserwacje korektności | 2 (B1 padding, B2 visibility) |
+| Pozycje nietestowalne (z przyczyną) | 5 (visibility-render, save, out-of-stock, obrazy/CTA, dialog OS) |
+| Nuty UX | 9 (U1–U9) |
 | Twarde bugi renderera | 0 |
 | Błędy/ostrzeżenia konsoli (frontend) | 0 |
+| Screenshoty w repo | 0 (ewentualne — wyłącznie etykiety lokalne, ignorowane przez Git) |
