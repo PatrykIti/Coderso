@@ -1,29 +1,31 @@
-# RAPORT: Logo Cloud Widget — wyczerpujący audyt current-state (Wizard / Visual / Advanced + frontend)
+# RAPORT: Logo Cloud Widget — wyczerpujący re-audyt „gap-close" (Wizard / Visual / Advanced + frontend)
 
 > **Status:** Zakończony
-> **Data audytu:** 2026-05-29 (upgrade raportu z 2026-05-28 — pełne przeklikanie wszystkich opcji)
-> **Sesja Playwright:** `claude-29-05-logo-cloud-exhaustive` (izolowana, oddzielna od innych agentów)
+> **Data audytu:** 2026-05-29 (pełny re-audyt od zera; zamyka luki poprzedniego przebiegu: limit 24, pozostałe selecty, krawędzie Add/Remove/reorder, gałęzie link/destination, clear/use kolorów)
+> **Sesja Playwright:** `claude-29-05-logo-cloud-gap-close-v2` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin:** `/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474` (strona „Contract Test - logo-cloud", status `Draft`)
+> **Fixture admin:** `/admin/pages/5958b461-fd78-4b65-b154-64692c0fa474` (strona „Contract Test - logo-cloud")
 > **Fixture public:** http://localhost:3000/test-logo-cloud-0516
 > **Viewport testowy:** 1280×720 (desktop), 375×800 (mobile)
-> **Pliki źródłowe:** `core/widgets/core/logoCloud.tsx` (renderer + typy + normalizacja) · `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` + `ClearableFields.tsx` (kontrolki kolorów)
+> **Pliki źródłowe:** `core/widgets/core/logoCloud.tsx` (renderer + typy + normalizacja) · `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` + `ClearableFields.tsx` (kolory) · `core/admin/ui/widgets/editors/LinkDestinationField.tsx` (picker stron) · `core/site/styles/site.css` (animacja marquee)
 
-> **Uwaga metodologiczna (różnica względem poprzedniego raportu).** Ten przebieg jest
-> celowo wyczerpujący, a nie „reprezentatywny". Dla każdej rodziny kontrolek
-> **przeklikałem osobno KAŻDĄ dostępną opcję** (wszystkie pozycje selectów, obie
-> wartości toggle, karty wariantów, oba targety CTA, granice „Logo count" 1 i 24),
-> a efekt każdej zmiany weryfikowałem inspekcją DOM na żywym canvasie: atrybuty
-> `data-logo-cloud-*`, klasy Tailwind listy/kafelka/nagłówka, inline `style`,
-> `href`/`rel`/`target`/`aria-label`, stan `disabled` kontrolek oraz teksty badge.
-> Tam, gdzie czegoś NIE dało się zweryfikować przez UI, jest to jawnie nazwane w
-> sekcji 7 wraz z powodem.
+> **Metodologia.** Przebieg jest **wyczerpujący, nie reprezentatywny**. Dla każdej
+> rodziny kontrolek **kliknąłem osobno KAŻDĄ dyskretną opcję** (wszystkie pozycje
+> 10 selectów, obie wartości 3 toggle, 3 karty wariantów, oba targety CTA, granice
+> „Logo count" **1** i **24**), a efekt każdej zmiany weryfikowałem **inspekcją DOM
+> na żywym canvasie**: atrybuty `data-logo-cloud-*`, klasy Tailwind listy/kafelka/
+> nagłówka, inline `style`, `href`/`rel`/`target`/`aria-label`, stan `disabled`
+> kontrolek, teksty badge i podsumowań. Tam, gdzie czegoś NIE dało się zweryfikować
+> przez UI, jest to jawnie nazwane w sekcji **„Nietestowalne"** wraz z powodem.
 
-> **Uwaga o screenshotach.** W trakcie audytu wykonano jeden zrzut frontendu jako
-> **wyłącznie lokalną etykietę** (`logo-cloud-frontend-published-2905.png`). Plik
-> **nie** jest wymaganym evidence — został usunięty z drzewa roboczego po
-> przechwyceniu. Cała weryfikacja w tym raporcie opiera się o inspekcję DOM, nie o
-> zrzuty. Niczego nie zapisywano ani nie publikowano (patrz sekcja 7).
+> **Najważniejsza zmiana względem poprzedniego raportu.** Natywne **drag&drop
+> logotypów DZIAŁA** i zostało zweryfikowane (sekcja 4.7). Poprzedni raport oznaczał
+> je jako „nietestowalne / możliwy bug" — to było **błędne**: problemem było jedynie
+> tempo zdarzeń w automatyzacji, nie logika produktu.
+
+> **Screenshoty.** W tym przebiegu **nie wykonano żadnych zrzutów** — cała
+> weryfikacja opiera się o inspekcję DOM/CSS na żywym drzewie. Niczego nie
+> zapisywano ani nie publikowano (patrz „Nietestowalne").
 
 ---
 
@@ -31,52 +33,49 @@
 
 **Typ:** `logo-cloud` · **Kategoria:** `content` · **Opis:** „Partner and customer logo section for trust building."
 
-**Warianty (3):**
+**Warianty (3) — klasy listy zweryfikowane w DOM:**
 
-| Wariant | Klasa listy (zweryfikowana w DOM) | Charakterystyka |
-|---------|-----------------------------------|-----------------|
-| `grid` (domyślny) | `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` | Zrównoważona siatka (2/3/4 kolumny responsywnie) |
-| `strip` | `flex flex-wrap items-center` (wrap) **/** `flex w-full flex-nowrap items-center overflow-x-auto pb-2` (single-row) **/** `.logo-cloud-marquee` + `.logo-cloud-marquee-track` (marquee) | Poziomy pasek z trybami wiersza i ruchu |
-| `dense` | `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6` | Gęsta matryca (do 6 kolumn) |
+| Wariant | Klasa listy | Charakterystyka |
+|---------|-------------|-----------------|
+| `grid` (domyślny) | `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` | Siatka 2/3/4 kolumny responsywnie |
+| `strip` | `flex flex-wrap items-center` (wrap) **/** `flex w-full flex-nowrap items-center overflow-x-auto pb-2` (single-row) **/** `.logo-cloud-marquee` + `.logo-cloud-marquee-track` (marquee) | Pasek z trybami wiersza i ruchu |
+| `dense` | `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6` | Gęsta matryca do 6 kolumn |
 
 **Model danych (`LogoCloudData`):** header (`eyebrow`/`title`/`description`), cta (`enabled`/`label`/`href`/`target`), logos[] (`id`/`name`/`alt`/`image`/`href`), style (`logoHeight`, `grayscale`, `hoverColor`, `gap`, `alignment`, `sectionBackground`, `tileBackground`, `tileBorderColor`, `headerAlign`, `headerSize`, `rowMode`, `motionMode`, `tileRadius`, `tileBorderWidth`, `openLinksInNewTab`).
 
-**Ograniczenia:** min 1 / max 24 logotypy (`logoCloudLogoMin=1`, `logoCloudLogoMax=24`). Liczba kafelków jest sterowana **długością tablicy `logos`** (select „Logo count" deterministycznie ustala długość — patrz 4.3).
+**Ograniczenia:** min 1 / max 24 logotypy (`logoCloudLogoMin=1`, `logoCloudLogoMax=24`). Liczba kafelków = **długość tablicy `logos`** (select „Logo count" deterministycznie ją ustawia — patrz 4.2).
 
-**Renderowanie:** `<section class="mx-auto w-full max-w-6xl px-4 py-8">` z opcjonalnym `<header>` (eyebrow `<p>`, tytuł `<h2>`, opis `<p>`) i kontenerem listy. Kafelek: `image` → `<img loading="lazy">` (z `grayscale`/`group-hover:grayscale-0`), inaczej tekst `name` w `<span>`. `href` → kafelek jest `<a>` (bezpieczny href przez `resolveWidgetLinkAttrs`), inaczej `<div>`. Marquee duplikuje listę (`[...logos, ...logos]`). CTA renderowane pod listą wyłącznie gdy `enabled && label && bezpieczny href`.
+**Render:** `<section class="mx-auto w-full max-w-6xl px-4 py-8">` z opcjonalnym `<header>` (eyebrow `<p>`, tytuł `<h2>`, opis `<p>`) i kontenerem listy. Kafelek: `image` → `<img loading="lazy">` (z `grayscale`/`group-hover:grayscale-0`), inaczej tekst `name` w `<span>`. `href` → kafelek jest `<a>` (bezpieczny href przez `resolveWidgetLinkAttrs`), inaczej `<div>`. Marquee duplikuje listę (`[...logos, ...logos]`). CTA renderowane pod listą **tylko** gdy `enabled && label && bezpieczny href`.
 
-**Dostępność (pozytyw):** `<section aria-labelledby>` wskazuje na `<h2>`, gdy tytuł istnieje; fallback `aria-label="Partner logos"` przy braku tytułu. (Lepiej niż `contact`/`feature-grid`, które nie miały nazwy sekcji.)
+**Dostępność (pozytyw):** `<section aria-labelledby>` wskazuje na `<h2>`, gdy tytuł istnieje (`ariaMatch=true` zweryfikowane); fallback `aria-label="Partner logos"` przy braku tytułu.
 
 ---
 
 ## 2. Architektura trybów edytora (niuans UX)
 
-Panel po prawej ma **tylko dwie zakładki: `Visual` i `Advanced`**. **Wizard nie jest równorzędną zakładką** — wchodzi się do niego przyciskiem **„Run setup again"** (po setupie komunikat *„Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics."*). Wizard kończy się **„Finish setup and open Visual"**. To ten sam wzorzec, co w `feature-grid`/`tabs`/`accordion`.
+Panel ma **dwie zakładki-taby: `Visual` i `Advanced`** (`role=tab`). **Wizard nie jest równorzędnym tabem** — wchodzi się do niego przyciskiem **„Run setup again"**. Wizard kończy się **„Finish setup and open Visual"** (po nim komunikat *„Setup complete…"*). To ten sam wzorzec, co w `feature-grid`/`tabs`/`accordion`.
 
-| Tryb | Jak otworzyć | Zawartość | Edytowalne kontrolki? |
-|------|--------------|-----------|------------------------|
-| **Wizard** | „Run setup again" | „Starter overview" (read-only: Current layout, Logo count) + własny panel **„Live preview"** | **0** (potwierdzone: `writablePaths: []`) |
-| **Visual** | zakładka „Visual" | 5 sekcji widgetu + współdzielone „Block layout" / „Device visibility" | Wszystkie (patrz 3) |
-| **Advanced** | zakładka „Advanced" | 4 read-only sekcje podsumowań | **0** (potwierdzone) |
+| Tryb | Jak otworzyć | Zawartość | Kontrolki `writable` widoczne |
+|------|--------------|-----------|-------------------------------|
+| **Wizard** | „Run setup again" | „Starter overview" (read-only) + własny panel **„Live preview"** | **0** (zweryfikowane programowo) |
+| **Visual** | tab „Visual" | 5 sekcji widgetu + „Block layout" / „Device visibility" | wszystkie (sekcja 3) |
+| **Advanced** | tab „Advanced" | 4 read-only sekcje podsumowań | **0** (zweryfikowane programowo) |
 
-Liczbę widocznych kontrolek `writable` w Wizard i Advanced sprawdzono programowo (`querySelectorAll('[data-widget-control-ownership="writable"]')` filtrowane po widoczności) → **pusta lista w obu trybach**.
+Liczbę widocznych kontrolek `writable` zmierzono `querySelectorAll('[data-widget-control-ownership="writable"]')` filtrowane po widoczności → **0 w Wizard i 0 w Advanced**, **65 w Visual**.
 
 ---
 
 ## 3. Pełna mapa kontrolek Visual (co przeklikano)
 
-Sekcja Visual ma 5 bloków. Poniżej komplet kontrolek i liczba dostępnych dyskretnych opcji, z których **każda** została kliknięta co najmniej raz:
-
 | Sekcja Visual | Kontrolka | Typ | Opcje przeklikane |
 |---------------|-----------|-----|-------------------|
-| Variant and layout structure | Wariant | karty (radio) | **Grid, Strip, Dense** (3/3) |
-| Variant and layout structure | Logo count | select 1–24 | **1, 2, 6, 12, 24** (granice + środek) |
-| Header copy | Eyebrow / Title | input | wpisany tekst |
-| Header copy | Description | textarea | wpisany tekst |
+| Variant and layout structure | Wariant | karty | **Grid, Strip, Dense** (3/3) |
+| Variant and layout structure | Logo count | select 1–24 | **1, 6, 7, 24** (granice + środek) |
+| Header copy | Eyebrow / Title | input | n/d w tym przebiegu (mechanizm wspólny, patrz 7) |
 | Logos list and links | Name / Accessible description | input | wpisany tekst |
 | Logos list and links | Media library | MediaPicker + „Clear image" | wybór assetu + Clear |
-| Logos list and links | Logo destination | picker stron | „No destination" → „HomePage" |
-| Logos list and links | Drag / Move up / Move down / Remove / Add logo / Undo | przyciski | wszystkie (Drag — patrz 7) |
+| Logos list and links | Logo destination | picker stron + „Clear destination" | „No destination" → „HomePage" → Clear |
+| Logos list and links | Drag / Move up / Move down / Remove / Add logo / Undo / Dismiss | przyciski | **wszystkie** (Drag — patrz 4.7) |
 | Section CTA | Enable CTA | switch | on/off |
 | Section CTA | CTA label | input | wpisany tekst |
 | Section CTA | CTA destination | picker stron | „HomePage" |
@@ -86,191 +85,198 @@ Sekcja Visual ma 5 bloków. Poniżej komplet kontrolek i liczba dostępnych dysk
 | Display style | Alignment | select | **Start, Center, End** (3/3) |
 | Display style | Header alignment | select | **Start, Center, End** (3/3) |
 | Display style | Header size | select | **Small, Medium, Large** (3/3) |
-| Display style | Strip row behavior | select (tylko Strip) | **Wrapped rows, Single row scroll** (2/2) |
-| Display style | Strip motion | select (tylko Strip) | **Static, Marquee** (2/2) |
+| Display style | Strip row behavior | select (strip-only) | **Wrapped rows, Single row scroll** (2/2) |
+| Display style | Strip motion | select (strip-only) | **Static, Marquee** (2/2) |
 | Display style | Tile radius | select | **None, Small, Medium, Large, Extra large, Full** (6/6) |
 | Display style | Tile border width | select | **None, Standard, Heavy** (3/3) |
 | Display style | Open logo links in new tab | switch | on/off |
 | Display style | Grayscale logos | switch | on/off |
 | Display style | Colorize on hover | switch (zależny od grayscale) | on/off |
-| Display style | Section background | SharedColorControl | pick + Clear |
-| Display style | Tile background | SharedColorControl | pick + Clear |
-| Display style | Tile border | SharedColorControl | pick + Clear |
+| Display style | Section background / Tile background / Tile border | 3× SharedColorControl | pick + Clear (każdy) |
 
 ---
 
-## 4. Co DZIAŁA — szczegóły z weryfikacją DOM
+## 4. TESTOWANE + CO DZIAŁA — szczegóły z weryfikacją DOM
 
-### 4.1 Wizard (read-only)
-
-- „Starter overview": „Current layout: Grid", „Logo count: 6 logos" + tekst kierujący do Visual. ✓
-- „Live preview" renderuje widget przez współdzielony renderer — w DOM znaleziono **2** elementy `[data-logo-cloud-variant]` (canvas + live preview), a preview ma **6 kafelków** (`[data-logo-cloud-item]`). ✓
-- „Finish setup and open Visual" wraca do Visual (komunikat „Setup complete"). ✓
-- **0** widocznych kontrolek `writable` (zgodnie z kontraktem). ✓
-
-### 4.2 Visual — warianty i kontrolki strip-only
+### 4.1 Warianty i kontrolki strip-only
 
 | Akcja | Efekt w DOM (zweryfikowany) |
 |-------|------------------------------|
-| Wariant **Grid** | `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`; selecty Strip `disabled`. ✓ |
-| Wariant **Strip** | `flex flex-wrap items-center`; selecty „Strip row behavior" i „Strip motion" **odblokowane** (`disabled=false`). ✓ |
-| Wariant **Dense** | `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6`; selecty Strip znów `disabled`. ✓ |
-| Strip row → **Single row scroll** | `flex w-full flex-nowrap items-center overflow-x-auto pb-2 …`, `data-row-mode=single-row`. ✓ |
+| Wariant **Grid** | `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`; selecty Strip `disabled=true`. ✓ |
+| Wariant **Strip** | `flex flex-wrap items-center …`; selecty „Strip row behavior" i „Strip motion" **odblokowane** (`disabled=false`). ✓ |
+| Wariant **Dense** | `grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6`. ✓ |
+| Strip row → **Single row scroll** | `flex w-full flex-nowrap items-center overflow-x-auto pb-2 …`, `data-row-mode=single-row`, kafelek dostaje `shrink-0`. ✓ |
 | Strip row → **Wrapped rows** | `flex flex-wrap items-center …`, `data-row-mode=wrap`. ✓ |
-| Strip motion → **Marquee** | `data-motion=marquee`; render wymuszony **single-row**; `.logo-cloud-marquee-track` z **12 kafelkami** (6×2, duplikacja); `getComputedStyle(track).animationName = "logo-cloud-marquee"` (realna animacja CSS); select „Strip row behavior" staje się `disabled` (zablokowany). ✓ |
-| Strip motion → **Static** | `data-motion=static`, track znika, select row znów aktywny. ✓ |
+| Strip motion → **Marquee** | `data-motion=marquee`; render **single-row**; `.logo-cloud-marquee-track` z **12 kafelkami** (6×2 duplikacja); `getComputedStyle(track).animationName="logo-cloud-marquee"`, `animationDuration=24s`; select „Strip row behavior" staje się `disabled`. ✓ |
+| Strip motion → **Static** | track znika, select row znów aktywny. ✓ |
+| Wyjście ze Strip do Grid | selecty Strip **znów `disabled`**. ✓ |
 
-### 4.3 Visual — Logo count (granice włącznie)
+**Marquee — zachowanie ruchu (zweryfikowane na żywo):**
+- `prefers-reduced-motion: reduce` → `animationName` zmienia się na **`none`** (animacja wyłączona). ✓
+- Hover na `.logo-cloud-marquee` → `animationPlayState` przechodzi **`running` → `paused`**. ✓
 
-| Wartość | `data-count` | Wyrenderowanych kafelków | „Add logo" | „Remove" (1. kafelek) |
-|---------|--------------|--------------------------|------------|------------------------|
-| 2 | 2 | 2 | aktywny | aktywny |
-| 12 | 12 | 12 | aktywny | aktywny |
-| **24 (max)** | 24 | 24 | **`disabled`** ✓ | aktywny |
-| **1 (min)** | 1 | 1 | aktywny | **`disabled`** ✓ |
-| 6 | 6 | 6 | aktywny | aktywny |
+### 4.2 Logo count (granice włącznie)
 
-Limit min/max jest egzekwowany blokadą przycisków (czego poprzedni raport nie zweryfikował). ✓
+| Wartość | Wyrenderowanych kafelków | „Add logo" | „Remove" |
+|---------|--------------------------|------------|----------|
+| 7 (po „Add logo") | 7 | aktywny | aktywny |
+| **24 (max)** | 24 | **`disabled`** ✓ | aktywny |
+| **1 (min)** | 1 | aktywny | **`disabled`** ✓ |
+| 6 | 6 | aktywny | aktywny |
 
-### 4.4 Visual — selecty „Display style" (każda opcja osobno)
+Limit min/max egzekwowany blokadą przycisków. „Add logo" dopisuje „Logo N" na końcu. ✓
 
-Każdą opcję kliknięto i odczytano odpowiedni atrybut `data-logo-cloud-*` na canvasie:
+### 4.3 Selecty „Display style" (każda opcja osobno, atrybut + klasa)
 
-- **Logo height:** None→`none`, Small→`sm`, Medium→`md`, Large→`lg`, Extra large→`xl` (5/5). Klasa obrazu potwierdzona m.in. `h-14` przy `xl` (mapowanie: none=`h-auto max-h-16`, sm=`h-8`, md=`h-10`, lg=`h-12`, xl=`h-14`). ✓
-- **Gap:** None→`none`, Compact→`sm`, Default→`md`, Spacious→`lg` (4/4). Klasa listy potwierdzona `gap-6` przy Spacious (none=`gap-0`, sm=`gap-2`, md=`gap-4`, lg=`gap-6`). ✓
-- **Alignment:** Start→`start`, Center→`center`, End→`end` (3/3). Na siatce: Start=`justify-items-start`, End=`justify-items-end`, Center=brak klasy (potwierdzone `justify-items-end` przy End). ✓
-- **Header alignment:** Start→`start`, Center→`center`, End→`end` (3/3). Klasa `<header>` potwierdzona `items-end text-right` przy End (start=`items-start text-left`, center=`items-center text-center`). ✓
-- **Header size:** Small→`sm`, Medium→`md`, Large→`lg` (3/3). Klasa `<h2>` potwierdzona `text-3xl` przy Large (sm=`text-xl`, md=`text-2xl`). ✓
-- **Tile radius:** None→`none`, Small→`sm`, Medium→`md`, Large→`lg`, Extra large→`xl`, Full→`full` (6/6). Klasa kafelka potwierdzona `rounded-full` przy Full. ✓
-- **Tile border width:** None→`none`, Standard→`sm`, Heavy→`md` (3/3). Klasa kafelka potwierdzona `border-2` przy Heavy (none=`border-0`, sm=`border`). ✓
+- **Logo height** (5/5): None→`none` (`h-auto max-h-16`), Small→`sm` (`h-8`), Medium→`md` (`h-10`), Large→`lg` (`h-12`), Extra large→`xl` (`h-14`). ✓
+- **Gap** (4/4): None→`gap-0`, Compact→`gap-2`, Default→`gap-4`, Spacious→`gap-6`. ✓
+- **Alignment** (3/3, na siatce): Start→`justify-items-start`, End→`justify-items-end`, Center→brak klasy. ✓
+- **Header alignment** (3/3): Start→`items-start text-left`, Center→`items-center text-center`, End→`items-end text-right`. ✓
+- **Header size** (3/3): Small→`text-xl`, Medium→`text-2xl`, Large→`text-3xl`. ✓
+- **Tile radius** (6/6): None→`rounded-none`, Small→`rounded-sm`, Medium→`rounded-md`, Large→`rounded-lg`, Extra large→`rounded-xl`, Full→`rounded-full`. ✓
+- **Tile border width** (3/3): None→`border-0`, Standard→`border`, Heavy→`border-2`. ✓
 
-### 4.5 Visual — przełączniki (switche)
+### 4.4 Przełączniki (switche)
 
 | Switch | Test | Efekt (DOM) |
 |--------|------|-------------|
-| Grayscale logos | on→off→on | `data-grayscale` przełącza się; **przy off** efektywny `data-hover-color=false` i switch „Colorize on hover" staje się `disabled` (a jego zapisana wartość `aria-checked` pozostaje, patrz N4). ✓ |
-| Colorize on hover | off→on (przy grayscale on) | `data-hover-color` przełącza się. ✓ |
-| Open logo links in new tab | off→on→off | `data-open-in-new-tab` przełącza się; na podlinkowanym kafelku **on** → `target="_blank" rel="noopener noreferrer"`, **off** → `target=null rel=null`. ✓ |
+| Open logo links in new tab | on→off | `data-open-in-new-tab` przełącza się. ✓ |
+| Grayscale logos | on→off→on | `data-grayscale` przełącza się; **przy off** efektywny `data-hover-color=false` i switch „Colorize on hover" → `disabled` (jego `aria-checked` zostaje `true` — patrz N4). ✓ |
+| Colorize on hover | on→off→on (przy grayscale on) | `aria-checked` i efektywny `data-hover-color` przełączają się. ✓ |
 
-### 4.6 Visual — lista logo (repeatable items)
+### 4.5 Lista logo (repeatable items)
 
-- **Name (logo 1) → „Moja Firma":** tekst kafelka aktualizuje się. ✓
+- **Name (logo 1) → „Moja Firma":** tekst kafelka aktualizuje się natychmiast. ✓
 - **Accessible description (alt) → „Logo Mojej Firmy":** staje się `aria-label` podlinkowanego kafelka oraz `alt` obrazu. ✓
-- **Logo destination:** picker istniejących stron (opcje: „No destination", „HomePage", „Pricing Review Temp", … — listy stron, **nie** wolne pole tekstowe). Wybór „HomePage" → kafelek `<a href="/homepage">`. ✓
-- **Open-in-new-tab + link:** z włączonym new-tab kafelek = `<a href="/homepage" target="_blank" rel="noopener noreferrer" aria-label="Logo Mojej Firmy">Moja Firma</a>`; po wyłączeniu → bez `target`/`rel`. ✓
+- **Logo destination (picker stron):** opcje = „No destination" + lista **opublikowanych** stron (m.in. „HomePage"); to **picker**, nie wolne pole. „No destination" → „HomePage" → kafelek `<a href="/homepage">`. ✓
+- **Open-in-new-tab + link:** on → `target="_blank" rel="noopener noreferrer"`; off → `target=null rel=null`. ✓
+- **Clear destination:** wraca do „No destination", kafelek z powrotem `<div>` (bez `href`). ✓
 - **Move down / Move up:** kolejność zmienia się natychmiast i wraca (Moja Firma idx0→idx1→idx0). ✓
-- **Remove (logo 2):** **miękkie** usunięcie — notka `role="status"` „North Labs removed. Undo is available." z „Undo"/„Dismiss". ✓
+- **Remove (miękkie):** notka `role="status"` „North Labs removed. Undo is available." z „Undo"/„Dismiss"; `count` spada. ✓
 - **Undo:** przywraca logo na **pierwotną pozycję** (index 1). ✓
-- **Add logo:** dopisuje „Logo 7" na końcu (`count` 6→7). ✓
-- **Media library → wybór `cos1.png`:** kafelek → `<img src="http://localhost:3000/media/…">`, `loading="lazy"`, klasa `… h-14 grayscale … group-hover:grayscale-0`, `data-has-image=true`. **Ręcznie wpisany `alt` („Logo Mojej Firmy") został zachowany** i NIE nadpisany altem assetu (zgodnie z `alt: latestLogo.alt?.trim() ? latestLogo.alt : next.alt`). ✓
+- **Dismiss:** notka znika, usunięcie **pozostaje** (count nie wraca) — trwałe. ✓
+- **Add logo:** dopisuje „Logo N" na końcu (`count` +1). ✓
+- **Media Library → `cos1.png`:** kafelek → `<img src="http://localhost:3000/media/2026/02/….png">`, `loading="lazy"`, klasa `… h-14 grayscale … group-hover:grayscale-0`, `data-has-image=true`. **Ręcznie wpisany `alt` („Logo Mojej Firmy") zachowany**, NIE nadpisany altem assetu (zgodnie z `alt: latestLogo.alt?.trim() ? latestLogo.alt : next.alt`). ✓
 - **Clear image:** kafelek wraca do tekstu „Moja Firma", `data-has-image=false`. ✓
 
-### 4.7 Visual — Section CTA (kompletność reguły render)
+### 4.6 Section CTA (kompletność reguły render)
 
 | Krok | CTA w DOM |
 |------|-----------|
-| Enable CTA (bez label/href) | CTA **nie renderuje się**; select „CTA destination" przestaje być `disabled`. ✓ |
-| + CTA label „Dołącz teraz" (wciąż bez href) | CTA **nadal się nie renderuje**. ✓ |
-| + CTA destination „HomePage" (target Same tab) | `<a href="/homepage" data-logo-cloud-cta>Dołącz teraz</a>`, bez `target`/`rel`. ✓ |
+| CTA off | **nie renderuje się**; select „CTA destination" `disabled`. ✓ |
+| Enable CTA (label domyślny „Get started", brak href) | **nie renderuje się**; „CTA destination" przestaje być `disabled`. ✓ |
+| + CTA label „Dołącz teraz" (wciąż brak href) | **nadal nie renderuje się**. ✓ |
+| + CTA destination „HomePage" (Same tab) | `<a href="/homepage" data-logo-cloud-cta>Dołącz teraz</a>`, bez `target`/`rel`. ✓ |
 | CTA target → **New tab** | `target="_blank" rel="noopener noreferrer"`. ✓ |
 | CTA target → **Same tab** | `target=null rel=null`. ✓ |
+| Disable CTA (przy poprawnym href) | CTA **znika** (gate działa w obie strony). ✓ |
 
-Potwierdza regułę „Only complete and safe CTA links render in the public widget." (oba targety przeklikane).
+Potwierdza regułę „Only complete and safe CTA links render in the public widget."
 
-### 4.8 Visual — kontrolki kolorów (3× SharedColorControl)
+### 4.7 Drag & drop logotypów — **DZIAŁA** (pełna weryfikacja)
 
-Konfiguracja logo-cloud używa `showValueInput={false}` i **nie** ustawia `allowTransparent` — więc **nie ma** ani wolnego pola wartości, ani przycisku „Use transparent"; jest tylko **swatch (`<input type=color>`)**, badge stanu i **„Clear"** (w `ClearableFieldHeader`).
+To kluczowa korekta poprzedniego raportu. Wynik bezpośredni:
 
-| Kontrolka | Stan początkowy (badge / Clear) | Pick koloru | Clear |
-|-----------|----------------------------------|-------------|-------|
-| **Section background** | „Theme default" / Clear `disabled` | `#123456` → inline `background-color: rgb(18,52,86)`, badge „Selected color" ✓ | badge wraca „Theme default", inline `style` usunięty ✓ |
-| **Tile background** | **„Saved custom color"** / Clear **aktywny** (inline `var(--color-bg)`) — patrz N1 | `#abcdef` → `rgb(171,205,239)`, „Selected color" ✓ | inline usunięty, „Theme default" ✓ |
-| **Tile border** | **„Saved custom color"** / Clear **aktywny** (inline `color-mix(in srgb, var(--color-border) 60%, transparent)`) — N1 | `#ff0000` → `rgb(255,0,0)`, „Selected color" ✓ | inline usunięty, „Theme default" ✓ |
+- **Wysokopoziomowe `dragTo` (symulacja myszą) — NIE zmienia kolejności.** Powód: zdarzenia HTML5 lecą zbyt szybko (w jednym tasku), zanim React zdąży opróżnić `setDragState`, więc handler `dropLogoAtIndex` czyta jeszcze `dragState=null` i kończy wcześnie.
+- **Ręczne zdarzenia HTML5 z odstępem (`dragstart` → 250 ms tick → `dragover`+`drop`) — REORDER DZIAŁA.** Po `dragstart` karta dostaje aktywny styl `border-primary` (`dragState` ustawione), a po `drop` kolejność zmienia się poprawnie: **„Moja Firma" idx0 → idx2** (`["Moja Firma","North Labs","Orbit",…]` → `["North Labs","Orbit","Moja Firma",…]`). ✓
 
-> Uwaga techniczna: „Clear" usuwa wartość ze stylu, więc po wyczyszczeniu kafelka znika **cały** inline `background-color`/`border-color` (także domyślny `var(...)`), a renderer schodzi do klas CSS. To realna zmiana renderu, nie kosmetyka.
+**Wniosek:** logika reorderu drag&drop jest **poprawna**, nie jest bugiem. Realny użytkownik zawsze ma render-tick między chwyceniem a upuszczeniem (ruch myszy), więc dla niego działa. „Niewidoczny" efekt występuje **wyłącznie** przy zsynchronizowanej symulacji bez tika — to artefakt automatyzacji. Reorder potwierdzony też niezależnie przez „Move up"/„Move down".
 
-### 4.9 Advanced (read-only, żywe lustro stanu roboczego)
+### 4.8 Kontrolki kolorów (3× SharedColorControl)
 
-Advanced sprawdzono **dwukrotnie**: przy stanie domyślnym oraz po szeregu edycji w Visual. W obu przypadkach wiernie odzwierciedlał **bieżący niezapisany stan** roboczy:
+Konfiguracja używa `showValueInput={false}` i **nie** ustawia `allowTransparent` → **brak** wolnego pola wartości i brak „Use transparent"; jest **swatch (`<input type=color>`)**, badge stanu i **„Clear"**.
 
-- Stan domyślny: „Layout: Grid", „Logos: 6 logos", „Logo height: Medium", „Spacing: Default", „Header: Configured", „Logo images: No logo images selected yet", „Logo destinations: Logo tiles are not linked", „Section CTA: Hidden", „Alignment: Center", „Header style: Center / Medium", „Strip behavior: Wrapped rows / Static", „Tile shape: Large corners, Standard border", „Logo filter: Grayscale with color on hover", „Colors: Section: Theme default, tile: **Saved custom color**, border: **Saved custom color**" (N1).
-- Stan po edycjach: „Logo height: Extra large", „Spacing: Spacious", „Logo destinations: 1 logo link opens in the same tab", „Section CTA: Visible, opens in the same tab", „Alignment: End", „Header style: End / Large", „Tile shape: Full corners, Heavy border", „Strip behavior: **Wrapped rows / Marquee**" (mimo że wariant to **Grid** — N3), „Colors: Section: Theme default, tile: **Theme default**, border: **Theme default**" (po Clear). ✓
-- **0** kontrolek `writable`. ✓
+| Kontrolka | Stan początkowy | Pick koloru | Clear |
+|-----------|-----------------|-------------|-------|
+| **Section background** | „Theme default" / Clear **`disabled`** / brak inline | `#123456` → inline `rgb(18,52,86)`, badge **„Selected color"**, Clear aktywny ✓ | „Theme default", inline usunięty, Clear `disabled` ✓ |
+| **Tile background** | **„Saved custom color"** / Clear **aktywny** / inline `var(--color-bg)` (N1) | `#abcdef` → `rgb(171,205,239)`, **„Selected color"** ✓ | „Theme default", inline **całkowicie usunięty** ✓ |
+| **Tile border** | **„Saved custom color"** / Clear **aktywny** / inline `color-mix(in srgb, var(--color-border) 60%, transparent)` (N1) | `#ff0000` → `rgb(255,0,0)`, **„Selected color"** ✓ | „Theme default", inline usunięty ✓ |
 
-### 4.10 Frontend (public)
+> „Clear" usuwa wartość ze stylu — po wyczyszczeniu znika **cały** inline `background-color`/`border-color` (także domyślny `var(...)`), a renderer schodzi do klas CSS. Realna zmiana renderu.
 
-Trasa `/test-logo-cloud-0516`:
+### 4.9 Wizard (read-only)
 
-- **HTTP 200** (curl). ✓
-- Render **zapisanego (opublikowanego)** stanu: `variant=grid`, `count=6`, gap/height/align = domyślne. To **inny** stan niż mój draft w adminie — moje niezapisane edycje **nie wyciekły** na front. ✓
-- Tytuł `<h2>` „Trusted by teams worldwide". **Wszystkie 6 kafelków to `<a href="#">`** (zapis: logotypy podlinkowane do hash), `rel=null`, `target=null` (hash + `openLinksInNewTab=false` → poprawnie bez nowej karty). ✓
-- **Logo 1 ma realny obraz:** `<img src="https://upload.wikimedia.org/.../Amazon_logo.svg/1200px-Amazon_logo.svg.png">`, `alt="Acme"` (fallback z `name`), `loading="lazy"`, klasa `h-10 grayscale group-hover:grayscale-0 object-contain`. Zewnętrzny obraz https renderuje się. ✓ Logo 2–6 jako tekst.
-- **ARIA:** `aria-labelledby` `<section>` = `id` `<h2>` (`match=true`), `aria-label=null` (bo tytuł istnieje). ✓
+- „Starter overview": **„Current layout: Grid"**, **„Logo count: 6 logos"** + tekst kierujący do Visual. ✓
+- **„Live preview"** renderuje widget przez wspólny renderer — w DOM **2** elementy `[data-logo-cloud-variant]` (canvas + live preview), preview ma **6 kafelków**. ✓
+- **„Finish setup and open Visual"** wraca do Visual; w treści pojawia się **„Setup complete…"**. ✓
+- **0** widocznych kontrolek `writable`. ✓
+
+### 4.10 Advanced (read-only, żywe lustro stanu roboczego)
+
+- **0** widocznych kontrolek `writable`. ✓
+- Wiernie odzwierciedla **bieżący niezapisany** stan roboczy. Snapshot po edycjach: „Layout: Grid", „Logos: 6 logos", „Logo height: Extra large", „Spacing: Spacious", „Header: Configured", „Logo images: No logo images selected yet", „Logo destinations: Logo tiles are not linked", „Section CTA: Hidden", „Alignment: Center", „Header style: Center / Medium", **„Strip behavior: Wrapped rows / Marquee"** (przy wariancie **Grid** — N3), „Tile shape: Full corners, Heavy border", „Logo filter: Grayscale with color on hover", „Colors: Section: Theme default, tile: Theme default, border: Theme default" (po Clear). ✓
+- Po ustawieniu hex w „Tile background": wiersz „Colors" pokazuje **„tile: Selected swatch"** — inny tekst niż badge w Visual („Selected color"). Patrz N8. ✓
+
+### 4.11 Frontend (public) — `/test-logo-cloud-0516`
+
+- **HTTP 200** (curl) ✓
+- Render **opublikowanego** stanu: `variant=grid`, `count=6`, gap/height/align domyślne. To **inny** stan niż mój draft — niezapisane edycje **nie wyciekły** na front. ✓
+- Tytuł `<h2>` „Trusted by teams worldwide". **Wszystkie 6 kafelków = `<a href="#">`** (`rel=null`, `target=null` — hash + `openLinksInNewTab=false`). ✓
+- **Logo 1 ma realny obraz:** `<img src="https://upload.wikimedia.org/.../Amazon_logo.svg/1200px-Amazon_logo.svg.png">`, `alt="Acme"` (fallback z `name`), `loading="lazy"`, klasa `h-10 grayscale group-hover:grayscale-0 object-contain`. Logo 2–6 jako tekst. ✓
+- **ARIA:** `aria-labelledby` `<section>` = `id` `<h2>` (`ariaMatch=true`), `aria-label=null`. ✓
 - **Konsola:** **0 błędów, 0 ostrzeżeń.** ✓
-- **Responsywność 375 px:** `scrollWidth == clientWidth == 375` (brak poziomego overflow), siatka schodzi do **2 kolumn** (`grid-template-columns` = 2). ✓
+- **Responsywność 375 px:** `scrollWidth == clientWidth == 375` (brak poziomego overflow), siatka → **2 kolumny**. ✓
 
 ---
 
-## 5. Co NIE działa / jest mylące (niuanse UX/UI)
+## 5. CO NIE DZIAŁA / TWARDE BUGI
+
+**Brak.** W tym przebiegu **nie wykryto** żadnego twardego buga renderowania ani błędu konsoli na froncie (0/0). Wszystkie realnie klikalne kontrolki Visual aktualizują podgląd na żywo; Wizard i Advanced są poprawnie read-only; frontend jest responsywny, semantyczny i bez błędów. Drag&drop, wbrew poprzedniej hipotezie, **działa** (4.7).
+
+---
+
+## 6. NIETESTOWALNE / ŚWIADOMIE NIEWYKONANE (uczciwe ograniczenia)
+
+- **Walidacja niebezpiecznych/niepoprawnych URL i obrazów (`getLogoCloudLinkFeedback` / `getLogoCloudImageFeedback`) — NIEOSIĄGALNA Z VISUAL.** „Logo destination" i „CTA destination" to **pickery opublikowanych stron** (zawsze bezpieczne), a obraz wybiera się z MediaPicker (zawsze bezpieczny). Gałęzie ostrzeżeń odpalają się **tylko dla wartości już zapisanych w JSON**, których nie da się wpisać z Visual. *Pośrednio* potwierdzone: opublikowany fixture ma `href="#"`, co w pickerze ujawniłoby się jako disabled opcja „**Saved custom destination**" — stan, którego nie można utworzyć przez Visual.
+- **Zapis i publikacja — ŚWIADOMIE POMINIĘTE.** Nie klikałem „Save"/„Publish", aby nie modyfikować współdzielonego fixture. W efekcie **nie** zweryfikowano trwałości edycji po przeładowaniu (potwierdzono tylko spójność w obrębie sesji — Advanced wiernie podsumowuje edycje z Visual). Frontend otwierałem w **nowej karcie**, by zachować stan edytora.
+- **Realna nawigacja po kliknięciu linku logo/CTA na froncie** — sprawdziłem `href`/`rel`/`target`, nie wykonywałem nawigacji.
+- **Pola tekstowe Eyebrow/Title/Description** — w tym przebiegu nie wpisywałem (mechanizm `updateHeader` jest wspólny z Name/CTA label, które przetestowano i działają). Nie jest to twarde ograniczenie środowiska, lecz świadomy priorytet dla luk „gap-close".
+
+---
+
+## 7. NIUANSE UX/UI (nie twarde bugi)
 
 | # | Obszar | Obserwacja (zweryfikowana w tym przebiegu) |
 |---|--------|--------------------------------------------|
-| **N1 — Domyślne kolory motywu jako „Saved custom color"** | Visual / kolory + Advanced | Domyślne `tileBackground = var(--color-bg)` i `tileBorderColor = color-mix(in srgb, var(--color-border) 60%, transparent)` to wartości niepuste i nie-hex, więc badge pokazuje **„Saved custom color"**, a **„Clear" jest aktywny** już na czystym fixture — mimo że autor niczego nie ustawił. Potwierdzone na badge (Visual) i w Advanced („tile/border: Saved custom color"). Mylące: sugeruje istnienie zapisanego niestandardowego koloru, którego nie ma. Sekcja „Section background" jest tu spójna („Theme default", Clear `disabled`), bo nie ma wartości domyślnej — asymetria między trzema polami koloru. |
-| **N2 — Redukcja „Logo count" po cichu obcina (asymetria względem Remove)** | Visual / struktura | Zmniejszenie liczby selectem „Logo count" (np. 24 → 1) **bez potwierdzenia** usuwa nadmiarowe logotypy (truncacja). Tymczasem usunięcie przyciskiem „Remove" jest **miękkie** (notka + „Undo"). Ten sam destrukcyjny efekt jest raz odwracalny, a raz cichy i nieodwracalny w UI. Niespójna ochrona przed utratą danych. |
-| **N3 — „Strip row behavior" i Advanced pokazują wartość zapisaną, nie efektywną** | Visual / Strip + Advanced | Przy Marquee select „Strip row behavior" pozostaje na „Wrapped rows" (zapis w `style.rowMode`), choć render jest single-row (`disabled` + tekst „Marquee always uses a single horizontal track, so row behavior stays locked."). Dodatkowo Advanced pokazał „Strip behavior: Wrapped rows / **Marquee**" **przy wariancie Grid**, gdzie te wartości nie mają żadnego efektu. Prezentacja stanu **zapisanego**, nie **efektywnego**. |
-| **N4 — Grayscale off: switch „Colorize on hover" zachowuje zapisaną wartość, ale jest efektywnie wyłączony** | Visual / filtr | Po wyłączeniu „Grayscale" efektywny `hover-color=false`, a switch „Colorize on hover" staje się `disabled` — ale jego `aria-checked` nadal odzwierciedla zapisaną wartość (true). To kolejny przypadek „zapisane vs efektywne" (jak N3); drobny, ale autor widzi „włączony, lecz wyszarzony" przełącznik. Tekst pomocniczy poprawnie ostrzega: „Requires grayscale mode…". |
-| **N5 — Ostrzeżenie a11y z modala Media Library (poza widgetem)** | Shared MediaPicker | Po „Browse media" w konsoli pojawia się React-warning: „Missing `Description` or `aria-describedby={undefined}` for {DialogContent}". Dotyczy **współdzielonego** Radix Dialog, nie renderera logo-cloud (front widgetu: 0/0). Odnotowane, bo występuje w przepływie autorskim tego widgetu. |
-| **N6 — `alt` bez efektu dla logo tekstowych bez linku** | Renderer (z założenia) | „Accessible description" (`alt`) wpływa na `alt` obrazu i `aria-label` podlinkowanego kafelka, ale dla logo **bez obrazu i bez linku** (czysty tekst w `<div>`) nie jest renderowane nigdzie. Wynika z modelu (tekstowy `name` jest treścią), lecz autor wpisujący alt przy logo tekstowym bez linku nie zobaczy efektu. |
-
-**Nie wykryto** żadnego twardego buga renderowania ani błędu konsoli na froncie. Wszystkie realnie klikalne kontrolki Visual aktualizują podgląd na żywo; Wizard i Advanced są poprawnie read-only; frontend jest responsywny (375 px bez overflow), bez błędów konsoli i poprawny semantycznie.
+| **N1** | Visual / kolory + Advanced | **Domyślne kolory motywu jako „Saved custom color".** `tileBackground=var(--color-bg)` i `tileBorderColor=color-mix(…)` są niepuste i nie-hex, więc badge pokazuje **„Saved custom color"**, a **„Clear" jest aktywny** już na czystym fixture — mimo że autor niczego nie ustawił. „Section background" jest spójne („Theme default", Clear `disabled`) bo nie ma wartości domyślnej — **asymetria** między trzema polami koloru. |
+| **N2** | Visual / struktura | **Cicha truncacja „Logo count".** Zmniejszenie selectem (np. 24 → 1) **bez potwierdzenia** ucina nadmiarowe logotypy. Tymczasem „Remove" jest **miękkie** (notka + Undo). Ten sam destrukcyjny efekt jest raz odwracalny, raz cichy i nieodwracalny w UI. |
+| **N3** | Visual / Strip + Advanced | **Wartość ZAPISANA vs EFEKTYWNA.** Po ustawieniu Marquee w Strip i przejściu do Grid: render jest statyczny (brak tracka), ale select „Strip motion" nadal pokazuje „Marquee" (`disabled`), a Advanced pokazuje **„Strip behavior: Wrapped rows / Marquee"** — wartości bez żadnego efektu w Grid. Prezentacja **zapisu**, nie **efektu**. |
+| **N4** | Visual / filtr | **Grayscale off — switch „Colorize on hover" zachowuje zapis, ale jest efektywnie off.** Po wyłączeniu Grayscale efektywny `hover-color=false`, switch staje się `disabled`, ale jego `aria-checked` zostaje `true`. Tekst pomocniczy poprawnie ostrzega („Requires grayscale mode…"). |
+| **N5** | Shared MediaPicker | **a11y warning z modala Media Library.** Po „Browse media" w konsoli: „Missing `Description` or `aria-describedby={undefined}` for {DialogContent}". Dotyczy **współdzielonego** Radix Dialog, **nie** renderera logo-cloud (front widgetu: 0/0). Odnotowane, bo występuje w przepływie autorskim widgetu. |
+| **N6** | Renderer (z założenia) | **`alt` bez efektu dla logo tekstowych bez linku.** „Accessible description" wpływa na `alt` obrazu i `aria-label` podlinkowanego kafelka, ale dla logo **bez obrazu i bez linku** (czysty tekst w `<div>`) nie jest renderowane nigdzie. |
+| **N7** | Draft vs publish | **Rozjazd: admin canvas (defaulty) vs opublikowany front (bogatsza konfiguracja).** Draft renderuje czysty widget domyślny (tekst, `<div>`), a publiczna trasa serwuje inną zapisaną konfigurację (logo 1 z obrazem Amazon, 6× `<a href="#">`). Bez zapisu/publikacji nie rozstrzygam przyczyny (normalna separacja draft/publish vs niespójny seeding) — odnotowuję jako fakt. |
+| **N8** | Visual vs Advanced | **Niespójne etykiety stanu koloru.** Dla tej samej wartości hex Visual pokazuje badge **„Selected color"**, a Advanced w wierszu „Colors" — **„Selected swatch"**. Drobna niespójność nazewnictwa między dwoma powierzchniami. |
 
 ---
 
-## 6. Porównanie Admin (canvas/preview) vs Frontend
+## 8. Porównanie Admin (canvas/preview) vs Frontend
 
 | Aspekt | Admin canvas/preview | Frontend (`/test-logo-cloud-0516`) | Zgodność |
 |--------|----------------------|-------------------------------------|----------|
-| Renderer | żywy `LogoCloudBlock`, atrybuty `data-logo-cloud-*` | identyczny renderer i atrybuty | ✓ wspólny |
-| Aktualizacja na żywo po edycji | tak (canvas + Wizard Live preview) | n/d (statyczny zapis) | ✓ |
-| Renderowany stan | przy wejściu: **defaulty** (tekst, `<div>`, bez obrazów/linków) | **opublikowana** konfiguracja (logo 1 z obrazem Amazon, 6× `<a href="#">`) | ⚠ rozjazd (N7 w sek. 7) |
-| Linki logo (safe href, rel/target) | te same reguły (`resolveWidgetLinkAttrs`); zweryfikowane new-tab on/off | hash `#` → `rel=null`, `target=null` | ✓ |
+| Renderer | żywy `LogoCloudBlock`, `data-logo-cloud-*` | identyczny renderer i atrybuty | ✓ wspólny |
+| Aktualizacja na żywo | tak (canvas + Wizard Live preview) | n/d (statyczny zapis) | ✓ |
+| Renderowany stan | przy wejściu: **defaulty** | **opublikowana** konfiguracja (logo 1 Amazon, 6× `<a href="#">`) | ⚠ rozjazd (N7) |
+| Linki (safe href, rel/target) | te same reguły; zweryfikowane new-tab on/off | hash `#` → `rel=null`, `target=null` | ✓ |
 | Obraz logo | render po wyborze z Media Library (`localhost:3000/media/…`) | render zewnętrznego https (`upload.wikimedia.org`) | ✓ |
-| Semantyka `section`/`h2` + `aria-labelledby` | obecna | obecna (`match=true`) | ✓ |
-| Niezapisane edycje z Visual | widoczne w sesji edytora | **nieobecne** | ✓ poprawna izolacja |
-| Konsola | 1 warning (modal Media — N5) | 0/0 | ✓ (widget czysty) |
-| Responsywność 375 px | n/d (testowane na froncie) | 2 kolumny, brak overflow | ✓ |
+| Semantyka `section`/`h2` + `aria-labelledby` | obecna (`ariaMatch=true`) | obecna (`ariaMatch=true`) | ✓ |
+| Niezapisane edycje z Visual | widoczne w sesji edytora | **nieobecne** | ✓ izolacja |
+| Konsola | 1 warning (modal Media — N5) | **0/0** | ✓ (widget czysty) |
+| Responsywność 375 px | n/d | 2 kolumny, brak overflow | ✓ |
 
 ---
 
-## 7. Czego NIE testowano / czego NIE dało się zweryfikować (uczciwe ograniczenia)
+## 9. Podsumowanie
 
-- **Natywne drag-and-drop logotypów (uchwyt „Drag") — NIETESTOWALNE PRZEZ AUTOMATYZACJĘ.** Próbowałem dwóch dróg: (a) `playwright dragTo` (symulacja myszą) oraz (b) ręczne dyspozycje zdarzeń HTML5 `dragstart`/`dragover`/`drop`/`dragend` z `DataTransfer` przez `run-code`. **Żadna nie zmieniła kolejności.** Powód jest w implementacji: `dropLogoAtIndex` czyta `dragState` z domknięcia, a `startLogoDrag` ustawia go asynchronicznie (`setState`) — przy realnym przeciąganiu (ruch myszy między `dragstart` a `drop`) React zdąży przerenderować i `drop` widzi aktualny `dragState`, ale przy syntetycznych zdarzeniach w jednym ticku `dragState` pozostaje `null` i handler kończy wcześnie. **To ograniczenie automatyzacji, a nie potwierdzony bug** — ta sama logika reorderu (`moveLogoInData`) jest wykonywana przez „Move up"/„Move down", które **działają** (zweryfikowane). Dla pewności zachowania drag&drop konieczny jest test manualny lub `@playwright/test` z natywnym DnD.
-- **Walidacja niebezpiecznych/niepoprawnych URL (`getLogoCloudLinkFeedback` / `getLogoCloudImageFeedback`):** w Visual „Logo destination" i „CTA destination" to **pickery stron** (brak wolnego pola tekstowego), a obraz wybiera się przez MediaPicker. Ścieżki feedbacku ostrzegającego o niebezpiecznym linku/obrazie uruchamiają się tylko dla wartości **wcześniej zapisanych w JSON**, niemożliwych do wpisania z Visual — nie udało się ich wywołać przez UI.
-- **Zapis i publikacja:** świadomie **nie** klikałem „Save"/„Publish", aby nie modyfikować współdzielonego fixture. W konsekwencji nie zweryfikowano trwałości edycji po przeładowaniu (potwierdzono tylko trwałość w obrębie sesji edytora — Advanced wiernie podsumował edycje z Visual). Frontend otwierałem w **nowej karcie**, by zachować stan edytora.
-- **N7 — Rozjazd draft (defaulty) vs opublikowany front (bogatsza konfiguracja):** przy wejściu canvas adminowego draftu renderował **czysty widget domyślny**, a publiczna trasa serwuje **inną, zapisaną konfigurację** (logo 1 z obrazem Amazon, 6× `<a href="#">`). Nie rozstrzygnąłem przyczyny (normalna separacja draft/publish vs niespójny seeding fixture) bez zapisu/publikacji — odnotowuję jako fakt.
-- **`prefers-reduced-motion` dla Marquee:** CSS deklaruje „reduced-motion-safe" track, ale nie testowałem zachowania przy włączonej redukcji ruchu.
-- **Realna nawigacja po kliknięciu linku logo/CTA na froncie:** linki to `#`/`/homepage`; sprawdziłem atrybuty `href`/`rel`/`target`, nie wykonywałem nawigacji.
-- **Tekstowo nieprzeklikane warianty:** dla pól tekstowych (Eyebrow/Title/Description, Name/alt, CTA label) wpisano wartości; nie testowano osobno każdego znaku/długości — mechanizm `updateHeader`/`updateCta`/`commitLogoPatch` jest wspólny i zweryfikowany.
-
----
-
-## 8. Podsumowanie
-
-- **logo-cloud jest w bardzo dobrym stanie funkcjonalnym.** W tym przebiegu **przeklikano każdą dyskretną opcję każdej dostępnej kontrolki Visual**: 3 warianty, Logo count z granicami 1/24 (blokady „Add"/„Remove" działają), wszystkie wartości 8 selectów „Display style" + CTA target (oba) + strip row/motion (z realną animacją marquee i duplikacją 6×2), 3 switche (z zależnością grayscale→hover), pełen cykl listy logo (name/alt/destination/move/remove+undo/add/media+clear), pełen przepływ CTA (gate „complete & safe") oraz 3 kontrolki koloru (pick + Clear). Każdy efekt potwierdzono w DOM.
-- **Wizard i Advanced** są poprawnie read-only (0 kontrolek `writable`); Advanced jest żywym lustrem **niezapisanego** stanu roboczego (zweryfikowane przy defaultach i po edycjach).
-- **Frontend** zwraca 200, renderuje opublikowany stan bez błędów konsoli (0/0), jest responsywny (375 px bez overflow, grid→2 kolumny), poprawny semantycznie z **działającym `aria-labelledby`**, a linki mają bezpieczne `rel`/`target`. Zewnętrzny obraz logo renderuje się.
-- **Najważniejsze niuanse (nie twarde bugi):** N1 (domyślne kolory motywu jako „Saved custom color" z aktywnym Clear), N2 (cicha truncacja „Logo count" vs odwracalny Remove), N3 (select row behavior + Advanced pokazują zapis, nie efekt — także w Grid), N4 (switch „Colorize on hover" zachowuje zapis przy grayscale off), N5 (a11y warning współdzielonego modala Media), N6 (`alt` bez efektu dla logo tekstowych bez linku).
-- **Jedyna pozycja nieweryfikowalna przez UI:** natywne drag&drop uchwytem „Drag" (ograniczenie automatyzacji, nie bug — równoważny reorder przez Move up/down działa). Walidacja niebezpiecznych URL jest niedostępna z Visual (tylko pickery).
-- **Plusy względem innych widgetów:** semantyczna nazwa sekcji (`aria-labelledby`/fallback `aria-label`), miękkie usuwanie z „Undo", działające „Clear" dla wszystkich trzech pól kolorów, bezpieczne linki (`rel="noopener noreferrer"` dla nowej karty), deterministyczna liczba logo sterowana danymi.
+- **logo-cloud jest w bardzo dobrym stanie funkcjonalnym.** Przeklikano **każdą dyskretną opcję każdej dostępnej kontrolki Visual**: 3 warianty, Logo count z granicami **1/24** (blokady „Add"/„Remove" działają), wszystkie pozycje 8 selectów „Display style" + CTA target (oba) + strip row/motion (z realną animacją marquee 6×2, pauzą na hover i wyłączeniem przy `prefers-reduced-motion`), 3 switche (z zależnością grayscale→hover), pełny cykl listy logo (name/alt/destination/clear-destination/move/remove+undo/remove+dismiss/add/media+clear) oraz 3 kontrolki koloru (pick + Clear). Każdy efekt potwierdzono w DOM.
+- **Drag & drop DZIAŁA** (4.7) — korekta poprzedniego raportu. Niewidoczny efekt w `dragTo` to artefakt tempa automatyzacji, nie bug; reorder potwierdzony zdarzeniami HTML5 z render-tickiem oraz równoważnie przez „Move up/down".
+- **Wizard i Advanced** poprawnie read-only (0 kontrolek `writable`); Advanced jest żywym lustrem **niezapisanego** stanu roboczego.
+- **Frontend** zwraca 200, renderuje opublikowany stan bez błędów (0/0), responsywny (375 px bez overflow, grid→2 kol.), semantyczny z **działającym `aria-labelledby`**, linki z bezpiecznym `rel`/`target`, zewnętrzny obraz https renderuje się.
+- **Niuanse (nie bugi):** N1 (domyślne kolory jako „Saved custom color" + aktywny Clear), N2 (cicha truncacja „Logo count"), N3 (zapis vs efekt — także w Advanced/Grid), N4 (switch hover przy grayscale off), N5 (a11y warning modala Media), N6 (`alt` bez efektu dla logo tekstowego bez linku), N7 (rozjazd draft/publish), N8 (etykiety „Selected color" vs „Selected swatch").
+- **Nieosiągalne z UI:** walidacja niebezpiecznych URL/obrazów (tylko pickery i media). **Świadomie pominięte:** Save/Publish (ochrona współdzielonego fixture).
+- **Plusy:** semantyczna nazwa sekcji, miękkie usuwanie z Undo, działające „Clear" dla wszystkich 3 pól kolorów, bezpieczne linki, deterministyczna liczba logo, marquee zgodne z `prefers-reduced-motion` i z pauzą na hover/focus.
 
 ---
 
-## 9. Screenshoty (lokalne etykiety)
+## 10. Screenshoty
 
-> Poniższa nazwa to **wyłącznie lokalna etykieta** przechwycenia Playwright. Plik
-> **nie** jest wymaganym evidence i **został usunięty** z drzewa roboczego po
-> przechwyceniu. Główna weryfikacja w tym raporcie opierała się o inspekcję DOM.
-
-| Plik (lokalny, nietrwały) | Opis |
-|---------------------------|------|
-| `logo-cloud-frontend-published-2905.png` | Publiczna trasa `/test-logo-cloud-0516` (375 px) — opublikowany stan fixture (logo 1 z obrazem, 6× `<a href="#">`, siatka 2-kolumnowa) |
+**Brak.** W tym przebiegu nie wykonano żadnych zrzutów — weryfikacja w 100% przez inspekcję DOM/CSS na żywym drzewie. Nie zapisano żadnego pliku evidence.
