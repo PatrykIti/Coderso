@@ -1,20 +1,27 @@
 # RAPORT: Footer Widget — Audyt bieżącego stanu (UX/UI + weryfikacja działania)
 
-> **Status:** Zakończony
+> **Status:** Zakończony (audyt domykający luki)
 > **Data:** 2026-05-29
-> **Sesja Playwright:** `claude-29-05-footer-v2` (izolowana od innych agentów)
+> **Sesja Playwright:** `claude-29-05-footer-gap-close` (izolowana od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Strona admin (fixture):** `Contract Test - footer` (ID: `0aa97321-eeda-4455-ba63-4537cc7f2dee`)
 > **Trasa publiczna:** http://localhost:3000/test-footer-widget-0516 (`TEST-FOOTER-WIDGET-0516`)
 
-> **Uwaga o zrzutach:** ewentualne pliki PNG (`footer-public-desktop.png`,
-> `footer-public-mobile-375.png`) to wyłącznie lokalne etykiety przechwyceń
-> Playwright. Nie są commitowane do repo i nie stanowią wymaganego evidence.
+> **Uwaga o zrzutach:** w tej sesji **nie commitowano** żadnych plików PNG. Jeżeli
+> mowa o przechwyceniu, to wyłącznie lokalna etykieta Playwright (np.
+> `footer-public-mobile-375` jako stan przeglądarki) — nie jest to wymagane evidence
+> ani plik w repo.
 
 > **Uwaga o zakresie:** raport opisuje **stan faktyczny zaobserwowany w UI** w dniu
-> testu. W sekcjach jasno rozdzielono: (a) co realnie przetestowano i działa,
-> (b) czego **nie** testowano, (c) niuanse UX/UI. Jeśli czegoś nie sprawdziłem,
-> jest to wprost zaznaczone.
+> testu. Każdą interakcję potwierdzono inspekcją DOM/CSS podglądu (`eval`). Sekcje
+> rozdzielają: (4) co przetestowano i DZIAŁA, (5) czego NIE da się w pełni
+> zweryfikować w tym fixture/środowisku (z dokładną przyczyną), (8) niuanse UX/UI,
+> (9) błędy. Tam, gdzie czegoś nie sprawdzono, jest to wprost zaznaczone.
+
+> **Domknięte luki z poprzedniej wersji raportu:** media picker logo, destynacje
+> i targety legal, add/remove/reorder dla linków i social, pozostałe selecty
+> typografii/kolorów/layoutu oraz **gałęzie slotów** zostały w tej sesji
+> przetestowane empirycznie. Szczegóły poniżej.
 
 ---
 
@@ -27,12 +34,14 @@
 **Sloty (zagnieżdżone widgety):** `column-1`, `column-2`, `column-3`, `bottom` (Bottom Strip)
 
 **Pliki źródłowe:**
-- `core/widgets/core/footer.tsx` — renderer `FooterBlock`, typy, schema, normalizacja
+- `core/widgets/core/footer.tsx` — renderer `FooterBlock`, typy, schema, normalizacja, `reorderFooterColumnsAndSlots`
 - `core/admin/ui/widgets/editors/FooterEditors.tsx` — edytory Wizard / Visual / Advanced
+- `core/admin/ui/widgets/editors/LinkDestinationField.tsx` — wspólny page-picker linków
+- `core/admin/ui/media/MediaPicker.tsx` — wspólny dialog biblioteki mediów (logo)
 
-Footer renderuje się jako semantyczny element `<footer>`. Gdy ustawiony jest tekst marki
-(`brand.logoText`), `<footer>` otrzymuje `aria-labelledby` wskazujące na nazwę marki;
-w przeciwnym razie ma `aria-label="Site footer"`. To dobry wzorzec dostępności.
+Footer renderuje się jako semantyczny `<footer>`. Gdy ustawiony jest tekst marki
+(`brand.logoText`), `<footer>` ma `aria-labelledby` wskazujące na nazwę marki; w
+przeciwnym razie `aria-label="Site footer"`. Dobry wzorzec dostępności.
 
 ---
 
@@ -50,121 +59,161 @@ w przeciwnym razie ma `aria-label="Site footer"`. To dobry wzorzec dostępności
 | **style** | `surfaceColor`, `borderColor`, `borderTopWidth`, `textColor`, `headingColor`, `linkColor`, `legalTextColor`, `socialColor`, `fontSize`, `headingTransform`, `linkHoverColor`, `linkActiveColor`, `linkUnderline`, `linkFontWeight`, `linkLetterSpacing` |
 
 **Warianty renderera:**
-- `columns-2` / `columns-3` — siatka kolumn (`md:grid-cols-2` / `-3`) + opcjonalny blok marki na górze + dolny pasek (legal / kontakt / social / back-to-top).
-- `minimal` — pierwsza kolumna jako kompaktowy rząd linków inline; pozostałe kolumny są zachowywane (ukryte). Słoty `column-1` + `bottom` lądują w dolnym pasku.
+- `columns-2` / `columns-3` — siatka kolumn (`md:grid-cols-2` / `-3`) + opcjonalny blok marki na górze + dolny pasek (legal / kontakt / social / back-to-top). Slot `column-N` renderuje się **wewnątrz** widocznej kolumny (wrapper `.pt-1`), slot `bottom` — w dolnym pasku.
+- `minimal` — pierwsza kolumna jako kompaktowy rząd linków inline; pozostałe kolumny zachowywane (ukryte). Slot `column-1` + `bottom` lądują pod kompaktowym rzędem (wrapper `.border-t.pt-4`).
 
 ---
 
 ## 3. Tryby edytora — co zawierają (stan faktyczny)
 
-W prawym panelu widoczne są **tylko dwie zakładki: „Visual" i „Advanced"**. Tryb
-**Wizard** to osobny przepływ „setup" uruchamiany przyciskiem **„Run setup again"**
-(panel pokazuje status „Setup complete · Daily edits live in Visual. Advanced is for
-technical diagnostics."). Wizard kończy się przyciskiem **„Finish setup and open Visual"**,
-który przełącza na zakładkę Visual.
+W prawym panelu są **dwie zakładki: „Visual" i „Advanced"**. Tryb **Wizard** to
+osobny przepływ „setup" uruchamiany przyciskiem **„Run setup again"** (status:
+„Daily edits live in Visual. Advanced is for technical diagnostics.").
 
 ### 3.1 Wizard („Starter footer")
-Z założenia jest to **ekran seedująco-przeglądowy, niemal w całości read-only**:
+Ekran seedująco-przeglądowy, niemal w całości read-only (`writablePaths: []`):
 - **Footer variant** — `Select` (jedyna interaktywna kontrolka; `ownership=action`).
-- **Columns quick setup** → wiersz read-only „Visible columns" (np. „Company, Resources").
-- Warunkowy tekst dla `minimal`: „Minimal footer reuses the first column links…".
-- Statyczna podpowiedź: „Use Visual to edit brand logo/text, tagline, copyright…".
-- **Social basics** → wiersz read-only „Show social links" (Enabled/Disabled) + licznik zapisanych profili.
-- **Live preview** — podgląd przez współdzielony renderer, reaguje na zmianę wariantu.
-
-Edycja treści (tytuły kolumn, linki, marka, legal, social) **nie jest możliwa w Wizard** — to celowy projekt (`writablePaths: []` w sekcji wizard).
+- Wiersze read-only: „Visible columns", „Show social links" + licznik profili.
+- Statyczne podpowiedzi kierujące do Visual; live preview reaguje na zmianę wariantu.
 
 ### 3.2 Visual (pełna edycja)
 Sekcje: **Variant and structure**, **Columns and links**, **Brand and legal**,
-**Utility strip** (kontakt + back-to-top), **Social links and icon style**,
-**Colors and borders**, **Typography and link styling**, **Layout and spacing**,
-**Slots overview** (read-only). To główne miejsce codziennej edycji.
+**Utility strip**, **Social links and icon style**, **Colors and borders**,
+**Typography and link styling**, **Layout and spacing**, **Slots overview** (read-only).
+Pod sekcjami footera są jeszcze **wspólne** panele bloku: **Structure** (zarządzanie
+slotami), **Block layout**, **Device visibility** — należą do bloku, nie do footera.
 
 ### 3.3 Advanced (wyłącznie diagnostyka)
-Cztery sekcje **w 100% read-only**: **Runtime summary**, **Layout diagnostics**,
-**Style diagnostics**, **Support summary**. Brak jakichkolwiek edytowalnych pól
-footera, brak edytora JSON, brak przycisku normalizacji. Wartości są na żywo
-powiązane z danymi widgetu (odzwierciedlają zmiany z Visual). Pod sekcjami footera
-pojawia się jeszcze współdzielona „Block layout summary" (Content width / Padding),
-która należy do wspólnych kontrolek bloku, nie do footera.
+Cztery sekcje **w 100% read-only**: Runtime summary, Layout diagnostics, Style
+diagnostics, Support summary. Brak edytora JSON i przycisku normalizacji. Wartości
+na żywo odzwierciedlają stan z Visual.
 
 ---
 
-## 4. Co realnie przetestowano i DZIAŁA (Admin UI)
+## 4. Co realnie PRZETESTOWANO i DZIAŁA (Admin UI)
 
-Wszystkie poniższe interakcje wykonano w sesji `claude-29-05-footer-v2` i potwierdzono
-zmianę w podglądzie (canvas) przez inspekcję DOM (`eval`). **Każda przetestowana
-kontrolka zadziałała poprawnie i natychmiast aktualizowała podgląd.**
+Wszystkie interakcje wykonano w sesji `claude-29-05-footer-gap-close` i potwierdzono
+inspekcją DOM/CSS podglądu (canvas). **Każda kontrolka zadziałała poprawnie i
+natychmiast aktualizowała podgląd.** Stan startowy draftu: wariant `columns-2`
+(kolumny „Company", „Resources"; trzecia „Product" ukryta), legal i social włączone.
 
-### 4.1 Wizard
-| Akcja | Wynik | Dowód |
-|------|-------|-------|
-| Zmiana wariantu `columns-2` → `columns-3` | Podsumowanie „Visible columns" → „Company, Resources, Product"; podgląd pokazał 3 kolumny | OK |
-| Zmiana wariantu → `minimal` | „Visible columns" → „Company"; pojawił się warunkowy hint o minimal; live preview przeszedł na kompaktowy rząd inline | OK |
-| Powrót do `columns-2` + „Finish setup and open Visual" | Przełączenie na zakładkę Visual | OK |
-
-### 4.2 Visual — treść
+### 4.1 Brand → Logo image (MediaPicker) — LUKA DOMKNIĘTA
 | Akcja | Wynik (DOM podglądu) |
 |------|----------------------|
-| Tytuł Kolumny 1 „Company" → „Firma" | `<h3>` zmienił się na „Firma" |
-| Etykieta linku „About" → „O nas" | link w podglądzie = „O nas" |
-| Reorder kolumn (Move right na Kol. 1) | kolejność nagłówków zmieniła się z `[Firma, Resources]` na `[Resources, Firma]` |
-| Wybór strony w „Link destination" (page-picker → „HomePage") | `href` linku zmienił się na `/homepage` |
-| Brand name „Coderso Inc" + Tagline „Buduj pewnie" | blok marki pojawił się w podglądzie; `<footer>` zyskał `aria-labelledby`, a `aria-label` zniknął |
+| „Browse media" | Dialog „Media library" otwarty, lista assetów (m.in. `cos1.png`, `image.png`) |
+| Wybór `cos1.png` | `brand.logoUrl` ustawiony; w `<footer>` pojawił się `<img src="http://localhost:3000/media/2026/02/…png">`, `alt="Footer logo"` (fallback); dialog zamknięty automatycznie |
+| Komunikat pod podglądem assetu | „Using the selected Media Library image." (potwierdza ścieżkę `selectedMediaId`) |
+| Logo alt text → „Logo Coderso testowe" | `img alt` zmienił się na „Logo Coderso testowe" |
+| „Clear logo" | `<img>` usunięty; ponieważ ustawiony był tylko `logoAlt`, blok marki zniknął, a `<footer>` wrócił do `aria-label="Site footer"` |
 
-### 4.3 Visual — Utility strip / Legal
+### 4.2 Brand / Legal — destynacje i targety — LUKA DOMKNIĘTA
 | Akcja | Wynik (DOM podglądu) |
 |------|----------------------|
-| Copyright → „© 2026 Coderso Sp. z o.o." | tekst widoczny w dolnym pasku |
-| Address → „ul. Testowa 1, Warszawa" | wyrenderowany `<address>` |
-| Phone → „+48 22 555 0100" | link `tel:+48225550100` (spacje/znaki usunięte, same cyfry) |
-| Email → „kontakt@coderso.dev" | link `mailto:kontakt@coderso.dev` |
-| Toggle „Show back-to-top action" = ON | `<a href="#top" data-footer-back-to-top>` |
-| Back-to-top label → „Wróć na górę" | tekst linku = „Wróć na górę" |
+| Privacy destination (page-picker) → „HomePage" | link „Privacy" → `href="/homepage"` |
+| Privacy link target → „Open in new tab" | „Privacy" zyskał `target="_blank"` + `rel="noopener noreferrer"` (mimo relatywnego href!) |
+| Terms destination (page-picker) → „HomePage" | link „Terms" → `href="/homepage"` |
+| Terms link target → „Open in new tab" | „Terms" → `target="_blank"` + `rel="noopener noreferrer"` |
+| „Clear destination" (Privacy) | link „Privacy" **całkowicie zniknął** z dolnego paska |
+| Toggle „Show legal strip" = OFF | zniknęły copyright + Privacy + Terms (social pozostał) |
+| Ten sam toggle = ON | copyright + Terms wróciły (Privacy nadal pusty — bo destynacja wyczyszczona wcześniej) |
 
-### 4.4 Visual — Social
+### 4.3 Columns and links — add / remove / reorder / target — LUKA DOMKNIĘTA
 | Akcja | Wynik (DOM podglądu) |
 |------|----------------------|
-| Toggle „Show social links" = OFF | lista `ul[aria-label="Footer social links"]` zniknęła |
-| Ten sam toggle = ON | lista wróciła |
-| Profile name (X) „coderso" → „coderso-test" | `href` = `https://x.com/coderso-test`, `target="_blank"`, `aria-label="X (opens in new tab)"` |
-| Platforma X → GitHub | `href` przebudowany na `https://github.com/coderso-test`, etykieta „GitHub (opens in new tab)" — handle zachowany przy zmianie platformy |
+| Link target (Kol.1 / Link 1 „About") → „Open in new tab" | „About" → `target="_blank"` + `rel="noopener noreferrer"` |
+| „Add link" (Kol. 1) | dodano „Link 3" (panel + render) |
+| „Move up" na „Link 3" | kolejność linków: `[About, Link 3, Careers]` |
+| „Remove" na „Link 3" | powrót do `[About, Careers]` |
+| „Clear destination" (Kol.1 / „About") | `href` linku „About" → `#` — link **nadal się renderuje** (patrz §8 pkt 3) |
 
-### 4.5 Visual — Colors / Typography / Layout
+### 4.4 Social — add / remove / reorder / typ custom — LUKA DOMKNIĘTA
+| Akcja | Wynik (DOM podglądu) |
+|------|----------------------|
+| „Add social" | dodano „Social link 3" (domyślnie LinkedIn, pusty href — nie renderuje się) |
+| Platform „Social link 3" → „Custom" | pole „Profile name" zamienione na **page-picker „Custom destination"** + pojawiło się pole **„Accessible label"** |
+| Accessible label → „Społeczność" + Custom destination → „HomePage" | w `<footer>` pojawiła się 3. ikona social: `aria-label="Społeczność"`, `href="/homepage"`, **bez** `target="_blank"` (link wewnętrzny) i bez „(opens in new tab)" |
+| „Move down" na „Social link 1" (X) | kolejność: `[LinkedIn, X, Społeczność]` |
+| „Remove" na „Social link 3" | powrót do 2 ikon `[LinkedIn, X]` |
+
+### 4.5 Typography and link styling — LUKA DOMKNIĘTA
 | Akcja | Wynik (DOM/CSS podglądu) |
 |------|---------------------------|
-| Surface color (swatch) → `#fef9c3` | `footer.style.backgroundColor = rgb(254, 249, 195)` |
-| Surface color → przycisk **Clear** | inline `backgroundColor` usunięty (powrót do motywu) |
-| Top border width `1px` → `3px` | `footer.style.borderTopWidth = 3px` |
-| Heading transform `Uppercase` → `Capitalize` | klasa `<h3>` = `... capitalize` |
-| Columns alignment `Left` → `Center` | klasa kolumny = `space-y-3 text-center` |
-| Max width `6xl` → `7xl` | klasa kontenera = `mx-auto w-full max-w-7xl` |
-| Variant select w Visual → `columns-3` | 3 nagłówki `[Resources, Firma, Product]`, siatka `md:grid-cols-3` (zachowany wcześniejszy reorder kolumn) |
+| Font size → „Base" | klasa `<footer>` = `… text-base` (z `text-sm`) |
+| Link font weight → „Semibold" | klasa linku = `… font-semibold` |
+| Link letter spacing → „Wide" | klasa linku = `… tracking-wide` |
+| Link underline → „Always underlined" | klasa linku = `… underline underline-offset-4` (z `no-underline … hover:underline`) |
+| Link hover color → `#ff0000` | inline `--footer-link-hover-color: #ff0000` + klasa `hover:text-[var(--footer-link-hover-color)]` |
+| Link active color → `#0000ff` | inline `--footer-link-active-color: #0000ff` + klasa `active:text-[var(--footer-link-active-color)]` |
 
-### 4.6 Advanced
-- Wszystkie wiersze diagnostyczne **poprawnie odzwierciedliły** wprowadzone w Visual zmiany:
-  Variant „Columns 3", „3 stored columns", „2 links", Legal „Visible", Back to top „Enabled",
-  Columns alignment „Center", Max width „7xl", Top border width „3px", Heading transform „Capitalize",
-  Surface color „Theme default" (po Clear). Brak edytowalnych pól — zgodnie z projektem.
+### 4.6 Colors and borders — LUKA DOMKNIĘTA
+| Akcja | Wynik (CSS podglądu) |
+|------|----------------------|
+| Border color → `#ff8800` | `footer.style.borderColor = rgb(255,136,0)` |
+| Text color → `#222222` | `footer.style.color = rgb(34,34,34)` |
+| Heading color → `#aa0000` | `h3.style.color = rgb(170,0,0)` |
+| Link color → `#008800` | `a.style.color = rgb(0,136,0)` |
+| Legal text color → `#888888` | span legal `color = rgb(136,136,136)` |
+| Social icon color → `#0088cc` | link social `color = rgb(0,136,204)` |
+| „Clear" (po ustawieniu) | przyciski „Clear" zmieniły stan z `disabled`/„Theme default" na aktywne/„Selected color"; Clear (Border) → powrót do `var(--color-border)` |
 
-**Konsola admina:** 0 błędów, 0 ostrzeżeń podczas całej sesji.
+### 4.7 Layout and spacing — LUKA DOMKNIĘTA
+| Akcja | Wynik (klasa podglądu) |
+|------|------------------------|
+| Legal row alignment → „Left" | dolny pasek = `… justify-start` (z `justify-end`) |
+| Column gap → „Spacious" | siatka = `… gap-8` |
+| Horizontal padding → „Spacious" | `<footer>` = `… px-8` |
+| Column breakpoint → „Large screens" | siatka = `… lg:grid-cols-2` (z `md:grid-cols-2`) |
+| Section padding → „Spacious" | `<footer>` = `… py-12` |
+
+### 4.8 Sloty (zagnieżdżone widgety) — LUKA DOMKNIĘTA
+| Akcja | Wynik (DOM podglądu) |
+|------|----------------------|
+| „Add widget to Column 1" → wstaw „Divider" | Divider wyrenderowany **wewnątrz** kolumny „Company", w wrapperze `.pt-1` (`[data-divider]`) |
+| „Move right" na kolumnie „Company" | **payload slotu podążył za kolumną**: po reorderze Divider renderuje się pod „Company" (teraz prawa kolumna), a lewa „Resources" nie ma slotu — potwierdza `reorderFooterColumnsAndSlots` |
+| „Add widget to Bottom Strip" → wstaw „Divider" | Divider wyrenderowany w dolnym pasku (`.mt-8` → `[data-divider]`) |
+| Zmiana wariantu na „Minimal" | sloty wtórne (`column-1` + `bottom`) renderują się **pod** kompaktowym rzędem (`.border-t.pt-4`); rząd inline reużywa pierwszej kolumny (`<nav aria-label="… links">`) |
+
+**Konsola admina:** 0 błędów, 1 ostrzeżenie (a11y dialogu media — patrz §8 pkt 1).
+
+> Kontrolki potwierdzone już wcześniej (i niezmienione): wybór wariantu w Wizard i
+> Visual, tytuł kolumny, etykieta linku, page-picker linków kolumn, brand name +
+> tagline (→ `aria-labelledby`), copyright, address (`<address>`), phone (`tel:`),
+> email (`mailto:`), back-to-top toggle + label (`#top` + `data-footer-back-to-top`),
+> social toggle, social profile name, zmiana platformy z zachowaniem handla,
+> Surface color + Clear, Top border width, Heading transform, Columns alignment,
+> Max width. **W tej sesji potwierdzono je ponownie pośrednio** (stan startowy i
+> reakcje podglądu były zgodne).
 
 ---
 
-## 5. Czego NIE przetestowano (uczciwe zastrzeżenia)
+## 5. Czego NIE DA SIĘ w pełni zweryfikować (z dokładną przyczyną)
 
-Poniższe kontrolki są obecne w UI, ale **nie zostały kliknięte/zmienione** w tej sesji —
-nie mogę więc potwierdzić ich działania empirycznie (choć w kodzie wyglądają poprawnie):
+- **Social → amber „Clear saved destination"** (`footer.social.{i}.clearSavedDestination`).
+  **Kontrolka:** żółty box z przyciskiem „Clear saved destination" w karcie social.
+  **Warunek pojawienia się:** typ inny niż `custom` **oraz** zapisany `href` o
+  niezerowej długości, którego `readFooterSocialProfile()` **nie potrafi** sparsować
+  na handle dla danej platformy.
+  **Dlaczego nieosiągalne w tym fixture/UI:** pole „Profile name" zawsze przebudowuje
+  kanoniczny, parsowalny URL przez `buildFooterSocialHref()` (albo zwraca pusty
+  string), a zmiana platformy (`updateSocialType`) najpierw wyciąga handle ze starego
+  URL-a i odbudowuje nowy — round-trip jest zawsze parsowalny. Aby wywołać amber,
+  trzeba **wprost zaseedować** wpis social z niespójnym href (np. `type: "twitter"`,
+  `href: "https://example.com/foo"`), czego standardowy edytor nie wytworzy, a tego
+  fixture nie zawiera. **To nie jest błąd** — to defensywny guard dla danych z
+  importu/legacy. Logika została zweryfikowana wyłącznie przez analizę kodu.
 
-- **Brand → Logo image** (MediaPicker) — nie wybrano realnego medium; nie sprawdzono `logoAlt`.
-- **Legal:** toggle „Show legal strip", pola Privacy/Terms **label**, **destination** (page-picker) oraz **link target** (`_self`/`_blank`).
-- **Columns/links:** przyciski **Add link**, **Remove**, reorder linków **Move up/down** w obrębie kolumny, **Add social**/**Remove social**, „Clear destination", „Clear saved destination" (amber), oraz select **Link target** per link.
-- **Typography:** Font size, Link font weight, Link letter spacing, Link underline (przetestowano tylko Heading transform); Link hover/active color (swatche).
-- **Pozostałe kolory:** Border/Text/Heading/Link/Legal/Social color (przetestowano tylko Surface + jego Clear).
-- **Layout:** Legal row alignment, Column gap, Horizontal padding, Column breakpoint, Section padding.
-- **Sloty zagnieżdżone** (Column 1–3, Bottom Strip) — nie wstawiano widgetów do slotów; nie testowano przenoszenia payloadu slotu wraz z reorderem kolumn.
-- **Front: wariant `minimal`** — na trasie publicznej opublikowany jest `columns-3`; minimal widziałem tylko w podglądzie admina (Wizard live preview), nie na froncie.
-- **Persystencja po publikacji** — **nie publikowałem** strony (patrz §6). Zmiany draftowe nie zostały utrwalone na froncie.
+- **Persystencja po publikacji.** Świadomie **nie klikałem „Publish"** — przy wyjściu
+  z admina pojawił się guard `beforeunload` (potwierdza śledzenie brudnego draftu),
+  który zaakceptowałem, więc edycje draftowe zostały porzucone. Trwałości moich zmian
+  na froncie **nie weryfikowałem** (front pokazuje wcześniej opublikowany fixture).
+
+- **Wariant `minimal` na froncie.** Na trasie publicznej opublikowany jest
+  `columns-3`; `minimal` (w tym jego gałąź slotów wtórnych) widziałem wyłącznie w
+  podglądzie admina, nie na froncie.
+
+- **Pozostałe 13 platform social poza X / LinkedIn / Custom** — nie przeklikiwałem
+  każdej z osobna (logika `buildFooterSocialHref`/`readFooterSocialProfile` wspólna;
+  potwierdzono X, LinkedIn, GitHub w poprzednich sesjach + Custom w tej).
 
 ---
 
@@ -172,24 +221,24 @@ nie mogę więc potwierdzić ich działania empirycznie (choć w kodzie wygląda
 
 > **URL:** http://localhost:3000/test-footer-widget-0516 · **Data:** 2026-05-29
 
-**Ważne:** trasa publiczna renderuje **opublikowaną** wersję strony, niezależną od moich
-edycji draftowych w adminie (świadomie **nie** klikałem „Publish"). Przy próbie opuszczenia
-admina pojawił się dialog `beforeunload` (potwierdza śledzenie „brudnego" draftu) — został
-zaakceptowany, więc edycje draftowe zostały porzucone. Front pokazuje zatem **wcześniej
-opublikowany fixture**, nie wynik moich zmian.
+Front renderuje **opublikowaną** wersję (niezależną od moich edycji draftowych).
+Po zaakceptowaniu `beforeunload` draft został porzucony — front pokazuje fixture
+sprzed sesji.
 
 ### 6.1 Wyrenderowany footer (opublikowany stan)
-- Wariant: **`columns-3`** — nagłówki: `Company`, `Resources`, `Product`.
-- Linki kolumn renderowane jako relatywne `<a href="/about">`, `/careers`, `/blog`, `/support`, `/features`, `/pricing` — bez `target`/`rel` (linki wewnętrzne).
-- Legal: `Privacy` → `/privacy`, `Terms` → `/terms`.
-- Social: `Twitter` → `https://twitter.com`, `LinkedIn` → `https://linkedin.com`, oba z **`target="_blank"` i `rel="noopener noreferrer"`** oraz `aria-label` „… (opens in new tab)" — 2 ikony SVG wyrenderowane.
-- `<footer>` z `aria-label="Site footer"` (brak tekstu marki w opublikowanej wersji → brak `aria-labelledby`).
-- Klasy: `border-t px-6 py-10 text-sm`, kontener `mx-auto w-full max-w-6xl`, siatka `grid w-full gap-6 md:grid-cols-3`, `borderTopWidth: 1px`, tło `var(--color-bg)`.
-- **Brak** sekcji kontakt, brak back-to-top, brak bloku marki (zgodnie z opublikowanymi danymi).
+- Wariant: **`columns-3`** — nagłówki: `Company`, `Resources`, `Product`; linki:
+  `About`/`Careers`, `Blog`/`Support`, `Features`/`Pricing` (relatywne, bez target).
+- Legal: `Privacy` → `/privacy`, `Terms` → `/terms` (bez target).
+- Social: `Twitter` → `https://twitter.com`, `LinkedIn` → `https://linkedin.com`,
+  oba z **`target="_blank"` + `rel="noopener noreferrer"`** i `aria-label` „… (opens in new tab)".
+- `<footer aria-label="Site footer">` (brak marki → brak `aria-labelledby`).
+- Klasy: `border-t px-6 py-10 text-sm`, kontener `max-w-6xl`, siatka
+  `grid w-full gap-6 md:grid-cols-3`.
 
 ### 6.2 Responsywność
-- **1280px:** 3 kolumny obok siebie (`md:grid-cols-3`).
-- **375px (mobile):** siatka redukuje się do jednej kolumny (`grid-template-columns` ≈ jedna kolumna o szer. ~327px); kolumny stackują się pionowo. Poprawne zachowanie — `md:grid-cols-3` aktywuje się dopiero od breakpointu `md`.
+- **1280px:** 3 kolumny obok siebie — `grid-template-columns` ≈ `309px 309px 309px`.
+- **375px (mobile):** jedna kolumna — `grid-template-columns` ≈ `327px`; `md:grid-cols-3`
+  aktywuje się dopiero od `md`. Poprawne zachowanie.
 
 **Konsola frontu:** 0 błędów, 0 ostrzeżeń.
 
@@ -199,75 +248,91 @@ opublikowany fixture**, nie wynik moich zmian.
 
 | Aspekt | Admin (podgląd) | Frontend (publish) | Uwaga |
 |--------|-----------------|--------------------|-------|
-| Element `<footer>` semantyczny | ✓ | ✓ | zgodne |
-| `aria-label` / `aria-labelledby` zależne od marki | ✓ (po dodaniu marki → `aria-labelledby`) | ✓ (`aria-label="Site footer"`, brak marki) | zgodne z logiką renderera |
+| `<footer>` semantyczny | ✓ | ✓ | zgodne |
+| `aria-label` / `aria-labelledby` zależne od marki | ✓ | ✓ (`aria-label`, brak marki) | zgodne z logiką renderera |
 | Linki kolumn (relatywne, bez target) | ✓ | ✓ | zgodne |
-| Social: `target=_blank` + `rel=noopener noreferrer` + a11y label | ✓ | ✓ | zgodne, poprawne bezpieczeństwo |
-| `tel:` / `mailto:` z kontaktu | ✓ (przetestowane w adminie) | n/d (brak kontaktu w opublikowanym fixture) | nie do porównania na froncie |
-| Siatka kolumn / responsywność | ✓ | ✓ | zgodne |
+| Link target `_blank` → `rel=noopener noreferrer` | ✓ (legal/link/social) | ✓ (social) | zgodne, poprawne bezpieczeństwo |
+| Sloty (column / bottom) | ✓ (Divider, reorder remap) | n/d (brak slotów w opublikowanym fixture) | nieporównywalne na froncie |
+| Siatka / responsywność | ✓ | ✓ | zgodne |
 
-**Wniosek:** renderer jest wspólny dla admina i frontu — to, co potwierdziłem w podglądzie
-admina (linki, social `target/rel`, `tel:`/`mailto:`, siatka), jest spójne z zachowaniem
-frontu. Różnice w treści (np. brak kontaktu/marki na froncie) wynikają wyłącznie z innych
-**opublikowanych** danych, nie z rozbieżności rendererów.
+**Wniosek:** renderer jest wspólny dla admina i frontu. Różnice w treści (np. brak
+marki/kontaktu/slotów na froncie) wynikają z innych **opublikowanych** danych, nie z
+rozbieżności rendererów.
 
 ---
 
 ## 8. Niuanse UX/UI (obserwacje)
 
-1. **Wizard jest praktycznie read-only** — poza selectem wariantu wszystko to wiersze
-   podsumowań kierujące do Visual. Komunikaty są jasne („Edit … in Visual"), więc jest to
-   raczej świadoma decyzja niż błąd, ale użytkownik szukający szybkiej edycji treści
-   w „kreatorze" niczego tam nie zmieni.
+1. **A11y dialogu media (NOWE).** Otwarcie page-pickerem mediów logo wywołuje w
+   konsoli ostrzeżenie React: „Missing `Description` or `aria-describedby={undefined}`
+   for {DialogContent}". Pochodzi ze wspólnego komponentu `Dialog`, ale ujawnia się
+   m.in. przez `MediaPicker` footera. Drobna luka dostępności (brak opisu dialogu).
 
-2. **„Link destination" to PAGE-PICKER, nie pole tekstowe URL.** Zaseedowane ścieżki
-   (`/about`, `/blog`…) są pokazywane jako **„Saved custom destination"** z trwałym
-   ostrzeżeniem: „A custom destination is already configured. Choose a site page to replace
-   it or clear the destination.". Lista oferuje istniejące strony serwisu + „No destination".
-   Konsekwencja: **autorowanie dowolnych zewnętrznych URL-i dla linków kolumn standardową
-   kontrolką jest nieoczywiste** — można wybrać stronę wewnętrzną albo wyczyścić. Zapisana
-   wartość „custom" jest jednak zachowywana i renderowana (np. `/about` działa na froncie),
-   a przycisk „Clear destination" pozwala ją usunąć.
+2. **„Add link" tworzy destynację `#`, nie pustą (NOWE).** Świeżo dodany link ma w
+   edytorze `href: ""`, ale po round-tripie normalizacji bloku zapisuje się jako `#`,
+   przez co page-picker pokazuje **„Saved custom destination"** zamiast neutralnego
+   „No destination". Użytkownik widzi „zapisaną niestandardową destynację" tuż po
+   dodaniu pustego linku — mylące.
 
-3. **Tekst marki pełni rolę dostępnej nazwy footera** — `aria-labelledby` gdy obecny,
-   inaczej `aria-label="Site footer"`. Dobry, spójny wzorzec.
+3. **Niespójna semantyka „pustej" destynacji: link kolumny vs legal (NOWE).**
+   Wyczyszczenie destynacji **linku kolumny** ustawia `href` na `#` i link **dalej się
+   renderuje** (jako `#`). Wyczyszczenie destynacji **legal** (Privacy/Terms) usuwa
+   link **całkowicie**. Dwa różne zachowania dla tej samej operacji „Clear destination".
 
-4. **Pola social są „platform-aware":** wpisuje się tylko handle/nazwę profilu, a edytor
-   buduje bezpieczny, kanoniczny URL. Zmiana platformy zachowuje handle i przebudowuje URL.
-   Typ `custom` przełącza się na page-picker + osobne pole „Accessible label". Gdy zapisany
-   jest niestandardowy `href`, którego nie da się sparsować na handle, pojawia się amber
-   z przyciskiem „Clear saved destination".
+4. **Link target `_blank` dokleja `rel=noopener noreferrer` także do linków
+   wewnętrznych/relatywnych.** Bezpieczne, ale oznacza, że link np. do `/homepage`
+   może otwierać się w nowej karcie z `rel`. Warto mieć świadomość przy targetowaniu
+   stron wewnętrznych.
 
-5. **Kontrolki koloru używają swatchy z przyciskiem „Clear"**, który jest **disabled** gdy
-   brak wartości (etykieta „Theme default"), a aktywny gdy ustawiono kolor (etykieta
-   „Selected color"). Semantyka czyszczenia jest spójna we **wszystkich** polach koloru —
-   w przeciwieństwie do starszego widgetu Contact, gdzie `borderColor` nie miał Clear.
+5. **„Link/Privacy/Terms/Custom destination" to PAGE-PICKER, nie pole URL.** Zaseedowane
+   ścieżki (`/about`, `/privacy`…) pokazywane jako „Saved custom destination" z
+   ostrzeżeniem „A custom destination is already configured…". Autorowanie dowolnego
+   zewnętrznego URL standardową kontrolką jest nieoczywiste — można wybrać stronę
+   wewnętrzną albo wyczyścić. Zapisana wartość „custom" jest zachowywana i renderowana.
 
-6. **Advanced jest „chudy, ale uczciwy"** — wyłącznie diagnostyka odzwierciedlająca stan
-   na żywo, bez edytora JSON i bez przycisku normalizacji. Dla power-usera brak tu narzędzi
-   edycji surowych danych; z drugiej strony nie ma mylących duplikatów kontrolek.
+6. **Pola social są „platform-aware":** wpisuje się tylko handle/nazwę, edytor buduje
+   bezpieczny, kanoniczny URL; zmiana platformy zachowuje handle. Typ `custom`
+   przełącza się na page-picker + osobne pole „Accessible label"; link wewnętrzny
+   custom **nie** dostaje `target=_blank` (zgodnie z logiką dla href relatywnego).
 
-7. **Reorder kolumn jest „live-only"** (przez `onBlockPatch`), aby payloady slotów
-   przesuwały się razem z widocznymi kolumnami — sekcja zawiera o tym wyraźną notkę. Przyciski
-   Move left/right są aktywne tylko gdy widocznych kolumn > 1.
+7. **Kontrolki koloru: swatch + „Clear".** „Clear" jest `disabled` przy „Theme default"
+   i aktywny przy „Selected color" — spójnie we **wszystkich** polach koloru
+   (Surface/Border/Text/Heading/Link/Legal/Social + hover/active).
 
-8. **Wariant `minimal`** reużywa linków pierwszej kolumny jako rzędu inline, a pozostałe
-   kolumny zachowuje (ukryte) — komunikowane zarówno w Wizard (hint), jak i w Visual (notka).
+8. **Reorder kolumn jest „live-only" (przez `onBlockPatch`) i przenosi sloty.**
+   Potwierdzone empirycznie: przeniesienie kolumny przenosi jej payload slotu
+   (`reorderFooterColumnsAndSlots`). Przyciski Move left/right aktywne tylko gdy
+   widocznych kolumn > 1.
 
-9. **Guard `beforeunload`** uruchamia się przy wyjściu z niezapisanym draftem — potwierdza
-   istnienie śledzenia zmian; trzeba świadomie potwierdzić opuszczenie strony.
+9. **Wstawienie widgetu do slotu zmienia zaznaczenie na ten widget.** Po „Add widget
+   to Column/Bottom" prawy panel przełącza się na edytor wstawionego widgetu (np.
+   Divider) — aby wrócić do edytora footera, trzeba ponownie zaznaczyć footer.
+   Zachowanie wspólne dla bloków ze slotami, nie błąd, ale wymaga dodatkowego kliknięcia.
+
+10. **Wizard jest praktycznie read-only** (poza selectem wariantu) — świadoma decyzja
+    projektowa (`writablePaths: []`), komunikaty jasno kierują do Visual.
+
+11. **Guard `beforeunload`** uruchamia się przy wyjściu z niezapisanym draftem —
+    potwierdza śledzenie zmian; trzeba świadomie potwierdzić opuszczenie strony.
 
 ---
 
-## 9. Co NIE działa / błędy
+## 9. Co NIE DZIAŁA / błędy
 
-W zakresie tego, co **faktycznie przetestowałem**, **nie znalazłem żadnej zepsutej ani
-mylącej kontrolki** — każda interakcja z §4 działała i natychmiast aktualizowała podgląd,
-a tryb Advanced wiernie odzwierciedlał stan. Brak błędów i ostrzeżeń w konsoli (admin i front).
+**Błędy funkcjonalne: 0.** Każda z ~40 przetestowanych w tej sesji interakcji
+(media picker, legal destinations/targets, add/remove/reorder linków i social,
+typ custom social, wszystkie selecty typografii/kolorów/layoutu, wstawianie i
+reorder slotów, wariant minimal) zadziałała i natychmiast aktualizowała podgląd.
+Tryb Advanced wiernie odzwierciedlał stan.
 
-Nie zgłaszam żadnego błędu funkcjonalnego. Jedyne zastrzeżenia mają charakter **UX**
-(§8), w szczególności: page-picker zamiast pola URL dla linków kolumn (pkt 2) oraz
-de facto read-only charakter Wizarda (pkt 1). Lista nieprzetestowanych kontrolek — §5.
+**Konsola:** front 0/0. Admin: 0 błędów, **1 ostrzeżenie** — a11y `DialogContent`
+(brak `Description`/`aria-describedby`) wyzwalane przez dialog biblioteki mediów
+(§8 pkt 1). To wspólny komponent, nie logika footera, ale ujawnia się przez footer.
+
+Zastrzeżenia mają charakter **UX/a11y** (§8): a11y dialogu media (1), `#` jako
+destynacja świeżego linku (2), niespójna semantyka „Clear destination" między
+linkami kolumn a legal (3), `rel` na linkach wewnętrznych z `_blank` (4),
+page-picker zamiast URL (5). Niezweryfikowane/odcięte kontrolki i przyczyny — §5.
 
 ---
 
@@ -276,10 +341,11 @@ de facto read-only charakter Wizarda (pkt 1). Lista nieprzetestowanych kontrolek
 | Kategoria | Obserwacja |
 |-----------|------------|
 | Tryby edytora | Wizard (setup/przegląd, edytowalny tylko wariant), Visual (pełna edycja), Advanced (tylko diagnostyka) |
-| Przetestowane kontrolki | 20+ interakcji w Wizard i Visual — **wszystkie działają** |
-| Błędy funkcjonalne | **0** (w zakresie przetestowanym) |
-| Błędy/ostrzeżenia konsoli | **0** (admin i front) |
-| Dostępność | dobra: semantyczny `<footer>`, `aria-labelledby`/`aria-label`, `rel=noopener` na linkach zewn., a11y labels social, `<address>` dla kontaktu |
-| Główne niuanse UX | page-picker zamiast URL dla linków; Wizard niemal read-only; Advanced bez edycji surowych danych |
+| Przetestowane kontrolki | ~40 interakcji w tej sesji + wcześniej potwierdzone — **wszystkie działają** |
+| Domknięte luki | media picker logo, legal destinations/targets, add/remove/reorder linków i social, typ custom social, pełna typografia/kolory/layout, **sloty (insert + reorder remap + bottom + minimal)** |
+| Błędy funkcjonalne | **0** |
+| Błędy / ostrzeżenia konsoli | front 0/0; admin 0 błędów, 1 ostrzeżenie a11y (dialog media) |
+| Dostępność | dobra: semantyczny `<footer>`, `aria-labelledby`/`aria-label`, `rel=noopener` na linkach zewn. i `_blank`, a11y labels social, `<address>` dla kontaktu; **minus:** brak `Description` w dialogu media |
+| Główne niuanse UX | a11y dialogu media; `#` dla świeżego linku; niespójna semantyka „Clear destination" (kolumna vs legal); page-picker zamiast URL; `rel` na linkach wewnętrznych |
+| Nietestowalne (z przyczyną) | amber „Clear saved destination" (nieosiągalny w UI/fixture — wymaga niespójnych danych seed); persystencja po publikacji (nie publikowano); minimal na froncie |
 | Front vs Admin | spójne (wspólny renderer); różnice treści wynikają z innych opublikowanych danych |
-| Nieprzetestowane | media logo, część selectów typografii/layoutu/legalu, sloty, minimal na froncie, persystencja po publikacji (nie publikowano) |
