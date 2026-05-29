@@ -1,200 +1,256 @@
-# RAPORT: Tabs Widget — pogłębiony audyt current-state (Wizard / Visual / Advanced + frontend)
+# RAPORT: Tabs Widget — wyczerpujący audyt current-state (Visual / Wizard / Advanced + frontend)
 
-> **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja Playwright:** `claude-28-05-tabs` (izolowana, oddzielna od innych agentów)
+> **Status:** Zakończony (pogłębiona iteracja „gap-close")
+> **Data:** 2026-05-29
+> **Sesja Playwright:** `claude-29-05-tabs-gap-close-v2` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin:** `/admin/pages/0be2cb49-8113-4a88-8d17-0ed70d5c5fdd` (strona „Contract Test - tabs", status `Draft`)
+> **Fixture admin:** `/admin/pages/0be2cb49-8113-4a88-8d17-0ed70d5c5fdd` (strona „Contract Test - tabs")
 > **Fixture public:** http://localhost:3000/test-tabs-0516
-> **Pliki źródłowe:** `core/widgets/core/tabs.tsx` (renderer + normalizacja + runtime script) · `core/admin/ui/widgets/editors/TabsEditors.tsx` (edytory Wizard/Visual/Advanced)
+> **Pliki źródłowe:** `core/widgets/core/tabs.tsx` (renderer + normalizacja + runtime script) · `core/admin/ui/widgets/editors/TabsEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` (kontrolka kolorów)
 
-> Uwaga metodologiczna: ten raport jest celowo bogatszy niż smoke z 27-05-2026.
-> Każde stwierdzenie „działa / nie działa" zostało zweryfikowane interakcją w UI
-> i inspekcją DOM (atrybuty `data-coderso-tabs-*`, klasy Tailwind, ARIA), a nie
-> tylko zliczeniem widocznych sekcji. Sekcje 4–5 jasno oddzielają: co działa, co
-> nie działa, co faktycznie przetestowano oraz czego NIE testowano.
+> **Cel tej iteracji:** zamknięcie luk z poprzedniego audytu. Wcześniej NIE było w pełni
+> przećwiczone: (a) rodziny stylów/kolorów, (b) gałęzie liczby zakładek / slotów
+> (add/remove/reorder), (c) gałęzie orientacji / wariantu / motion. W tym przebiegu
+> KAŻDA wartość każdego enuma została kliknięta, a efekt zweryfikowany inspekcją DOM
+> (atrybuty `data-coderso-tabs-*`, klasy Tailwind triggera/tablisty/panelu, inline `style`,
+> ARIA). Tam, gdzie kontrolka jest nietestowalna w tym fixture, podana jest dokładna
+> nazwa kontrolki i powód.
 
-> Uwaga o screenshotach: pliki PNG wspomniane w sekcji 9 są **wyłącznie lokalnymi
-> etykietami** przechwyceń Playwright w katalogu `.playwright-cli/` (ignorowany przez
-> Git). Nie są wymaganym evidence w repo i nie zostały dołączone do żadnego pliku
-> źródłowego.
+> **Uwaga o screenshotach:** ten przebieg opierał się na inspekcji DOM/atrybutów, a **nie**
+> na zrzutach PNG. Nie przechwycono żadnych plików screenshotów — pliki `.yml` w katalogu
+> `.playwright-cli/` to wewnętrzne snapshoty narzędzia (katalog ignorowany przez Git) i nie
+> są evidence dołączanym do repo. Sekcja 10 zawiera jedynie lokalne etykiety potencjalnych
+> przechwyceń (brak rzeczywistych artefaktów w tym przebiegu).
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** `tabs` · **Kategoria:** `layout` · **Tytuł:** „Switch between grouped content panels."
+**Typ:** `tabs` · **Kategoria:** `layout` · **Opis:** „Switch between grouped content panels."
 
-**Warianty:** `pills` (domyślny, zaokrąglone segmenty z obramowaniem), `underline` (styl linkowy z aktywnym podkreśleniem), `minimal` (lekka nawigacja z `underline` na aktywnym).
+**Warianty:** `pills` (domyślny), `underline`, `minimal`.
 
 **Model danych (`TabsData`):**
 
 | Sekcja | Pola |
 |--------|------|
-| **items[]** | `id`, `label`, `description` (legacy→panelIntro), `panelIntro`, `triggerDescription` (podtytuł), `icon` (max 16 znaków), `disabled` |
-| **options** | `defaultItemId`, `activeId`, `alignment` (start/center/end), `orientation` (horizontal/vertical), `triggerOverflow` (wrap/scroll — patrz 4.2), `containerPadding`/`triggerGap`/`panelGap` (sm/md/lg), `triggerTextSize` (xs/sm/base), `triggerFontWeight` (normal/medium/semibold), `motion` (none/fade/slide) |
+| **items[]** | `id`, `label`, `description` (legacy→`panelIntro`), `panelIntro`, `triggerDescription` (podtytuł), `icon` (max 16 znaków), `disabled` |
+| **options** | `defaultItemId`, `activeId`, `alignment` (start/center/end), `orientation` (horizontal/vertical), `triggerOverflow` (wrap/scroll — patrz B1), `containerPadding`/`triggerGap`/`panelGap` (sm/md/lg), `triggerTextSize` (xs/sm/base), `triggerFontWeight` (normal/medium/semibold), `motion` (none/fade/slide) |
 | **style** | `surfaceColor`, `borderColor`, `activeBackgroundColor`, `activeTextColor`, `inactiveTextColor`, `panelBackgroundColor` |
 
-**Ograniczenia:** min 2 / max 6 zakładek (`tabsItemMin=2`, `tabsItemMax=6`). Liczba renderowanych zakładek jest sterowana **liczbą slotów typu `panel`** (repeatable slot), a nie długością tablicy `items` — to ma kluczowe znaczenie (patrz 4.1).
+**Ograniczenia:** min 2 / max 6 zakładek (`tabsItemMin=2`, `tabsItemMax=6`). **Kluczowy niuans:** liczbę realnie renderowanych zakładek wyznacza **liczba slotów typu `panel`** (repeatable slot), a nie długość tablicy `items` (patrz N1 i sekcja 6).
 
-**Renderowanie:** zakładki na froncie są w pełni dostępne (`role=tablist/tab/tabpanel`), a interaktywność zapewnia wstrzykiwany skrypt runtime (`data-coderso-tabs='1'`). W trybie podglądu (admin) interaktywność realizuje stan Reacta (`previewActiveId`).
-
----
-
-## 2. Architektura trybów edytora (istotny niuans UX)
-
-Panel edytora po prawej stronie ma **tylko dwie zakładki: `Visual` i `Advanced`**. Tryb **Wizard nie jest równorzędną zakładką** — dostaje się do niego przyciskiem **„Run setup again"** (po zakończeniu setupu panel pokazuje komunikat: *„Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics."*). Wizard kończy się przyciskiem **„Finish setup and open Visual"**.
-
-| Tryb | Jak otworzyć | Zawartość |
-|------|--------------|-----------|
-| **Wizard** | przycisk „Run setup again" | Sekcja „Starter tabs": select „Number of tabs" (2–6) + read-only podsumowanie etykiet/intro każdej zakładki + własny panel „Live preview". |
-| **Visual** | zakładka „Visual" | 5 sekcji widgetowych: Variant, Tab content, Layout, Tab label style, Colors. Dodatkowo współdzielone sekcje wrappera: Structure (sloty), Block layout, Device visibility. |
-| **Advanced** | zakładka „Advanced" | 4 sekcje read-only: Behavior summary, Saved tabs summary, Saved display summary, Contract summary + współdzielone Block layout summary, Visibility summary. Brak jakichkolwiek edytowalnych kontrolek. |
+**Tryby edytora:** panel po prawej ma dwie zakładki **Visual** i **Advanced**. **Wizard** nie jest równorzędną zakładką — wchodzi się do niego przyciskiem **„Run setup again"**, a kończy **„Finish setup and open Visual"**. Po setupie panel pokazuje „Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics."
 
 ---
 
-## 3. Co faktycznie przetestowano (zakres interakcji)
+## 2. Zakres faktycznie przećwiczonych interakcji (current-state)
 
-Wszystkie poniższe interakcje zostały wykonane w sesji `claude-28-05-tabs` i zweryfikowane inspekcją DOM:
+Wszystkie poniższe wykonane w sesji `claude-29-05-tabs-gap-close-v2`, każda zweryfikowana inspekcją DOM.
 
-- **Wizard:** zmiana liczby zakładek 2→4 i 4→2 (z dialogiem potwierdzenia), porównanie liczby renderowanych zakładek w canvas i w „Live preview".
-- **Structure (wrapper):** „Add Panel" (dodanie realnego slotu) i „Remove" (przywrócenie stanu).
-- **Visual / Variant:** kliknięcie wszystkich 3 kart (pills → underline → minimal → powrót do pills).
-- **Visual / Tab content:** edycja label, content intro, subtitle, icon dla Tab 1; zmiana „Default tab"; włączenie/wyłączenie „Show as unavailable" dla Tab 2.
-- **Visual / Layout:** orientation (vertical i horizontal), alignment (center), container padding (Large), tab gap (Small), content gap (Large).
-- **Visual / Tab label style:** text size (Base), font weight (Semibold), motion (Slide).
-- **Visual / Colors:** zmiana swatcha „Active background" i „Border color"; przycisk „Clear" dla „Active background".
-- **Advanced:** odczyt wszystkich sekcji podsumowań i porównanie z edycjami z Visual.
-- **Frontend (public):** render początkowy, przełączanie zakładek myszą, nawigacja klawiaturą (ArrowUp/ArrowDown/Home/End), atrybuty ARIA, brak wycieku placeholdera edytora, brak błędów konsoli, brak overflow na 375 px.
-- **Admin canvas:** interaktywność podglądu (kliknięcie zakładki w canvas).
+**Variant (3/3):** pills → underline → minimal → powrót do pills.
+
+**Layout — orientacja (2/2):** horizontal, vertical.
+
+**Layout — alignment (3/3 × 2 orientacje):** start / center / end, sprawdzone i w poziomie, i w pionie.
+
+**Layout — spacing (3/3 każda):** container padding sm/md/lg, tab gap sm/md/lg, content gap sm/md/lg.
+
+**Tab label style:** text size (3/3: xs/sm/base), font weight (3/3: normal/medium/semibold), motion (3/3: none/fade/slide — w tym **fade**, którego brakowało wcześniej).
+
+**Colors (6/6 swatchy):** zmiana wszystkich 6 swatchy + weryfikacja inline `style` w canvas; przyciski „Clear" (3/3 obecne) + brak „Clear" (3/3); **oba** ostrzeżenia kontrastu (active + inactive); licznik kolorów w Advanced.
+
+**Count / sloty:** Wizard „Number of tabs" 2→4 (z weryfikacją rozjazdu N1) i dialog redukcji 4→2 (ścieżka *anuluj* i *zaakceptuj*); Structure „Add Panel" 2→6 (limit max); Structure „Remove" 6→2 (limit min); „Move up/down" (reorder).
+
+**Tab content:** edycja etykiet/intro (zgodnie z poprzednim audytem) + ponownie zweryfikowany branch „Show as unavailable" (Tab 2) i jego wpływ na canvas oraz dropdown „Default tab".
+
+**Frontend (public):** render początkowy, klik myszą, klawiatura (ArrowUp/ArrowDown/Home/End), ARIA, runtime script, brak wycieku placeholdera, brak błędów konsoli, brak overflow na 375 px.
 
 ---
 
-## 4. Wyniki szczegółowe
+## 3. CO DZIAŁA — zweryfikowane w DOM
 
-### 4.1 Co DZIAŁA — Wizard
+### 3.1 Variant (Visual → Variant)
 
-- **Select „Number of tabs" (2–6)** — zmiana wartości natychmiast aktualizuje read-only podsumowanie listy zakładek (np. po wyborze 4 pojawiają się „Tab 3" i „Tab 4" w podsumowaniu) oraz pozostaje wartość w kontrolce.
-- **Dialog potwierdzenia redukcji** — przy zmniejszaniu liczby zakładek pojawia się natywny `window.confirm` z konkretną treścią:
-  *„Reduce tabs to 2? This removes these tab content areas: Tab 3, Tab 4. This cannot be undone."*
-  Po zaakceptowaniu liczba elementów wraca do 2. Mechanizm chroni przed przypadkową utratą zawartości i nazewnie wskazuje, które zakładki znikną. ✓
-- **Read-only podsumowanie** etykiet i intro każdej zakładki (z badge „Default" przy domyślnej) — odzwierciedla bieżący stan.
-- **Live preview** w panelu Wizard renderuje widget przez współdzielony renderer.
+| Wariant | `data-coderso-tabs-variant` | Klasy triggera |
+|---------|------------------------------|----------------|
+| pills | `pills` | `rounded-full border px-3 py-1.5 data-[state=active]:border-transparent` ✓ |
+| underline | `underline` | `rounded-none border-b-2 border-transparent pb-2 data-[state=active]:border-current` ✓ |
+| minimal | `minimal` | `rounded-md px-2 py-1.5 data-[state=active]:underline` ✓ |
 
-### 4.2 Co DZIAŁA — Visual
+Karty wariantu aktualizują canvas live; „Choose"/„Current style" badge przełącza się poprawnie.
 
-| Kontrolka | Test | Efekt w canvas (zweryfikowany w DOM) |
-|-----------|------|--------------------------------------|
-| Karty wariantu | pills/underline/minimal | `data-coderso-tabs-variant` oraz klasy triggera zmieniają się live: pills→`rounded-full border`, underline→`rounded-none border-b-2 ... border-current`, minimal→`rounded-md ... underline`. ✓ |
-| Tab label | „Przegląd" | Etykieta triggera aktualizuje się natychmiast. ✓ |
-| Content intro text | „Wprowadzenie do panelu pierwszego" | `<p>` w aktywnym panelu aktualizuje się. ✓ |
-| Tab subtitle | „Sekcja główna" | Podtytuł renderuje się pod etykietą (mniejszy, `opacity-75`). ✓ |
-| Icon or emoji | „⭐" | Ikona renderuje się przed etykietą jako `aria-hidden`. ✓ |
-| Default tab | wybór „Tab 2" | `data-coderso-tabs-active-id` → `2`, aktywny panel pokazuje „Secondary details." ✓ |
-| Show as unavailable | Tab 2 = unavailable | Trigger dostaje `aria-disabled=true`, `disabled`, klasę `opacity-50`; aktywna zakładka prawidłowo „spada" na pierwszą dostępną (Tab 1). ✓ |
-| Default tab + disabled | Tab 2 unavailable | W dropdownie „Default tab" opcja „Tab 2" jest wyłączona (`disabled`). ✓ |
-| Orientation | vertical / horizontal | `data-coderso-tabs-orientation` + `aria-orientation` + klasa tablisty (`flex flex-col` vs `flex flex-wrap`). ✓ |
-| Tab alignment | center | klasa tablisty → `justify-center` (horizontal). ✓ |
-| Container padding | Large | kontener → `p-6` (z `p-4` dla md). ✓ |
-| Tab gap | Small | tablista → `gap-1.5` (z `gap-2`). ✓ |
-| Content gap | Large | kontener → `space-y-6` (z `space-y-4`). ✓ |
-| Tab label size | Base | trigger → `text-base`. ✓ |
-| Tab label weight | Semibold | trigger → `font-semibold`. ✓ |
-| Content motion | Slide | `data-coderso-tabs-motion=slide` + panel z klasami `slide-in-from-bottom-2 ... motion-reduce:animate-none`. ✓ |
-| Swatch koloru | Active background → czerwony | inline `background-color: rgb(255,0,0)` na aktywnym triggerze. ✓ |
-| Swatch koloru | Border color → zielony | inline `border-color: rgb(0,255,0)` na kontenerze i panelu. ✓ |
-| Przycisk „Clear" | Active background | usuwa zapisany kolor — aktywny trigger traci inline `background-color`, swatch wraca do fallbacku `#0f172a`. ✓ |
+### 3.2 Layout — orientacja i alignment
 
-**Structure (sekcja współdzielona wrappera):** „Add Panel" dodaje **realny** slot i renderuje się 3. zakładka („Tab 3"); „Remove" przywraca 2 zakładki. To potwierdza, że to **sloty `panel`** (nie Wizard) sterują faktyczną liczbą renderowanych zakładek. ✓
+- **Orientacja:** `horizontal` → tablist `flex flex-wrap items-center`, `aria-orientation=horizontal`; `vertical` → tablist `flex flex-col`, `aria-orientation=vertical`. Atrybut `data-coderso-tabs-orientation` zgodny. ✓
+- **Alignment** (zweryfikowany w obu orientacjach):
 
-### 4.3 Co DZIAŁA — Advanced (read-only)
+| Wartość | Poziomo (klasa tablisty) | Pionowo (klasa tablisty) |
+|---------|--------------------------|--------------------------|
+| start | `justify-start` | `items-start` |
+| center | `justify-center` | `items-center` |
+| end | `justify-end` | `items-end` |
 
-Tryb Advanced jest w 100% read-only i **dokładnie** odzwierciedla stan zapisany w sesji edytora. Po moich edycjach w Visual pokazał m.in.:
+Wszystkie 6 kombinacji potwierdzone w DOM. ✓
 
-- **Behavior summary:** „Opens on: Przegląd (tab 1)", „Default tab: Przegląd (tab 1)", „Unavailable tabs: 0 of 2".
-- **Saved tabs summary:** „Przegląd; intro text saved; subtitle saved; icon saved; available" oraz „Tab 2; intro text saved; no subtitle; no icon; available" — pełna zgodność z edycjami.
-- **Saved display summary:** „Horizontal; Center aligned", „Container Large; tabs Small; content Large", „Base; Semibold; Slide motion", **„5 saved color choices"** (liczba spadła z 6 do 5 po wyczyszczeniu „Active background" — licznik jest poprawny).
-- **Contract summary:** komunikat o tym, że Visual jest właścicielem konfiguracji, a Advanced tylko podsumowuje.
+### 3.3 Layout — spacing (po sm i lg, baza md)
 
-### 4.4 Co DZIAŁA — Frontend (public)
+| Kontrolka | sm | md (baza) | lg |
+|-----------|----|-----------|----|
+| Container padding (kontener) | `p-3` | `p-4` | `p-6` ✓ |
+| Tab gap (tablist) | `gap-1.5` | `gap-2` | `gap-3` ✓ |
+| Content gap (kontener) | `space-y-3` | `space-y-4` | `space-y-6` ✓ |
 
-Strona `/test-tabs-0516` zwraca `200` i renderuje **zapisany** stan fixture:
+### 3.4 Tab label style
 
-- variant `pills`, orientation `vertical`, 2 zakładki (etykiety domyślne „Tab 1"/„Tab 2"), Tab 1 aktywna.
-- **Przełączanie myszą:** klik „Tab 2" → `data-coderso-tabs-active-id=2`, prawidłowe przełączenie `data-state`, `aria-selected`, `tabindex` (aktywny `0`, nieaktywny `-1`) oraz `hidden` na panelach. ✓
-- **Nawigacja klawiaturą** (orientacja pionowa): `ArrowDown` = następna, `ArrowUp` = poprzednia, `Home` = pierwsza, `End` = ostatnia. Wszystkie działają i jednocześnie aktywują zakładkę (wzorzec „automatic activation": focus = aktywacja). ✓
-- **Dostępność:** `role=tablist` + `aria-label="Content tabs"` + `aria-orientation="vertical"`; każdy `role=tab` ma `aria-controls` wskazujący panel; każdy `role=tabpanel` ma `aria-labelledby` wskazujący trigger oraz `tabindex=0`. ✓
-- **Intro panelu** („Primary details.") renderuje się; placeholder edytora („Add widgets to this tab panel.") **nie wycieka** na front (renderowany tylko w trybie edytora). ✓
-- **Runtime script** obecny w DOM; **0 błędów i 0 ostrzeżeń** w konsoli.
+| Kontrolka | Wartości i klasy triggera |
+|-----------|---------------------------|
+| Tab label size | xs→`text-xs`, sm→`text-sm`, base→`text-base` ✓ |
+| Tab label weight | normal→`font-normal`, medium→`font-medium`, semibold→`font-semibold` ✓ |
+| Content motion | none→brak klas motion; fade→`data-[state=active]:motion-safe:animate-in … fade-in-0 … duration-200 … motion-reduce:animate-none`; slide→jw. + `slide-in-from-bottom-2`. `data-coderso-tabs-motion` = none/fade/slide zgodny. ✓ |
+
+Gałąź **fade** (wcześniej nieprzećwiczona) potwierdzona: klasa `fade-in-0` bez `slide-in-from-bottom-2`, a slide dokłada slide.
+
+### 3.5 Colors (Visual → Colors) — wszystkie 6 swatchy
+
+Zapisany fixture trzyma wartości jako **zmienne motywu** (`var(--color-surface)`, `var(--color-border)`, `var(--color-text)`, `var(--color-background)`). Po zmianie swatcha canvas dostaje konkretny `rgb(...)`:
+
+| Swatch | Cel w canvas (inline `style`) | „Clear"? |
+|--------|-------------------------------|----------|
+| Surface color | kontener `background-color` | **Tak** — „Clear" usuwa `background-color` ✓ |
+| Border color | kontener + panel `border-color` | **Nie** |
+| Active background | aktywny trigger `background-color` **oraz** `border-color` | **Tak** — „Clear" usuwa oba (patrz N5) ✓ |
+| Active text color | aktywny trigger `color` | **Nie** (patrz B-fill) |
+| Inactive text color | nieaktywny trigger `color` | **Nie** |
+| Content background | panel `background-color` | **Tak** — „Clear" usuwa `background-color` ✓ |
+
+- **Zmiana swatcha:** 5 z 6 zweryfikowano przez `fill` (Surface=red, Border=green, Active bg=blue, Inactive text, Content bg=cyan) — każdy natychmiast aktualizuje odpowiedni inline `style` w canvas. ✓
+- **Active text color:** zaktualizowany i potwierdzony (aktywny trigger `color: rgb(255,255,0)`) — szczegóły metody w B-fill (sekcja 5). Sam mechanizm produktowy działa.
+- **„Clear" (3/3):** Surface, Active background, Content background — usuwają zapisany kolor; inline `style` znika z odpowiedniego elementu. ✓
+- **Brak „Clear" (3/3):** Border, Active text, Inactive text — nie da się ich zresetować przyciskiem (zgodne z kodem; niespójność UX — N4).
+- **Ostrzeżenia kontrastu (oba branche):** ustawienie active text = active background (#ffffff/#ffffff) → *„Active tab: Configured colors may be hard to read together."*; ustawienie inactive text ≈ surface → *„Inactive tab: Configured colors may be hard to read together."* Oba renderują się jako `text-amber-700`. ✓
+
+### 3.6 Count / sloty — pełne gałęzie
+
+- **Structure „Add Panel":** dodaje **realny** slot `panel`; render rośnie 2→3→…→6 (`data-coderso-tabs-panels` i liczba triggerów rosną, pojawiają się etykiety „Tab 3"…„Tab 6"). Przy **6** „Add Panel" jest **disabled** (limit max wymuszony). ✓
+- **Structure „Remove":** redukuje render natychmiast 6→5→…→2, „Add Panel" wraca do enabled. Przy **2** przyciski „Remove" **w ogóle nie są renderowane** (limit min wymuszony przez ukrycie „Remove", nie przez disabled). ✓
+- **Structure reorder „Move up/Move down":** Panel 1 ma „Move up" disabled, Panel N (ostatni) ma „Move down" disabled — granice działają. Sama zmiana kolejności — patrz NT2 (nietestowalna w tym fixture).
+- **Wizard „Number of tabs" (2–6):** zmiana wartości aktualizuje tablicę `items` i read-only podsumowanie (po wybraniu 4 w podsumowaniu pojawiają się „Tab 3"/„Tab 4"), ale **liczba renderowanych zakładek się nie zmienia** (patrz N1).
+- **Dialog redukcji (`window.confirm`):** przy zmniejszaniu liczby pojawia się natywny dialog: *„Reduce tabs to 2? This removes these tab content areas: Tab 3, Tab 4. This cannot be undone."*
+  - **Anuluj (dismiss):** liczba pozostaje 4 (podsumowanie nadal pokazuje Tab 3/Tab 4). ✓
+  - **OK (accept):** tablica `items` wraca do 2 (Tab 3/Tab 4 znikają z podsumowania). ✓
+  - Treść imiennie wymienia, które obszary znikną — dobry mechanizm ochrony. ✓
+
+### 3.7 Tab content — „Show as unavailable"
+
+- Zaznaczenie „Show as unavailable" dla Tab 2 → trigger w canvas dostaje `aria-disabled=true`, atrybut `disabled`, klasę `opacity-50`; aktywna zakładka pozostaje na Tab 1 (pierwszej dostępnej). ✓
+- W dropdownie **„Default tab"** opcja „Tab 2" jest `aria-disabled=true` (nie da się wybrać niedostępnej zakładki jako domyślnej). ✓
+
+### 3.8 Advanced (read-only) — odzwierciedlenie stanu sesji
+
+Po edycjach w Visual sekcja Advanced wiernie podsumowała stan:
+
+- **Behavior summary:** „Opens on: Tab 1 (tab 1)", „Default tab: Tab 1 (tab 1)", „Unavailable tabs: 0 of 2", „Line behavior: Tabs wrap onto extra lines when space is tight." (statyczne — patrz B1).
+- **Saved display summary:** „Horizontal; Start aligned", „Container Large; tabs Large; content Large", „Base; Semibold; None motion".
+- **Color choices:** licznik reaguje — po wyczyszczeniu jednego pola pokazał **„5 saved color choices"**, a przy aktywnym ostrzeżeniu kontrastu komunikat przełączył się na **„Review color readability in Visual before publishing."** (bez ostrzeżeń: „No saved color readability warnings are visible."). ✓
+- **Contract summary:** „Visual owns variant, tab content, layout, tab label style, and colors. Advanced only summarizes the saved state."
+
+### 3.9 Frontend (public `/test-tabs-0516`)
+
+Strona zwraca `200`. Render: variant `pills`, orientation **`vertical`**, 2 zakładki, Tab 1 aktywna, motion `none`, overflow `wrap`.
+
+- **Klik myszą** „Tab 2" → `data-coderso-tabs-active-id=2`, panel 1 `hidden`, panel 2 widoczny. ✓
+- **Klawiatura (orientacja pionowa):** z fokusem na Tab 2 — `ArrowUp` → aktywna 1 (poprzednia), `ArrowDown` → 2 (następna), `End` → 2 (ostatnia), `Home` → 1 (pierwsza). Wzorzec „automatic activation" (focus = aktywacja). ✓
+- **ARIA:** tablist `aria-label="Content tabs"` + `aria-orientation="vertical"`; każdy `role=tab` ma `aria-selected`, `tabindex` (aktywny 0 / nieaktywny -1), `aria-controls`; każdy `role=tabpanel` ma `aria-labelledby`, `tabindex=0` i `hidden` na nieaktywnym. ✓
+- **Runtime script:** obecny (1 inline script), root ma `data-coderso-tabs-bound=true` (skrypt zainicjalizowany). ✓
+- **Placeholder edytora** („Add widgets to this tab panel.") **nie wycieka** na front. ✓
 - **Responsywność:** na 375 px brak poziomego overflow (`scrollWidth == clientWidth == 375`). ✓
-
-### 4.5 Admin canvas (podgląd)
-
-Canvas w edytorze renderuje żywy `TabsBlock` (te same atrybuty `data-coderso-tabs-*` co front) i jest interaktywny w trybie podglądu — kliknięcie „Tab 2" przełącza aktywny panel na „Secondary details." ✓
+- **Konsola:** 0 błędów, 0 ostrzeżeń. ✓
 
 ---
 
-## 5. Co NIE działa / jest mylące / wymaga uwagi (niuanse UX/UI)
+## 4. CO NIE DZIAŁA / jest martwe (twarde ustalenia)
 
 | # | Obszar | Obserwacja |
 |---|--------|-----------|
-| **N1 — Rozjazd Wizard „Number of tabs" vs render** | Wizard / sloty | Zmiana „Number of tabs" z 2 na 4 zaktualizowała tablicę `items` i read-only podsumowanie, **ale liczba realnie renderowanych zakładek pozostała 2** — zarówno w głównym canvas, jak i w „Live preview" Wizarda (zweryfikowane: obie tablisty `Content tabs` miały `tabCount=2`). Faktyczną liczbę zakładek tworzą sloty `panel` (sekcja „Structure" → „Add Panel"), a nie kontrolka Wizarda. Sekcja jest opisana jako „Starter tabs / Set the initial tab count **before** daily visual editing", więc intencyjnie służy tylko do startu — ale po setupie kontrolka pozostaje w pełni edytowalna, pokazuje destrukcyjny dialog i zmienia podsumowanie, nie zmieniając przy tym renderu. To realna pułapka UX (dwa nieZSYNCHRONIZOWANE mechanizmy liczby zakładek). |
-| **N2 — Martwa opcja `triggerOverflow=scroll`** | Renderer / schema | Schema dopuszcza `triggerOverflow: wrap | scroll`, a Advanced pokazuje stałą etykietę „Line behavior: Tabs wrap onto extra lines when space is tight." Jednak `resolveTriggerOverflow()` **zawsze** zwraca `"wrap"` i **nie istnieje żadna kontrolka UI** do ustawienia `scroll`. Opcja jest faktycznie legacy/martwa; `data-coderso-tabs-overflow` zawsze = `wrap`. |
-| **N3 — „Saved custom color" dla wartości domyślnych** | Colors (Visual) | Wszystkie 6 pól kolorów pokazuje etykietę „Saved custom color" i tekst „A saved custom color is configured…", mimo że domyślne wartości to zmienne CSS (`var(--color-surface)` itd.). Swatch wyświetla **kolor fallbacku** (np. `#f8fafc`, `#cbd5e1`, `#0f172a`), a nie rzeczywistą wartość zmiennej. Użytkownik nie odróżni „dziedziczy z motywu" od „ręcznie ustawiony kolor". |
-| **N4 — Niespójna dostępność „Clear"** | Colors (Visual) | Przycisk „Clear" mają tylko 3 z 6 kolorów: Surface, Active background, Content background (czyli te, które przechodzą przez `resolveClearableStyleValue`). Border color, Active text color, Inactive text color **nie mają „Clear"** — nie da się ich zresetować do domyślnej zmiennej CSS bez ręcznego wpisania wartości. Zgodne z kodem, ale niespójne dla użytkownika. |
-| **N5 — Skutek „Clear" na aktywnym tle** | Colors (Visual) | Po „Clear" na „Active background" aktywny trigger w wariancie `pills` traci inline `background-color` (i `border-color` aktywne), więc aktywny stan może stać się wizualnie nieodróżnialny od nieaktywnego. Funkcjonalnie „Clear" działa, ale brak ostrzeżenia o utracie wyróżnienia aktywnej zakładki. |
-| **N6 — Wizard nie jest równorzędnym trybem** | UX nawigacji | Tryb Wizard jest ukryty za przyciskiem „Run setup again"; w panelu trybów widoczne są tylko „Visual" i „Advanced". Dla osoby szukającej „kreatora" nie jest to oczywiste. |
-| **N7 — Automatyczna aktywacja klawiaturą** | Frontend a11y | Strzałki/Home/End **jednocześnie** przenoszą focus i aktywują zakładkę (brak trybu „manual activation", gdzie aktywacja następuje dopiero po Enter/Space). To dopuszczalny wzorzec WAI-ARIA, ale przy zakładkach z ciężką zawartością może być kosztowne; warto odnotować jako świadomą decyzję, nie błąd. |
+| **B1 — martwa opcja `triggerOverflow=scroll`** | Renderer / schema | Schema dopuszcza `triggerOverflow: wrap \| scroll`, ale `resolveTriggerOverflow()` **zawsze** zwraca `"wrap"`, nie istnieje żadna kontrolka UI do ustawienia `scroll`, a `data-coderso-tabs-overflow` jest zawsze `wrap` (potwierdzone w canvas i na froncie). Advanced pokazuje stały tekst „Tabs wrap onto extra lines…". Opcja jest faktycznie legacy/martwa. |
 
-**Nie wykryto** żadnych błędów konsoli, błędów renderowania ani rozjazdu render między admin canvas a frontem dla wspólnie testowanych opcji. Wszystkie kontrolki Visual, które przetestowałem, działają i aktualizują podgląd na żywo; Advanced wiernie podsumowuje stan.
+> Poza B1 **nie wykryto twardych bugów renderowania**: wszystkie przetestowane enumy Visual aktualizują canvas, Advanced wiernie podsumowuje, frontend jest interaktywny i dostępny, bez błędów konsoli.
 
 ---
 
-## 6. Porównanie Admin (canvas/preview) vs Frontend
+## 5. CZEGO NIE DA SIĘ W PEŁNI ZWERYFIKOWAĆ (nazwane kontrolki + powód)
 
-| Aspekt | Admin canvas | Frontend (`/test-tabs-0516`) | Zgodność |
-|--------|--------------|------------------------------|----------|
-| Renderowanie wariantu/atrybutów `data-coderso-tabs-*` | ✓ żywy `TabsBlock` | ✓ identyczne atrybuty | ✓ |
-| Przełączanie zakładek | ✓ przez stan Reacta (`previewActiveId`) | ✓ przez skrypt runtime | ✓ |
-| Nawigacja klawiaturą | obsługiwana w preview (handlery React) | ✓ ArrowUp/Down/Home/End | ✓ (testowane głównie na froncie) |
-| Placeholder pustego panelu | „Add widgets to this tab panel." (tryb edytora) | brak (nie wyciekły) | ✓ poprawne rozróżnienie |
-| Dostępność (role/aria) | obecna | obecna i kompletna | ✓ |
+| # | Kontrolka | Powód nietestowalności |
+|---|-----------|------------------------|
+| **NT1 — `triggerOverflow=scroll`** | (brak kontrolki) | Nie istnieje kontrolka UI; wartość `scroll` jest nieosiągalna (patrz B1). Zachowanie „scroll" niemożliwe do wywołania. |
+| **NT2 — Structure → „Move up" / „Move down" (reorder slotów)** | Visual → Structure | Przy **pustych** slotach reorder nie daje żadnego obserwowalnego efektu: kolejność na liście Structure, etykiety triggerów („Tab 1/2/3"), `selectionId` paneli (`1,2,3`) i DOM-owe `id` (`…-panel-1/2/3`) pozostają identyczne po kliknięciu „Move down" na pierwszym slocie. Powód: etykiety/intro są wiązane **pozycyjnie** z tablicą `items` (`items[index]`), a etykiety slotów są pozycyjne („Panel N slot"). Żeby zaobserwować efekt reorderu, panele musiałyby zawierać zagnieżdżone widgety (czego świadomie nie dodawałem, by nie modyfikować fixture). |
+| **NT3 — „Active text color" przez programowy `fill`** | Visual → Colors | Patrz B-fill poniżej — kontrolka działa dla realnego użytkownika (event `change`), ale nie udało się jej wysterować samym `fill` (event `input`). Zweryfikowana ścieżką `change`, nie `fill`. |
+| **NT4 — trwałość / publikacja** | całość | Świadomie **nie** klikałem „Save draft" ani „Publish" (fixture współdzielony). Trwałość po zapisie i propagacja na front nie były testowane (patrz jednak sekcja 6 — rozjazd draft↔public). |
+| **NT5 — „unavailable" na froncie** | frontend | Opublikowany fixture nie ma wyłączonych zakładek (0 z 2), więc stan `disabled` zweryfikowano tylko w admin canvas, nie na publicznej trasie. |
+| **NT6 — `prefers-reduced-motion`** | frontend | Klasy `motion-reduce:animate-none` są obecne w markupie dla fade/slide, ale nie wymuszałem redukcji ruchu w przeglądarce. |
+| **NT7 — realne zawijanie wielu zakładek (poziom, wąski viewport)** | frontend | Opublikowany fixture ma 2 zakładki i orientację pionową, więc realnego zawijania `flex-wrap` nie sprawdzono na żywo. |
 
-**Wniosek:** renderer jest wspólny; admin canvas i front zachowują się spójnie. Różnica jest celowa tylko w warstwie interaktywności (React w preview vs wstrzykiwany skrypt na froncie) i w placeholderze pustego panelu.
-
----
-
-## 7. Czego NIE testowano (uczciwe ograniczenia)
-
-- **Zapis i publikacja:** świadomie **nie** klikałem „Save draft" ani „Publish", aby nie zmieniać współdzielonego fixture. W związku z tym:
-  - moje edycje w Visual (np. etykieta „Przegląd", kolory, układ) **nie** zostały zweryfikowane pod kątem trwałości po przeładowaniu strony ani propagacji na front;
-  - frontend pokazuje **wcześniej zapisany** stan (orientacja `vertical`, etykiety domyślne) — co potwierdza, że niezapisane edycje nie wyciekają.
-  - Zweryfikowana została natomiast **trwałość w obrębie sesji edytora** — edycje z Visual były obecne po przełączeniu na Advanced (i z powrotem widoczne w canvas).
-- **Zachowanie zakładki „unavailable" na froncie:** zapisany fixture nie ma wyłączonych zakładek (0 z 2), więc stan `disabled` przetestowano tylko w admin canvas, nie na publicznej trasie.
-- **Realna zawartość paneli:** panele są puste; nie dodawałem zagnieżdżonych widgetów, więc renderowanie dzieci paneli na froncie nie zostało wykonane.
-- **Ostrzeżenia o kontraście kolorów:** advisory pokazywało „No saved color readability warnings"; nie wymusiłem celowo kombinacji niskokontrastowej, by sprawdzić treść ostrzeżenia.
-- **`prefers-reduced-motion`:** klasy `motion-reduce:animate-none` są obecne w markupie dla fade/slide, ale nie testowałem zachowania pod włączoną redukcją ruchu.
-- **`triggerOverflow=scroll`:** nietestowalne — brak kontrolki UI (patrz N2).
-- **Zawijanie wielu zakładek w orientacji poziomej przy wąskim viewport:** fixture ma tylko 2 zakładki, więc realnego zawijania nie sprawdzono.
+**B-fill (dokładny opis NT3):** programowy `fill` poprawnie wysterował 5 z 6 swatchy (Surface, Border, Active background, Inactive text, Content background) — każdy zaktualizował i swatch, i inline `style` w canvas. **Wyjątkiem był wyłącznie swatch „Active text color":** powtórzony `fill` zostawiał wartość swatcha i `color` aktywnego triggera bez zmian, podczas gdy strukturalnie identyczny „Inactive text color" reagował na `fill` w tej samej chwili. Wysłanie na ten sam `<input type="color">` natywnego eventu `change` **zaktualizowało** kontrolkę (aktywny trigger `color: rgb(255,255,0)`). Najbardziej prawdopodobna przyczyna: zmiana „Active text color" przełącza warunkowo renderowane ostrzeżenie kontrastu (`activeContrast`), a wynikający re-render „gubi" event `input` z `fill`. **Wniosek:** to artefakt programowego sterowania, **nie** potwierdzony bug produktowy — realny wybór z systemowego color-pickera (event `change`) działa. Oznaczam jako „niezweryfikowalne przez `fill`", zweryfikowane przez `change`.
 
 ---
 
-## 8. Podsumowanie
+## 6. Rozjazd draft ↔ public oraz brak autosave (istotny niuans)
 
-- Widget **tabs jest w dobrym stanie funkcjonalnym**. Wszystkie przetestowane kontrolki Visual (variant, treść zakładek, układ, styl etykiet, kolory) działają i aktualizują podgląd na żywo; Advanced wiernie i poprawnie podsumowuje stan; frontend jest w pełni interaktywny i dostępny (klawiatura + ARIA), bez błędów konsoli i bez overflow na mobile.
-- **Najważniejszy niuans:** rozjazd między kontrolką Wizarda „Number of tabs" a realną liczbą renderowanych zakładek (N1) — liczbą zakładek steruje system slotów („Add Panel"), nie Wizard.
-- **Drobne, ale realne kwestie UX/spójności:** martwa opcja `scroll` (N2), mylące „Saved custom color" dla wartości z motywu (N3), niespójna dostępność „Clear" w kolorach (N4), potencjalna utrata wyróżnienia aktywnej zakładki po „Clear" (N5).
-- Nie znaleziono żadnego twardego buga renderowania ani rozbieżności admin↔front w zakresie wspólnie testowanych opcji.
+- **Admin draft vs public:** edytor (draft) ładuje orientację **`horizontal`**, a publiczna trasa `/test-tabs-0516` renderuje **`vertical`**. To rozbieżność między bieżącym draftem a opublikowaną wersją — oczekiwana przy separacji draft/publish, ale konkretna i warta odnotowania (zmiany draftu nie są widoczne na froncie do publikacji).
+- **Brak autosave + strażnik wyjścia:** po przeładowaniu strony **bez zapisu** wszystkie moje edycje sesyjne (kolory, sloty, orientacja) zniknęły — fixture wrócił do stanu wyjściowego (2 panele, pills, horizontal, none, kolory = zmienne motywu). Przy próbie przeładowania pojawił się natywny dialog „unsaved changes" (beforeunload guard). Potwierdza to, że (a) nie ma cichego autosave, (b) niezapisane zmiany są chronione przed utratą.
 
 ---
 
-## 9. Screenshoty (lokalne etykiety)
+## 7. NIUANSE UX/UI (świadome decyzje, nie błędy)
 
-> Poniższe nazwy to **wyłącznie lokalne etykiety** przechwyceń w `.playwright-cli/`
-> (katalog ignorowany przez Git). Nie są wymaganym evidence i nie są dołączone do
-> repo.
+| # | Obszar | Obserwacja |
+|---|--------|-----------|
+| **N1 — Wizard „Number of tabs" vs realny render** | Wizard / sloty | Zmiana „Number of tabs" 2→4 zaktualizowała tablicę `items` i podsumowanie, **ale liczba renderowanych zakładek pozostała 2** — zarówno w głównym canvas, jak i w „Live preview" Wizarda (oba roots `data-coderso-tabs-panels=2`). Faktyczną liczbę zakładek tworzą **sloty `panel`** (Structure → „Add Panel"), nie kontrolka Wizarda. Renderer normalizuje `items` do liczby slotów (`normalizeTabsData(data, slotTargets.length)`), więc nadmiarowe `items` są „martwe". To realna pułapka UX: dwa nieZSYNCHRONIZOWANE mechanizmy liczby zakładek. |
+| **N2 — niespójna potwierdzalność redukcji** | Wizard vs Structure | Redukcja przez Wizard („Number of tabs" w dół) pokazuje destrukcyjny `window.confirm` z imienną listą zakładek. Natomiast **Structure → „Remove" usuwa slot natychmiast, BEZ żadnego potwierdzenia.** Dwie różne ścieżki zmniejszania liczby paneli mają różny poziom ochrony przed przypadkową utratą. |
+| **N3 — „Saved custom color" dla wartości z motywu** | Colors (Visual) | Wszystkie 6 pól pokazuje „Saved custom color", mimo że domyślne wartości to zmienne CSS (`var(--color-surface)` itd.). Swatch wyświetla **kolor fallbacku** (np. `#f8fafc`, `#cbd5e1`, `#0f172a`, `#ffffff`), a nie wartość zmiennej. Użytkownik nie odróżni „dziedziczy z motywu" od „ręcznie ustawiony". (Komponent ma stany „Theme default / Selected color / Saved custom color", ale dla tabs `treatAsThemeDefaultValues` jest puste, więc `var(...)` trafia w „Saved custom color".) |
+| **N4 — niespójna dostępność „Clear"** | Colors (Visual) | „Clear" mają tylko 3 z 6 kolorów: Surface, Active background, Content background. Border, Active text, Inactive text **nie mają „Clear"** — nie da się ich zresetować do zmiennej motywu bez ręcznej wartości. Zgodne z kodem, niespójne dla użytkownika. |
+| **N5 — skutek „Clear" na aktywnym tle** | Colors (Visual) | „Clear" na „Active background" usuwa z aktywnego triggera **zarówno** `background-color`, **jak i** `border-color` (renderer wiąże oba z `activeBackgroundColor`). W wariancie `pills` aktywna zakładka może stać się wizualnie nieodróżnialna od nieaktywnej. Brak ostrzeżenia o utracie wyróżnienia. |
+| **N6 — Wizard nie jest równorzędnym trybem** | UX nawigacji | Wizard ukryty za „Run setup again"; w panelu trybów widoczne tylko „Visual"/„Advanced". |
+| **N7 — automatyczna aktywacja klawiaturą** | Frontend a11y | Strzałki/Home/End jednocześnie przenoszą focus i aktywują zakładkę (brak „manual activation"). Dopuszczalny wzorzec WAI-ARIA; przy zakładkach z ciężką zawartością może być kosztowny — świadoma decyzja, nie błąd. |
 
-| Plik (lokalny) | Opis |
-|----------------|------|
-| `tabs-01-admin-visual-editor.png` | Edytor Visual po edycjach (variant pills, „Przegląd", kolory, układ) |
-| `tabs-02-public-route.png` | Publiczna trasa `/test-tabs-0516` — zapisany stan fixture (orientacja vertical) |
+---
+
+## 8. Porównanie Admin (canvas/preview) vs Frontend
+
+| Aspekt | Admin canvas / preview | Frontend (`/test-tabs-0516`) | Zgodność |
+|--------|------------------------|------------------------------|----------|
+| Renderer i atrybuty `data-coderso-tabs-*` | żywy `TabsBlock` | identyczny zestaw atrybutów | ✓ (wspólny renderer) |
+| Interaktywność | stan Reacta (`previewActiveId`) | wstrzykiwany runtime script (`data-coderso-tabs-bound`) | ✓ (celowa różnica warstwy) |
+| Klawiatura (Arrow/Home/End) | handlery React | runtime script | ✓ |
+| Placeholder pustego panelu | „Add widgets to this tab panel." (tryb edytora) | brak (nie wyciekł) | ✓ poprawne rozróżnienie |
+| Bieżąca **orientacja** | `horizontal` (draft) | `vertical` (opublikowane) | ✗ rozjazd draft↔public (sekcja 6) |
+| ARIA (role/aria) | obecna | obecna i kompletna | ✓ |
+
+**Wniosek:** renderer jest wspólny i spójny dla wspólnie testowanych opcji. Jedyna rozbieżność stanu to draft (horizontal) vs opublikowana wersja (vertical) — efekt niepublikowanych zmian, nie bug renderera.
+
+---
+
+## 9. Podsumowanie
+
+- **Widget tabs jest w dobrym stanie funkcjonalnym.** W tej iteracji domknięto wszystkie wskazane luki: **wszystkie wartości** wariantu, orientacji, alignmentu (× obie orientacje), spacingu (×3 kontrolki), rozmiaru/wagi etykiety, motion (w tym **fade**) oraz **wszystkie 6 swatchy** kolorów zostały kliknięte i zweryfikowane w DOM. Gałęzie liczby/slotów (Wizard count, dialog redukcji ↑↓, Add/Remove/limity min-max) potwierdzone.
+- **Twardy problem:** tylko **B1** — martwa opcja `triggerOverflow=scroll` (brak kontrolki, wartość nieosiągalna, zawsze `wrap`).
+- **Najważniejszy niuans:** **N1** — rozjazd Wizard „Number of tabs" ↔ realny render (render sterują sloty, nie Wizard); pokrewne **N2** — Structure „Remove" bez potwierdzenia, w przeciwieństwie do Wizarda.
+- **Niuanse kolorów:** N3 (mylące „Saved custom color" dla `var(...)`), N4 (niespójna dostępność „Clear"), N5 (utrata wyróżnienia aktywnej zakładki po „Clear" na aktywnym tle).
+- **Nietestowalne w tym fixture (nazwane):** reorder pustych slotów (NT2), `scroll` (NT1/B1), „Active text color" przez `fill` (NT3/B-fill — działa przez `change`), oraz świadomie pominięte: publikacja (NT4), disabled na froncie (NT5), reduced-motion (NT6), realne zawijanie (NT7).
+- **Higiena fixture:** żadnych „Save"/„Publish"; brak cichego autosave (reload przywraca stan), obecny beforeunload guard.
+
+---
+
+## 10. Screenshoty (lokalne etykiety)
+
+> W tym przebiegu **nie** przechwycono żadnych zrzutów PNG — weryfikacja opierała się na
+> inspekcji DOM/atrybutów (`eval`) i snapshotach `.yml` narzędzia. Poniższe nazwy to
+> jedynie potencjalne **lokalne etykiety** (gdyby zrzuty były robione); nie istnieją jako
+> artefakty w repo, a katalog `.playwright-cli/` jest ignorowany przez Git.
+
+| Etykieta (lokalna, niewygenerowana) | Opis |
+|-------------------------------------|------|
+| `tabs-29-admin-colors-contrast.png` | Sekcja Colors z aktywnymi ostrzeżeniami kontrastu (active + inactive) |
+| `tabs-29-admin-structure-6panels.png` | Structure z 6 panelami i wyłączonym „Add Panel" (limit max) |
+| `tabs-29-public-vertical.png` | Publiczna trasa `/test-tabs-0516` — orientacja vertical, Tab 2 aktywna po kliknięciu |
