@@ -1,34 +1,40 @@
-# RAPORT: Template Section Widget — audyt current-state (Wizard / Visual / Advanced)
+# RAPORT: Template Section Widget — audyt gap-close (wyczerpujące klikanie kontrolek + dowód na fixture placeholder-only)
 
-> **Status:** Zakończony — przetestowany na żywej instancji lokalnej
-> **Data:** 2026-05-28
-> **Sesja Playwright:** `claude-28-05-template-section` (oddzielna od innych agentów)
+> **Status:** Zakończony
+> **Data:** 2026-05-29 (upgrade audytu z 2026-05-28 — domknięcie luki „nowszej fali" re-audytu)
+> **Sesja Playwright:** `claude-29-05-template-section-gap-close` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin:** `/admin/pages/56a31dad-cf02-4671-89f4-15ecd77fa67f` (strona „Contract Test - template-section")
+> **Fixture admin:** `/admin/pages/56a31dad-cf02-4671-89f4-15ecd77fa67f` (strona „Contract Test - template-section", status **Published**)
 > **Fixture public:** http://localhost:3000/ctr-template-section-2305
-> **Referencja formatu:** `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`
-> **Referencja historyczna (smoke):** `_docs/PLAYWRIGHT/27-05-2026/REPORT_TEMPLATE_SECTION_WIDGET.md`
+> **Pliki źródłowe:**
+> - `core/widgets/core/templateSection.tsx` — renderer (`TemplateSectionBlock`), `TemplateSectionPlaceholder`, schema, normalizacja, kontrakt edytora, `resolveTemplateLabel` / `resolvePlaceholderMessage`.
+> - `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` — edytory Wizard / Visual / Advanced.
+> - `core/services/widgets/templateSectionRuntime.ts` — runtime-owa resolucja szablonu (źródło stanów `template_missing` / `template_unpublished` / `template_loop`).
+> - `core/server/publicSite.tsx` (≈ l. 527–556, 1365–1377) — hydratacja bloku `template-section` na publicznej trasie.
+> - `core/admin/ui/widgets/hooks/useWidgetTemplates.ts` + `core/admin/services/widgetTemplatesClient.ts` — lista szablonów (`GET /admin/api/widget-templates`).
 
-> **Uwaga o screenshotach:** w tym przebiegu audyt opierał się na snapshotach
-> dostępności (accessibility tree) i inspekcji DOM przez `eval`, a nie na plikach
-> PNG. Jeżeli gdziekolwiek pojawiają się nazwy plików zrzutów, są to wyłącznie
-> lokalne etykiety przechwyceń Playwright — same pliki PNG nie są commitowane do
-> repo i nie stanowią wymaganego evidence.
+> **Cel tego upgrade'u:** poprzedni raport (28-05) był rzetelny, ale nie przeszedł nowszej, wyczerpującej
+> fali re-audytu. Ten przebieg **klika realnie każdą dostępną kontrolkę** fikstury (selektor szablonów ze
+> wszystkimi opcjami, reset „No template", Finish setup, oba pola Visual, wszystkie wiersze read-only
+> Advanced) oraz — ponieważ fikstura jest **z natury placeholder-only** — dowodzi tego **mocniejszym
+> evidence** (inspekcja DOM + API + lektura ścieżki runtime), a nie tylko stwierdzeniem. Sekcje jasno
+> oddzielają: **przetestowane / działa / nie działa / nie-do-zweryfikowania / niuanse UX**.
+
+> **Metodyka i bezpieczeństwo fixture:** weryfikacja oparta o realne kliknięcia w żywym edytorze + inspekcję
+> DOM (`eval`) + odczyt API z kontekstu zalogowanej sesji. **Nie** klikałem „Save draft" ani „Publish" —
+> wszystkie edycje to ulotny stan React (panel pokazywał „Unsaved changes"). Po testach wykonałem `reload`
+> i **zaakceptowałem dialog `beforeunload`**, aby odrzucić zmiany; potwierdziłem powrót fikstury do stanu
+> wyjściowego (§9). Zrzutów PNG **nie** zapisywałem — wszystkie etykiety przechwyceń byłyby wyłącznie
+> lokalne w `.playwright-cli/` (katalog ignorowany przez Git), nie są wymaganym evidence w repo.
 
 ---
 
-## 1. Przegląd widgetu
+## 1. Przegląd widgetu (skrót)
 
-**Typ:** `template-section`
-**Kategoria:** `layout`
-**Opis:** „Render a reusable widget template as a page section." — widget renderuje
-zapisany szablon widgetów (`widget-template`) jako sekcję strony.
-**Warianty:** tylko `default` (brak wyboru wariantu; `editorCapabilities.visualOwnsVariantSelection = true`).
-
-**Pliki źródłowe:**
-- `core/widgets/core/templateSection.tsx` — renderer (`TemplateSectionBlock`), schema, normalizacja, kontrakt edytora.
-- `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` — edytory Wizard / Visual / Advanced.
-- `core/admin/ui/widgets/hooks/useWidgetTemplates.ts` + `core/admin/services/widgetTemplatesClient.ts` — pobieranie listy szablonów (`GET /admin/api/widget-templates`).
+**Typ:** `template-section` · **Kategoria:** `layout`.
+**Opis:** „Render a reusable widget template as a page section." — widget renderuje zapisany szablon
+widgetów (`widget-template`) jako sekcję strony.
+**Warianty:** wyłącznie `default` (brak kart wariantu; `editorCapabilities.visualOwnsVariantSelection = true`).
 
 ### 1.1 Model danych (`TemplateSectionData`)
 
@@ -36,237 +42,257 @@ zapisany szablon widgetów (`widget-template`) jako sekcję strony.
 |--------|------|
 | (root) | `templateId` (string), `templateName` (string) |
 | **metadata** | `category`, `previewLabel`, `version` |
-| **resolved** | `blocks[]` (rozwiązane bloki szablonu), `error` (`template_missing` / `template_unpublished` / `template_loop`) |
+| **resolved** | `blocks[]`, `error` (`template_missing` / `template_unpublished` / `template_loop`) |
 
-`resolved.*` jest polem WYNIKOWYM — wypełnianym przez runtime przy renderze, nie przez edytor.
+`resolved.*` to pole **wynikowe** — wypełnia je runtime przy renderze publicznym (`publicSite.tsx` →
+`resolveTemplateSectionRuntimeData`), **nigdy edytor** (patrz N1).
 
-### 1.2 Tryby edytora (wg kontraktu)
+### 1.2 Tryby edytora (wg kontraktu `editorContract`)
 
-- **Wizard** — sekcja `template-section.wizard.template-setup`; zapisuje `templateId`, `templateName`.
-- **Visual** — `active-template` (read-only `templateId`/`templateName`) + `presentation-fields` (zapisuje `metadata.previewLabel`, `metadata.category`; read-only `metadata.version`).
-- **Advanced** — `template-diagnostics`, `runtime-payload`, `runtime-rules` — wszystkie bez `writablePaths` (czysto read-only / informacyjne).
+- **Wizard** — sekcja `template-section.wizard.template-setup`; `writablePaths: ["templateId","templateName"]`.
+- **Visual** — `active-template` (read-only `templateId`/`templateName`, summary) + `presentation-fields`
+  (`writablePaths: ["metadata.previewLabel","metadata.category"]`, `readOnlyPaths: ["metadata.version"]`).
+- **Advanced** — `template-diagnostics`, `runtime-payload`, `runtime-rules` — **wszystkie `writablePaths: []`**
+  (w 100% read-only / informacyjne).
 
-W panelu admina Wizard jest uruchamiany przyciskiem **„Run setup again"**, natomiast
-Visual i Advanced to zakładki w prawym panelu. Variant cards nie występują (jeden wariant).
+W panelu admina **Wizard** uruchamia się przyciskiem „Run setup again" (nie jest zakładką), a **Visual** /
+**Advanced** to zakładki w prawym panelu. Brak kart wariantu (jeden wariant).
 
----
+### 1.3 Logika renderu i resolucji (kluczowa dla zrozumienia całej fikstury)
 
-## 2. Metoda i zakres faktycznego testu
-
-Co **zostało faktycznie wykonane** w tej sesji:
-
-1. Logowanie do admina (`patryk.ciechanski@patrykiti.pl`) — OK.
-2. Otwarcie fixture page w trybie edycji.
-3. **Wizard:** otwarcie selektora szablonów, odczyt całej listy, wybór 3 różnych szablonów (`My Test Template`, `main-footer`, `test`), reset do „No template", przejście „Finish setup and open Visual".
-4. **Visual:** wpisanie wartości w `Preview label` i `Category`, obserwacja podglądu na kanwie, weryfikacja sekcji „Active template".
-5. **Advanced:** odczyt wszystkich sekcji read-only, weryfikacja zgodności diagnostyki ze stanem in-memory.
-6. **Persystencja w UI:** weryfikacja zachowania wartości przy przełączaniu zakładek (Visual → Advanced).
-7. **Frontend:** otwarcie public route w osobnej karcie, inspekcja DOM (`data-template-section*`), sprawdzenie overflow i statusu.
-8. Inspekcja API listy szablonów (`GET /admin/api/widget-templates`) dla statusów i liczby bloków.
-9. Po testach: reload edytora i odrzucenie zmian (`beforeunload` → accept), aby przywrócić fixture do stanu wyjściowego (patrz §9).
-
-Czego **NIE wykonano** (świadomie) — patrz §8 (ograniczenia/fixture-gap):
-- Nie publikowano ani nie zapisywano zmian na współdzielonym fixture.
-- Nie udało się zweryfikować stanu „ready" (rozwiązany szablon z blokami) na froncie — brak opublikowanego szablonu w danych (patrz §8).
-- Nie weryfikowano responsywności mobilnej szablonu w stanie populated (brak danych).
-
----
-
-## 3. Tryb Wizard — wyniki
-
-Struktura: nagłówek „Wizard" / „Template section", pole „Widget type: template-section",
-sekcja **„Template setup"** z jednym selektorem `Template selection` (Radix `Select`),
-panel **„Live preview"** oraz przycisk **„Finish setup and open Visual"**.
-
-### 3.1 Co działa
-
-- **Selektor szablonów** ładuje listę z API i pokazuje 8 opcji: „No template" + 7 szablonów.
-- **Wybór szablonu** natychmiast utrwala się w combobox (`My Test Template` → `main-footer` → `test`).
-- Po wyborze pojawia się **karta szablonu** z nazwą, **badge statusu** (np. `Draft`) oraz opisem, gdy istnieje (np. `main-footer` → „Footer all pages").
-- Opcja **„No template"** poprawnie resetuje wybór (czyści `templateId`/`templateName`/`resolved`).
-- **„Finish setup and open Visual"** przełącza do zakładki Visual i przenosi wybrany szablon (po wyborze `test` → Visual pokazuje „Active template: test").
-- Wartość przeżywa przejście Wizard → Visual → Advanced (persystencja in-memory potwierdzona).
-
-### 3.2 Co jest mylące / ograniczone
-
-- **Live preview NIGDY nie renderuje realnej zawartości szablonu.** Dla każdego wybranego szablonu — także tych, które mają bloki w bazie (`test`, `main-footer` mają po 1 bloku) — podgląd pokazuje tylko etykietę + komunikat **„This template has no blocks yet."** Resolucja bloków nie zachodzi w edytorze. Opis panelu „Reflects the current Wizard state through the shared widget renderer" jest przez to **mylący** — sugeruje pełny render, którego nie ma.
-- W selektorze **wszystkie dostępne szablony mają status `Draft`** (potwierdzone przez API). Wizard pozwala wybrać draft, ale nie sygnalizuje, że draft nie wyrenderuje się na opublikowanej stronie publicznej (tylko w preview — patrz alert w Advanced).
-
-### 3.3 Lista szablonów (z `GET /admin/api/widget-templates`)
-
-| Nazwa | Status | Liczba bloków |
-|-------|--------|---------------|
-| Template-420f0b92-6507-49b0-84bd-339f0c6eff6b | draft | 0 |
-| My Test Template | draft | 0 |
-| test | draft | 1 |
-| main-footer (opis: „Footer all pages") | draft | 1 |
-| test2 | draft | 0 |
-| test1 | draft | 0 |
-| test (drugi wpis, inny id) | draft | 1 |
-
-**Wniosek:** 0 opublikowanych szablonów; część szablonów jest pusta (0 bloków). To wprost ogranicza możliwość weryfikacji stanu populated (§8).
+- **Renderer** (`TemplateSectionBlock`): jeśli `resolved.error` LUB brak rozwiązanych bloków → render
+  `TemplateSectionPlaceholder` (stan `data-template-section-state="empty"`). Dopiero przy faktycznych
+  `resolved.blocks` → stan `ready` (z `data-template-section-category` / `-version` i mapowaniem podbloków).
+- **Etykieta** (`resolveTemplateLabel`): priorytet `metadata.previewLabel` → `templateName` → „Template section".
+- **Komunikat placeholdera** (`resolvePlaceholderMessage`): pusty `templateId` → „Select a widget template to
+  render here."; inaczej zależnie od `resolved.error`: `template_missing` → „Template not found…",
+  `template_unpublished` → „Template is not published yet.", `template_loop` → „Template loop detected…",
+  brak błędu → „This template has no blocks yet.".
+- **Runtime** (`templateSectionRuntime.ts`): pusty id → `blocks:[]`; id w stosie → `template_loop`; brak
+  szablonu → `template_missing`; **`!preview && status !== "published"` → `template_unpublished`**; inaczej
+  bloki szablonu.
+- **Trasa publiczna** (`publicSite.tsx` l. 1370) renderuje **opublikowane dane strony** z `preview=false`.
+  Wniosek: **szablon draft na publicznej stronie zawsze da `template_unpublished`** (placeholder), a stan
+  `ready` jest osiągalny tylko dla **opublikowanego** szablonu wskazanego w **opublikowanych** danych strony.
 
 ---
 
-## 4. Tryb Visual — wyniki
+## 2. Stan fikstury w momencie audytu
 
-Sekcje widget-specyficzne: **„Active template"** (summary, read-only) oraz
-**„Template presentation"** (`Preview label`, `Category`). Dodatkowo edytor-shell
-dokłada współdzielone sekcje **„Block layout"** i **„Device visibility"** (§6).
+| Aspekt | Wartość zaobserwowana |
+|--------|------------------------|
+| Status strony fikstury | **Published** |
+| `templateId` w danych opublikowanych | **pusty** (`""`) |
+| Render na froncie | placeholder, `data-template-section-state="empty"` |
+| Stan edytora przy wejściu | „Setup complete" → zakładka **Visual**, „No template selected yet…" |
+| Wskaźnik zapisu przy wejściu | **„All changes saved"** (brak „Unsaved changes") — czysta fikstura |
 
-### 4.1 Co działa
+**Lista szablonów (`GET /admin/api/widget-templates` → HTTP 200, 7 pozycji, z zalogowanej sesji):**
 
-- **„Active template"** poprawnie odzwierciedla stan: gdy brak szablonu → „No template selected yet. Run setup to choose one before editing presentation labels."; po wyborze → „Active template: test".
-- **`Preview label`** (input): wpisanie wartości działa natychmiast i **aktualizuje podgląd na kanwie** — etykieta placeholdera zmieniła się z „test" na wpisane „Audyt Podgląd 2805". Potwierdza to logikę `resolveTemplateLabel` (priorytet: `previewLabel` > `templateName` > „Template section").
-- **`Category`** (input): przyjmuje tekst i utrzymuje wartość; wartość jest zachowywana między zakładkami.
-- Wartości obu pól przetrwały przełączenie do Advanced (Preview label widoczny w diagnostyce — persystencja UI potwierdzona).
+| Nazwa | Status | Liczba bloków | Category | Opis |
+|-------|--------|---------------|----------|------|
+| Template-420f0b92-6507-49b0-84bd-339f0c6eff6b | `draft` | 0 | Content | „Reusable hero layout" |
+| My Test Template | `draft` | 0 | Layout | — |
+| test (`5361ca2a-…2718c`) | `draft` | **1** | Layout | — |
+| main-footer (`4053fd91-…a6fb`) | `draft` | **1** | Layout | „Footer all pages" |
+| test2 | `draft` | 0 | Layout | — |
+| test1 | `draft` | 0 | Layout | — |
+| test (drugi wpis, inny id) | `draft` | **1** | layout | — |
 
-### 4.2 Co jest mylące / ograniczone
-
-- **`Category` nie ma żadnego widocznego efektu w edytorze.** Kategoria renderuje się tylko jako „chip" w stanie `ready` (gdy są rozwiązane bloki), do którego edytor nigdy nie dochodzi. W placeholderze (`TemplateSectionPlaceholder`) kategoria nie jest pokazywana. W praktyce użytkownik wpisuje `Category` „w ciemno" — nie da się jej podejrzeć w adminie. Dodatkowo `Category` **nie jest** echo-wana w diagnostyce Advanced (tam są tylko `previewLabel` i `version`).
-- **`metadata.version`: niespójność kontrakt ↔ UI.** Kontrakt deklaruje `metadata.version` jako `readOnlyPath` sekcji `presentation-fields` (Visual), ale **pole nie jest renderowane nigdzie w Visual** — pojawia się tylko w Advanced (read-only, „Not configured"). Co więcej, `version` jest read-only we wszystkich trybach, więc **nie istnieje żaden edytor do jego ustawienia** — wartość może trafić tu wyłącznie z surowych danych / normalizacji.
-- Visual, tak jak Wizard, **nie pokazuje realnej zawartości szablonu** (ten sam root cause: brak resolucji bloków w edytorze).
-
----
-
-## 5. Tryb Advanced — wyniki
-
-Sekcje widget-specyficzne: **„Resolved template"**, **„Resolved content summary"**,
-**„Runtime behavior"** (statyczny alert). Plus współdzielone „Block layout summary"
-i „Visibility summary" (§6). **Cały tryb jest read-only** — brak jakiegokolwiek pola edycyjnego (zgodne z kontraktem: puste `writablePaths`).
-
-### 5.1 Co działa
-
-- Diagnostyka poprawnie odzwierciedla stan in-memory:
-  - `Template selection: test`, `Template name: test`,
-  - `Preview label: Audyt Podgląd 2805` (przeniesione z Visual — persystencja potwierdzona),
-  - `Version: Not configured`,
-  - `Resolved blocks: 0 blocks`, `Resolution error: No resolution problem detected.`
-- „Resolved content summary" → „No content blocks resolved." — spójne z faktem, że edytor nie rozwiązuje bloków.
-- „Runtime behavior" (alert): „This widget renders the selected template blocks in order. Draft templates will only render in preview mode." — poprawnie opisuje regułę draft/preview.
-
-### 5.2 Co jest mylące / ograniczone
-
-- **„Resolved blocks: 0 blocks" mimo że wybrany szablon `test` ma 1 blok w bazie.** Diagnostyka raportuje stan nierozwiązany edytora, a nie to, co faktycznie wyrenderuje runtime. Dla sekcji „dla troubleshootingu" jest to mylące — nie pomaga zdiagnozować realnego renderu.
-- **Wewnętrzna sprzeczność diagnostyki:** „Resolution error: No resolution problem detected." dla szablonu **draft**, podczas gdy sąsiedni alert „Runtime behavior" ostrzega, że draft wyrenderuje się tylko w preview. Diagnostyka daje fałszywe „wszystko OK", ignorując bramkę publikacji szablonu.
-- **`Category` nie jest w ogóle wystawiana** w diagnostyce (jest tylko `Template selection`, `Template name`, `Preview label`, `Version`, `Resolved blocks`, `Resolution error`).
+**Wniosek (twardy fakt z API):** **0 opublikowanych szablonów** (7/7 to `draft`); część jest pusta (0 bloków).
+To wprost zamyka możliwość weryfikacji stanu `ready` na froncie (§7) i czyni fiksturę **placeholder-only**.
 
 ---
 
-## 6. Współdzielone kontrolki bloku (obserwacje — poza kontraktem template-section)
+## 3. Co przetestowano w tym audycie (zakres realnych interakcji)
 
-Edytor-shell dokłada do Visual i Advanced kontrolki wspólne dla wszystkich widgetów
-(nie należą do kontraktu `template-section`):
+**Wizard:** otwarcie selektora i odczyt **wszystkich 8 opcji**; wybór `test` (1 blok w bazie); wybór
+`main-footer` (1 blok + opis); reset „No template"; ponowny wybór `test`; przycisk „Finish setup and open
+Visual"; obserwacja karty szablonu (nazwa + badge statusu + opis) i panelu „Live preview".
 
-- **Block layout** (Visual) / **Block layout summary** (Advanced): `Content width = default`, `Top/Bottom padding = MD`, `Top/Bottom margin = None`.
-- **Device visibility** (Visual): przełączniki Desktop / Tablet / Mobile — w odczytanym stanie wszystkie `aria-checked=false` (unchecked), z etykietą „Hidden".
-- **Visibility summary** (Advanced): „Shown on: **Hidden on all devices**".
+**Visual:** sekcja „Active template" (pusta vs wypełniona); wpis do `Preview label` z obserwacją etykiety na
+kanwie; wpis do `Category` z obserwacją (braku) efektu na kanwie i atrybutach DOM; weryfikacja, że pole
+`version` **nie jest renderowane** w panelu Visual; obserwacja współdzielonych sekcji „Block layout" /
+„Device visibility".
 
-**Obserwacja (do follow-upu w warstwie współdzielonej, nie w template-section):**
-podsumowanie „Hidden on all devices" stoi w sprzeczności z faktem, że widget **realnie
-renderuje się na public route** (widoczny na desktopie 1280px — patrz §7). Wskazuje to na
-niejednoznaczność/możliwą inwersję semantyki etykiet w współdzielonej sekcji widoczności.
-Nie jest to problem renderera `template-section` i nie był dalej drążony w tym audycie.
+**Advanced:** odczyt wszystkich 6 wierszy diagnostyki + „Resolved content summary" + alert „Runtime
+behavior"; weryfikacja, że tryb **nie ma żadnej edytowalnej kontrolki** (`input/textarea/select/button`
+liczone = 0); weryfikacja przeniesienia `Preview label` z Visual (persystencja in-memory).
 
----
+**Dowód placeholder-only (mocniejsze evidence):** dla **każdego** wybranego szablonu — także tych z
+**1 blokiem w bazie** (`test`, `main-footer`) — kanwa pozostaje `state="empty"` z komunikatem „This template
+has no blocks yet."; potwierdzone odczytem `data-template-section*` z DOM oraz lekturą kodu edytora
+(każdy wybór ustawia `resolved: undefined`).
 
-## 7. Frontend (public route) — wyniki
+**Frontend (public):** render placeholdera, atrybuty `data-template-section*`, brak overflow na 1280 i 375 px,
+widoczność widgetu, konsola.
 
-**URL:** http://localhost:3000/ctr-template-section-2305 · **HTTP:** `200`.
-
-Stan **opublikowany** fixture nie ma wybranego szablonu, więc front renderuje placeholder:
-
-```html
-<div class="rounded-lg border border-dashed bg-muted/20 p-4 text-sm"
-     data-template-section="" data-template-section-state="empty">
-  <p ...>Template section</p>
-  <p ...>Template section</p>
-  <p ...>Select a widget template to render here.</p>
-</div>
-```
-
-- `data-template-section = ""` (pusty `templateId`) ✓
-- `data-template-section-state = "empty"` ✓
-- Etykieta = „Template section" (fallback, bo brak `previewLabel` i `templateName`) ✓
-- Komunikat = „Select a widget template to render here." (poprawny dla pustego `templateId`) ✓
-- **Brak horyzontalnego overflow** (`scrollWidth = innerWidth = 1280`) ✓
-- Widget jest **widocznie wyrenderowany** na desktopie (kontekst do obserwacji widoczności w §6).
-
-Stan public odpowiada więc renderowi placeholdera (`TemplateSectionPlaceholder`) i jest
-zgodny ze stanem placeholdera obserwowanym w podglądzie admina.
+**Higiena:** reload + akceptacja `beforeunload` → odrzucenie zmian, weryfikacja powrotu do stanu wyjściowego.
 
 ---
 
-## 8. Czego NIE udało się zweryfikować — ograniczenia / fixture-gap
+## 4. Co DZIAŁA — szczegóły zweryfikowane w DOM
 
-- **Brak opublikowanego szablonu w danych** (wszystkie 7 to `draft`). W połączeniu z regułą
-  „draft renderuje się tylko w preview" oznacza to, że **nie da się obecnie zweryfikować stanu
-  `ready`** (rozwiązany szablon z realnymi blokami) na opublikowanej stronie publicznej. To
-  klasyczny **fixture-gap**, analogiczny do komercyjnych widgetów z 27-05.
-- **Brak resolucji bloków w edytorze** sprawia, że ani Wizard, ani Visual, ani Advanced
-  nie są w stanie pokazać realnej zawartości szablonu — testowano wyłącznie ścieżkę placeholdera.
-- **Nie testowano ścieżek błędów** `template_missing` / `template_loop` na żywym froncie
-  (wymagałyby spreparowanego, opublikowanego szablonu / zapętlonego template-section).
-- **Nie publikowano zmian** na współdzielonym fixture (świadoma decyzja — patrz §9), więc nie
-  weryfikowano propagacji `previewLabel`/`category` na front w stanie populated.
-- **Responsywność mobilna** szablonu w stanie populated — nie testowana (brak danych do renderu).
+### 4.1 Wizard
+
+| Kontrola / ścieżka | Test | Efekt |
+|--------------------|------|-------|
+| Selektor „Template selection" | otwarcie listy | dokładnie **8 opcji**: „No template" + 7 szablonów z API ✓ |
+| Wybór `test` | klik opcji | `data-template-section` = `5361ca2a-…2718c`, etykieta kanwy „test"; `hasUnsaved=true` (in-memory) ✓ |
+| Karta wybranego szablonu | po wyborze `test` | nazwa „test" + **badge „Draft"** ✓ |
+| Karta z opisem | wybór `main-footer` | nazwa „main-footer" + badge „Draft" + **opis „Footer all pages"** ✓ |
+| Reset „No template" | klik „No template" | `templateId` → `""`, etykieta → „Template section", komunikat → „Select a widget template to render here.", combobox → „No template" ✓ |
+| „Finish setup and open Visual" | klik | przełącza na zakładkę **Visual** (`[selected]`), niesie wybór → „Active template: test" ✓ |
+| „Live preview" (panel Wizard) | obserwacja | wiernie odbija stan kanwy (zawsze placeholder — patrz N1) ✓ |
+
+### 4.2 Visual
+
+| Kontrola / ścieżka | Test | Efekt |
+|--------------------|------|-------|
+| „Active template" (summary, read-only) | brak / wybór | bez szablonu „No template selected yet. Run setup…"; po wyborze „Active template: test" ✓ |
+| `Preview label` → `metadata.previewLabel` | wpis „Audyt Podglad 2905" | **etykieta kanwy aktualizuje się na żywo** (środkowy wiersz placeholdera: „test" → „Audyt Podglad 2905") — potwierdza priorytet `resolveTemplateLabel` ✓ |
+| `Category` → `metadata.category` | wpis „Marketing-AUDYT" | input **utrzymuje** wartość; persystuje między zakładkami (patrz N3 co do braku efektu) ✓ |
+| Lista inputów template-section w Visual | inspekcja | dokładnie **2**: „Preview label", „Category" (poza nimi tylko globalny „Find components…") ✓ |
+
+### 4.3 Advanced (w 100% read-only)
+
+Po wpisaniu w Visual `Preview label = "Audyt Podglad 2905"` i wybraniu `test`, diagnostyka pokazała:
+
+| Wiersz | Wartość | Komentarz |
+|--------|---------|-----------|
+| Template selection | `test` | ✓ |
+| Template name | `test` | ✓ |
+| **Preview label** | **`Audyt Podglad 2905`** | **przeniesione z Visual → persystencja in-memory potwierdzona** ✓ |
+| Version | `Not configured` | (jedyne miejsce, gdzie `version` w ogóle się pojawia — read-only) |
+| Resolved blocks | `0 blocks` | (mimo 1 bloku w bazie — patrz N2) |
+| Resolution error | `No resolution problem detected.` | (dla szablonu draft — patrz N4) |
+| Resolved content | `No content blocks resolved.` | spójne z brakiem resolucji w edytorze |
+| Runtime behavior (alert) | „This widget renders the selected template blocks in order. Draft templates will only render in preview mode." | poprawnie opisuje regułę draft/preview |
+
+**Liczba edytowalnych kontrolek widget-specyficznych w Advanced = 0** (potwierdzone `eval`-em). Zgodne z
+kontraktem (`writablePaths: []` we wszystkich trzech sekcjach Advanced).
+
+### 4.4 Frontend (public `/ctr-template-section-2305`)
+
+| Test | Wynik |
+|------|-------|
+| HTTP | `200`, tytuł „Contract Test - template-section" ✓ |
+| `data-template-section` | `""` (pusty `templateId` w danych opublikowanych) ✓ |
+| `data-template-section-state` | `empty` ✓ |
+| `data-template-section-category` / `-version` | **nieobecne** (renderowane wyłącznie w stanie `ready`) ✓ — spójne z kodem renderera |
+| Treść placeholdera | „Template section" (fallback label) + „Select a widget template to render here." ✓ |
+| Overflow poziomy @1280 | brak (`scrollWidth == innerWidth == 1280`) ✓ |
+| Overflow poziomy @375 | brak (`scrollWidth == innerWidth == 375`), widget widoczny (szer. 375) ✓ |
+| Konsola frontu | **0 błędów, 0 ostrzeżeń** ✓ |
+
+### 4.5 Konsola admina
+
+0 błędów / 0 ostrzeżeń (jedyny wpis: info React DevTools).
+
+---
+
+## 5. Co NIE działa / jest mylące / wymaga uwagi (niuanse UX/UI)
+
+| # | Obszar | Obserwacja |
+|---|--------|-----------|
+| **N1 — edytor NIGDY nie renderuje realnej zawartości szablonu (placeholder-only) + mylący opis** | Edytor / preview | Każdy wybór szablonu w `TemplateSelectField` ustawia `resolved: undefined` (kod l. 80, 89), więc ani Wizard, ani Visual, ani „Live preview" nie rozwiązują bloków. **Dowód:** po wyborze `test` (1 blok w bazie) i `main-footer` (1 blok) kanwa pozostała `state="empty"` z „This template has no blocks yet." — nigdy `ready`. Mimo to opis panelu Wizard obiecuje „Reflects the current Wizard state through the **shared widget renderer**", co sugeruje pełny render, którego nie ma. **Mylący opis + realne ograniczenie podglądu.** |
+| **N2 — Advanced „Resolved blocks: 0" mimo bloków w bazie** | Advanced / diagnostyka | Diagnostyka raportuje **stan in-memory edytora** (nierozwiązany, bo N1), a nie to, co wyrenderuje runtime. Dla `test`/`main-footer` (po 1 bloku w API) Advanced pokazuje „0 blocks" i „No content blocks resolved.". Sekcja reklamowana jako „for troubleshooting" **nie pomaga** zdiagnozować realnego renderu. |
+| **N3 — `Category` nie ma żadnego widocznego efektu w adminie i nie jest echo-wana w Advanced** | Visual / Advanced | `metadata.category` renderuje się **tylko** w stanie `ready` (jako chip obok bloków), do którego edytor nie dochodzi (N1). W placeholderze `category` nie jest pokazywana (`data-template-section-category` = nieobecny — potwierdzone w DOM po wpisaniu „Marketing-AUDYT"). Dodatkowo Advanced **nie wystawia** `category` (są tylko Template selection/name, Preview label, Version, Resolved blocks, Resolution error). Użytkownik wpisuje `Category` „w ciemno". |
+| **N4 — wewnętrzna sprzeczność diagnostyki dla szablonu draft** | Advanced / diagnostyka | „Resolution error: **No resolution problem detected.**" dla szablonu `test` o statusie **draft**, podczas gdy sąsiedni alert „Runtime behavior" ostrzega, że **draft wyrenderuje się tylko w preview**. Diagnostyka daje fałszywe „wszystko OK", ignorując bramkę publikacji (na publicznej trasie ten sam draft dałby `template_unpublished`). |
+| **N5 — `metadata.version`: niespójność kontrakt ↔ UI; brak edytora w ogóle** | Kontrakt ↔ UI | Kontrakt deklaruje `metadata.version` jako `readOnlyPath` sekcji Visual `presentation-fields`, ale **pole nie jest renderowane w Visual** (potwierdzone: panel Visual nie zawiera „Version"). Pojawia się **tylko** w Advanced jako read-only („Not configured"). `version` jest read-only **we wszystkich trybach** → **nie istnieje żaden edytor do jego ustawienia**; wartość może trafić tu wyłącznie z surowych danych / normalizacji. |
+| **N6 — (współdzielone, poza kontraktem template-section) „Visibility summary: Hidden on all devices" przy realnie widocznym widgecie** | Kontrolka współdzielona | Sekcja „Device visibility" (Visual) ma przełączniki Desktop/Tablet/Mobile z etykietą „Hidden" (wszystkie niezaznaczone), a Advanced podsumowuje „Shown on: **Hidden on all devices**" — mimo że widget **realnie renderuje się** na froncie (desktop 1280 i mobile 375). Wskazuje na możliwą inwersję/niejednoznaczność semantyki etykiet w warstwie współdzielonej. **Nie jest to problem renderera `template-section`** i nie był dalej drążony. |
+
+**Nie wykryto** żadnego błędu konsoli (admin i front: 0/0), żadnego crasha ani twardego buga renderowania.
+Wszystkie kontrolki Wizard/Visual reagują i (tam, gdzie ma to sens — etykieta z `Preview label`) aktualizują
+podgląd na żywo. „Twarde" usterki to wyłącznie **mylące podglądy/diagnostyka i niespójności kontrakt↔UI**
+opisane wyżej, nie błędy blokujące.
+
+---
+
+## 6. Porównanie Admin (kanwa) vs Frontend
+
+| Aspekt | Admin (kanwa/preview) | Frontend (public) | Zgodność |
+|--------|-----------------------|-------------------|----------|
+| Render pustego `templateId` | placeholder „Select a widget template…" | placeholder „Select a widget template…" | ✓ Zgodne |
+| `data-template-section-state` | `empty` | `empty` | ✓ Zgodne |
+| Etykieta z `previewLabel` | aktualizuje etykietę placeholdera na żywo | (niezweryfikowane — nie publikowano; danych opublikowanych nie zmieniałem) | n/d |
+| `data-template-section-category` / `-version` | nieobecne (placeholder) | nieobecne (placeholder) | ✓ Zgodne |
+| Realna zawartość szablonu (bloki) | **nigdy** nie renderowana w edytorze (N1) | nie do zweryfikowania (brak published template) | — (oba ograniczone) |
+| Overflow poziomy | brak | brak (1280 i 375) | ✓ Zgodne |
+| Widoczność widgetu | widoczny w preview | widoczny (desktop + mobile) | ✓ Zgodne |
+
+**Wniosek:** w jedynym dostępnym do weryfikacji stanie (placeholder / pusty `templateId`) admin i front są
+spójne. Stanu `ready` (populated) nie da się porównać z powodu fixture-gap (§7).
+
+---
+
+## 7. Czego NIE dało się zweryfikować (uczciwe ograniczenia — z nazwą kontrolki i powodem)
+
+- **Stan `ready` na froncie (rozwiązany szablon z realnymi blokami) — NIE-DO-ZWERYFIKOWANIA.**
+  **Powód (dwie niezależne bramki):** (1) w API **0 opublikowanych szablonów** (7/7 `draft`), a publiczna
+  trasa renderuje z `preview=false` → każdy draft daje `template_unpublished` (placeholder „Template is not
+  published yet."); (2) opublikowane dane strony fikstury mają **pusty `templateId`**, więc resolucja nawet
+  nie startuje. Domknięcie wymagałoby **opublikowania szablonu** ORAZ **ustawienia + opublikowania**
+  `templateId` na współdzielonej fiksturze — **świadomie pominięte** (mutacja shared fixture). To klasyczny
+  **fixture-gap**.
+- **Komunikat `template_unpublished` na żywym froncie — NIE-DO-ZWERYFIKOWANIA bez publikacji.**
+  Logikę potwierdziłem lekturą `templateSectionRuntime.ts` + `publicSite.tsx`, ale wywołanie jej na żywej
+  publicznej stronie wymaga opublikowanej strony z `templateId` wskazującym na szablon draft — czyli
+  ponownie mutacji fikstury.
+- **Stany błędów `template_missing` / `template_loop` — NIE-DO-ZWERYFIKOWANIA w tej fiksturze.**
+  `template_missing` wymaga opublikowanej strony wskazującej na **usunięty** szablon; `template_loop` —
+  szablonu zawierającego `template-section` z odwołaniem do samego siebie (rekurencja). Żadnego z tych
+  scenariuszy nie da się odtworzyć bez preparowania danych/publikacji.
+- **Pole `metadata.version` — NIE-DO-USTAWIENIA z UI (nie tylko nie-do-zweryfikowania).** Jak w N5: brak
+  jakiegokolwiek edytowalnego kontrolera dla `version` w którymkolwiek trybie. Nie mogłem wprowadzić
+  wartości i zaobserwować jej propagacji.
+- **Trwałość po zapisie / propagacja `previewLabel`+`category` na front — świadomie pominięte.** Nie
+  klikałem „Save draft"/„Publish", więc nie weryfikowałem persystencji po przeładowaniu ani propagacji na
+  opublikowaną stronę. (Zweryfikowano natomiast spójność w obrębie sesji Wizard→Visual→Advanced.)
+- **Responsywność szablonu w stanie populated** — niemożliwa (brak danych do renderu `ready`).
+- **Współdzielone sekcje wrappera (Block layout, Device visibility)** — poza zakresem kontraktu
+  `template-section`; obserwacja N6 odnotowana, ale nie drążona ani nie modyfikowana trwale.
+
+---
+
+## 8. Podsumowanie
+
+- **template-section to fikstura placeholder-only — i tym razem jest to udowodnione, nie tylko stwierdzone.**
+  Edytor z założenia nie rozwiązuje bloków (`resolved: undefined` przy każdym wyborze), co potwierdziłem
+  realnie: dwa szablony z **1 blokiem w bazie** (`test`, `main-footer`) i tak dają kanwę `state="empty"` z
+  „This template has no blocks yet.". API pokazuje **0/7 opublikowanych** szablonów, a opublikowana strona
+  ma **pusty `templateId`** — stąd front renderuje placeholder.
+- **Co działa (potwierdzone klikaniem + DOM):** pełny selektor szablonów (8 opcji), badge statusu „Draft",
+  opis w karcie, reset „No template", „Finish setup and open Visual" z carry-over, `Preview label`
+  aktualizujący etykietę kanwy na żywo, `Category` przyjmujące/utrzymujące wartość, pełna read-only
+  diagnostyka Advanced wiernie odbijająca stan in-memory (z persystencją `previewLabel` Visual→Advanced),
+  poprawny render placeholdera na froncie bez overflow (1280 i 375), 0/0 w konsoli admina i frontu.
+- **Najważniejsze realne znaleziska:** N1 (placeholder-only + mylący opis „shared widget renderer"),
+  N2 (Advanced „0 blocks" mimo bloków w bazie), N4 (sprzeczność „No resolution problem detected." dla
+  draftu), N5 (`version` w kontrakcie/Visual readOnly, ale nierenderowane i nieedytowalne nigdzie),
+  N3 (`category` bez widocznego efektu i bez echa w Advanced).
+- **Nie-do-zweryfikowania (fixture-gap, nazwane w §7):** stan `ready` na froncie oraz komunikaty
+  `template_unpublished` / `template_missing` / `template_loop` — wszystkie wymagają publikacji szablonu i/lub
+  mutacji współdzielonej fikstury, czego świadomie nie wykonałem.
+- **Higiena:** po testach `reload` + akceptacja `beforeunload` → fikstura wróciła do stanu wyjściowego
+  (kanwa „Select a widget template to render here.", brak „Unsaved changes"). Nie klikano Save/Publish.
 
 ---
 
 ## 9. Higiena fixture (cleanup)
 
-Wszystkie interakcje w edytorze były **in-memory** — panel pokazywał „Unsaved changes”,
-co potwierdza brak autosave/zapisu. Po testach wykonano `reload` edytora i potwierdzono
-dialog `beforeunload` (accept), aby **odrzucić niezapisane zmiany**. Po reloadzie edytor wrócił
-do stanu wyjściowego (kanwa: „Select a widget template to render here.", Visual: „No template
-selected yet…", brak „Unsaved changes"). Fixture pozostawiono w stanie pierwotnym; nie klikano
-Publish/Save.
+Wszystkie interakcje były **in-memory** — po pierwszej edycji panel pokazywał „Unsaved changes". Po testach
+wykonałem `reload`; przeglądarka wyświetliła dialog `beforeunload` („Leave site?"), który **zaakceptowałem**
+(`dialog-accept`), aby odrzucić niezapisane zmiany. Po przeładowaniu zweryfikowałem `eval`-em:
+`data-template-section-state="empty"`, `templateId=""`, etykieta „Template section", komunikat „Select a
+widget template to render here.", **brak „Unsaved changes"** (status „All changes saved"). Fikstura w stanie
+pierwotnym; **nie** klikano Publish/Save.
 
 ---
 
-## 10. Porównanie Admin Preview ↔ Frontend
+## 10. Screenshoty (etykiety lokalne)
 
-| Aspekt | Admin (preview/kanwa) | Frontend (public) | Zgodność |
-|--------|-----------------------|-------------------|----------|
-| Render pustego stanu (brak `templateId`) | Placeholder „Select a widget template…" | Placeholder „Select a widget template…" | ✓ Zgodne |
-| `data-template-section-state` | `empty` | `empty` | ✓ Zgodne |
-| Etykieta z `previewLabel` | Aktualizuje etykietę placeholdera | (niezweryfikowane na froncie — nie publikowano) | n/d |
-| Realna zawartość szablonu (bloki) | Nigdy nie renderowana w edytorze | Nie do zweryfikowania (brak published template) | — (oba ograniczone) |
-| Overflow poziomy | brak | brak | ✓ Zgodne |
-
-**Wniosek:** w jedynym dostępnym do weryfikacji stanie (placeholder / pusty `templateId`)
-admin i front są spójne. Stanu populated nie da się porównać z powodu fixture-gap (§8).
-
----
-
-## 11. Podsumowanie
-
-### 11.1 Co działa (potwierdzone testem)
-
-- Logowanie, otwarcie fixture, ładowanie edytora (Wizard/Visual/Advanced).
-- Wizard: lista szablonów z API, wybór, badge statusu, opis, reset „No template", przejście do Visual.
-- Visual: `Active template` (read-only summary), `Preview label` (aktualizuje podgląd na kanwie), `Category` (przyjmuje i utrzymuje wartość).
-- Advanced: kompletna, poprawna diagnostyka read-only odzwierciedlająca stan in-memory; statyczny alert runtime.
-- Persystencja wartości między zakładkami (in-memory).
-- Public route: `200`, poprawny render placeholdera, brak overflow, spójne `data-*`.
-
-### 11.2 Co nie działa / jest mylące
-
-| # | Obserwacja | Obszar |
-|---|------------|--------|
-| 1 | Podgląd (Wizard i Visual) nigdy nie renderuje realnych bloków szablonu — zawsze placeholder, nawet dla szablonów z blokami | Edytor / preview |
-| 2 | Opis „Reflects the current Wizard state through the shared widget renderer" jest mylący (brak realnego renderu) | Wizard UX |
-| 3 | `Category` nie ma widocznego efektu w adminie i nie jest echo-wana w Advanced | Visual / Advanced |
-| 4 | `metadata.version` deklarowane w kontrakcie (Visual readOnly), ale nie renderowane w Visual; brak edytora do jego ustawienia gdziekolwiek | Kontrakt ↔ UI |
-| 5 | Advanced „Resolved blocks: 0" mimo bloków w bazie — diagnostyka nie odzwierciedla realnego renderu | Advanced / diagnostyka |
-| 6 | Sprzeczność: „No resolution problem detected." dla szablonu draft, przy alercie „draft tylko w preview" | Advanced / diagnostyka |
-| 7 | Wszystkie szablony to `draft` → brak możliwości weryfikacji stanu `ready` na froncie (fixture-gap) | Dane / fixture |
-| 8 | (Współdzielone) „Visibility summary: Hidden on all devices" przy realnie widocznym widgecie na froncie — możliwa inwersja semantyki | Kontrolka współdzielona |
-
-### 11.3 Uwaga końcowa o uczciwości raportu
-
-Jeżeli coś nie zostało przetestowane, jest to wyraźnie zaznaczone w §8. Wszystko, co
-zostało przetestowane w ścieżce placeholdera (pusty/draft template), **działa zgodnie z
-oczekiwaniami renderera**; jedyne „twarde" defekty to mylące podglądy i niespójności
-diagnostyki/kontraktu opisane w §11.2 — nie zaobserwowano crasha ani błędu blokującego
-ani w adminie, ani na froncie.
+> W tym audycie **nie** zapisywałem zrzutów PNG — całą weryfikację oparłem o snapshoty dostępności
+> (`snapshot`) oraz inspekcję DOM/API (`eval`). Ewentualne pliki PNG byłyby **wyłącznie lokalnymi
+> etykietami** przechwyceń w `.playwright-cli/` (katalog ignorowany przez Git), nie są wymaganym evidence
+> i nie zostały dołączone do repo.
