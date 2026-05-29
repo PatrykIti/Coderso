@@ -1,23 +1,31 @@
-# RAPORT: Divider Widget — audyt current-state (Wizard / Visual / Advanced)
+# RAPORT: Divider Widget — audyt wyczerpujący (Wizard / Visual / Advanced + Front)
 
 > **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja przeglądarki:** `claude-28-05-divider` (izolowana, oddzielna od innych agentów)
+> **Data audytu:** 2026-05-29 (upgrade raportu z 28-05; ten plik zastępuje poprzednią wersję)
+> **Sesja przeglądarki:** `claude-29-05-divider-exhaustive` (izolowana)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin:** page id `074a7240-a254-4ebc-8a09-1d060e057981` (breadcrumb „Contract Test - divider")
-> **Route public:** `http://localhost:3000/test-divider-0516` (tytuł „TEST-DIVIDER-0516")
-> **Pliki źródłowe:** `core/widgets/core/divider.tsx` (renderer + model + normalizacja), `core/admin/ui/widgets/editors/DividerEditors.tsx` (edytory Wizard/Visual/Advanced)
+> **Fixture admin:** page id `074a7240-a254-4ebc-8a09-1d060e057981`, slug `/ctr-divider-2305`, tytuł „Contract Test - divider" (status `draft`)
+> **Route public:** `http://localhost:3000/test-divider-0516` (tytuł „TEST-DIVIDER-0516", osobna opublikowana strona)
+> **Pliki źródłowe:** `core/widgets/core/divider.tsx` (model + normalizacja + renderer `DividerBlock`), `core/admin/ui/widgets/editors/DividerEditors.tsx` (edytory), `core/admin/ui/widgets/editors/{SharedColorControl,ClearableFields,TokenOrPixelField}.tsx` (pola wspólne)
 
-> **Uwaga metodologiczna:** Ten raport jest świadomie bogatszy niż smoke-report z
-> 27-05-2026 (`../27-05-2026/REPORT_DIVIDER_WIDGET.md`), który był jedynie clean
-> smoke (status `passed`, liczba sekcji edytora). Tutaj realnie klikałem w kontrolki
-> i weryfikowałem zmianę w żywym podglądzie przez inspekcję atrybutów `data-divider-*`
-> na faktycznie wyrenderowanym elemencie, sprawdzałem trwałość po zapisie (Save draft →
-> reload) oraz render na publicznej trasie.
+> **Metodologia — czym ten przebieg różni się od poprzedniego:** poprzedni raport (28-05)
+> klikał kontrolki *reprezentatywnie* (np. tylko Label size, tylko alignment Left, tylko
+> opacity Muted) i jawnie wymieniał luki w sekcji „Czego nie testowałem". **Ten przebieg
+> przeszedł przez WSZYSTKIE dyskretne opcje każdej dostępnej w fixture kontrolki**
+> (każdy wariant, każdy preset selecta, każdy switch warunkowego odsłaniania), a efekt
+> każdej zmiany weryfikowałem programowo na faktycznie wyrenderowanym elemencie
+> `[data-divider]` (atrybuty `data-divider-*`, klasy i `getComputedStyle`).
 
-> **Uwaga o zrzutach:** Nazwy plików PNG poniżej są wyłącznie lokalnymi etykietami
-> przechwyceń Playwright. Same pliki PNG nie są wymaganym evidence i nie są
-> commitowane do repo.
+> **Uwaga techniczna o środowisku (ważne):** katalog zrzutów Playwright (`.playwright-cli/`)
+> jest **współdzielony przez równolegle działające sesje agentów**. Odczyt „najnowszego"
+> pliku snapshotu (`ls -t | head`) zwracał pliki INNYCH widgetów (stats-kpi, spacer),
+> co na starcie dało fałszywe wrażenie, że strona dividera zawiera Stats KPI. Po przejściu
+> na inspekcję wyłącznie przez `--raw eval` (wynik trafia do mojego stdout, nie przez
+> współdzielony plik) stan był stabilny i spójny — strona faktycznie zawiera **jeden**
+> widget `divider` (potwierdzone też w backendzie: `currentData.blocks[0].type = divider`).
+
+> **Uwaga o zrzutach:** nazwy plików PNG to wyłącznie lokalne etykiety przechwyceń.
+> Same PNG nie są wymaganym evidence i **nie są commitowane** do repo.
 
 ---
 
@@ -25,175 +33,198 @@
 
 **Typ:** `divider` · **Kategoria:** layout
 **Opis (z definicji):** „Visual separator with optional centered label and spacing controls."
-**Warianty:** `line`, `dashed`, `label-center`.
-
-**Model danych (skrót, `DividerData`):**
-
-| Grupa | Pola |
-|-------|------|
-| Etykieta | `label`, `labelColor`, `labelSize` (xs/sm/base), `labelWeight` (medium/semibold/bold), `labelTransform` (none/uppercase), `labelLetterSpacing` (normal/wide), `labelGap` (2/3/4/6) |
-| Linia | `thickness` (1–8, clamp), `color`, `lineStyle` (solid/dashed/dotted), `opacity` (100/75/50/25), `dashPattern` (browser/short/wide), `visibility` (line/spacer-only) |
-| Szerokość | `width` (full/container/custom), `containerWidth` (sm/md/lg), `customWidth`, `align` (left/center/right) |
-| Odstępy | `marginTop`, `marginBottom` (tokeny spacingu, np. `6` = 1.5rem) |
+**Warianty:** `line`, `dashed`, `label-center` (Visual jest właścicielem wyboru wariantu — `editorCapabilities.visualOwnsVariantSelection: true`).
 
 **Tryby edytora wg kontraktu (`dividerEditorContract`):**
 - **Wizard** — 1 sekcja „Divider quick start" (rola `setup`), `writablePaths: []`, `readOnlyPaths: ["variant"]`.
-- **Visual** — sekcja „Preview" (summary) + 3 sekcje edytowalne: „Variant and label", „Line style and width", „Spacing around divider". `editorCapabilities.visualOwnsVariantSelection: true`.
+- **Visual** — „Preview" (summary) + 3 sekcje edytowalne: „Variant and label", „Line style and width", „Spacing around divider".
 - **Advanced** — „Preview" (summary) + „Runtime divider summary" (diagnostics, read-only) + „Support summary" (read-only).
 
----
-
-## 2. Co było faktycznie testowane (zakres realnych interakcji)
-
-Wszystkie poniższe interakcje wykonano w żywej aplikacji. Efekt weryfikowałem przez
-inspekcję atrybutów `data-divider-*` oraz inline-style faktycznie wyrenderowanego
-elementu (zarówno w canvas, jak i w panelu „Live preview"), a trwałość przez ponowny
-odczyt po reloadzie.
-
-- Logowanie do admina + otwarcie fixture page.
-- **Wizard:** wejście przez „Run setup again", odczyt zawartości, policzenie kontrolek edytowalnych, powrót przez „Finish setup and open Visual".
-- **Visual:** zmiana wariantu na `label-center` (odsłonięcie pól etykiety), wpisanie tekstu etykiety, zmiana koloru etykiety (swatch), label size = Large, line thickness = Heavy (6), width mode = Container, container width = Wide (lg), alignment = Left, line color = `#3366ff`, line style = Dashed, dash pattern = Wide dash, line emphasis (opacity) = Muted (50%), visibility = Spacer only → z powrotem Visible line, top spacing = Hero gap (24).
-- **Persistencja:** „Save draft" → toast „Draft saved." → reload strony → ponowna weryfikacja całego stanu.
-- **Advanced:** odczyt 3 sekcji diagnostycznych, policzenie kontrolek edytowalnych, weryfikacja zgodności podsumowań ze stanem.
-- **Front:** otwarcie `/test-divider-0516`, inspekcja DOM trzech opublikowanych dividerów, status HTTP, konsola, overflow przy 1280 i 375.
+**Stan początkowy fixture (przed audytem):** wariant `label-center`, etykieta „Sekcja testowa",
+thickness 6, width container-lg, lineStyle dashed, dashPattern wide, opacity 50%, mt Hero / mb Compact
+(pozostałość draftu z 28-05). **Stan końcowy** (zapisany draftem na koniec sesji) opisuje sekcja 4.5.
 
 ---
 
-## 3. Co działa (potwierdzone w praktyce)
+## 2. Co było faktycznie testowane (pełny zakres interakcji)
 
-### 3.1 Tryb Wizard
-- W stanie domyślnym panel pokazuje baner „Setup complete · Daily edits live in Visual. Advanced is for technical diagnostics." z przyciskiem **„Run setup again"**; ten przycisk otwiera Wizard.
-- Wizard zawiera **dokładnie jedną** sekcję **„Divider quick start"**: „Live divider preview" (renderer współdzielony), read-only wiersz **„Divider style: Line"** (ścieżka `variant`, zgodnie z `readOnlyPaths: ["variant"]`) oraz tekst pomocniczy „Visual owns divider style changes, center labels, line weight, color, width, and spacing."
-- Przycisk **„Finish setup and open Visual"** poprawnie wraca do Visual.
-- **Programowo potwierdzono 0 edytowalnych kontrolek widgetu** w panelu Wizard (jedyne 2 pola input w całym DOM to wyszukiwarki strony i biblioteki komponentów — poza panelem widgetu).
-- **Werdykt:** Wizard działa zgodnie z kontraktem — to wyłącznie afordancja startowa/podsumowanie, bez pól edycji; wariant jest tu read-only.
+Wszystkie kliknięcia wykonano w żywej aplikacji; każdy efekt zweryfikowany na renderze.
+Selecty to komponenty Radix — obsługiwane przez klik triggera (`[role=combobox]`) i klik
+opcji (`[role=option]`). Pełne wyliczenie przejść w sekcji 3.
 
-### 3.2 Tryb Visual — wszystkie testowane kontrolki działają i aktualizują podgląd
+| Rodzina kontrolek | Liczba opcji | Przejście „przez wszystkie" |
+|---|---|---|
+| Karty wariantu | 3 | ✅ line, dashed, label-center |
+| Center label (tekst) + Clear | — | ✅ wpis, render, Clear (czyszczenie) |
+| Label color (swatch) | — | ✅ 2 kolory hex |
+| Label size | 3 | ✅ Small / Medium / Large |
+| Label weight | 3 | ✅ Medium / Semi-bold / Bold |
+| Text transform | 2 | ✅ Normal case / Uppercase |
+| Letter spacing | 2 | ✅ Normal / Wide |
+| Label gap | 4 | ✅ Tight / Standard / Comfortable / Loose |
+| Line thickness | 8 | ✅ Hairline … Maximum weight (1–8) |
+| Width mode | 3 | ✅ Full / Container / Custom (+ warunkowe odsłanianie) |
+| Container width | 3 | ✅ Narrow / Standard / Wide |
+| Custom width | 5 | ✅ 240 / 320 / 480 / 640px / 75% |
+| Horizontal alignment | 3 | ✅ Left / Center / Right |
+| Line color (swatch) | — | ✅ 2 kolory hex |
+| Line style | 3 | ✅ Solid / Dashed / Dotted (+ warunkowe odsłanianie dash pattern) |
+| Line emphasis (opacity) | 4 | ✅ Solid / Soft / Muted / Faint |
+| Visibility | 2 | ✅ Spacer only / Visible line |
+| Dash pattern | 3 | ✅ Default / Short / Wide |
+| Top spacing | 13 | ✅ wszystkie presety (none … Hero gap) |
+| Bottom spacing | 13 | ✅ wszystkie presety (none … Hero gap) |
 
-| Kontrolka | Akcja testowa | Efekt w renderze (zweryfikowany) | Wynik |
-|---|---|---|---|
-| Karty wariantu | Klik „Label center" | `data-divider-variant=label-center`; odsłonięcie sekcji pól etykiety | ✅ |
-| Center label (tekst) | Wpisanie „Sekcja testowa" | `data-divider-has-label=true`; span etykiety renderuje tekst; przycisk „Clear" przechodzi z disabled na aktywny | ✅ |
-| Label color (swatch) | Ustawienie koloru | Kolor renderowanej etykiety zmienił się na `rgb(255,0,0)` | ✅ |
-| Label size | Wybór „Large" | Klasa spana → `text-base` (z `text-xs`) | ✅ |
-| Line thickness | Wybór „Heavy" (6) | `data-divider-thickness=6`; wysokość linii `6px` | ✅ |
-| Width mode | Wybór „Container width" | `data-divider-width-mode=container`, `width-kind=container-md`; **odsłonięcie** „Container width" i „Horizontal alignment" | ✅ (UI warunkowe) |
-| Container width | Wybór „Wide content width" | `width-kind=container-lg`; szerokość kontenera `min(100%, 64rem)` | ✅ |
-| Horizontal alignment | Wybór „Left" | Klasa kontenera → `mr-auto` (z `mx-auto`) | ✅ |
-| Line color (swatch) | Ustawienie `#3366ff` | `data-divider-color-kind` → `hex`; gradient linii `rgb(51,102,255)` | ✅ |
-| Line style | Wybór „Dashed" | `data-divider-line-style=dashed`; `repeating-linear-gradient`; **odsłonięcie** „Dash pattern" | ✅ (UI warunkowe) |
-| Dash pattern | Wybór „Wide dash" | Gradient `0 14px, transparent 14px 22px` (zgodny z presetem wide) | ✅ |
-| Line emphasis (opacity) | Wybór „Muted" (50%) | `opacity:0.5` na linii **oraz** na etykiecie | ✅ |
-| Visibility | Wybór „Spacer only" | `data-divider-visibility=spacer-only`; element nie renderuje żadnej zawartości (0 dzieci, zostają tylko marginesy) | ✅ |
-| Visibility (powrót) | Wybór „Visible line" | Linia wraca, `has-label=true` przywrócone | ✅ |
-| Top spacing | Wybór „Hero gap" (24) | `margin-top:6rem`; `margin-top-kind=token` | ✅ |
+Dodatkowo: **Wizard** (read-only), **Advanced** (read-only diagnostyka), **persistencja**
+(Save draft → reload → ponowna weryfikacja + odczyt z backendu), **front** `/test-divider-0516`
+(HTTP, konsola, DOM 3 dividerów, overflow @1280 i @375).
 
-- **Warunkowe odsłanianie pól działa poprawnie:** pola etykiety pojawiają się tylko dla wariantu `label-center`; „Container width" tylko dla width=container; „Horizontal alignment" tylko gdy width≠full; „Dash pattern" tylko gdy visibility=line i lineStyle=dashed.
-- **Panel „Preview"** w Visual aktualizuje się live przez ten sam renderer.
+---
 
-### 3.3 Spacer-only renderuje czysty odstęp
-Po wyborze „Spacer only" element `[data-divider]` traci całą zawartość (0 dzieci) i
-pozostawia jedynie marginesy — poprawna realizacja „odstępu bez widocznej linii"
-(`visibility === "spacer-only" ? null : ...`). Brak „pustej kreski".
+## 3. Co działa (potwierdzone na renderze — pełne wyliczenie)
 
-### 3.4 Persistencja (Save draft → reload)
-„Save draft" zwraca toast **„Draft saved."**. Po reloadzie **wszystkie** zmiany wróciły
-z bazy bez utraty: `variant=label-center`, `thickness=6`, `colorKind=hex`,
-`widthKind=container-lg`, `lineStyle=dashed`, `visibility=line`, `has-label=true`,
-`margin-top=6rem` / `margin-bottom=1.5rem`, `align=left` (`mr-auto`),
-`innerWidth=min(100%, 64rem)`, etykieta „Sekcja testowa" (czerwona, `text-base`),
-opacity linii `0.5`. ✅
+### 3.1 Wizard (read-only setup)
+- „Run setup again" otwiera Wizard; **0 kontrolek edytowalnych** (`data-widget-control-ownership="writable"` = pusta lista; 0 inputów/comboboxów/przycisków w panelu poza Finish).
+- Jedyny wiersz to **read-only `variant`** — pokazuje bieżący wariant („Label center"); zgodne z `readOnlyPaths: ["variant"]`.
+- Tekst pomocniczy: „Visual owns divider style changes, center labels, line weight, color, width, and spacing."
+- „Live divider preview" renderuje **bieżący** stan przez ten sam renderer (etykieta i styl identyczne z canvas).
+- „Finish setup and open Visual" wraca do Visual **bez resetu danych** (po powrocie stan w pełni zachowany — variant, thickness 5, container-lg, dashed, mt 96px, mb 48px, etykieta).
 
-_Zrzut (lokalny): `divider-admin-visual-28-05.png`_
+### 3.2 Visual — Variant and label
 
-### 3.5 Tryb Advanced — read-only, wiernie odzwierciedla stan
-- **Programowo potwierdzono 0 edytowalnych kontrolek i 0 przycisków** w panelu widgetu Advanced.
-- „Runtime divider summary" (diagnostics) zgadzało się ze stanem zapisanym w Visual:
+| Kontrolka | Przejście | Zweryfikowany efekt na renderze |
+|---|---|---|
+| Karty wariantu | line | `data-divider-variant=line`, kontener z `role="separator"` + `aria-orientation="horizontal"`, `has-label=false` |
+| | dashed | `variant=dashed`, `role="separator"` obecny |
+| | label-center | `variant=label-center`, **brak** `role="separator"`, `has-label=true` |
+| Center label | wpis „Audyt 29-05 divider" | render span aktualizuje tekst; `has-label=true` |
+| Center label → Clear | klik „Clear" | input pusty, span etykiety znika, `has-label=false`, przycisk „Clear" przechodzi w `disabled` |
+| Label color (swatch) | `#ff0000`, `#1e88e5` | kolor renderowanej etykiety = `rgb(255,0,0)` → `rgb(30,136,229)`; status swatcha „Selected color" |
+| Label size | Small / Medium / Large | klasa spana `text-xs` / `text-sm` / `text-base` |
+| Label weight | Medium / Semi-bold / Bold | `font-medium` / `font-semibold` / `font-bold` |
+| Text transform | Normal case / Uppercase | `normal-case` / `uppercase` |
+| Letter spacing | Normal / Wide | `tracking-normal` / `tracking-wider` |
+| Label gap | Tight / Standard / Comfortable / Loose | kontener `gap-2` / `gap-3` / `gap-4` / `gap-6` |
+
+### 3.3 Visual — Line style and width
+
+| Kontrolka | Przejście | Zweryfikowany efekt |
+|---|---|---|
+| Line thickness | Hairline → Maximum weight (8 wartości) | `data-divider-thickness` 1→8; wysokość linii `1px`→`8px` (każdy krok) |
+| Width mode | Full | `width-mode=full`, `width-kind=full`, brak inline width; **ukryte** Container width, Custom width, Alignment |
+| | Container | `width-mode=container`; **odsłonięte** Container width + Alignment |
+| | Custom | `width-mode=custom`; **odsłonięte** Custom width + Alignment |
+| Container width | Narrow / Standard / Wide | `width-kind` container-sm/md/lg; inline width `min(100%, 40rem)` / `48rem` / `64rem` |
+| Custom width | 240/320/480/640px / 75% | inline width = `240px`/`320px`/`480px`/`640px`/`75%`; helper „Selected width: …" aktualizuje się |
+| Horizontal alignment | Left / Center / Right | klasa kontenera `mr-auto` / `mx-auto` / `ml-auto` (potwierdzone marginesami auto) |
+| Line color (swatch) | `#d81b60`, `#00897b` | `color-kind=hex`; gradient linii przyjmuje kolor (`rgb(216,27,96)` → `rgb(0,137,123)`) |
+| Line style | Solid | `line-style=solid`, `backgroundColor` ustawiony, brak `background-image` |
+| | Dashed | `line-style=dashed`, `repeating-linear-gradient`; **odsłonięty** Dash pattern |
+| | Dotted | `line-style=dotted`, `radial-gradient(circle, …)`; Dash pattern ukryty |
+| Line emphasis (opacity) | Solid/Soft/Muted/Faint | `opacity` 1 / 0.75 / 0.5 / 0.25 — **na linii ORAZ na etykiecie** |
+| Visibility | Spacer only | `visibility=spacer-only`, element ma **0 dzieci** (czysty odstęp), `has-label=false`, hint „Spacer-only hides the label…"; Dash pattern ukryty |
+| | Visible line | `visibility=line`, linia wraca (1 dziecko), `has-label=true` |
+| Dash pattern | Default / Short / Wide | gradient `0→8px / 8→12px` (8/4) · `0→6px / 6→9px` (6/3) · `0→14px / 14→22px` (14/8) |
+
+**Warunkowe odsłanianie działa w pełni:** pola etykiety tylko dla `label-center`;
+Container width tylko dla width=container; Custom width tylko dla width=custom;
+Alignment tylko gdy width≠full; Dash pattern tylko gdy `visibility=line` **i** `lineStyle=dashed`.
+
+### 3.4 Visual — Spacing around divider
+- **Top spacing** — przejście przez wszystkie 13 presetów: `No extra space`=0px (kind `none`), `Micro`=4px, `Tiny`=8px, `Extra small`=12px, `Small`=16px, `Small plus`=20px, `Compact`=24px, `Card`=32px, `Comfortable`=40px, `Standard`=48px, `Section`=64px, `Large section`=80px, `Hero`=96px (kind `token`).
+- **Bottom spacing** — przejście przez wszystkie 13 presetów: wartości identyczne jak wyżej (0px→96px).
+- **Pozycja „Custom value unavailable" jest obecna i `disabled`** (lista ma 14 elementów = 13 presetów + 1 wyłączony). Potwierdza to: (a) token `0` jest filtrowany na rzecz `none` (`buildVisibleOffTokenOptions`), (b) wpisanie własnej wartości px jest zablokowane (`allowCustom=false`).
+
+### 3.5 Persistencja (Save draft → reload)
+- „Save draft" → toast **„Draft saved."**.
+- Backend (`/admin/api/pages/…` → `currentData.blocks[0].data`) zapisał komplet pól:
+  `align=center, color=#00897b, label="Audyt 29-05 divider", width=container, opacity=75, labelGap=4, labelSize=base, lineStyle=dashed, marginTop=24, thickness=5, labelColor=#1e88e5, visibility=line, customWidth=75%, dashPattern=wide, labelWeight=semibold, marginBottom=12, containerWidth=lg, labelTransform=uppercase, labelLetterSpacing=wide`.
+- Po **reloadzie** edytor odtworzył cały stan z backendu: `variant=label-center, thickness=5, color-kind=hex, width-kind=container-lg, line-style=dashed, visibility=line, has-label=true`, mt `96px` / mb `48px`, etykieta „Audyt 29-05 divider" w kolorze `rgb(30,136,229)`, klasa `text-base font-semibold uppercase tracking-wider`, opacity linii `0.75`, gradient z dash 14px. ✅
+
+_Zrzut (lokalny): `divexh-admin-visual-29-05.png`_
+
+### 3.6 Advanced — read-only, wiernie odzwierciedla stan
+- **0 kontrolek edytowalnych** i **0 inputów/comboboxów/przycisków** w panelu widgetu.
+- „Runtime divider summary" (zgodne ze stanem zapisanym):
   - Variant: **Label center**
-  - Line: **dashed, Heavy, Muted, visible line**
-  - Width: **Wide content width, aligned left.**
-  - Spacing: **Top Hero gap, bottom Compact gap.**
-  - Label: **Sekcja testowa (base, medium)**
-- „Support summary": nota o normalizacji + **„Preset-only width and spacing values are saved."** (poprawnie, bo width=container i marginesy to tokeny — `hasSavedCompatibility=false`).
-- **Werdykt:** Advanced realizuje zadeklarowany kontrakt diagnostyczny — zero edycji, podsumowania spójne ze stanem.
+  - Line: **dashed, Bold, Soft, visible line**
+  - Width: **Wide content width, aligned center.**
+  - Spacing: **Top Hero gap, bottom Standard gap.**
+  - Label: **Audyt 29-05 divider (base, semibold)**
+- „Support summary": nota o normalizacji + **„Preset-only width and spacing values are saved."** (poprawnie — aktywny tryb to container i tokenowe marginesy; zapisane `customWidth=75%` jest nieaktywne i nie wpływa na flagę `hasSavedCompatibility`).
+- Panel pokazuje też **read-only podsumowania bloku** page-buildera (poza kontraktem widgetu): „Block layout summary" (Content width default, Padding MD/MD, Margin None/None) oraz „Visibility summary" → **„Hidden on all devices"**.
 
-_Zrzut (lokalny): `divider-admin-advanced-28-05.png`_
-
-### 3.6 Front (`/test-divider-0516`)
-- HTTP **200 OK**, **0 błędów konsoli**.
-- To **osobna, opublikowana strona** zawierająca **trzy** widgety divider (a nie tę pojedynczą instancję, którą edytowałem w adminie — patrz sekcja 6):
-  1. `line` / thickness 1 / solid / full / bez etykiety / `role="separator"` + `aria-orientation="horizontal"`,
-  2. `dashed` (wariant) / **`line-style=solid`** / full / bez etykiety / `role="separator"`,
+### 3.7 Front (`/test-divider-0516`)
+- HTTP **200** (`text/html`), **0 błędów i 0 ostrzeżeń konsoli**.
+- Strona zawiera **3 opublikowane dividery** (osobna strona od edytowanego fixture):
+  1. `line` / `line-style=solid` / full / thickness 1 / bez etykiety / `role="separator"` + `aria-orientation="horizontal"`,
+  2. `dashed` (wariant) / **`line-style=solid`** / full / bez etykiety / `role="separator"` + `aria-orientation="horizontal"`,
   3. `label-center` / solid / full / etykieta **„OR"** / **bez** `role="separator"` i bez `aria-orientation`.
-- Marginesy domyślne `1.5rem` (Compact gap) na wszystkich trzech.
-- **Brak poziomego overflow** zarówno przy 1280px, jak i 375px (`scrollWidth == clientWidth`). ✅
+- Marginesy domyślne `24px` (1.5rem) na wszystkich trzech.
+- **Brak poziomego overflow:** `scrollWidth == clientWidth` przy **1280px** (1280=1280) i **375px** (375=375). ✅
 
-_Zrzuty (lokalne): `divider-public-desktop-28-05.png`, `divider-public-mobile-375-28-05.png`_
-
----
-
-## 4. Co NIE działa / problemy
-
-- **Nie znaleziono błędów funkcjonalnych** w przetestowanym zakresie. Każda kontrolka, którą kliknąłem w Visual, realnie zmieniała render i przetrwała zapis; Wizard i Advanced zachowują się dokładnie tak, jak deklaruje kontrakt (odpowiednio: setup-only oraz read-only).
-- Brak regresji względem smoke-reportu z 27-05 (który również był `passed`).
-
-> Uczciwe zastrzeżenie: „brak błędów" dotyczy **przetestowanego** zakresu z sekcji 2.
-> Obszary z sekcji 6 nie były klikane i nie mogę ich potwierdzić ani zaprzeczyć na
-> podstawie tej sesji. Punkty z sekcji 5 to niuanse UX/a11y, nie defekty funkcjonalne.
+_Zrzuty (lokalne): `divexh-front-desktop-1280-29-05.png`, `divexh-front-mobile-375-29-05.png`_
 
 ---
 
-## 5. Uwagi UX/UI i dostępności (niuanse, nie błędy funkcjonalne)
+## 4. Co NIE działa / problemy funkcjonalne
 
-1. **Domyślny kolor (token) prezentowany jako „Saved custom color".** Pola Line color i Label color mają zapisane domyślne tokeny (`var(--color-border)` / `var(--color-text)`; `data-divider-color-kind=token`), ale swatch pokazuje fallback `#e2e8f0` / `#0f172a` i etykietę **„Saved custom color"** oraz „A saved custom color is configured.". Sugeruje to użytkownikowi zapisany kolor własny, podczas gdy faktycznie jest to domyślny token motywu. (Ta sama rodzina problemu co niuans „transparent-jako-biały" z raportu Section.)
-2. **Helper „...or clear the field" bez przycisku Clear.** Przy Line color tekst pomocniczy mówi „Pick a swatch to replace it, or clear the field.", ale w kontrolce (przy `showValueInput={false}`) widoczny jest jedynie natywny swatch — brak widocznej afordancji „Clear". Tekst myli.
-3. **Wariant „Dashed" nie wymusza linii przerywanej.** `lineStyle` jest niezależnie konfigurowalny; wariant ustala tylko *domyślny* styl linii. Na froncie opublikowany divider #2 ma wariant `dashed`, ale renderuje się jako linia ciągła (`line-style=solid`). Nazwa wariantu może wprowadzać w błąd.
-4. **Niespójna semantyka separatora między wariantami.** Warianty `line` i `dashed` renderują kontener z `role="separator"` i `aria-orientation="horizontal"`. Wariant `label-center` z etykietą renderuje zwykły `flex`-div (linie jako `span[aria-hidden]`) — **bez** `role="separator"` i bez `aria-orientation`. Dla czytników ekranu divider z etykietą nie jest ogłaszany jako separator.
-5. **„Line emphasis" (opacity) działa łącznie na linię i etykietę.** Wybór przezroczystości stosuje tę samą wartość `opacity` do linii oraz do tekstu etykiety — nie da się przyciemnić samej linii bez przyciemnienia etykiety.
-6. **Odstępy są wyłącznie tokenowe (`allowCustom=false`).** Rozwijane listy Top/Bottom spacing zawierają wyłączoną pozycję **„Custom value unavailable"** — nie można wpisać własnej wartości px. Jednocześnie Advanced i copy mówią o „saved custom spacing" (kompatybilność dla wartości zapisanych spoza presetów) — drobna niespójność słownictwa względem tego, co realnie da się ustawić z UI.
-7. **Wizard jest de facto pusty** — poza read-only podsumowaniem wariantu i podglądem nie ma tu nic do skonfigurowania (celowe; ten sam wzorzec co w widgecie Section).
-8. **Radix Select vs natywny `select`.** Wszystkie comboboxy (thickness, width, line style, opacity, visibility, spacing, label size/weight…) to komponenty Radix — w teście wymagają kliknięcia triggera i opcji; programowa komenda `select` (natywna) na nich nie działa. To niuans harnessu, **nie** błąd widgetu.
-9. **Natywny `input[type=color]` (swatch).** Kliknięcie swatcha otwiera systemowy dialog koloru, którego nie da się obsłużyć w headless. Zmianę koloru zweryfikowałem przez programowe ustawienie wartości + zdarzenia React (propagacja zadziałała — patrz 3.2). To niuans harnessu, nie defekt.
+- **Nie wykryto błędów funkcjonalnych.** Każda dyskretna opcja każdej dostępnej kontrolki, którą udało się kliknąć (a w tym przebiegu kliknięto je wszystkie — patrz sekcja 3), realnie zmieniała render zgodnie z modelem i przetrwała zapis draftu + reload. Wizard i Advanced zachowują się dokładnie zgodnie z kontraktem (setup-only / read-only).
+- Brak błędów konsoli na froncie; brak regresji renderu względem poprzednich przebiegów.
 
 ---
 
-## 6. Czego NIE testowałem (świadome luki tej sesji)
+## 5. Czego NIE dało się w pełni zweryfikować (i dlaczego — konkretnie)
 
-- **Pozostałe pola etykiety pojedynczo:** Label weight, Text transform, Letter spacing, Label gap — kliknąłem reprezentatywnie tylko Label size. Wzorzec identyczny (Radix Select → writablePaths), ale nie weryfikowałem każdego z osobna.
-- **Width mode = Custom** i komponent `CustomWidthField` (presety 240/320/480/640px, 75% oraz ścieżka „Saved custom width" / disabled „legacy-custom") — testowałem tylko tryb Container.
-- **Pozostałe warianty wartości:** alignment Right (testowałem Left), line style Dotted (testowałem solid + dashed), dash pattern Short (testowałem Wide), opacity Faint/Soft (testowałem Muted), inne wartości thickness.
-- **Clear dla Line/Label color** — nie udało się zlokalizować widocznego przycisku Clear w tych kontrolkach (patrz niuans 5.2); zachowanie czyszczenia nie zostało wykonane.
-- **Publikacja (Publish)** — wykonałem wyłącznie „Save draft". W konsekwencji **moje zmiany nie trafiły na front**.
-- **Round-trip moich edycji na trasę publiczną** — `/test-divider-0516` to **inna, opublikowana strona** niż edytowany fixture admin (jeden divider w adminie vs trzy na froncie). Front zweryfikowałem więc pod kątem **poprawności renderu widgetu divider** (3 warianty), a nie odzwierciedlenia moich konkretnych edycji.
-- **Wpływ blokowych ustawień „Device visibility" na froncie** — Advanced pokazał „Hidden on all devices" (ustawienie page-buildera, nie część edytora widgetu); nie weryfikowałem jego realnego efektu na opublikowanej trasie.
+1. **Natywny dialog koloru OS (`input[type=color]`)** — dotyczy **Line color** i **Label color**. Kliknięcie swatcha otwiera systemowy picker, którego nie da się obsłużyć w headless. **Obejście:** ustawiałem `value` natywnym setterem + `input`/`change` (ścieżka zgodna z React `onChange` → `onSwatchChange`); propagacja zadziałała i efekt na renderze potwierdzony (sekcje 3.2, 3.3). To **ograniczenie harnessu, nie defekt widgetu**.
+2. **Wyłączona pozycja „Saved custom width"** w `CustomWidthField` — renderuje się **wyłącznie**, gdy zapisany `customWidth` NIE należy do 5 presetów (`legacy-custom`, `disabled`). Z UI można ustawić tylko presety, więc tej gałęzi **nie da się aktywować z poziomu interfejsu** w tym fixture. Lista custom width zawierała tylko 5 presetów (0 pozycji disabled). Wymagałaby wstrzyknięcia nie-presetowej wartości po stronie backendu.
+3. **Własna wartość px odstępu („Custom value unavailable")** — celowo wyłączona (`allowCustom=false`). Potwierdziłem, że pozycja jest obecna i `disabled`; **z założenia nie da się jej aktywować**. To nie defekt, to projekt.
+4. **Przycisk „Clear" dla kolorów (Line/Label color)** — **nie istnieje**. `ColorField` nie przekazuje `onClear` do `SharedColorControl`, więc nagłówek pola nie renderuje przycisku „Clear". Jedyny działający „Clear" w edytorze dotyczy **tekstu etykiety** (zweryfikowany, sekcja 3.2). Nie ma więc czego klikać dla kolorów.
+5. **Przycisk „Use transparent"** — **nie istnieje** dla kolorów dividera. `ColorField` nie przekazuje `allowTransparent`, więc przycisk się nie renderuje. Nie ma czego testować.
+6. **Round-trip moich edycji na trasę publiczną** — fixture admin (`/ctr-divider-2305`, status `draft`) to **inna strona** niż opublikowana `/test-divider-0516` (id `37fbfa5f…`). Wykonałem wyłącznie **Save draft** (świadomie nie publikowałem — Publish to akcja widoczna publicznie, a i tak nie zmieniłaby `/test-divider-0516`). W efekcie front zweryfikowałem **niezależnie**, pod kątem poprawności renderu 3 opublikowanych dividerów, a nie odzwierciedlenia moich edycji.
+7. **Efekt blokowego „Hidden on all devices"** — to ustawienie page-buildera (poza edytorem widgetu), widoczne jako read-only w Advanced. Ponieważ fixture nie jest opublikowany, nie weryfikowałem jego realnego skutku na żywej trasie.
+
+---
+
+## 6. Uwagi UX/UI i dostępności (niuanse, nie defekty)
+
+1. **„Line emphasis" (opacity) działa łącznie na linię i etykietę.** Ta sama wartość `opacity` (1 / 0.75 / 0.5 / 0.25) trafia na linię **oraz** na tekst etykiety — nie da się przyciemnić samej linii bez przyciemnienia etykiety (potwierdzone na wszystkich 4 poziomach).
+2. **Niespójna semantyka separatora między wariantami.** `line` i `dashed` renderują kontener z `role="separator"` + `aria-orientation="horizontal"`. `label-center` z etykietą renderuje zwykły `flex`-div (linie jako `span[aria-hidden]`) — **bez** `role="separator"`. Dla czytników ekranu divider z etykietą nie jest ogłaszany jako separator (potwierdzone w adminie i na froncie, divider #3).
+3. **Wariant „Dashed" nie wymusza linii przerywanej.** `lineStyle` jest niezależny; wariant ustala tylko *domyślny* styl. Na froncie divider #2 ma wariant `dashed`, ale `line-style=solid` → renderuje się jako linia ciągła. Nazwa wariantu może mylić.
+4. **Odstępy są wyłącznie tokenowe** (`allowCustom=false`): rozwijane Top/Bottom mają wyłączoną pozycję „Custom value unavailable", a mimo to copy w Advanced/Support mówi o „saved custom spacing" (kompatybilność dla wartości spoza presetów). Drobna niespójność słownictwa względem tego, co realnie da się ustawić z UI.
+5. **Pola koloru — mylące copy w stanie domyślnym (z kodu).** Dla domyślnych tokenów (`var(--color-border)`/`var(--color-text)`) `SharedColorControl` pokazuje etykietę **„Saved custom color"** oraz tekst **„A saved custom color is configured. Pick a swatch to replace it, or clear the field."** — sugerując zapisany kolor własny i przycisk „Clear", którego (patrz 5.4) **nie ma**. W tym przebiegu nadpisałem kolory wartościami hex, więc obserwowałem status **„Selected color"** (bez tego helpera); niuans dotyczy stanu tokenowego i jest potwierdzony w źródle `SharedColorControl.tsx`.
+6. **`customWidth=75%` pozostaje zapisany, choć nieaktywny**, gdy width=container. Advanced słusznie raportuje „Preset-only…", bo ocenia tylko aktywny tryb szerokości — ale w danych nadal siedzi wartość z wcześniejszego trybu custom (normalizer celowo zachowuje wszystkie pola).
+7. **Wizard jest de facto pusty** — poza read-only podsumowaniem wariantu i podglądem nie ma tu nic do konfiguracji (celowe; ten sam wzorzec co Section/Spacer).
+8. **Comboboxy to Radix (nie natywny `<select>`).** Wymagają kliknięcia triggera i opcji; natywna komenda `select` na nich nie działa — niuans harnessu, nie błąd widgetu.
 
 ---
 
 ## 7. Podsumowanie
 
-| Tryb | Charakter | Wynik audytu |
+| Tryb / obszar | Charakter | Wynik audytu (przebieg wyczerpujący) |
 |---|---|---|
-| **Wizard** | Read-only podsumowanie wariantu + preview + przejście do Visual | ✅ Działa zgodnie z kontraktem (0 pól edycji, wariant read-only) |
-| **Visual** | Główny edytor (Preview + 3 sekcje edytowalne) | ✅ Wszystkie testowane kontrolki działają, aktualizują podgląd i są trwałe po zapisie |
-| **Advanced** | Preview + 2 sekcje diagnostyczne read-only | ✅ 0 kontrolek edytowalnych; podsumowania wiernie odzwierciedlają stan |
-| **Front** | `/test-divider-0516` (treść opublikowana, 3 dividery) | ✅ HTTP 200, 0 błędów konsoli, brak overflow (1280/375) |
+| **Wizard** | Read-only setup + preview | ✅ 0 pól edycji; tylko read-only `variant`; powrót do Visual bez resetu |
+| **Visual** | Główny edytor (Preview + 3 sekcje) | ✅ **Wszystkie** dyskretne opcje wszystkich kontrolek działają, aktualizują render, są trwałe po zapisie; warunkowe odsłanianie poprawne |
+| **Advanced** | Preview + 2 sekcje diagnostyczne | ✅ 0 kontrolek edytowalnych; podsumowania 1:1 ze stanem |
+| **Persistencja** | Save draft → reload | ✅ Komplet pól w backendzie i pełne odtworzenie po reloadzie |
+| **Front** | `/test-divider-0516` (3 dividery) | ✅ HTTP 200, 0 błędów konsoli, brak overflow (1280/375) |
 
-**Werdykt końcowy:** W przetestowanym zakresie widget `divider` jest sprawny i spójny
-między edytorem a rendererem. Nie wykryto błędów funkcjonalnych. Warianty Wizard/Advanced
-realizują zadeklarowany kontrakt (setup-only / read-only), a Visual poprawnie obsługuje
-pełną konfigurację (wariant, etykieta, styl/grubość/kolor/szerokość/wyrównanie linii,
-przezroczystość, widoczność, odstępy) z warunkowym odsłanianiem pól i trwałym zapisem.
-Uwagi z sekcji 5 to niuanse UX/a11y (najważniejsze: brak `role="separator"` dla wariantu
-z etykietą oraz mylące „Saved custom color" dla domyślnych tokenów), a nie defekty.
-Obszary niezweryfikowane wymieniono jawnie w sekcji 6.
+**Werdykt końcowy:** Po przejściu przez **wszystkie** dostępne opcje każdej kontrolki widget
+`divider` jest sprawny i spójny między edytorem a rendererem; nie wykryto żadnego defektu
+funkcjonalnego. Warianty Wizard/Advanced realizują zadeklarowany kontrakt (setup-only /
+read-only), a Visual obsługuje pełną konfigurację z poprawnym warunkowym odsłanianiem pól
+i trwałym zapisem. Pozycje z sekcji 5 to albo świadome ograniczenia projektu (px-spacing,
+brak przycisku Clear/transparent dla kolorów), albo ograniczenia harnessu (natywny picker
+koloru), a nie błędy. Najważniejsze niuanse to sekcja 6: wspólna `opacity` linii i etykiety,
+brak `role="separator"` dla wariantu z etykietą oraz mylące „Saved custom color" dla
+domyślnych tokenów.
 
 ---
 
-## 8. Zrzuty (etykiety lokalne)
+## 8. Zrzuty (etykiety lokalne, niecommitowane)
 
 | Plik (lokalna etykieta) | Opis |
 |---|---|
-| `divider-admin-visual-28-05.png` | Admin, tryb Visual po edycjach (stan zapisany draftem, po reloadzie) |
-| `divider-admin-advanced-28-05.png` | Admin, tryb Advanced — diagnostyka read-only |
-| `divider-public-desktop-28-05.png` | Front `/test-divider-0516`, 1280px (3 dividery, brak overflow) |
-| `divider-public-mobile-375-28-05.png` | Front `/test-divider-0516`, 375px (brak overflow) |
+| `divexh-admin-visual-29-05.png` | Admin, Visual po edycjach (stan zapisany draftem, po reloadzie) |
+| `divexh-front-desktop-1280-29-05.png` | Front `/test-divider-0516`, 1280px (3 dividery, brak overflow) |
+| `divexh-front-mobile-375-29-05.png` | Front `/test-divider-0516`, 375px (brak overflow) |
