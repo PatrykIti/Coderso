@@ -1,8 +1,8 @@
-# RAPORT: Grid Columns Widget — audyt stanu bieżącego (UX/UI + zachowanie)
+# RAPORT: Grid Columns Widget — pełny audyt stanu bieżącego (UX/UI + zachowanie)
 
-> **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja przeglądarki:** `claude-28-05-grid-columns` (izolowana, oddzielna od innych agentów)
+> **Status:** Zakończony (audyt domykający luki z 28-05)
+> **Data:** 2026-05-29
+> **Sesja przeglądarki:** `claude-29-05-grid-columns-gap-close` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Fixture admin:** strona `ee3f7352-52f1-4b4a-a910-619d94dc4410` ("Contract Test - grid-columns")
 > **Fixture public:** http://localhost:3000/test-grid-columns-0516 ("TEST-GRID-COLUMNS-0516")
@@ -10,230 +10,240 @@
 > - `core/widgets/core/gridColumns.tsx` — renderer, typy, normalizacja, presety spanów
 > - `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` — edytory Wizard / Visual / Advanced
 
-> Uwaga: nazwy plików PNG w tym raporcie są wyłącznie lokalnymi etykietami przechwyceń Playwright.
-> Same pliki PNG nie są wymaganym evidence w repo i nie są wersjonowane.
+> Uwaga: nazwy plików PNG w tym raporcie to **wyłącznie lokalne etykiety przechwyceń Playwright**.
+> Same pliki PNG nie są evidence wymaganym w repo i nie są wersjonowane (po audycie usunięte z drzewa roboczego).
 
-Ten raport jest znacznie bogatszy niż smoke-raport z 27-05 (który stwierdzał jedynie
-`passed` dla `visual`/`advanced` oraz `200` na publicznej trasie). Tutaj każda kontrolka
-została przeklikana i zweryfikowana względem realnego DOM-u podglądu i frontu.
-
----
-
-## 1. Przegląd widgetu
-
-**Typ:** `grid-columns` · **Kategoria:** layout
-**Warianty:** `equal`, `asymmetric`, `masonry-lite`
-**Liczba kolumn:** min 2 / max 6 (sloty repeatable, zarządzane przez współdzielony panel **Structure**)
-
-Grid Columns to responsywny, 12-kolumnowy układ siatki z powtarzalnymi „content areas"
-(kolumnami-slotami), do których wstawia się inne widgety. Każda kolumna ma niezależne
-szerokości per breakpoint (desktop/tablet/telefon + opcjonalnie wide/very-wide), widoczność
-per urządzenie, opcjonalne wyróżnienie (per-column surface override) oraz wysokość/wyrównanie.
-
-### 1.1 Model danych (skrót)
-
-| Sekcja | Pola |
-|--------|------|
-| **columns[]** | `id`, `label`, `desktopSpan`, `tabletSpan`, `mobileSpan`, `xlSpan`, `twoXlSpan`, `hideOnMobile/Tablet/Desktop`, `minHeight`, `mobileMinHeight`, `alignSelf`, `style{surface,background,borderColor,borderWidth,radius,padding,overflow}` |
-| **layout** | `gapX`, `gapY`, `align` (start/center/end/stretch), `reverseOnMobile` |
-| **style** | `cardizeColumns`, `columnBackground`, `columnBorderColor`, `columnBorderWidth`, `columnRadius`, `columnPadding` |
-
-### 1.2 Architektura trybów edytora — istotny niuans
-
-Panel edytora ma **tylko dwie zakładki: `Visual` (domyślna) i `Advanced`**.
-**Nie ma osobnej zakładki „Wizard".** Wizard to **flow konfiguracji startowej** uruchamiany
-przyciskiem **„Run setup again"** (oraz przy pierwszym dodaniu widgetu). Po jego zakończeniu
-panel pokazuje komunikat: _„Setup complete — Daily edits live in Visual. Advanced is for
-technical diagnostics."_ W tym raporcie „tryb Wizard" = ten właśnie flow setup.
+Ten raport domyka luki wskazane w wersji z 28-05 („some style families and slot-related branches not
+fully exercised"). Tym razem **przeklikano per-column style selecty, gałęzie cardize / overflow /
+min-height / vertical alignment, pozostałe tokeny layoutu oraz kontrolki Structure osiągalne z tego
+fixtura**. Każdy efekt zweryfikowano odczytem realnego DOM-u (klasy Tailwind kolumn, inline-style,
+atrybuty `data-grid-columns-*`, `getBoundingClientRect`), a nie tylko z wyglądu snapshotu.
 
 ---
 
-## 2. Co zostało faktycznie przetestowane
+## 1. Stan wyjściowy fixtura admin (po świeżym wczytaniu)
 
-Wszystkie interakcje wykonano w izolowanej sesji `claude-28-05-grid-columns`, weryfikując
-efekty przez odczyt realnego DOM-u (atrybuty `data-grid-columns-*`, klasy Tailwind kolumn,
-pozycje `getBoundingClientRect`) — nie tylko przez wygląd snapshotu.
+- **Wariant:** `equal`, **2 content areas:** „Primary content" (instance `1`), „Supporting content" (instance `2`).
+- Obie kolumny: desktop `6/12`, tablet `6/12`, phone `12/12`.
+- **Globalny cardize: ON** — kolumny mają `border p-4 rounded-xl`, tło `#f8fafc`, obramowanie `#e2e8f0`, `1px`.
+- **Kolumna 1 ma włączony „Highlight this column"** (per-column surface override = on) z wartościami `Global`.
+- Kolumna 2 — highlight off.
+- Sloty Structure aktywne (2 puste sloty) → liczba kolumn sterowana w panelu **Structure**, nie w Visual.
 
-- **Logowanie do admina** i otwarcie fixtura admin (2 puste kolumny: „Primary content",
-  „Supporting content", wariant `equal`).
-- **Wizard (setup):** wybór wszystkich 3 wariantów + powrót „Finish setup and open Visual".
-- **Visual:** reset wariantu, vertical alignment, reverse on phone, preset szerokości 33/67,
-  bezpośredni Select desktop width, edycja label, toggle „Hide on desktop", toggle „Cardized
-  columns" (off), per-column „Highlight this column" (kolumna 2 on/off), odczyt diagnostyki
-  „Current row width totals".
-- **Advanced:** otwarcie zakładki i weryfikacja, że wszystkie wiersze są read-only oraz że
-  odzwierciedlają bieżący stan edycji.
-- **Front (public):** SSR przez `curl` + render w przeglądarce; pozycje kolumn na desktopie
-  (1280px) i mobile (375px); kontrola overflow; konsola błędów; brak wycieku etykiet kolumn.
-
-### Czego NIE testowano (uczciwie)
-
-- Fizycznego **Move up / Move down** kolumn (przyciski są obecne i aktywne, ale samego
-  przeniesienia nie wykonano).
-- Zmiany spanów **xl / 2xl** („Wide screens" / „Very wide screens") oraz indywidualnej zmiany
-  tablet/phone width (zweryfikowano tylko desktop width — mechanizm Select jest wspólny).
-- Zmiany **wartości gap** na inną (kontrolki obecne, wartości startowe `gap-x-6`/`gap-y-6`).
-- Interakcji z **color-pickerem / swatchem** ani działania przycisków **„Clear"** przy kolorach.
-- Przycisku **„Reapply asymmetric desktop widths"** w Visual (logika opisana z kodu, nie klik).
-- **Zapisu** (Save draft / Publish) — patrz sekcja 6 (świadomie pominięty, by nie nadpisać fixtura).
+> Architektura trybów bez zmian względem 28-05: panel ma zakładki **Visual** i **Advanced**; „Wizard"
+> to flow startowy uruchamiany przyciskiem **„Run setup again"** (nie osobna zakładka). Komunikat
+> „Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics." obecny.
 
 ---
 
-## 3. Co działa (potwierdzone)
+## 2. Co zostało przetestowane w tym przebiegu (przeklikane, nie z kodu)
 
-### 3.1 Wizard (setup)
+### 2.1 Per-column style selecty (sekcja „Per-column surfaces and behavior")
+- Kol.1 (highlight ON): **Border width** override, **Corner radius** override, **Internal padding** override.
+- Kol.1: **Background override** (swatch) + **Clear**.
+- Kol.1 i Kol.2: **Clip overflowing content** (overflow).
+- Kol.1: **Minimum height**, **Phone minimum height**; Kol.2: **Minimum height (None)**.
+- Kol.1: **Vertical alignment (Center)**; Kol.2: **Vertical alignment (End / Stretch / Start)**.
 
-- **Jedna sekcja „Grid quick start"** z 3 kartami wariantów (Equal/Asymmetric/Masonry Lite),
-  podpisem oraz tekstem pomocniczym _„Column labels, count, spacing, responsive spans, and
-  surfaces stay in Visual after setup."_
-- Karty są spójne wizualnie z Visual (te same `VariantCards`) — brak rozjazdu jak w innych
-  widgetach, gdzie Wizard używał zwykłego selecta.
-- Wybór wariantu **natychmiast aktualizuje** zarówno podgląd główny, jak i osobny podgląd
-  Wizarda (_„Reflects the current Wizard state through the shared widget renderer."_).
-- **Equal** → `data-grid-columns-variant="equal"`.
-- **Masonry Lite** → wymusza kardyzację: wewnętrzny wrapper kolumny dostaje
-  `h-full min-h-[6rem] border p-4 rounded-xl`. ✓
-- **„Finish setup and open Visual"** poprawnie wraca do zakładki Visual i pokazuje „Setup complete". ✓
+### 2.2 Gałęzie cardize / overflow / min-height / alignment
+- Globalny **Cardized columns** OFF→ON i precedencja override vs. global.
+- Wariant **Masonry Lite** — wymuszony, zablokowany cardize.
+- Pełne pokrycie 4 wartości `alignSelf` (start/center/end/stretch) oraz `items-*` (start/center/end/stretch).
+- Responsywny min-height (base ≠ phone) → klasy `min-h-[…] md:min-h-[…]`.
 
-### 3.2 Visual — wszystkie sprawdzone kontrolki działają
+### 2.3 Pozostałe tokeny layoutu
+- **Horizontal gap** (No gap → `gap-x-0`), **Vertical gap** (Maximum → `gap-y-12`).
+- **Wide screens (xl)** i **Very wide screens (2xl)** spany + reset „Match desktop".
+- Indywidualny **Tablet width** i **Phone width** (Kol.2).
+- **Reverse on phone** (klasy `order-*`).
+- **Width presets** (67/33, 50/50).
+- **Reapply asymmetric desktop widths**.
+- Globalny **Column background** (swatch) + **Clear**, globalny **Column border color** Clear.
 
-| Kontrolka | Efekt zweryfikowany w DOM | Wynik |
-|-----------|---------------------------|-------|
-| Karty wariantu | reset na `equal` → `data-grid-columns-variant="equal"` | ✓ |
-| Vertical alignment → Center | grid: `items-start` → `items-center`, `data-grid-columns-align="center"` | ✓ |
-| Reverse on phone (on) | kolumny: `order-2 md:order-none` / `order-1 md:order-none`, `data-grid-columns-reverse-mobile="true"` | ✓ |
-| Preset 33 / 67 | kol.1 `lg:col-span-4`, kol.2 `lg:col-span-8` (mobile/tablet bez zmian) | ✓ |
-| Desktop width (Select) kol.1 → 3/12 | kol.1 `lg:col-span-3` | ✓ |
-| Label kol.1 → „Lewa kolumna" | podgląd admina pokazuje natychmiast „Lewa kolumna" | ✓ |
-| Hide on desktop (kol.1, on) | dodano `lg:hidden`; suma desktop spadła z 11 → 8 | ✓ |
-| Cardized columns (toggle off) | kolumna BEZ override traci `border p-4 rounded-xl` | ✓ |
-| Highlight this column (kol.2, on) | kol.2 dostaje własne `border p-4 rounded-xl` niezależnie od globalnego cardize | ✓ |
-| „Current row width totals" | Desktop 11/12 „leaves unused width", Tablet 12/12 „fills one row", Phone 24/12 „continues onto additional rows" | ✓ |
+### 2.4 Kontrolki Structure osiągalne z tego fixtura
+- **Add Column** (Structure) → 2→3 kolumny.
+- **Remove** per-slot (Structure) → 3→2 kolumny.
+- **Move up / Move down** — w siatce „Column sizing" oraz w panelu **Structure**.
+- Gałęzie widoczności **Hide on tablet / + Hide on mobile / wszystkie trzy (guard)**.
 
-- **Pierwszeństwo override nad globalem:** przy globalnym `cardize=off` kolumna z włączonym
-  „Highlight" zachowuje kartę, a kolumna bez override — nie. To poprawne i intuicyjne. ✓
-- **Diagnostyka sum spanów** jest dynamiczna i reaguje na każdą zmianę szerokości/widoczności.
-- Sekcja „Gap and column surface" przy włączonym cardize odsłania komplet pól: tło, kolor
-  obramowania, szerokość obramowania, promień, padding — każde z osobnym **„Clear"**
-  (uwaga pozytywna: zarówno tło, jak i kolor obramowania mają „Clear", brak niespójności).
-
-### 3.3 Advanced — read-only, ale rzetelne
-
-- Zawiera **wyłącznie** wiersze diagnostyczne (read-only), brak edytowalnych kontrolek widgetu.
-- Sekcje: **Layout summary** (Variant, Layout, Width totals, Cardized columns, Content area
-  mismatch), **Column override summary** (liczba override'ów powierzchni + wysokości/wyrównania),
-  **Content area diagnostics** (liczba content areas, „Shared surface").
-- Dodatkowo współdzielone read-only: **Block layout summary** i **Visibility summary**.
-- **Odzwierciedla stan na żywo:** po moich edycjach pokazał `Variant: Equal`, `Width totals:
-  Desktop 11/12, tablet 12/12, phone 24/12 across 2 content areas`, `Cardized columns: Off`,
-  `1 of 2 content areas use per-column surface overrides`, `Saved column settings match the
-  Structure order`. ✓
-
-### 3.4 Front (public route `/test-grid-columns-0516`)
-
-- `curl` zwraca **HTTP 200** w ~1 s; widget jest **renderowany po stronie serwera** (SSR)
-  z pełnym kontraktem atrybutów `data-grid-columns-*`.
-- Fixture publiczny to **populated layout: 3 kolumny**, wariant `equal`, każda desktop `6/12`,
-  kardyzowane (`border p-4 rounded-xl`, `background-color: var(--color-primary)`,
-  `border-color: var(--color-border)`, `1px`). Każda kolumna zawiera zagnieżdżony widget
-  Rich Text Section (eyebrow „Fixture" + `h3`).
-- **Etykiety kolumn NIE wyciekają na front** (`labelLeak = 0`) — etykiety renderują się tylko
-  w trybie editor/admin-preview, zgodnie z kodem. ✓
-- **Desktop (1280px):** kol.1 (x=128, y=48) + kol.2 (x=652, y=48) w jednym rzędzie, **kol.3
-  zawija się do drugiego rzędu** (x=128, y=346). 3×6=18 > 12, więc nadmiar przechodzi do
-  kolejnego rzędu — zgodnie z zasadą „keeps saved widths as authored". Brak poziomego overflow.
-- **Mobile (375px):** wszystkie 3 kolumny `12/12`, stackują się pionowo na pełną szerokość,
-  brak poziomego overflow.
-- **0 błędów w konsoli** na froncie.
-
-_Zrzuty (lokalne etykiety): `grid-columns-frontend-desktop.png`, `grid-columns-frontend-mobile.png`._
+### Czego NIE testowano (uczciwie) — patrz też sekcja 6 (not-testable)
+- **Save draft / Publish** — świadomie pominięte (by nie nadpisać fixtura). Moje edycje są tylko w sesji.
+- **Drag & drop** widgetów z biblioteki do slotów kolumn (mechanizm slot-add przez canvas/drag).
+- **Wizard flow** („Run setup again") — pokryty raportem z 28-05; tu skupiono się na lukach.
+- Block-level **Move up/down** (canvas) — patrz sekcja 6.
 
 ---
 
-## 4. Co nie działa / zachowania mylące (UX)
+## 3. Co działa (potwierdzone w DOM)
 
-### 4.1 Wybór „Asymmetric" w Wizardzie nie zmienia gotowego układu (mylące)
+### 3.1 Per-column style selecty (Kol.1 z włączonym Highlight)
 
-Po wybraniu **Asymmetric** w Wizardzie flaga wariantu zmienia się na `asymmetric`, ale
-**szerokości kolumn pozostają 50/50** (`lg:col-span-6` / `lg:col-span-6`). Powód: preset
-asymetryczny ustawia jedynie **fallbackowe** spany dla kolumn bez jawnie zapisanej szerokości,
-a fixture ma jawnie zapisany `desktopSpan: "6"`. Z perspektywy użytkownika setupu wygląda to
-jak kontrolka, która „nic nie robi".
+| Kontrolka | Zmiana | Efekt w DOM | Wynik |
+|-----------|--------|-------------|-------|
+| Border width override | Global → Strong | inline `border-width: 3px` (z `1px`) | ✓ |
+| Corner radius override | Global → None | usunięto `rounded-xl` z inner (`h-full min-h-[…] border p-4`) | ✓ |
+| Internal padding override | Global → Extra roomy | `p-4` → `p-6` | ✓ |
+| Clip overflowing content | Visible → Hidden | dodano `overflow-hidden` | ✓ |
+| Minimum height | Default → Extra tall | `min-h-[6rem]` → `min-h-[10rem]` | ✓ |
+| Phone minimum height | Match base → Small (przy base Extra tall) | `min-h-[4rem] md:min-h-[10rem]` (responsywnie) | ✓ |
+| Vertical alignment | Inherit → Center | `self-center` na outer-div kolumny | ✓ |
+| Background override (swatch) | → `#00ff00` | inline `background-color: rgb(0,255,0)`, zachowane `border-width:3px` | ✓ |
+| Background override → **Clear** | usuń | znika `background-color`, **pozostaje** `border 3px` (osobny override) | ✓ |
 
-- **W Visual** istnieje obejście: notice „Custom desktop spans override the asymmetric preset…"
-  + przycisk **„Reapply asymmetric desktop widths"**, który wymusza spany presetu.
-- **W Wizardzie brak jakiejkolwiek podpowiedzi czy przycisku reapply** — to luka UX (Wizard
-  pozwala wybrać wariant, którego efekt jest niewidoczny i nieodwracalny w samym Wizardzie).
+### 3.2 Per-column behavior (Kol.2, Highlight OFF)
 
-### 4.2 Brak — nie wykryto żadnego błędu funkcjonalnego ani błędu renderingu
+| Kontrolka | Zmiana | Efekt w DOM | Wynik |
+|-----------|--------|-------------|-------|
+| Minimum height | Default → None | `min-h-0` | ✓ |
+| Vertical alignment | End / Stretch / Start | `self-end` / `self-stretch` / `self-start` | ✓ |
+| Clip overflowing content | Visible → Hidden | `overflow-hidden` (kolumna nadal kartowana, bo global cardize ON) | ✓ |
 
-Poza niuansem z 4.1 (który wynika ze świadomej zasady „keep widths as authored"), **wszystkie
-przetestowane kontrolki działały poprawnie**, podgląd aktualizował się natychmiast, stan
-utrzymywał się w UI po re-renderze, a front renderował się spójnie z logiką edytora.
-Nie napotkano błędów konsoli, zawieszeń kontrolek ani „martwych" przełączników.
+> Wszystkie 4 wartości `alignSelf` i wszystkie 4 wartości `items-*` siatki zostały realnie odwzorowane.
+
+### 3.3 Cardize i precedencja override vs. global (kluczowy test)
+
+- **Global cardize OFF** przy Kol.1 = surface override ON, Kol.2 = tylko overflow/min-height/align:
+  - **Kol.1 POZOSTAJE kartowana** z własnymi wartościami: `border p-6 overflow-hidden` + inline `border-width:3px` (override „przeżywa" wyłączenie globala). ✓
+  - **Kol.2 TRACI kartę**: `h-full min-h-0 overflow-hidden` — bez `border`, `p-*`, `rounded-*`, bez inline-style. Czyli overflow / min-height / vertical-alignment **nie liczą się** jako surface-override (zgodnie z `hasGridColumnsColumnSurfaceOverrides`, które pomija `overflow`). ✓
+- **Global cardize ON z powrotem** → Kol.2 wraca do `border p-4 rounded-xl overflow-hidden`. ✓
+- **Masonry Lite**: przełącznik „Cardized columns" jest `checked + disabled`, helper „Masonry Lite always adds column cards, so this switch stays on."; obie kolumny kartowane, ale **per-column overrides nadal działają** (Kol.1: `border p-6` bez radiusa; Kol.2: domyślne `border p-4 rounded-xl`). ✓
+
+### 3.4 Tokeny layoutu
+
+| Kontrolka | Zmiana | Efekt w DOM | Wynik |
+|-----------|--------|-------------|-------|
+| Vertical alignment (grid) | End / Stretch | `items-end` / `items-stretch` + `data-grid-columns-align` | ✓ |
+| Horizontal gap | No gap | `gap-x-0` + `data-grid-columns-gap-x="none"` | ✓ |
+| Vertical gap | Maximum gap | `gap-y-12` + `data-grid-columns-gap-y="12"` | ✓ |
+| Wide screens (xl) Kol.1 | 4/12 | dodano `xl:col-span-4` | ✓ |
+| Very wide (2xl) Kol.1 | 3/12 → Match desktop | dodano `2xl:col-span-3`, reset usuwa klasę (gałąź „auto"→undefined) | ✓ |
+| Tablet width Kol.2 | 4/12 | `md:col-span-4` | ✓ |
+| Phone width Kol.2 | 6/12 | `col-span-6` (base) | ✓ |
+| Reverse on phone | on | `order-2 md:order-none` / `order-1 md:order-none` + `data-grid-columns-reverse-mobile="true"` | ✓ |
+| Column background (global swatch) | → `#ff0000` | kolumny BEZ override dostają `background-color: rgb(255,0,0)` | ✓ |
+| Column background (global) → **Clear** | usuń | znika `background-color` z kolumn bez override; swatch wraca do fallbacku | ✓ |
+
+### 3.5 Presety i asymmetric
+
+- **Preset 67/33** → desktop `8/4` (`lg:col-span-8` / `lg:col-span-4`), tablet `6/6`, phone `12/12`.
+  **Zachowuje** spany `xl/2xl` oraz per-column alignment/override (reset dotyczy tylko desktop/tablet/phone). ✓
+- **Preset 50/50** → desktop `6/6`. ✓
+- **Asymmetric + „Reapply asymmetric desktop widths"**: z `6/6` → `8/4` (`lg:col-span-8`/`lg:col-span-4`).
+  Notice zmienia się z „This saved layout still uses matching desktop spans…" (tryb `equal`, przycisk Reapply) na
+  „Asymmetric desktop widths are active…" (tryb `preset`). ✓
+  - Niuans: po `67/33` (8/4) Asymmetric od razu jest w trybie `preset` (8/4 = preset asymetryczny dla 2 kolumn),
+    więc przycisk Reapply się nie pojawia — ten sam układ osiągalny dwiema drogami.
+
+### 3.6 Reorder i Structure (osiągalne z tego fixtura)
+
+- **Move down / Move up** (siatka „Column sizing"): kolejność instancji `1,2` ↔ `2,1`.
+  **Ustawienia per-column podróżują z instancją, nie z pozycją** (po przeniesieniu „Supporting content"
+  zachowuje `self-start`/`col-span-6`, „Primary content" zachowuje `self-center`/`xl:col-span-4`). ✓
+- **Move down / Move up w panelu Structure**: ten sam efekt reorderu (`1,2` ↔ `2,1`). ✓
+- **Add Column (Structure)**: count `2`→`3`; nowa kolumna z domyślami `col-span-12 md:col-span-6 lg:col-span-6`;
+  istniejące kolumny zachowują swoje ustawienia. ✓
+- **Remove (Structure)**: przyciski **Remove pojawiają się dopiero, gdy count > min (2)**; usunięcie → `3`→`2`. ✓
+- **Widoczność (gałęzie `resolveColumnVisibilityClasses`)**:
+  - Hide on tablet → `md:hidden lg:block`. ✓
+  - Hide on mobile + tablet → `hidden lg:block`. ✓
+  - Wszystkie trzy włączone → **guard**: normalizacja resetuje wszystkie 3 przełączniki do `false` (kolumna znów widoczna). ✓
+  - (Hide on desktop solo → `lg:hidden` — potwierdzone w 28-05.)
+
+### 3.7 Advanced — żywe odzwierciedlenie stanu
+
+Po wszystkich edycjach zakładka Advanced raportowała (read-only):
+- Variant: **Equal**; Layout: „Vertical alignment Start, horizontal/vertical spacing Large gap, phone order normal."
+- Width totals: „Desktop 12/12, tablet 12/12, phone 24/12 across 2 content areas."
+- Cardized columns: **On**; Content area mismatch: „Saved column settings match the Structure order."
+- Column overrides: **„1 of 2 content areas use per-column surface overrides"** (Kol.1). ✓
+- Height and alignment overrides: **„2 of 2 content areas override height or alignment"**. ✓
+- Content areas: „2 resolved content areas. Live Structure order is active."
+- Shared surface: **„Background Custom color, border Custom color"** (bo zapisane jako hex `#f8fafc`/`#e2e8f0`, nie var()).
+
+### 3.8 Front (public route `/test-grid-columns-0516`)
+
+> To **inny fixture** niż admin: **3 wypełnione, kardyzowane kolumny** (admin: 2 puste). Zgodność admin↔front
+> zweryfikowano na poziomie **kontraktu renderera**, nie przez wypchnięcie moich (niezapisanych) edycji.
+
+- **SSR:** HTTP **200** (~1.07 s, 6660 B). Atrybuty: `variant="equal"`, `count="3"`, `align="start"`,
+  `gap-x="6"`, `gap-y="6"`, `reverse-mobile="false"`.
+- Każda kolumna `col-span-12 md:col-span-6 lg:col-span-6`, kardyzowana `h-full min-h-[6rem] border p-4 rounded-xl`,
+  inline `background-color: var(--color-primary); border-color: var(--color-border); border-width:1px`.
+- W każdej kolumnie zagnieżdżony **Rich Text Section** (eyebrow „Fixture" + `h3`); w żywym DOM `nestedH3 = 3`.
+- **Brak wycieku etykiet** — `labelLeak = 0` zarówno w SSR, jak i w żywym DOM (etykiety renderują się tylko w editor/admin-preview).
+- **Desktop (1280px):** kol.1 (x=128, y=48), kol.2 (x=652, y=48) w jednym rzędzie; **kol.3 zawija się do 2. rzędu** (x=128, y=346).
+  `scrollWidth == clientWidth` → **brak poziomego overflow**.
+- **Mobile (375px):** wszystkie 3 kolumny pełna szerokość (x=0, w=375), stack pionowy (y=48/374/700), **brak overflow**.
+- **Konsola: 0 błędów / 0 ostrzeżeń.**
+
+_Zrzuty (lokalne etykiety, niewersjonowane): `grid-columns-frontend-desktop-2905.png`, `grid-columns-frontend-mobile-2905.png`._
+
+---
+
+## 4. Co nie działa / błędy
+
+**Nie wykryto żadnego błędu funkcjonalnego ani renderingu.** Każda przeklikana kontrolka dała poprawny,
+natychmiastowy efekt w DOM; brak „martwych" przełączników, brak zawieszeń, **0 błędów konsoli** w adminie
+(jedyny wpis to info React DevTools) i na froncie. Pozycje pozostające w obszarze „nie w pełni potwierdzone"
+są ograniczeniami środowiska/fixtura, nie błędami — patrz sekcja 6.
 
 ---
 
 ## 5. Niuanse UX / UI warte odnotowania
 
-1. **„Wizard" nie jest zakładką** — to flow setup („Run setup again"). Osoba szukająca trybu
-   Wizard obok Visual/Advanced go nie znajdzie. Świadoma decyzja produktowa (Wizard = tylko
-   wybór startowego kształtu siatki), ale wymaga przyzwyczajenia.
-2. **Liczba kolumn jest zablokowana w Visual**, gdy istnieją współdzielone sloty Structure:
-   select „Content area count" oraz przyciski „Add one column" / „Remove one column" są
-   **disabled**, z komunikatem _„Shared content areas are controlled in the Structure section."_
-   Kolumny dodaje/usuwa się w panelu **Structure** (powyżej zakładek), nie w Visual.
-3. **Etykiety kolumn to pomoc tylko dla autora** — widoczne w podglądzie admina, niewidoczne
-   na froncie. To poprawne, ale może zaskoczyć (wpisana etykieta „znika" na produkcji).
-4. **Masonry Lite blokuje przełącznik cardize** — w Masonry Lite toggle „Cardized columns" jest
-   wymuszony i zablokowany (helper: _„Masonry Lite always adds column cards, so this switch
-   stays on."_).
-5. **Sumy spanów są celowo „nie-pilnowane"** — widget pozwala przekroczyć 12 (zawijanie do
-   kolejnego rzędu) i zejść poniżej 12 (puste miejsce). Diagnostyka „Current row width totals"
-   jasno to komunikuje per breakpoint zamiast wymuszać korektę. Zgodne z `gridColumnsOverflowDecision = "no-runtime-guard"`.
-6. **Advanced jest bogaty informacyjnie, ale nieedytowalny** — w przeciwieństwie do Contact
-   widget nie ma tu snapshotu JSON ani przycisku normalizacji; to czysty zestaw czytelnych
-   podsumowań, w tym wspólne „Block layout summary" / „Visibility summary" (edytowalne tylko w Visual).
-7. **Sekcja per-column ma komplet opcji**: highlight (tło/obramowanie/szerokość/promień/padding
-   z opcją „Global"), overflow (Visible/Hidden), min-height, phone min-height, vertical alignment
-   — dużo precyzji, ale i długi, przewijalny panel bez zwijania sekcji.
+1. **Nie da się ukryć kolumny na wszystkich 3 breakpointach.** Włączenie trzeciego „Hide on…" powoduje
+   reset wszystkich trzech przełączników do off (guard `normalizeColumnVisibility`). Z perspektywy użytkownika
+   trzeci toggle „nie działa" / „sam się wyłącza" — działanie poprawne, ale potencjalnie mylące.
+2. **Liczba kolumn zablokowana w Visual przy aktywnych slotach Structure.** Select „Content area count" oraz
+   „Add one column"/„Remove one column" są **disabled**; dodawanie/usuwanie tylko w **Structure**. Przyciski
+   **Remove w Structure pojawiają się dopiero powyżej minimum (2 kolumny)** — przy 2 kolumnach nie ma jak usunąć.
+3. **Presety resetują tylko desktop/tablet/phone**, ale **zachowują `xl`/`2xl` spany** oraz per-column
+   alignment/override. Po zastosowaniu presetu „pozostały" span dla wide/very-wide może być nieoczywisty.
+4. **Override surface „przeżywa" globalny cardize OFF, ale override zachowania (overflow/min-height/align) — nie.**
+   Kolumna z samym overflow/min-height traci kartę po wyłączeniu globalnego cardize. Subtelne, ale spójne z kodem.
+5. **Masonry Lite wymusza karty, ale nie ujednolica ich wyglądu** — per-column border/radius/padding nadal
+   nadpisują pojedyncze karty (lock dotyczy samego włączenia, nie wartości).
+6. **Globalne kolory zapisane jako hex** (`#f8fafc`/`#e2e8f0`) Advanced opisuje jako „Custom color"
+   (nie „Theme surface/border color"); swatch przy wartości var() pokazuje hex-fallback. Czysto kosmetyczne.
+7. **Asymmetric w Wizardzie wciąż bez „Reapply"** (z 28-05, nadal aktualne wg kodu `GridColumnsWizardEditor`):
+   Wizard ma tylko karty wariantów; wybór Asymmetric nie zmienia widocznie układu, gdy kolumny mają jawne równe
+   spany, a Wizard nie oferuje przycisku Reapply (jest tylko w Visual).
+8. **Sumy spanów są celowo „nie-pilnowane"** (`gridColumnsOverflowDecision = "no-runtime-guard"`): >12 zawija
+   do kolejnego rzędu, <12 zostawia puste miejsce; diagnostyka „Current row width totals" komunikuje to per breakpoint.
+9. **Długi, przewijalny panel bez zwijania sekcji** — przy włączonym Highlight + cardize sekcja per-column robi się obszerna.
 
 ---
 
-## 6. Admin vs Front — zakres i ograniczenia porównania (uczciwie)
+## 6. Czego NIE dało się w pełni zweryfikować (not-testable) — z dokładną przyczyną
 
-- **To nie jest porównanie tej samej strony.** Fixture admin (`ee3f7352…`) ma **2 puste
-  kolumny** (`equal`), a fixture publiczny (`test-grid-columns-0516`) to **3 wypełnione,
-  kardyzowane kolumny**. To dwie różne strony-fixture.
-- **Moich edycji w Visual NIE zapisano** (świadomie nie klikałem Save draft / Publish, by nie
-  nadpisać fixtura). Front renderuje więc **zapisany stan fixtura**, a nie moje zmiany z sesji.
-  Spójność admin↔front zweryfikowano **na poziomie kontraktu renderera** (te same atrybuty
-  `data-grid-columns-*`, ta sama logika klas span/cardize/order), a nie przez wypchnięcie moich
-  konkretnych edycji na front.
-- **Przy wyjściu z admina pojawia się prompt `beforeunload`** (niezapisane zmiany). Pierwsze
-  próby `goto` na front zawieszały się właśnie na tym dialogu — **to nie jest bug widgetu**.
-  Obejście: otwarcie frontu w nowej karcie. Warto o tym pamiętać przy automatyzacji.
-
-| Aspekt | Admin preview | Front (public) | Zgodność kontraktu |
-|--------|---------------|----------------|--------------------|
-| Atrybuty `data-grid-columns-*` | obecne | obecne | ✓ |
-| Klasy span (`col-span/md:/lg:`) | zgodne z konfiguracją | zgodne z konfiguracją | ✓ |
-| Kardyzacja kolumn | `border p-4 rounded-xl` przy cardize/override | identycznie | ✓ |
-| Etykiety kolumn | widoczne (helper autora) | niewidoczne | ✓ (zamierzone) |
-| Zawijanie >12 spanów | — (admin miał 2 kol.) | kol.3 w 2. rzędzie | ✓ |
-| Overflow poziomy | brak | brak (desktop i mobile) | ✓ |
+- **Natywny color-picker (paleta systemowa).** Swatche to `<input type="color">`. Wartości ustawiałem
+  programowo (`fill` → poprawnie propaguje do DOM), ale **systemowego popupu wyboru koloru Playwright nie
+  steruje** (to chrome przeglądarki/OS). Weryfikowalny jest wynik (zmiana koloru), nie sam akt klikania w paletę.
+- **Select „Content area count" w Visual** — **disabled** w tym fixturze (aktywne sloty Structure). Liczbę
+  kolumn da się zmieniać wyłącznie przez „Add Column"/„Remove" w **Structure** (co przetestowano). Sam select
+  pozostaje nieklikalny z założenia.
+- **Przyciski „Add one column" / „Remove one column" w Visual** — **disabled** gdy istnieją sloty Structure.
+- **Block-level „Move Grid Columns up/down"** (nagłówek bloku w canvas) — **disabled**, bo na stronie jest
+  tylko jeden blok; nie da się wykonać realnego przeniesienia bloku.
+- **Drag & drop** widgetu z biblioteki do slotu kolumny / drag-reorder slotów — nie wykonane (reorder
+  testowano przyciskami Move up/down, które dają ten sam efekt danych).
+- **Save draft / Publish** — świadomie pominięte, by nie nadpisać fixtura. W efekcie **moje edycje są tylko
+  sesyjne**; front renderuje zapisany stan fixtura, a zgodność admin↔front potwierdzono na poziomie kontraktu
+  renderera (te same atrybuty i logika klas), nie przez wypchnięcie konkretnych zmian.
+- **Shared „Device visibility" bloku** w adminie pokazuje w Advanced „Shown on: Hidden on all devices" —
+  to **współdzielona kontrolka bloku**, nie część widgetu grid-columns; poza zakresem audytu (podgląd admina
+  i tak renderuje widget). Odnotowane jako obserwacja, nie błąd grid-columns.
 
 ---
 
 ## 7. Podsumowanie
 
-- **Wizard / Visual / Advanced przetestowane.** Wszystkie sprawdzone kontrolki działają,
-  podgląd aktualizuje się na żywo, stan trzyma się w UI, a Advanced wiernie raportuje stan.
-- **Jedyne zastrzeżenie UX:** wybór **Asymmetric w Wizardzie** nie zmienia widocznie układu,
-  gdy kolumny mają już jawne, równe spany — i Wizard nie oferuje (jak Visual) przycisku
-  „Reapply". Reszta zachowań jest poprawna i przewidywalna.
-- **Front renderuje się poprawnie** (SSR 200, brak błędów konsoli, brak overflow, poprawne
-  zawijanie i stackowanie, brak wycieku etykiet).
-- **Nie wykryto błędów krytycznych ani regresji** względem smoke-raportu z 27-05; ten audyt
-  potwierdza i znacząco rozszerza tamten wynik `passed`.
-- Pozycje świadomie nieprzetestowane wypisano w sekcji 2 („Czego NIE testowano").
+- **Domknięto luki z 28-05:** przeklikano komplet per-column style selectów, wszystkie gałęzie
+  cardize/overflow/min-height/vertical-alignment, pozostałe tokeny layoutu (gap, items-*, xl/2xl, tablet/phone,
+  reverse, presety, reapply asymmetric, swatche + Clear) oraz kontrolki Structure (Add/Remove/Move) osiągalne z tego fixtura.
+- **Wszystkie sprawdzone kontrolki działają**, podgląd aktualizuje się na żywo, stan trzyma się w UI, Advanced
+  wiernie raportuje stan, a precedencja override↔global jest poprawna i przewidywalna.
+- **Front renderuje się poprawnie**: SSR 200, 3 kardyzowane kolumny, poprawne zawijanie (desktop) i stackowanie
+  (mobile), **brak poziomego overflow**, **0 błędów konsoli**, **brak wycieku etykiet**.
+- **Brak błędów krytycznych i regresji.** Pozostałe obserwacje to świadome ograniczenia (sekcja 6) oraz
+  niuanse UX (sekcja 5) — głównie guard widoczności, zarządzanie liczbą kolumn w Structure i zachowanie presetów.
