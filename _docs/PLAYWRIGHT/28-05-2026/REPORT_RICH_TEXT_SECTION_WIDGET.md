@@ -1,36 +1,18 @@
-# RAPORT: Rich Text Section Widget — pogłębiony audyt current-state (Wizard / Visual / Advanced + frontend)
+# RAPORT: Rich Text Section Widget — pogłębiony audyt current-state z domknięciem luk (Wizard / Visual / Advanced + frontend)
 
 > **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja Playwright:** `claude-28-05-rich-text-section` (izolowana przeglądarka, oddzielna od innych agentów)
+> **Data audytu pierwotnego:** 2026-05-28 · **Data domknięcia luk (ten upgrade):** 2026-05-29
+> **Sesja Playwright (upgrade):** `claude-29-05-rich-text-gap-close` (izolowana, nazwana przeglądarka, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin:** `/admin/pages/1e0f651b-d7c0-4c03-8e3b-07bff2c1d5ca` (status `Draft`, tytuł „Contract Test - rich-text-section")
+> **Fixture admin:** `/admin/pages/1e0f651b-d7c0-4c03-8e3b-07bff2c1d5ca` (status `Draft`, „Contract Test - rich-text-section", canvas: dokładnie jeden render `blk-1`)
 > **Fixture public:** http://localhost:3000/richtextsectiontest
-> **Pliki źródłowe:** `core/widgets/core/richTextSection.tsx` (renderer + normalizacja + sanitizer HTML + embed/media + kotwice nagłówków/TOC) · `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` (edytory Wizard/Visual/Advanced)
+> **Pliki źródłowe:** `core/widgets/core/richTextSection.tsx` (renderer + normalizacja + sanitizer HTML + embed/media + kotwice nagłówków/TOC) · `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` (kolor + „Use transparent") · `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` (WYSIWYG body/bloku) · `core/services/posts/editor/postRichText*` (serializer/sanitizer upstream)
 
-> Uwaga metodologiczna: ten raport jest celowo bogatszy niż smoke z 27-05-2026.
-> Każde stwierdzenie „działa / nie działa" zostało zweryfikowane realną interakcją
-> w UI (klik kart wariantu, otwieranie selectów Radix, wpisywanie do edytora WYSIWYG,
-> przełączanie switchy, dialogi potwierdzenia, Undo) oraz inspekcją DOM przez `eval`
-> (atrybuty `data-rich-text-*`, klasy Tailwind, inline `style`, ARIA, wstrzyknięte
-> `id` kotwic nagłówków, normalizacja embed). Sekcje 4–8 jasno oddzielają: co działa,
-> co nie działa / jest mylące, co faktycznie przetestowano i czego NIE testowano.
+> **Cel tego upgrade'u (domknięcie luk z 28-05):** wyczerpujące, realne wyklikanie rodzin kontrolek, które poprzedni raport oznaczył jako nietestowane: **media picker (image + attachment)**, **przycisk „Use transparent"**, **per-blokowy select poziomu nagłówka**, **dodawanie/usuwanie/przenoszenie/paginacja bloków**, **wszystkie providery embed + odrzucanie złych URL**, oraz **wyzwalacze diagnostyki sanitizera**. Tam, gdzie kontrolki nie dało się w pełni zweryfikować, podano **dokładną nazwę kontrolki i powód**.
 
-> Uwaga o screenshotach: weryfikację oparłem **wyłącznie o inspekcję DOM** (`eval`)
-> oraz snapshoty accessibility tree — nie zapisywałem zrzutów PNG jako evidence.
-> Ewentualne pliki PNG byłyby **wyłącznie lokalnymi etykietami** przechwyceń
-> w katalogu `.playwright-cli/` (ignorowanym przez Git), nie są wymaganym evidence
-> w repo.
+> **Metodologia evidence:** każde twierdzenie „działa / nie działa / nie da się przetestować" pochodzi z realnej interakcji w UI (klik kart/przycisków, otwieranie selectów Radix, wpisywanie do WYSIWYG, dialog `window.prompt`, dialogi potwierdzenia, Undo, paginacja) **plus** inspekcji DOM przez `eval` w mojej własnej nazwanej sesji (atrybuty `data-rich-text-*`, struktura `<figure>/<img>/<a>/<h*>`, inline `style`, klasy Tailwind, `rel`/`target`, liczniki bloków, treść notatek diagnostycznych). Canvas zawsze zawierał dokładnie jeden blok `blk-1`, więc odczyty dotyczyły wyłącznie widgetu `rich-text-section`.
 
-> Uwaga o środowisku współdzielonym (istotna dla wiarygodności): katalog
-> `.playwright-cli/` jest **wspólny dla wszystkich równoległych sesji agentów**.
-> Pliki snapshotów innych audytów (zaobserwowałem m.in. `stats-kpi`, `content-list`)
-> trafiają do tego samego katalogu, przez co „najnowszy" plik snapshotu potrafił
-> należeć do innego widgetu. Dlatego **wszystkie twierdzenia w tym raporcie oparłem
-> o `eval` w mojej własnej, nazwanej sesji** (`claude-28-05-rich-text-section`) oraz
-> o snapshoty zapisywane pod własnymi nazwami — odczyty `eval` były spójne i zawsze
-> dotyczyły wyłącznie widgetu `rich-text-section` (canvas zawierał dokładnie jeden
-> blok `blk-1`).
+> **Uwaga o screenshotach:** w tym audycie **nie** zapisywałem zrzutów PNG jako evidence. Weryfikacja opiera się o `eval` + snapshoty accessibility tree zapisywane przez `playwright-cli` pod automatycznymi nazwami w katalogu `.playwright-cli/` (ignorowany przez Git, **współdzielony** między równoległymi sesjami agentów). Ewentualne pliki PNG byłyby **wyłącznie lokalnymi etykietami** przechwyceń, nie są wymaganym evidence i nie zostały dołączone do repo.
 
 ---
 
@@ -38,7 +20,7 @@
 
 **Typ:** `rich-text-section` · **Kategoria:** `content` · **Opis:** „Long-form copy block with safe HTML rendering, rich fallback blocks, and editorial layout controls."
 
-**Warianty:** `single-column` (domyślny, pojedyncza kolumna), `two-column` (`grid-cols-1 lg:grid-cols-3` — kolumna TOC + treść 2/3 dopiero od `lg`), `article` (renderuje semantyczny `<article>`).
+**Warianty:** `single-column` (domyślny), `two-column` (`grid-cols-1 lg:grid-cols-3` — kolumna TOC + treść), `article` (semantyczny `<article>`).
 
 **Model danych (`RichTextSectionData`):**
 
@@ -48,189 +30,167 @@
 | **body** | `html` (sanitizowany HTML, max 24000 zn.), `blocks[]` |
 | **body.blocks[]** | 4 rodzaje: `text` (heading, headingLevel 2/3/4, contentHtml/content), `image` (mediaId/src, alt, decorative, caption, href, width content/wide/full, align left/center/right), `attachment` (mediaId/src, label, description, mimeType, sizeLabel), `embed` (provider youtube/vimeo/external-link, url, title, aspectRatio 16:9/4:3/1:1, renderMode link-card) |
 | **options** | `dropcap` (bool), `toc` (bool), `maxWidth` (md/lg/xl/full), `outputMode` (html/blocks-fallback/blocks) |
-| **style** | `fontScale` (none/sm/md/lg), `lineHeight` (none/tight/normal/relaxed), `textColor` (clearable), `background` (clearable), `spacing` (none/sm/md/lg) |
+| **style** | `fontScale` (none/sm/md/lg), `lineHeight` (none/tight/normal/relaxed), `textColor` (clearable), `background` (clearable + „transparent"), `spacing` (none/sm/md/lg) |
 
-**Ograniczenia bloków:** min 0 / max 20 (`richTextBlockMin=0`, `richTextBlockMax=20`). Liczba bloków jest **data-driven** — kontrolka „Blocks count" realnie dodaje/ucina tablicę `body.blocks` (potwierdzone, patrz 4.2).
+**Ograniczenia bloków:** min 0 / max 20. Liczba bloków **data-driven** (kontrolka „Blocks count" realnie dodaje/ucina tablicę), `blockPageSize=5` (paginacja od 6 bloków w górę).
 
-**Kluczowy mechanizm — dwa źródła treści + tryb wyboru źródła:** widget ma DWA niezależne źródła: rich-text `body.html` (edytowany przez WYSIWYG) oraz strukturalne `body.blocks`. `options.outputMode` decyduje co się renderuje:
-- `html` („Prefer rich text body") → zawsze renderuje `body.html`,
-- `blocks` („Use structured blocks only") → zawsze renderuje strukturalne bloki,
-- `blocks-fallback` (domyślny, „Use body, then blocks") → renderuje `body.html` jeśli niepusty, w przeciwnym razie bloki.
+**Dwa źródła treści + tryb wyboru źródła:** `body.html` (WYSIWYG) i strukturalne `body.blocks`. `options.outputMode`: `html` (zawsze body), `blocks` (zawsze bloki), `blocks-fallback` (body jeśli niepusty, inaczej bloki). Atrybut `data-rich-text-rendered-source` raportuje faktyczne źródło renderu.
 
-Atrybut `data-rich-text-rendered-source` (`html`/`blocks`) na sekcji deterministycznie raportuje, które źródło faktycznie się renderuje.
-
-**Bezpieczeństwo renderowania:** `body.html` przechodzi przez allowlist (`p, br, strong, em, u, s, a, ul, ol, li, blockquote, code, pre, h2, h3, h4, hr, span`) — `img`, `iframe`, `script`, `style`, `h1` oraz atrybuty `on*` są usuwane, a niebezpieczne `href` przepisywane na `#`. Obrazy/embedy są obsługiwane wyłącznie przez strukturalne bloki (image przez MediaPicker, embed przez provider-validated link-card). Linki zewnętrzne dostają `target="_blank" rel="noopener noreferrer"`. Nagłówki H2–H4 w renderowanym body dostają wstrzyknięte, scope'owane do UUID bloku `id` (kotwice), z których budowany jest TOC.
+**Bezpieczeństwo renderu:** `body.html` przez allowlist (`p, br, strong, em, u, s, a, ul, ol, li, blockquote, code, pre, h2, h3, h4, hr, span`) — `img, iframe, script, style, h1` oraz `on*` usuwane, niebezpieczne `href` przepisywane na `#`. Obrazy/embedy wyłącznie przez bloki strukturalne (image → MediaPicker, embed → provider-validated link-card). Linki zewnętrzne dostają `target="_blank" rel="noopener noreferrer"`. Nagłówki H2–H4 w body dostają scope'owane do UUID `id` (kotwice → TOC).
 
 ---
 
-## 2. Architektura trybów edytora (istotny niuans UX)
+## 2. Architektura trybów edytora (niezmieniona względem 28-05)
 
-Panel edytora po prawej ma **tylko dwie równorzędne zakładki: `Visual` i `Advanced`**. Tryb **Wizard nie jest zakładką** — wchodzi się do niego przyciskiem **„Run setup again"**. Po setupie widoczny jest komunikat: *„Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics."*. Wizard kończy się przyciskiem **„Finish setup and open Visual"**. To dokładnie ten sam wzorzec, co w `faq-accordion`, `accordion`, `tabs`.
+Panel edytora ma **dwie zakładki: `Visual` i `Advanced`**. **Wizard nie jest zakładką** — wchodzi się przyciskiem **„Run setup again"**. Komunikat: *„Setup complete — Daily edits live in Visual. Advanced is for technical diagnostics."*.
 
 | Tryb | Jak otworzyć | Zawartość |
 |------|--------------|-----------|
-| **Wizard** | przycisk „Run setup again" | Jedna sekcja **„Starter copy"**: select „Rich text layout" (wariant), read-only info-box o trybie wyjścia („Output mode stays untouched in Wizard. Current mode: …"), read-only notka „Use Visual to edit the eyebrow, title…", oraz read-only **podgląd pierwszych dwóch bloków tekstowych** (Heading 1/2 + Paragraph 1/2). **Jedyna interaktywna kontrolka to select wariantu.** |
-| **Visual** | zakładka „Visual" (domyślna po setupie) | 6 sekcji widgetu: **Variant and layout structure** (karty wariantu + Content max width), **Title block copy** (eyebrow/title/heading level), **Body content** (Source preference + status źródła + edytor WYSIWYG + notka sanitizera), **Structured content blocks** (status źródła + Blocks count + Add text/image/attachment/embed + block navigator + edytor aktywnego bloku + Move/Remove + Undo), **Reader options** (dropcap + TOC), **Typography and colors** (font scale, line height, spacing density, text color + Clear, background + Clear/transparent). Dodatkowo współdzielone sekcje wrappera: **Block layout**, **Device visibility**. (Łącznie 8 widocznych sekcji — zgodne ze smoke 27-05.) |
-| **Advanced** | zakładka „Advanced" | 4 sekcje widgetu **w pełni read-only**: **Output mode and source diagnostics**, **Sanitizer diagnostics** (długość zapisanego HTML, liczba diagnostyk, sanitized preview), **Saved content summary** (liczba bloków + rozbicie media/embed, długość HTML), **Contract summary** (podział własności Wizard/Visual/Advanced). Plus współdzielone **Block layout summary** i **Visibility summary**. (Łącznie 6 widocznych — zgodne ze smoke 27-05.) **Brak edytowalnych kontrolek widgetu.** |
-
-**Istotne:** w canvas adminowym jest **tylko JEDEN** render widgetu (`[data-block-id="blk-1"]`), więc nie ma kolizji wielu renderów dzielących stan.
+| **Wizard** | „Run setup again" | Sekcja „Starter copy": select wariantu (jedyna interaktywna kontrolka), read-only info o trybie wyjścia, read-only podgląd pierwszych dwóch bloków tekstowych. |
+| **Visual** | zakładka „Visual" (domyślna) | 6 sekcji widgetu: Variant and layout structure, Title block copy, Body content, Structured content blocks, Reader options, Typography and colors + współdzielone Block layout / Device visibility. |
+| **Advanced** | zakładka „Advanced" | 4 sekcje widgetu **read-only**: Output mode and source diagnostics, Sanitizer diagnostics, Saved content summary, Contract summary + współdzielone summary. **Brak edytowalnych kontrolek widgetu.** |
 
 ---
 
-## 3. Co faktycznie przetestowano (zakres interakcji)
+## 3. Co przetestowano w TYM upgrade (zakres interakcji)
 
-Wszystkie interakcje wykonane w sesji `claude-28-05-rich-text-section`, zweryfikowane `eval`:
+Wszystko wykonane w sesji `claude-29-05-rich-text-gap-close`, zweryfikowane `eval`:
 
-- **Wizard:** select „Rich text layout" (Single → Two Column, potwierdzona zmiana `data-rich-text-variant` w canvas), read-only info o trybie wyjścia, read-only podgląd quick-start (Heading/Paragraph), przycisk „Finish setup and open Visual" (powrót do zakładki Visual).
-- **Visual / Variant:** wszystkie 3 karty (single ↔ two-column ↔ article) z odczytem atrybutu i obecności `<article>` / `lg:grid-cols-3`.
-- **Visual / Content max width:** Full (`max-w-none`) i Medium (`max-w-3xl`) z odczytem klasy kontenera.
-- **Visual / Title block copy:** edycja eyebrow, title (live), zmiana title heading level (H2 → H1, zmiana tagu nagłówka).
-- **Visual / Body content:** Source preference — wszystkie 3 tryby (html / blocks-fallback / blocks) z odczytem `data-rich-text-rendered-source` oraz testem różnicowym (akapit „Keep paragraphs concise" obecny tylko przy renderze HTML, nieobecny przy blokach); badge statusu źródła; edytor WYSIWYG (wpisanie markera → natychmiastowa aktualizacja canvas).
-- **Visual / Structured content blocks:** edycja heading aktywnego bloku (live), Blocks count 2→4 (dodanie „Heading 3", „Heading 4"), redukcja 4→2 (dialog potwierdzenia), **Undo** (przywrócenie), Add embed block + wpisanie URL YouTube (normalizacja do link-card z labelem „YouTube"), Move down (reorder), Remove (dialog + Undo notice).
-- **Visual / Reader options:** dropcap (on → `data-rich-text-dropcap=true`), TOC (on → nav „Table of contents" z 4 linkami kotwic, `data-rich-text-toc-count`).
-- **Visual / Typography and colors:** Font scale Large (`text-lg`), line height/spacing odczytane (`leading-7`, `space-y-6`), Text color `#00ff00` + Clear (powrót do `var(--color-text)`), Background color `#ff0000` + Clear (usunięcie inline tła).
-- **Advanced:** odczyt wszystkich 4 sekcji read-only i porównanie z edycjami z Visual; weryfikacja braku edytowalnych kontrolek widgetu.
-- **Public (frontend):** render początkowy, atrybuty `data-rich-text-*`, semantyka `<section aria-labelledby>`, wstrzyknięte `id` kotwic nagłówków, render dropcap (klasy first-letter), klasy typografii, konsola (0 błędów), brak overflow na 375 px, izolacja niezapisanych edycji admin↔front.
-
----
-
-## 4. Co DZIAŁA — szczegóły
-
-### 4.1 Wizard
-
-- **Select „Rich text layout"** — zmiana na „Two Column" natychmiast ustawiła `data-rich-text-variant="two-column"` w canvas i wyrenderowała grid `lg:grid-cols-3`. Ścieżka `variant` współdzielona z Visual (po „Finish" wariant pozostaje). ✓
-- **Info-box trybu wyjścia** — read-only, poprawnie pokazuje „Current mode: blocks-fallback" i komunikuje, że Wizard nie zmienia źródła renderowania. ✓
-- **Notka „Use Visual to edit…"** — read-only, jasno deleguje codzienną edycję do Visual. ✓
-- **„Finish setup and open Visual"** — poprawnie przełącza na zakładkę Visual (`aria-selected=true`). ✓
-
-### 4.2 Visual — kontrolki i efekt w canvas (zweryfikowane w DOM)
-
-| Kontrolka | Test | Efekt w canvas |
-|-----------|------|----------------|
-| Karty wariantu | single / two-column / article | `data-rich-text-variant` + struktura: two-column→`lg:grid-cols-3`; article→semantyczny `<article>`. ✓ |
-| Content max width | Full / Medium | kontener treści `max-w-none` / `max-w-3xl` (mapowanie `maxWidthClassMap`). ✓ |
-| Eyebrow | „AUDYT-EYEBROW" | `<p>` eyebrow w `<header>` aktualizuje się live. ✓ |
-| Title | „Audyt tytuł sekcji" | nagłówek tytułu aktualizuje się live; `id` tytułu = `aria-labelledby` sekcji. ✓ |
-| Title heading level | H2 → H1 | tag nagłówka tytułu zmienia się na `<h1>`, `data-rich-text-title-level=1`. ✓ |
-| Source preference | html / blocks-fallback / blocks | `data-rich-text-rendered-source` zmienia się deterministycznie; blocks-only usuwa akapit obecny tylko w HTML body (test różnicowy). ✓ |
-| Badge statusu źródła | — | „Active / Rich text body" z opisem powodu („renders because it has content") spójny z trybem. ✓ |
-| Edytor WYSIWYG body | wpisanie „MARKER_BODY_EDIT" | treść markera natychmiast pojawia się w renderze body w canvas. ✓ |
-| Blocks count | 2 → 4 | data-driven: dochodzą bloki „Heading 3", „Heading 4" (`createTextBlock`). ✓ |
-| Blocks count (redukcja) | 4 → 2 | dialog „Reduce structured block count" z opisem „Reduce blocks from 4 to 2?…", przyciski Cancel/Reduce. ✓ |
-| Undo (po redukcji/usunięciu) | klik „Undo" | przywraca poprzedni stan tablicy bloków (4 bloki z „Blok-1 ZMIENIONY", „Heading 3", „Heading 4"). ✓ |
-| Heading aktywnego bloku | „Blok-1 ZMIENIONY" | nagłówek bloku w renderze blocks aktualizuje się live. ✓ |
-| Add embed block + URL YouTube | `youtube.com/watch?v=…` | blok embed renderuje się jako **link-card** z labelem providera „YouTube" i bezpiecznym `<a href>` do YouTube (normalizacja `normalizeAllowedRichTextEmbedUrl`). ✓ |
-| Move down | blok 1 → pozycja 2 | kolejność w renderze blocks zmienia się natychmiast (`handleMoveBlock`). ✓ |
-| Remove | dialog „Remove structured block" | „Remove Blok-1 ZMIENIONY? This action can be undone…", po potwierdzeniu blok znika, pojawia się Undo notice. ✓ |
-| Dropcap | on | `data-rich-text-dropcap=true` + klasy first-letter (`[&>p:first-of-type:first-letter]:text-4xl …`) na kontenerze treści. ✓ |
-| Table of contents | on | `data-rich-text-toc=true`, render `<nav aria-label="Table of contents">` z linkami kotwic; `data-rich-text-toc-count` zgodny z liczbą nagłówków body. ✓ |
-| Font scale | Large | kontener body `text-lg` (`fontScaleClassMap.lg`). ✓ |
-| Line height / Spacing | (odczyt md/normal) | `leading-7` + `space-y-6` na kontenerze body. ✓ |
-| Text color | `#00ff00` → Clear | inline `color: rgb(0,255,0)` na body; po Clear powrót do `var(--color-text)`. ✓ |
-| Background color | `#ff0000` → Clear | inline `background-color: rgb(255,0,0)` na `<section>`; po Clear usunięcie inline tła. ✓ |
-
-**Spójność „Clear" w kolorach:** oba pola koloru (Text color, Background color) mają działający przycisk „Clear" oraz badge „Theme default" / „Transparent". Text color czyści do `var(--color-text)`, Background do braku inline tła. Spójne i przewidywalne.
-
-### 4.3 Advanced (read-only) — wiernie odzwierciedla stan z Visual
-
-Po moich edycjach w Visual (tryb `blocks`, 4 bloki w tym 1 embed, font `lg`, edycja body z markerem) Advanced raportował:
-
-- **Output mode and source diagnostics:** „Output mode: blocks", „Rendered source: blocks", „Source status: Variant: single-column · Block count: 4", „Reason: blocks-only". ✓
-- **Sanitizer diagnostics:** „Stored HTML length: 328 characters · Diagnostics: 0" + sekcja „Sanitized preview" (render bezpiecznego HTML). ✓ (HTML zawierał mój marker, 0 problemów sanitizera dla czystej treści.)
-- **Saved content summary:** „Structured blocks: 4 total · 0 media/attachment · 1 embed", „HTML source: 328 sanitized characters". ✓ (Embed poprawnie zliczony osobno; rozbicie media/embed dokładne.)
-- **Contract summary:** poprawny podział własności — „Wizard owns: One-time layout seed plus the first structured-block preview." / „Visual owns: Title copy, rendered-source preference, structured blocks, reader options, typography, spacing, and colors." / „Advanced owns: Read-only output/source diagnostics, sanitizer reporting, saved content summaries, and contract ownership." ✓
-
-**Brak edytowalnych kontrolek widgetu** w Advanced — sekcje diagnostyczne zawierają wyłącznie paragrafy/podsumowania (zob. niuans N6 o pojedynczym bezetykietowym `<input>`).
-
-### 4.4 Frontend (public)
-
-Strona `/richtextsectiontest` zwraca `200` i renderuje **zapisany/opublikowany** stan fixture (NIE moje niezapisane edycje):
-
-- Atrybuty: `single-column`, `font-scale=md`, `line-height=normal`, `spacing=md`, `max-width=lg`, `output-mode=blocks-fallback`, `rendered-source=html`, `title-level=2`, `dropcap=true`, `toc=false`. ✓
-- **Semantyka i dostępność:** `<section aria-labelledby="rich-text-section-{uuid}-title">`, tytuł `<h2 id="…-title">`. ✓
-- **Kotwice nagłówków:** body H2/H3 mają wstrzyknięte, scope'owane do UUID bloku `id` (np. `…-heading-clear-structure-for-readable-content`, `…-heading-what-works-best`) — slugify z `injectHeadingAnchors`. ✓
-- **Dropcap renderuje się:** kontener treści ma klasy first-letter (`…:mr-2`, `…:float-left`, `…:text-4xl`, `…:leading-none`) + `text-base leading-7 space-y-6`. ✓
-- **Konsola:** **0 błędów, 0 ostrzeżeń.** ✓
-- **Responsywność 375 px:** brak poziomego overflow (`scrollWidth == clientWidth == 375`). ✓
-- Brak linków w tej zawartości (fixture nie ma bloku embed/attachment — patrz 5/N2).
-
-### 4.5 Izolacja niezapisanych edycji
-
-- **Niezapisane edycje NIE wyciekają na front** — mimo że w Visual ustawiłem `outputMode=blocks`, font `lg`, dodałem embed itd., front nadal pokazuje stan zapisany (`output-mode=blocks-fallback`, `rendered-source=html`, `font-scale=md`, single-column). **Silny dowód poprawnej izolacji draft↔public.** ✓
-- Świadomie **nie** klikałem „Save draft"/„Publish", aby nie mutować współdzielonego fixture.
+- **Baseline:** logowanie, otwarcie fixture, odczyt atrybutów `data-rich-text-*` w canvas i na public (porównanie draft↔public).
+- **Use transparent (Background):** klik przycisku → inline `background-color: transparent` + badge „Transparent".
+- **Per-blokowy heading level:** blok tekstowy 1 H2 → **H4**, weryfikacja zmiany tagu w renderze (tryb blocks).
+- **Source preference → blocks:** przełączenie na „Use structured blocks only", aby bloki realnie renderowały się w canvas (warunek widoczności zmian image/embed/heading).
+- **MediaPicker image:** Browse media → Media library → wybór realnego assetu → render `<figure>/<img>`; caption → `<figcaption>`; Link URL → wrap `<a>`; Decorative → pusty alt; Width Full; Alignment Left; **usunięcie media (clear)** → znika `<figure>`.
+- **MediaPicker attachment:** Browse media → Media library (filtr application/audio/video/text) → **„No media assets found"**; wypełnienie pól Label/Description/MIME/Size label; weryfikacja braku renderu karty bez `src`.
+- **Bloki — dodawanie:** Add image / attachment / embed / text (count 2 → 6).
+- **Bloki — paginacja:** 6 bloków → strona 1 (Block 1–5, „Previous" disabled), strona 2 (Block 6, „Next" disabled), nawigacja „Previous"/„Next".
+- **Bloki — reorder:** **Move up** (pozycja 6 → 5) — uzupełnia „Move down" z poprzedniego audytu.
+- **Bloki — Remove + Undo:** dialog „Remove Heading 6?…" → count 6 → 5 → Undo notice → Undo → powrót do 6.
+- **Embed providery:** youtube.com/watch, youtu.be, vimeo.com, example.com (external-link), `javascript:alert(1)`, „not a valid url"; Card title (override link text); Aspect ratio token (16:9 → 1:1).
+- **Sanitizer diagnostics:** sformatowanie akapitu body jako **Heading 1** (Text → Heading 1) → notatka „Sanitizer guidance" w Visual; odczyt Advanced „Sanitizer diagnostics"; wstawienie linku z URL `javascript:alert(1)` i weryfikacja neutralizacji w renderze (`href="#"`, 0 × `<h1>`).
+- **Izolacja + frontend:** beforeunload prompt (niezapisany draft), public bez wycieku edycji, 375 px bez overflow, konsola public 0/0, `<section aria-labelledby>`.
 
 ---
 
-## 5. Co NIE działa / jest mylące / wymaga uwagi (niuanse UX/UI)
+## 4. Co DZIAŁA — szczegóły zweryfikowane w DOM (nowe ścieżki tego upgrade'u)
+
+### 4.1 Przycisk „Use transparent" (Background color)
+- Klik → sekcja w canvas dostaje inline `style="background-color: transparent;"`, badge kontrolki pokazuje **„Transparent"**. Spójne z `SharedColorControl` (`allowTransparent`, `onChange("transparent")`). ✓
+
+### 4.2 Per-blokowy select poziomu nagłówka (text block)
+- W trybie `blocks` blok 1 zmieniony H2 → **H4**: render bloku w canvas zmienił tag z `<h2>` na `<h4>` (odczyt: `["H2:Long-form content section","H4:Clear structure for readable content","H3:What works best"]`). Tytuł sekcji pozostał H2, blok 2 H3 — niezależność per-blok potwierdzona. ✓
+
+### 4.3 MediaPicker — blok IMAGE (pełna rodzina ścieżek)
+Po „Browse media" otwiera się dialog **„Media library"** z filtrem **„Allowed: image/*"**. Biblioteka zawiera realne obrazy (m.in. `cos1.png`, kilka `image.png`).
+
+| Ścieżka | Test | Efekt w canvas |
+|---------|------|----------------|
+| Wybór poprawnego assetu | klik miniatury w dialogu | `<figure>` + `<img src="http://localhost:3000/media/2026/02/5c485b87-…​.png" alt="image.png" loading="lazy" …>`; auto-alt z metadanych media (`media.alt/title/caption/originalName`). ✓ (`handleImageMediaSelection`, ścieżka sukcesu) |
+| Caption | „Audyt podpis obrazu" | `<figcaption>` z tekstem podpisu. ✓ |
+| Link URL | `https://example.com/story` | `<img>` opakowany w `<a href="https://example.com/story" target="_blank" rel="noopener noreferrer">`. ✓ |
+| Decorative (switch) | on | `alt` obrazu czyści się do `""` (pusty). ✓ |
+| Width | Full | klasa `<figure>`: `… w-full mr-auto ml-0` (wcześniej `max-w-4xl w-full` dla „Wide"). ✓ |
+| Alignment | Left | klasa `mr-auto ml-0` (mapowanie align). ✓ |
+| Usunięcie media (przycisk „×" w pickerze) | klik | `mediaId/src` czyszczone → `<figure>` znika (figures=0, imgs=0). ✓ (`handleImageMediaSelection`, gałąź `mediaId=null`) |
+
+### 4.4 Bloki strukturalne — dodawanie / paginacja / reorder / Remove + Undo
+- **Add text/image/attachment/embed** — każdy przycisk dokłada blok właściwego rodzaju; licznik „Blocks count" rośnie data-driven 2 → 6. ✓
+- **Paginacja (od 6 bloków):** strona 1 pokazuje karty Block 1–5, „Previous" disabled; strona 2 pokazuje tylko Block 6, „Next" disabled; „Previous"/„Next" przełączają strony i ustawiają aktywny blok. ✓
+- **Move up** (uzupełnienie luki): aktywny blok przeniesiony z „position 6 of 6" na „position 5 of 6". ✓ (`handleMoveBlock`, kierunek w górę)
+- **Remove:** dialog „Remove structured block" z opisem „Remove Heading 6? This action can be undone from the editor notice.", Cancel/Remove → po Remove count 6 → 5, pojawia się notatka **„Heading 6 removed. Undo is available."** (Undo/Dismiss). ✓
+- **Undo:** klik „Undo" → count wraca do 6 (przywrócenie tablicy bloków). ✓
+
+### 4.5 Embed — wszystkie providery + odrzucanie złych URL
+Render w trybie `blocks`, link-card (`renderRichTextEmbedBlockAsHtml` + `normalizeAllowedRichTextEmbedUrl`):
+
+| URL wpisany | Provider label | href / efekt |
+|-------------|----------------|--------------|
+| `https://www.youtube.com/watch?v=…` | **YouTube** | `<a href=…​ target="_blank" rel="noopener noreferrer">`, URL widoczny w karcie. ✓ |
+| `https://youtu.be/abc123` | **YouTube** | provider rozpoznany też dla skróconej domeny. ✓ |
+| `https://vimeo.com/123456789` | **Vimeo** | link-card jw. ✓ |
+| `https://example.com/article` | **External link** | link-card jw. ✓ |
+| `javascript:alert(1)` | — | **brak renderu karty** (URL odrzucony → `null` → pusty HTML). ✓ |
+| `not a valid url` | — | **brak renderu karty** (parsowanie URL zawodzi → `null`). ✓ |
+| Card title | „Audyt tytul karty embed" | tekst linku w karcie = tytuł (override providerLabel). ✓ |
+| Aspect ratio token | 16:9 → 1:1 | wartość selecta zmienia się na „1:1"; **brak widocznego efektu w renderze** (link-card nie używa proporcji — patrz niuans N7). ✓ (kontrolka działa, render obojętny) |
+
+### 4.6 Sanitizer — wyzwolenie diagnostyki (kluczowe domknięcie luki)
+- **Wyzwolenie diagnostyki H1:** akapit body sformatowany przez **Text → Heading 1** → w Visual pojawia się notatka **„Sanitizer guidance"** z komunikatem: *„H1 is removed from the body. Use the section title or H2/H3/H4 headings instead."* To realny `tag_removed: h1`. Mechanizm: serializer post-edytora **zachowuje** `<h1>` (jest w jego allowlist), więc tag dociera do `sanitizeRichTextHtmlWithDiagnostics` widgetu i zostaje zgłoszony. ✓ **(diagnostyka sanitizera wyzwolona interakcyjnie)**
+- **Neutralizacja w renderze (bezpieczeństwo):** po przełączeniu Source preference na „Prefer rich text body" canvas renderuje body **bez żadnego `<h1>`** (`h1Count=0`) — H1 zostaje usunięte z publicznego renderu. ✓
+- **Neutralizacja niebezpiecznego `href`:** wstawiłem link z URL `javascript:alert(1)` (toolbar „Link" → `window.prompt`). W DOM samego WYSIWYG anchor chwilowo trzyma `javascript:alert(1)`, ale w **renderze canvas** (tryb html) anchor wychodzi jako `href="#"` — niebezpieczny URL zneutralizowany. ✓ (security działa)
+
+### 4.7 Izolacja niezapisanych edycji + frontend
+- **beforeunload prompt** przy próbie opuszczenia admina potwierdza, że draft ma niezapisane zmiany (świadomie nie zapisywałem).
+- **Public route nietknięty moimi edycjami:** mimo że w Visual ustawiłem tryb `blocks`/`html`, dodałem 6 bloków, media, embed itd. — public nadal serwuje stan zapisany: `output-mode=blocks-fallback`, `rendered-source=html`, `variant=single-column`, `font-scale=md`. **Silny dowód izolacji draft↔public.** ✓
+- **Brak `javascript:` w HTML public.** ✓
+- **375 px:** brak poziomego overflow (`scrollWidth == clientWidth == 375`). ✓
+- **Konsola public:** **0 błędów, 0 ostrzeżeń.** ✓
+- **A11y:** `<section aria-labelledby="rich-text-section-{uuid}-title">` obecny; `dropcap=true` (stan opublikowany). ✓
+
+---
+
+## 5. Co NIE DZIAŁA / jest mylące / wymaga uwagi (niuanse UX/UI)
 
 | # | Obszar | Obserwacja |
 |---|--------|-----------|
-| **N1 — Wizard pokazuje „No paragraph text yet" dla bloków, które MAJĄ treść (mylący podgląd)** | Wizard / podgląd | Sekcja „Structured quick-start blocks" w Wizard wyświetla dla obu domyślnych bloków tekstowych „Paragraph 1/2: No paragraph text yet", mimo że bloki **mają** treść — tyle że w polu `contentHtml`, a nie w legacy `content`. Kod podglądu: `value={(block.contentHtml ? "" : block.content)?.trim() || "No paragraph text yet"}` — gdy istnieje `contentHtml`, podgląd celowo pokazuje pusty string → „No paragraph text yet". Skutek: każdy blok z treścią rich-text (czyli realnie każdy blok edytowany w Visual) w Wizard wygląda na pusty. **Mylące** — autor w Wizard może sądzić, że treści nie ma. (Heading wyświetla się poprawnie.) |
-| **N2 — Rozbieżność dropcap: public=`true` vs wczytany draft adminowy=`false`** | Draft vs publish / shared state | Mój pierwszy odczyt baseline w adminie pokazał `data-rich-text-dropcap="false"`, a public route renderuje `dropcap="true"`. Ponieważ strona jest w statusie `Draft`, najprawdopodobniej public serwuje **wcześniej opublikowaną** wersję (rozbieżność draft↔published). **Nie mogę jednak w pełni wykluczyć** wpływu równoległych audytów na współdzielony fixture. Niczego nie zapisywałem, więc rozbieżność **nie pochodzi z mojej sesji**. Należy zweryfikować, czy to celowe (draft niepublikowany) czy realny drift. |
-| **N3 — TOC i kotwice nie obejmują tytułu sekcji (świadome, ale warte odnotowania)** | Renderer / TOC | `injectHeadingAnchors` działa wyłącznie na renderowanym `body` (HTML lub bloki), więc tytuł sekcji (`titleBlock.title`, np. H2 „Long-form content section") **nigdy** nie pojawia się w TOC ani nie dostaje kotwicy — w TOC lądują tylko nagłówki treści. To spójne z intencją (TOC = spis treści body), ale `data-rich-text-toc-count` liczy tylko nagłówki body (u mnie 2 dla domyślnego HTML, 4 po dodaniu bloków), co może zaskoczyć przy interpretacji licznika. |
-| **N4 — Podwójny H2 na stronie** | Semantyka / a11y | Tytuł sekcji jest H2, a pierwszy nagłówek body również H2 (domyślny fixture). Daje to dwa H2 w obrębie jednej sekcji. Akceptowalne, ale przy `headingLevel` tytułu = 2 i blokach H2 hierarchia nagłówków nie jest ściśle zagnieżdżona. Autor może to skorygować (tytuł H1/H2, bloki H3/H4), ale domyślny fixture tego nie robi. |
-| **N5 — „body.html" i „body.blocks" mogą się cicho różnić** | Model danych / UX | W trybie `blocks-fallback` (domyślnym) renderuje się `body.html`, ale strukturalne bloki istnieją równolegle z **inną** treścią (HTML body ma dodatkowy akapit „Keep paragraphs concise…", którego nie ma w blokach). Przełączenie Source preference na „blocks" zmienia widoczną treść. To projekt (dwa źródła), ale autor edytujący tylko jedno źródło może nie zauważyć, że drugie ma rozjechaną treść. Brak w UI wyraźnego ostrzeżenia o rozjeździe obu źródeł. |
-| **N6 — Pojedynczy bezetykietowy `<input>` w tabpanelu Advanced** | Advanced (drobne) | W obrębie `[role=tabpanel]` Advanced jest jeden `<input>` bez `type`, `role`, `aria-label` i bez przynależności do żadnej sekcji diagnostycznej (najpewniej globalny, ukryty artefakt, np. input z MediaPicker/uploadu montowany na poziomie panelu). **Nie jest** kontrolką konfiguracyjną widgetu — sekcje widgetu w Advanced pozostają read-only. Drobiazg do odnotowania, nie bug produktowy. |
+| **N1 — Wizard pokazuje „No paragraph text yet" dla bloków z treścią** | Wizard / podgląd | (Z 28-05, kod niezmieniony.) `value={(block.contentHtml ? "" : block.content)?.trim() || "No paragraph text yet"}` — gdy istnieje `contentHtml`, podgląd celowo pokazuje pusty string → „No paragraph text yet". Każdy blok z treścią rich-text wygląda w Wizard na pusty. **Mylące.** |
+| **N2 — Rozbieżność dropcap: public=`true` vs draft adminowy=`false`** | Draft vs publish | Nadal aktualne: canvas baseline `dropcap=false`, public `dropcap=true`. Strona jest `Draft`, więc public serwuje **wcześniej opublikowaną** wersję. Niczego nie zapisywałem → rozbieżność nie pochodzi z mojej sesji. Do weryfikacji czy celowe. |
+| **N3 — TOC/kotwice nie obejmują tytułu sekcji** | Renderer / TOC | `injectHeadingAnchors` działa tylko na renderowanym body; tytuł sekcji nigdy nie trafia do TOC ani nie dostaje kotwicy. `data-rich-text-toc-count` liczy tylko nagłówki body. |
+| **N4 — Podwójny H2 w domyślnym fixture** | Semantyka / a11y | Tytuł H2 + pierwszy nagłówek body H2 → dwa H2 w jednej sekcji. (Można skorygować per-blok — N4 jest właśnie naprawialny mechanizmem z 4.2.) |
+| **N5 — `body.html` i `body.blocks` mogą się cicho rozjeżdżać** | Model / UX | Dwa niezależne źródła; w `blocks-fallback` renderuje się body, ale bloki trzymają inną treść. Brak w UI ostrzeżenia o rozjeździe. Realnie obserwowane: HTML body ma akapit „Keep paragraphs concise…", którego nie ma w blokach. |
+| **N6 — Pojedynczy bezetykietowy `<input>` w tabpanelu Advanced** | Advanced (drobne) | Jeden `<input>` bez `type/role/aria-label`, niepowiązany z sekcją diagnostyczną (najpewniej artefakt MediaPicker/uploadu montowany na poziomie panelu). **Nie** jest kontrolką widgetu. |
+| **N7 — Embed „Aspect ratio token" bez widocznego efektu** | Embed / UX (nowe) | Jedyny `renderMode` to `link-card`, który **nie używa** proporcji. Select 16:9/4:3/1:1 zmienia dane, ale render link-card jest identyczny. Kontrolka działa, lecz dla użytkownika jest pozornie bezskutkowa (proporcja miałaby sens dopiero dla osadzonego playera). |
+| **N8 — Notatka „Sanitizer guidance" jest ulotna** | Sanitizer / UX (nowe) | Komunikat H1 (`bodyDiagnostics`) pokazuje się tuż po edycji, ale przy remountcie edytora (np. przełączenie Advanced↔Visual) WYSIWYG wczytuje **już zsanityzowaną** (bez H1) wartość ze stanu — H1 znika wizualnie, a notatka się czyści. Autor, który szybko opuści sekcję, może nie zauważyć ostrzeżenia. |
+| **N9 — Advanced „Sanitizer diagnostics" praktycznie zawsze pokazuje 0** | Advanced / diagnostyka (nowe) | Visual zapisuje do `body.html` **już zsanityzowany** HTML (`updateBody(…, { html: result.html })`). Advanced liczy diagnostyki ponownie na czystym, zapisanym HTML → zawsze „Diagnostics: 0". Potwierdzone: po wyzwoleniu notatki H1 w Visual, Advanced raportował „Stored HTML length: 304 characters · Diagnostics: 0". Niezerowy licznik w Advanced jest osiągalny **tylko** gdy zapisane dane już zawierają niedozwolony markup (np. import/legacy), nie przez normalną edycję w Visual. Nie jest to bug, ale czyni sekcję Advanced de facto stale-zerową. |
+| **N10 — Podwójna warstwa sanityzacji shadowuje `href_rewritten`** | Sanitizer / nuance (nowe) | Niebezpieczny `href` jest neutralizowany do `#` w renderze (bezpieczeństwo OK), ale **diagnostyka `href_rewritten`** widgetu nie pojawia się w Visual, bo upstreamowy serializer post-edytora neutralizuje URL zanim widgetowy sanitizer porówna `originalHref` vs `sanitizedHref`. Widget „nie widzi" przepisania. Efekt bezpieczeństwa zachowany; komunikat dla autora — nie. |
 
-**Nie wykryto** żadnych błędów konsoli na froncie (0/0), żadnego twardego buga renderowania, ani wycieku niezapisanych edycji na front. Wszystkie przetestowane kontrolki Wizard i Visual działają i aktualizują podgląd na żywo; Advanced wiernie podsumowuje stan; frontend jest dostępny (semantyczna `<section>`, `aria-labelledby`, kotwice nagłówków) i bez overflow. Embed jest bezpiecznie normalizowany (provider-validated link-card, nie surowy iframe).
+**Nie wykryto** żadnego twardego buga renderowania, błędu konsoli na froncie (0/0), ani wycieku niezapisanych edycji na public. Wszystkie wyklikane kontrolki działają i aktualizują podgląd na żywo; Advanced wiernie podsumowuje stan; embed jest bezpiecznie normalizowany; niebezpieczny `href` i `h1` są neutralizowane w renderze.
 
 ---
 
-## 6. Porównanie Admin (canvas) vs Frontend
+## 6. Czego NIE DA SIĘ przetestować w tym fixture/środowisku (dokładna nazwa + powód)
+
+- **MediaPicker bloku ATTACHMENT — wybór assetu + render karty + `handleAttachmentMediaSelection` (sukces i błąd „image-invalid"):** dialog „Media library" filtrowany na `application/*, audio/*, video/*, text/*` zwraca **„No media assets found"**. **Powód:** współdzielona biblioteka mediów zawiera **wyłącznie obrazy** (brak PDF/audio/wideo/tekstu). Bez selektowalnego assetu nie da się: (a) wyrenderować karty attachment (renderer zwraca pusty HTML bez `src`), (b) trafić ścieżki sukcesu handlera, (c) trafić błędu „Selected asset cannot be used as a public attachment card." (bo to wymaga wybrania obrazu, którego filtr i tak nie pokazuje). Zweryfikowano jedynie, że pola tekstowe (Label/Description/MIME type/Size label) aktualizują dane, a karta **nie** renderuje się bez media `src` (zgodne z amber-notką „Pick a public document, audio, or video file…").
+- **MediaPicker bloku IMAGE — ścieżka błędu `rich_text_image_media_invalid` („Selected image is unavailable or missing a public render URL."):** **Powód:** picker filtrowany na `image/*`; nie da się przez UI wybrać assetu bez URL ani nie-obrazu, więc warunek błędu (`!media.url || !mime image/*`) jest nieosiągalny interakcyjnie. Zweryfikowano tylko ścieżkę sukcesu i czyszczenia.
+- **Advanced „Sanitizer diagnostics" z niezerowym licznikiem:** **Powód:** Visual zapisuje już zsanityzowany HTML (patrz N9), więc Advanced nie ma czego zgłosić. Osiągalne wyłącznie przy danych z importu/legacy zawierających niedozwolony markup — poza zasięgiem edycji UI.
+- **Diagnostyka `href_rewritten` w notatce Visual:** **Powód:** upstreamowy serializer post-edytora neutralizuje `href` przed widgetowym sanitizerem (patrz N10). Zweryfikowano natomiast realny efekt bezpieczeństwa (`href="#"` w renderze). Pozostałe kody diagnostyk (`tag_removed` dla `img/iframe/script/style`, `attribute_removed` dla `on*`) nie zostały wyzwolone — WYSIWYG nie pozwala ich wprowadzić, a serializer pre-strippuje; **jedynie `tag_removed: h1` udało się realnie wyzwolić** (bo serializer zachowuje h1).
+- **Save / Publish i trwałość po reload:** świadomie **nie** zapisywałem (współdzielony fixture). Zweryfikowano izolację (public = stan zapisany) i istnienie niezapisanego draftu (beforeunload), ale nie propagację moich zmian na public.
+- **Warianty two-column / article na froncie:** zapisany fixture to `single-column`; układy two-column (z TOC w kolumnie) i article na **public** nie były weryfikowane (tylko w canvas, w poprzednim audycie).
+- **Limity/ucinanie pól** (HTML 24000, heading 180, content 12000, caption 240 itd.) oraz twarde max 20 bloków — nie testowane.
+- **Pełna nawigacja klawiaturą / czytnik ekranu na froncie** — weryfikowano strukturę ARIA przez DOM, nie realną nawigację SR.
+
+---
+
+## 7. Porównanie Admin (canvas) vs Frontend
 
 | Aspekt | Admin canvas | Frontend (`/richtextsectiontest`) | Zgodność |
 |--------|--------------|-----------------------------------|----------|
-| Atrybuty `data-rich-text-*` | ✓ żywy `RichTextSectionBlockView` | ✓ identyczny renderer | ✓ wspólny renderer |
-| Wariant / max-width / typografia | ✓ live z Visual | ✓ (stan zapisany) | ✓ logika spójna |
-| Source preference / rendered-source | ✓ live (html/blocks/fallback) | ✓ (zapisany `blocks-fallback`→html) | ✓ |
-| Kotwice nagłówków + `aria-labelledby` | ✓ obecne | ✓ obecne (scope UUID) | ✓ |
-| Dropcap | ✓ live (klasy first-letter) | ✓ renderuje się (`dropcap=true`) | ⚠ wartość różni się — N2 |
-| Embed → link-card | ✓ normalizacja YouTube | (fixture bez embed → brak) | ✓ logika spójna |
-| Niezapisane edycje z Visual | widoczne w sesji edytora | **nieobecne** (front = stan zapisany) | ✓ poprawna izolacja |
-| Konsola | (admin nie sprawdzany pod kątem 0/0) | 0 błędów / 0 ostrzeżeń | ✓ front czysty |
+| Atrybuty `data-rich-text-*` | ✓ żywy render | ✓ identyczny renderer | ✓ wspólny renderer |
+| Wariant / max-width / typografia | ✓ live z Visual | ✓ (stan zapisany) | ✓ |
+| Source preference / rendered-source | ✓ live (html/blocks/fallback) | ✓ (`blocks-fallback`→html) | ✓ |
+| Image block (figure/img/figcaption/anchor) | ✓ live po wyborze media | (fixture bez aktywnego image w html) | ✓ logika spójna |
+| Embed → link-card (provider) | ✓ youtube/youtu.be/vimeo/external | (fixture bez embed) | ✓ logika spójna |
+| Niebezpieczny href / h1 | ✓ neutralizowane (`#`, brak h1) | ✓ brak `javascript:` w HTML | ✓ bezpieczne |
+| Dropcap | ✓ live | ✓ `dropcap=true` (publish) | ⚠ wartość różni się — N2 |
+| Niezapisane edycje z Visual | widoczne w sesji | **nieobecne** | ✓ poprawna izolacja |
+| Konsola | (admin niesprawdzany 0/0) | 0 błędów / 0 ostrzeżeń | ✓ front czysty |
 
-**Wniosek:** renderer jest wspólny; canvas i front zachowują się spójnie dla testowanych opcji. Jedyna zaobserwowana różnica wartości (N2 — `dropcap`) to najpewniej rozbieżność draft↔published (lub artefakt współdzielonego fixture), a nie błąd renderera. Niezapisane edycje są poprawnie izolowane od public.
-
----
-
-## 7. Czego NIE testowano (uczciwe ograniczenia)
-
-- **Bloki image i attachment (MediaPicker):** kontrolki istnieją (wybór assetu, alt, decorative, caption, href, width, align dla image; label, description, mimeType, sizeLabel dla attachment), ale **NIE** wybierałem realnego assetu z biblioteki mediów — wymaga to interakcji z MediaPicker i istniejących mediów. Nie potwierdziłem renderu `<figure>`/karty attachment ani walidacji „obraz musi być image/*".
-- **Per-blokowy edytor WYSIWYG + per-blokowa notka sanitizera:** testowałem edytor WYSIWYG **body** (wpisanie markera) oraz heading bloku, ale nie testowałem pełnej edycji rich-content wewnątrz konkretnego bloku tekstowego ani sanitizera na poziomie bloku.
-- **Sanitizer / diagnostyki z niedozwolonym HTML:** nie udało się wstrzyknąć przez toolbar WYSIWYG tagów `script`/`iframe`/`img`/`h1` ani atrybutów `on*`, więc nie zaobserwowałem realnego komunikatu „Sanitizer guidance" ani niezerowego licznika diagnostyk (Advanced pokazał „Diagnostics: 0" dla czystej treści). Ścieżka kodu istnieje (`sanitizeRichTextHtmlWithDiagnostics`), ale **nie zweryfikowana interakcyjnie** w tym audycie.
-- **Przycisk „Use transparent" (Background):** testowałem ustawienie koloru i „Clear"; osobnego przycisku „Use transparent" nie klikałem.
-- **Block navigator — paginacja:** paginacja (Previous/Next) pojawia się przy >5 blokach; nie przekroczyłem 5, więc paginacji nie testowałem. „Move up" — testowałem tylko „Move down".
-- **Block heading level (select w bloku):** testowałem heading level **tytułu** (H1/H2/H3); per-blokowy select heading level (H2/H3/H4) działa tym samym mechanizmem, ale nie testowany osobno.
-- **Pozostałe providery embed:** testowałem **tylko YouTube**; Vimeo, external-link oraz URL nieprawidłowy/niebezpieczny (odrzucenie, brak renderu) — nie testowane.
-- **Warianty two-column / article na froncie:** zapisany fixture to `single-column`; układu two-column (z TOC w kolumnie) i article na **froncie** nie weryfikowałem (tylko w canvas adminowym).
-- **Limity i normalizacja:** nie testowałem ucinania pól do limitów (HTML 24000, heading 180, content 12000, caption 240 itd.) ani twardego maksimum 20 bloków.
-- **Save / Publish:** świadomie **nie** zapisywałem, aby nie mutować współdzielonego fixture; trwałość moich edycji po przeładowaniu oraz propagacja na front **nie zostały** zweryfikowane (zweryfikowana została izolacja: front pokazuje stan zapisany).
-- **Współdzielone sekcje wrappera (Block layout, Device visibility / ich summary w Advanced):** poza zakresem audytu rich-text-section; niczego w nich nie zmieniałem.
-- **Pełna dostępność klawiatury / czytnik ekranu na froncie:** weryfikowałem strukturę ARIA przez DOM, ale nie testowałem realnej nawigacji klawiaturą/SR.
-
-> Uwaga środowiskowa: w trakcie audytu sesja przeglądarki raz uległa awarii (proces `playwright-cli` zwrócił błąd Node i zamknął przeglądarkę) — najpewniej w połączeniu z obciążeniem współdzielonego katalogu `.playwright-cli/` przez równoległe audyty. Po ponownym zalogowaniu fixture wrócił do stanu zapisanego (moje edycje nie były zapisywane), więc nie miało to wpływu na wnioski; kontynuowałem od baseline.
+**Wniosek:** renderer wspólny; canvas i front spójne. Jedyna różnica wartości (N2 — `dropcap`) to rozbieżność draft↔published, nie błąd renderera.
 
 ---
 
 ## 8. Podsumowanie
 
-- Widget **rich-text-section jest w bardzo dobrym stanie funkcjonalnym**. Praktycznie wszystkie przetestowane kontrolki Wizard i Visual **działają i aktualizują podgląd na żywo**: wariant (3 układy), max width, eyebrow/title/heading level, **tryb wyboru źródła** (html/blocks-fallback/blocks z deterministycznym `rendered-source`), edytor WYSIWYG body, data-driven Blocks count (z dialogiem redukcji i **Undo**), edycja heading bloku, **bezpieczny embed** (normalizacja YouTube do link-card), Move/Remove z dialogami, dropcap, TOC (z wstrzykniętymi kotwicami), font scale, line height, spacing, oraz oba kolory z działającym „Clear".
-- **Advanced jest w 100% read-only** i **wiernie** podsumowuje stan z Visual (tryb wyjścia, rendered-source, liczba bloków z rozbiciem media/embed, długość sanitizowanego HTML, liczba diagnostyk, podział własności kontraktu).
-- **Frontend jest czysty:** semantyczna `<section aria-labelledby>`, wstrzyknięte scope'owane kotwice nagłówków, render dropcap, **0 błędów/ostrzeżeń konsoli**, brak overflow na 375 px. **Niezapisane edycje admin nie wyciekają na front** (silny dowód izolacji draft↔public).
-- **Najważniejsze realne znaleziska:**
-  - **N1 (mylący Wizard):** podgląd quick-start pokazuje „No paragraph text yet" dla bloków, które mają treść w `contentHtml` — błąd wyświetlania (czyta legacy `content`).
-  - **N2 (rozbieżność dropcap draft↔public):** public `dropcap=true` vs wczytany draft `false` — prawdopodobnie draft/publish, do weryfikacji; nie pochodzi z mojej sesji (nic nie zapisywałem).
-  - **N5 (dwa źródła treści mogą się cicho rozjeżdżać):** `body.html` i `body.blocks` przechowują niezależną treść; brak ostrzeżenia o rozjeździe.
-- **Drobne:** TOC/kotwice nie obejmują tytułu sekcji (N3); podwójny H2 w domyślnym fixture (N4); bezetykietowy globalny `<input>` w tabpanelu Advanced (N6, nie kontrolka widgetu).
-- **Plusy względem innych widgetów:** liczba bloków **data-driven** (realnie zmienia tablicę), **bezpieczny model treści** (sanitizer allowlist, brak surowych obrazów/iframe w HTML, embed jako provider-validated link-card, linki zewnętrzne z `rel="noopener noreferrer"`), deterministyczny wybór źródła z czytelnym badge statusu, spójny „Clear" dla obu kolorów, dialogi potwierdzenia + Undo dla destrukcyjnych operacji na blokach.
-- Nie znaleziono żadnego twardego błędu renderowania ani rozbieżności admin↔front w zakresie wspólnie testowanych opcji (poza wartością `dropcap` — N2, najpewniej draft/publish).
+- **Wszystkie rodziny kontrolek wskazane jako luki z 28-05 zostały realnie wyklikane i zweryfikowane w DOM** — z wyjątkiem ścieżek, które fizycznie blokuje środowisko (patrz pkt 6, z dokładnym powodem).
+- **DZIAŁA (nowo potwierdzone):** „Use transparent" (inline `transparent` + badge), per-blokowy heading level (H2→H4 zmienia tag), **MediaPicker image** w pełnej rodzinie (wybór assetu z auto-alt + lazy, caption→figcaption, link→bezpieczny anchor, decorative→pusty alt, width Full→`w-full`, align Left, usunięcie media→znika figure), **dodawanie bloków, paginacja (Previous/Next od 6 bloków), Move up, Remove + Undo**, **wszystkie providery embed** (youtube/youtu.be/vimeo/external-link) z odrzuceniem `javascript:` i niepoprawnego URL, card-title override, oraz **wyzwolenie diagnostyki sanitizera H1** („Sanitizer guidance") z neutralizacją H1 i niebezpiecznego `href` w renderze.
+- **NIE DA SIĘ przetestować (z powodem):** wybór i render **attachment** (biblioteka ma tylko obrazy → „No media assets found"); ścieżka błędu image-invalid (filtr `image/*`); niezerowe diagnostyki w **Advanced** (Visual zapisuje czysty HTML — N9); notatka `href_rewritten` w Visual (shadowing przez upstream serializer — N10); Save/Publish (świadomie pominięte); two-column/article na froncie.
+- **NIUANSE UX (nowe):** N7 (aspect ratio embed bez efektu w link-card), N8 (ulotna notatka sanitizera), N9 (Advanced sanitizer stale-zerowy), N10 (podwójna sanityzacja shadowuje `href_rewritten`). Plus utrzymane N1–N6.
+- **Bezpieczeństwo:** mocne — niebezpieczny `href` → `#`, `h1` usuwane z renderu, embed jako provider-validated link-card (brak surowego iframe), linki zewnętrzne z `rel="noopener noreferrer"`, obrazy wyłącznie przez MediaPicker z walidacją `image/*` po stronie handlera.
+- **Frontend czysty:** 0/0 konsoli, brak overflow 375 px, semantyczna `<section aria-labelledby>`, niezapisane edycje admin **nie** wyciekają na public (potwierdzone beforeunload + odczytem public).
+- **Brak twardych bugów.** Najważniejsze realne obserwacje to mylący Wizard (N1), rozbieżność dropcap draft↔public (N2), oraz dwie nowe diagnostyczne „ślepe plamki" Advanced/Visual (N9/N10), które nie obniżają bezpieczeństwa, ale ograniczają widoczność komunikatów dla autora.
 
 ---
 
 ## 9. Screenshoty (lokalne etykiety)
 
-> W tym audycie **nie** zapisywałem zrzutów PNG jako evidence — całą weryfikację oparłem
-> o inspekcję DOM (`eval`) oraz snapshoty accessibility tree zapisywane pod własnymi
-> nazwami. Ewentualne pliki PNG byłyby **wyłącznie lokalnymi etykietami** przechwyceń
-> w katalogu `.playwright-cli/` (ignorowanym przez Git, **współdzielonym** między
-> równoległymi sesjami audytów), nie są wymaganym evidence i nie zostały dołączone do repo.
+> W tym audycie **nie** zapisywałem zrzutów PNG jako evidence — całą weryfikację oparłem o inspekcję DOM (`eval`) oraz snapshoty accessibility tree zapisywane automatycznie przez `playwright-cli` pod nazwami z timestampem w katalogu `.playwright-cli/` (ignorowanym przez Git, **współdzielonym** między równoległymi sesjami audytów). Ewentualne pliki PNG byłyby **wyłącznie lokalnymi etykietami** przechwyceń, nie są wymaganym evidence i nie zostały dołączone do repo.

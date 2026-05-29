@@ -1,23 +1,24 @@
-# RAPORT: CTA Banner Widget — audyt current-state (Wizard / Visual / Advanced)
+# RAPORT: CTA Banner Widget — audyt wyczerpujący (Wizard / Visual / Advanced)
 
 > **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja przeglądarki:** `claude-28-05-cta-banner` (izolowana, oddzielna od innych agentów)
+> **Data:** 2026-05-29 (re-audyt domykający luki raportu z 28-05-2026)
+> **Sesja przeglądarki:** `claude-29-05-cta-banner-gap-close` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Fixture admin:** page id `94e844e2-9287-4aa4-949e-c2ea9d28ca4f` (breadcrumb „Contract Test - cta-banner")
 > **Route public:** `http://localhost:3000/test-cta-banner-0516` (tytuł „TEST-CTA-BANNER-0516")
 > **Pliki źródłowe:** `core/widgets/core/ctaBanner.tsx` (renderer + model + normalizacja), `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` (edytory Wizard/Visual/Advanced)
 
-> **Uwaga metodologiczna:** Ten raport jest świadomie bogatszy niż smoke-report z
-> 27-05-2026. Realnie klikałem w kontrolki i po każdej zmianie weryfikowałem faktycznie
-> wyrenderowany element CTA Banner w canvasie admina przez inspekcję DOM (klasy Tailwind,
-> inline-style, atrybuty `data-cta-banner-*`, `data-cta-button`). Sprawdziłem trwałość
-> po zapisie (Save draft → reload), zachowanie akcji w trybie Advanced (Normalize / Reset
-> + dialogi potwierdzające) oraz render na publicznej trasie (DOM, konsola, overflow 1280/375).
+> **Uwaga metodologiczna:** Ten re-audyt został przeprowadzony „od zera" w żywej aplikacji i celowo
+> domyka luki poprzedniej sesji (media picker, nie wszystkie clear-y kolorów / destynacji, nie wszystkie
+> rodziny opcji). Każdą kontrolkę faktycznie klikałem, a efekt weryfikowałem przez inspekcję realnie
+> wyrenderowanego CTA Banner w canvasie admina (`section[data-cta-banner-outer]` → `div[data-cta-banner-variant]`
+> → przyciski `[data-cta-button]`, badge `[data-cta-banner-badge]`) — odczyt klas Tailwind, `inline-style`
+> oraz `getComputedStyle`. Sprawdziłem też trwałość po `Save draft → reload`, akcje Advanced
+> (Normalize / Reset z dialogami) oraz render na publicznej trasie (DOM, konsola, overflow 1280/375).
 
-> **Uwaga o zrzutach:** Nazwy plików PNG w tym raporcie są wyłącznie lokalnymi etykietami
-> przechwyceń Playwright. Pliki PNG są ignorowane przez Git (`git check-ignore` potwierdza,
-> exit 0) i nie są wymaganym evidence w repo.
+> **Uwaga o zrzutach:** Nazwy plików PNG w tym raporcie są wyłącznie lokalnymi etykietami przechwyceń
+> Playwright. Pliki PNG są ignorowane przez Git (reguła `*.png` w `.gitignore`, potwierdzona `git check-ignore`)
+> i nie są wymaganym evidence w repo.
 
 ---
 
@@ -42,28 +43,39 @@
 **Tryby edytora wg kontraktu (`ctaBannerEditorContract`, version 2):**
 - **Wizard** — 1 sekcja `setup`: „Starter conversion" (`writablePaths: []`, `readOnlyPaths: ["variant","content.title"]`).
 - **Visual** — 5 sekcji edytowalnych: „Variant and layout structure", „Content copy", „Actions", „Colors and Borders", „Background and motion".
-- **Advanced** — 3 sekcje read-only widgetu: „Style diagnostics" (diagnostics), „Normalization and safeguards" (summary — 2 przyciski akcji), „Runtime summary" (diagnostics).
+- **Advanced** — 3 sekcje read-only: „Style diagnostics" (diagnostics), „Normalization and safeguards" (summary — 2 akcje), „Runtime summary" (diagnostics).
 
 ---
 
-## 2. Co było faktycznie testowane (zakres realnych interakcji)
+## 2. Co było faktycznie testowane (pełny zakres realnych interakcji)
 
 Wszystkie poniższe interakcje wykonano w żywej aplikacji na fixture „Contract Test - cta-banner".
-Efekt każdej zmiany weryfikowałem przez inspekcję realnie wyrenderowanego CTA Banner w canvasie
-(`section[data-cta-banner-outer]` → `div[data-cta-banner-variant]` → przyciski `[data-cta-button]`),
-a trwałość przez ponowny odczyt po reloadzie.
+W odróżnieniu od poprzedniej sesji **wyczerpano wszystkie rodziny opcji** (każda karta wariantu, każda
+wartość selecta, każdy przycisk Clear, picker mediów, fit/position na realnym obrazie).
 
-- Logowanie do admina (formularz e-mail/hasło) + otwarcie fixture page.
-- **Wizard:** wejście przez „Run setup again", odczyt sekcji „Starter conversion", programowe policzenie kontrolek (`data-widget-control-ownership`), powrót przez „Finish setup and open Visual".
-- **Visual:** warianty Centered / Split / With Badge; padding → Spacious(lg); badge/title/description; toggle „Show description"; Primary CTA (label, „Open in new tab", ikona Arrow right); Secondary CTA „Enabled" off/on; Tertiary CTA „Enabled" on + label + wybór strony jako destination; paleta „Dark"; border width → 3px; button radius → Pill; primary button size → Large; motion → Fade in; gradient (suwak kąta → 90°); background media type → Image (odsłonięcie pól) → z powrotem None.
-- **Persistencja:** „Save draft" → reload → ponowna pełna weryfikacja stanu.
-- **Advanced:** odczyt sekcji diagnostycznych; „Normalize now" (z dialogiem) → potwierdzenie; „Reset to defaults" (z dialogiem) → potwierdzenie + weryfikacja przywrócenia defaultów; sprawdzenie guardu `beforeunload` przy niezapisanym reset.
-- **Front:** `http://localhost:3000/test-cta-banner-0516` — inspekcja DOM, konsola, overflow przy 1280 i 375, potwierdzenie wariantu i a11y.
-
-> **Zastrzeżenie:** „Save draft" zostawił na fixture „Contract Test - cta-banner" wersję
-> roboczą z moimi edycjami audytowymi (NIE opublikowaną). Trasa publiczna
-> `/test-cta-banner-0516` to osobna, opublikowana strona z własną, domyślną treścią —
-> patrz sekcja 6.
+- **Logowanie** do admina (e-mail/hasło) + otwarcie fixture page.
+- **Wariant (3/3):** Centered, Split, With Badge — sprawdzone klasy wrappera i kontenera akcji.
+- **Padding (5/5):** None, Compact, Default, Spacious, Extra spacious — sprawdzony atrybut `data-cta-banner-padding` i klasy `p-*`.
+- **Content:** badge, title, description, przełącznik „Show description" off→on.
+- **Actions — wszystkie 3 CTA, wszystkie rodziny:**
+  - **Ikona (4/4 × Primary)** + po jednej weryfikacji dla Secondary i Tertiary: None, Arrow right, Chevron right, External link.
+  - **„Open in new tab" (3/3 CTA):** primary, secondary, tertiary — sprawdzony `target=_blank` + `rel`.
+  - **„Clear destination" (3/3 CTA):** primary, secondary, tertiary — sprawdzone zniknięcie przycisku po wyczyszczeniu href.
+  - **Destination page-picker:** otwarcie listy stron i wybór (HomePage / Pricing Review Temp) — przywrócenie linków.
+- **Colors and Borders — wyczerpująco:**
+  - **Palety (3/3):** Light, Dark, Brand — sprawdzone wszystkie zapisane hexy (kontener, badge, przyciski).
+  - **Clear (10/10 pól koloru):** text, badge background, badge text, primary button bg/text/border, secondary button bg/text/border, border color.
+  - **„Use transparent" (Colors + Background):** secondary button background oraz background color.
+  - **Color input onChange (programowo):** ustawienie wartości `input[type=color]` przez natywny setter — render zaktualizowany.
+  - **Border width (4/4):** 0/1/2/3 px. **Banner radius (5/5):** None..2XL. **Button radius (8/8):** Default, Match banner radius, None, Medium, Large, Extra large, 2XL, Pill. **Primary button size (4/4)** i **Secondary button size (4/4):** None, Small, Medium, Large.
+- **Background and motion — wyczerpująco:**
+  - **Background color:** „Use transparent" + „Clear".
+  - **Gradient:** suwak kąta (90°→45°), kolor start (`#112233`), kolor end (`#abcdef`), „Clear".
+  - **Media type → Image:** odsłonięcie pól; **MediaPicker** → „Browse media" → wybór realnego assetu z Media Library (przypięty URL); **Image fit (2/2):** Cover/Contain; **Image position (3/3):** Center/Top/Bottom (na realnym obrazie); **„Clear image".**
+  - **Entrance motion (3/3):** Static, Fade in, Slide up.
+- **Persistencja:** ustawienie deterministycznego stanu → „Save draft" (toast „Draft saved.") → reload → pełna re-weryfikacja.
+- **Advanced:** odczyt 9 wierszy diagnostyki; „Normalize now" (dialog → potwierdzenie); „Reset to defaults" (dialog → potwierdzenie + weryfikacja powrotu do defaultów).
+- **Front:** `/test-cta-banner-0516` — DOM, konsola (0/0), overflow 1280 i 375, a11y, potwierdzenie wariantu.
 
 ---
 
@@ -71,81 +83,121 @@ a trwałość przez ponowny odczyt po reloadzie.
 
 ### 3.1 Tryb Wizard
 
-- W stanie domyślnym panel pokazuje baner **„Setup complete · Daily edits live in Visual. Advanced is for technical diagnostics."** z przyciskiem **„Run setup again"**. Wizard nie jest osobną zakładką w `tablist` (są tylko `Visual`/`Advanced`) — to celowy wzorzec startowy (identyczny jak w Hero/Section/Divider).
-- Wizard zawiera **dokładnie 1 sekcję „Starter conversion"** z **dwoma wierszami read-only**:
-  - **„Banner layout"** = „Centered" (mapowane z `variant`),
-  - **„Headline"** = aktualny `content.title`,
-  - oraz statyczny hint: „Use Visual for CTA labels, destinations, visibility toggles, button styling, background media, and motion."
-- Panel ma własny **„Live preview"** renderowany przez współdzielony renderer.
-- **Programowo potwierdzony kontrakt:** w panelu Wizard są **2 wiersze `data-widget-control-ownership=readonly`** (`variant`, `content.title`) i **0 kontrolek writable** — zgodnie z `writablePaths: []`.
-- **„Finish setup and open Visual"** poprawnie wraca do trybu Visual.
-- **Werdykt:** Wizard działa zgodnie z kontraktem — to czysto read-only podsumowanie + podgląd, **bez żadnej kontrolki edytowalnej ani akcji seedującej** (inaczej niż Hero, który ma selektor „Goal").
+- W stanie domyślnym panel pokazuje baner **„Setup complete · Daily edits live in Visual. Advanced is for technical diagnostics."** z przyciskiem **„Run setup again"**. Wizard nie jest osobną zakładką w `tablist` (są tylko `Visual`/`Advanced`) — to celowy wzorzec startowy.
+- Wizard zawiera **dokładnie 1 sekcję „Starter conversion"** z dwoma wierszami read-only („Banner layout" = mapowany `variant`, „Headline" = `content.title`) i statycznym hintem kierującym do Visual.
+- **Programowo potwierdzony kontrakt:** 2 wiersze read-only, 0 kontrolek writable — zgodnie z `writablePaths: []`. **„Finish setup and open Visual"** wraca do Visual.
+- **Werdykt:** Wizard działa zgodnie z kontraktem — czysto read-only podsumowanie + podgląd, bez kontrolki edytowalnej ani akcji seedującej.
 
-### 3.2 Tryb Visual — wszystkie testowane kontrolki działają i aktualizują podgląd
+### 3.2 Tryb Visual — warianty, padding, treść
 
-| Sekcja | Kontrolka | Akcja testowa | Efekt w renderze (zweryfikowany) | Wynik |
+| Sekcja | Kontrolka | Wartości przetestowane | Efekt w renderze (zweryfikowany) | Wynik |
 |---|---|---|---|---|
-| Variant | Karty wariantu | Split | wrapper → `flex flex-col gap-4 md:flex-row md:items-center md:justify-between`; actions → `md:justify-end` | ✅ |
-| Variant | Karty wariantu | Centered | wrapper → `flex flex-col items-center gap-4 text-center` | ✅ |
-| Variant | Karty wariantu | With Badge | `data-cta-banner-variant=with-badge`, ale klasy **identyczne jak Centered** | ⚠ patrz 4.1 |
-| Variant | Padding (Select) | Spacious | `data-cta-banner-padding=lg`, klasy `px-6 py-6` | ✅ |
-| Content | Badge | „AUDYT 28-05" | `[data-cta-banner-badge]` aktualizuje tekst | ✅ |
-| Content | Title | „Tytuł audytowy CTA" | `<h3 id=…-cta-title>` aktualizuje tekst | ✅ |
-| Content | Description | „Opis audytowy…" | `<p>` opisu aktualizuje tekst | ✅ |
+| Variant | Karty wariantu | **Centered** | wrapper `flex flex-col items-center gap-4 text-center` | ✅ |
+| Variant | Karty wariantu | **Split** | wrapper `flex flex-col gap-4 md:flex-row md:items-center md:justify-between`; akcje `…md:justify-end` | ✅ |
+| Variant | Karty wariantu | **With Badge** | `data-cta-banner-variant=with-badge`, ale wrapper **identyczny jak Centered** | ⚠ patrz 4.1 |
+| Variant | Padding (Select) | **None / Compact / Default / Spacious / Extra spacious** | `p-0` / `px-4 py-4` / `px-5 py-5` / `px-6 py-6` / `px-7 py-7` (+ `data-cta-banner-padding`) | ✅ 5/5 |
+| Content | Badge / Title / Description | tekst | `[data-cta-banner-badge]` / `<h3>` / `<p>` aktualizują tekst | ✅ |
 | Content | Show description (switch) | Off → On | `<p>` opisu znika / wraca | ✅ |
-| Actions | Primary label | „Rozpocznij teraz" | `[data-cta-button=primary]` aktualizuje label | ✅ |
-| Actions | Primary „Open in new tab" | On | `target="_blank"` + `rel="noopener noreferrer"` | ✅ (bezpieczny rel) |
-| Actions | Primary ikona | Arrow right | render `<svg class="lucide lucide-arrow-right">` w przycisku | ✅ |
-| Actions | Secondary „Enabled" | Off | przycisk secondary znika z podglądu | ✅ |
-| Actions | Secondary „Enabled" | On | przycisk secondary wraca | ✅ |
-| Actions | Tertiary „Enabled" + label + destination | On / „Nie, dziękuję" / strona „HomePage" | renderuje się jako link tekstowy `href="/homepage"` | ✅ (po ustawieniu destination — patrz 4.2) |
-| Colors | Paleta „Dark" | Klik | bg `#0f172a`, text `#f8fafc`, border `#334155`, badge `#38bdf8/#082f49`, przyciski z jawnymi hexami | ✅ |
-| Colors | Border width (Select) | 3px | `data-cta-banner-border-width=3`, inline `border-width: 3px` | ✅ |
-| Colors | Button radius (Select) | Pill | przyciski → `rounded-full` | ✅ |
-| Colors | Primary button size (Select) | Large | przycisk primary → `px-5 py-2.5 text-base` | ✅ |
-| Background | Entrance motion (Select) | Fade in | outer → klasy `motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none` + inline `animation-duration: 500ms`, `data-cta-banner-motion=fade-in` | ✅ |
-| Background | Gradient — suwak kąta | 90° | inner → `background-image: linear-gradient(90deg, #0f172a, #475569)` | ✅ |
-| Background | Background media type (Select) | Image | odsłonięcie pól: MediaPicker + „Clear image" + „Image fit" + „Image position" | ✅ (UI warunkowe) |
 
-- **Warunkowe odsłanianie pól działa:** pola tła obrazu (MediaPicker, fit, position) pojawiają się dopiero po wyborze „Image"; przy „None" są ukryte. Tertiary destination jest **disabled** dopóki tertiary nie jest „Enabled".
-- **Paleta „Dark" zapisuje jawne kolory** — po kliknięciu wszystkie sprawdzone inline-style (kontener, badge, przyciski) zgadzały się z presetem.
+### 3.3 Tryb Visual — Actions (wszystkie 3 CTA, wszystkie rodziny)
 
-### 3.3 Persistencja (Save draft → reload)
+| Kontrolka | Wartości | Efekt w renderze | Wynik |
+|---|---|---|---|
+| Primary — ikona (Select) | None / Arrow right / Chevron right / External link | brak `<svg>` / `lucide-arrow-right` / `lucide-chevron-right` / `lucide-external-link` | ✅ 4/4 |
+| Secondary — ikona | External link | `lucide-external-link` w przycisku secondary | ✅ |
+| Tertiary — ikona | Chevron right | `lucide-chevron-right` w linku tertiary | ✅ |
+| Primary — „Open in new tab" | On | `target=_blank` + `rel="noopener noreferrer"` | ✅ |
+| Secondary — „Open in new tab" | On | `target=_blank` + `rel="noopener noreferrer"` | ✅ |
+| Tertiary — „Open in new tab" | On | `target=_blank` + `rel="noopener noreferrer"` | ✅ |
+| Primary — „Clear destination" | Klik | href→pusty ⇒ **przycisk primary znika** z podglądu | ✅ |
+| Secondary — „Clear destination" | Klik | href→pusty ⇒ **przycisk secondary znika** | ✅ |
+| Tertiary — „Clear destination" | Klik | href→pusty ⇒ **link tertiary znika** | ✅ |
+| Destination — page-picker | wybór „HomePage" / „Pricing Review Temp" | render linku `href="/homepage"` / `/pricing-review-temp` (przycisk wraca) | ✅ |
 
-„Save draft" + reload — **cały sprawdzony stan wrócił z bazy bez utraty**:
+> **Generalizacja względem poprzedniego raportu:** wyczyszczenie destynacji **dowolnego** z trzech CTA usuwa
+> ten przycisk z renderu, bo `resolveWidgetLinkAttrs("")` zwraca `null` (gating `has{Primary|Secondary|Tertiary}`
+> wymaga prawidłowego href). To nie tylko tertiary — wszystkie trzy CTA znikają przy pustym href.
 
-- `variant=centered`, `padding=lg`, `border-width=3px`, kolory z palety Dark (`bg #0f172a`, `text #f8fafc`, `border #334155`), `background-image: linear-gradient(90deg, …)`, `motion=fade-in`;
-- treść: badge „AUDYT 28-05", title „Tytuł audytowy CTA";
-- akcje: primary „Rozpocznij teraz" (`target=_blank` + ikona arrow-right), secondary „Contact sales", tertiary „Nie, dziękuję" → `/homepage`;
-- przyciski: `rounded-full` (pill), primary `text-base` (large).
+### 3.4 Tryb Visual — Colors and Borders (wyczerpująco)
 
-✅ **Brak defektów trwałości w przetestowanym zakresie.** W szczególności wyłączenie/utrzymanie tertiary oraz tryb pill/large przetrwały zapis (to inny obraz niż defekt „Single CTA" w raporcie Hero — tutaj nie wykryto regresji re-merge defaultów).
+**Palety (3/3) — każda zapisuje jawne hexy (zweryfikowane `getComputedStyle`):**
+
+| Paleta | Tło | Text | Border | Badge bg | Primary btn bg | Secondary btn border |
+|---|---|---|---|---|---|---|
+| **Light** | `#f8fafc` | `#0f172a` | `#e2e8f0` | `#1d4ed8` | `#1d4ed8` | `#e2e8f0` |
+| **Dark** | `#0f172a` | `#f8fafc` | `#334155` | `#38bdf8` | `#38bdf8` | `#334155` |
+| **Brand** | `#eff6ff` | `#1e3a8a` | `#93c5fd` | `#1d4ed8` | `#1d4ed8` | `#93c5fd` |
+
+**Przyciski „Clear" (10/10):** po wyczyszczeniu pole wraca do tokenu motywu:
+- 9 pól → status **„Theme default"** + inline-style na `var(--color-*)` (text → `var(--color-text)`, border → `var(--color-border)` itd.),
+- **primary button border** → status **„Transparent"** (domyślną wartością tego pola jest `transparent`, nie token — pole nie jest „clearable" do pustego).
+- **„Use transparent"** (secondary button bg, background color) → wartość `transparent`, render `rgba(0,0,0,0)`, status „Transparent".
+
+**Selecty (wszystkie rodziny):**
+
+| Select | Wartości | Efekt w renderze | Wynik |
+|---|---|---|---|
+| Border width | 0px / 1px / 2px / 3px | `data-cta-banner-border-width` + `border-width`; **0px usuwa klasę `border`** | ✅ 4/4 |
+| Banner radius | None / Medium / Large / Extra large / 2XL | brak / `rounded-md` / `rounded-lg` / `rounded-xl` / `rounded-2xl` | ✅ 5/5 |
+| Button radius | Default / Match banner radius / None / Medium / Large / Extra large / 2XL / Pill | `rounded-md` / **`rounded-2xl` (= radius kontenera)** / brak / `rounded-md` / `rounded-lg` / `rounded-xl` / `rounded-2xl` / `rounded-full` | ✅ 8/8 |
+| Primary button size | None / Small / Medium / Large | brak / `px-3 py-1.5 text-xs` / `px-4 py-2 text-sm` / `px-5 py-2.5 text-base` | ✅ 4/4 |
+| Secondary button size | None / Small / Medium / Large | jw. (na przycisku secondary) | ✅ 4/4 |
+
+> **„Match banner radius" (inherit)** poprawnie odzwierciedla bieżący promień banera: przy radius kontenera = 2XL przycisk dostał `rounded-2xl`, zgodnie z `radiusClassMap[containerRadius]`.
+
+### 3.5 Tryb Visual — Background and motion (wyczerpująco, z mediami)
+
+| Kontrolka | Akcja | Efekt w renderze | Wynik |
+|---|---|---|---|
+| Background color | „Use transparent" | `background-color: transparent` (`rgba(0,0,0,0)`) | ✅ |
+| Background color | „Clear" | inline `background-color` usuwany (Theme default); kasuje też `style.background` | ✅ |
+| Gradient | suwak kąta 90→45 | `linear-gradient(45deg, …)` | ✅ |
+| Gradient | kolor start `#112233` | `linear-gradient(45deg, rgb(17,34,51), …)` | ✅ |
+| Gradient | kolor end `#abcdef` | `linear-gradient(135deg, …, rgb(171,205,239))` | ✅ |
+| Gradient | „Clear" | `background-image` usuwany | ✅ |
+| **Media type → Image** | Select | odsłonięcie pól: MediaPicker („Browse media") + „Clear image" + Image fit + Image position | ✅ |
+| **MediaPicker** | „Browse media" → wybór assetu z Media Library | `background-image: url("http://localhost:3000/media/2026/02/…png")`, `source=library`, `assetId` + `src` zapisane | ✅ **(luka domknięta)** |
+| Image fit | Cover / Contain | `background-size: cover` / `contain` | ✅ 2/2 |
+| Image position | Center / Top / Bottom | `background-position: center center` / `center top` / `center bottom` | ✅ 3/3 |
+| „Clear image" | Klik | `background-image` usuwany, „No media selected yet.", przycisk disabled | ✅ |
+| Media type → None | Select | pola mediów chowane (render warunkowy działa w obie strony) | ✅ |
+| Entrance motion | Static | brak klas motion, `data-cta-banner-motion=none`, brak inline `animation-duration` | ✅ |
+| Entrance motion | Fade in | `motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500 motion-reduce:animate-none` + inline `500ms` | ✅ |
+| Entrance motion | Slide up | jw. + `motion-safe:slide-in-from-bottom-2` (reduced-motion-safe) | ✅ |
+
+### 3.6 Persistencja (Save draft → reload)
+
+Ustawiłem deterministyczny stan (paleta Dark + padding Spacious + border 2px + radius XL + button radius Pill +
+primary size Large + motion Fade in + 3 CTA z ikonami, `_blank` i destynacjami stron) → „Save draft" (toast
+**„Draft saved."**) → reload. **Cały stan wrócił z bazy bez utraty:**
+
+- `variant=centered`, `padding=lg`, `border-width=2`, `radius=rounded-xl`, `motion=fade-in`, `bg #0f172a`;
+- przyciski: `rounded-full` (pill), primary `px-5 py-2.5 text-base` (large);
+- 3 CTA: primary `/homepage`, secondary `/pricing-review-temp`, tertiary `/homepage` — **każdy** z `target=_blank` i ikoną;
+- treść: badge „AUDYT 28-05", title „Tytuł audytowy CTA".
+
+✅ **Brak defektu trwałości w pełnym przetestowanym zakresie** (w tym wyłączeń/ikon/destynacji/rozmiarów/promieni).
 
 _Zrzut (lokalny): stan zweryfikowany programowo (bez dedykowanego zrzutu admina)._
 
-### 3.4 Tryb Advanced — read-only diagnostyka + akcje serwisowe
+### 3.7 Tryb Advanced — diagnostyka + akcje serwisowe
 
-- **„Style diagnostics"** (`<dl>` read-only) wiernie odzwierciedlał stan: Background `#0f172a`, Text `#f8fafc`, Border `#334155`, Primary button border `transparent`, Secondary button border `#334155`.
+- **„Style diagnostics"** (read-only `<dl>`) wiernie odzwierciedlał zapisany stan: Background `#0f172a`, Text `#f8fafc`, Border `#334155`, Primary button border `transparent`, Secondary button border `#334155`.
 - **„Runtime summary"** (read-only): Variant `centered`, Actions `3 configured`, Background media `Not configured`, Motion `fade-in` — zgodne ze stanem.
-- **„Normalization and safeguards"** — 2 przyciski:
-  - **„Normalize now"** → otwiera dialog „Normalize CTA banner data?" („Apply schema-owned fallbacks…") z Cancel/Normalize now. Po potwierdzeniu stan pozostał niezmieniony (dane były już znormalizowane) — akcja zadziałała bez błędu.
-  - **„Reset to defaults"** → otwiera dialog „Reset CTA banner to defaults?" z Cancel/Reset. Po potwierdzeniu **podgląd poprawnie wrócił do defaultów** (padding `md`, border `1`, motion `none`, badge „Limited offer", title „Ready to launch your next campaign?", tło `var(--color-surface)`, tylko 2 CTA).
-- **Guard niezapisanych zmian:** po (niezapisanym) Reset próba reloadu wywołała natywny dialog `beforeunload`. Po jego akceptacji i przeładowaniu wrócił **zapisany draft** (stan audytowy), co potwierdza, że Reset działa wyłącznie in-memory dopóki nie klikniemy „Save draft".
-- Advanced zawiera dodatkowo współdzielone panele blokowe **„Block layout summary"** i **„Visibility summary"** — to nie są kontrolki widgetu (patrz 6).
-- **Werdykt:** Advanced realizuje deklarowany kontrakt diagnostyczny (zero edycji pól) + dwie deterministyczne akcje serwisowe, które realnie działają.
+- **„Normalize now"** → dialog „Normalize CTA banner data?" (Cancel / Normalize now). Po potwierdzeniu stan pozostał niezmieniony (dane już znormalizowane) — akcja bez błędu.
+- **„Reset to defaults"** → dialog „Reset CTA banner to defaults?" (Cancel / Reset to defaults). Po potwierdzeniu **podgląd wrócił do defaultów**: `padding=md`, `border-width=1`, `radius=xl`, `motion=none`, tło `var(--color-surface)`, badge „Limited offer", title „Ready to launch your next campaign?", **tylko 2 CTA** (primary/secondary → `#`, tertiary domyślnie wyłączony).
+- Reset działa **in-memory** (nie zapisany) — pozostawiłem go niezapisanym, więc zapisany draft to stan z 3.6.
+- **Werdykt:** Advanced realizuje kontrakt diagnostyczny (0 edycji pól) + 2 deterministyczne akcje, które realnie działają.
 
-### 3.5 Front (`http://localhost:3000/test-cta-banner-0516`)
+### 3.8 Front (`http://localhost:3000/test-cta-banner-0516`)
 
 - Strona ładuje się, **0 błędów i 0 ostrzeżeń konsoli**.
-- To **osobna, opublikowana strona** (NIE edytowany fixture). Zawiera **jeden** widget CTA Banner z **domyślną treścią**:
-  - `variant=with-badge`, `padding=md`, `border-width=1px`, `motion=none`, tło/teksty na tokenach motywu (`var(--color-surface)`, `var(--color-text)`, `var(--color-border)`);
-  - badge „Limited offer", `<h3>` „Ready to launch your next campaign?";
-  - 2 przyciski: primary „Get started" → `#`, secondary „Contact sales" → `#` (bez ikon, bez `target`).
-- **Dostępność:** `section` ma `aria-labelledby="…-cta-title"` wskazujące na `<h3>` (poprawny landmark z nazwą).
+- To **osobna, opublikowana strona** (NIE edytowany fixture) z **domyślną treścią**: `variant=with-badge`, `padding=md`, `border-width=1`, `motion=none`; badge „Limited offer", `<h3>` „Ready to launch your next campaign?"; 2 przyciski primary/secondary jako `<a>` → `#` (bez ikon, bez `target`).
+- **Dostępność:** `<section>` z `aria-labelledby` wskazującym na `<h3>` (poprawny landmark z nazwą).
 - **Brak poziomego overflow** przy 1280px (`scrollWidth==clientWidth==1280`) i 375px (`==375`). ✅
-- **Potwierdzenie 4.1 na froncie:** wariant `with-badge` renderuje wrapper `flex flex-col items-center gap-4 text-center` — **identycznie jak `centered`**.
+- **Potwierdzenie 4.1 na froncie:** wariant `with-badge` renderuje wrapper `flex flex-col items-center gap-4 text-center` — identycznie jak `centered`.
 
-_Zrzuty (lokalne): `cta-banner-public-desktop-28-05.png`, `cta-banner-public-mobile-375-28-05.png`._
+_Zrzuty (lokalne): `cta-banner-public-desktop-29-05.png`, `cta-banner-public-mobile-375-29-05.png`._
 
 ---
 
@@ -158,51 +210,49 @@ _Zrzuty (lokalne): `cta-banner-public-desktop-28-05.png`, `cta-banner-public-mob
   const wrapperClassName =
     resolvedVariant === "split" ? "…md:flex-row…" : "flex flex-col items-center gap-4 text-center";
   ```
-- Dla `with-badge` `resolvedVariant` to „with-badge", ale klasy wrappera i akcji są **dokładnie takie same jak dla `centered`**. Badge i tak renderuje się nad nagłówkiem również w `centered` (jeśli `content.badge` niepusty).
-- Zmiana wariantu na „With Badge" zmienia **wyłącznie atrybut** `data-cta-banner-variant`, nie zmienia żadnego widocznego elementu układu.
-- Potwierdzone w adminie (klik karty „With Badge" → identyczne klasy jak Centered) **oraz** na froncie (opublikowana strona używa `with-badge` i renderuje `flex flex-col items-center gap-4 text-center`).
-- **Skutek dla użytkownika:** opis karty obiecuje „Highlights badge above CTA heading", ale wybór tej opcji nie daje żadnej wizualnej różnicy względem „Centered" z włączonym badge. To **mylący wariant** — albo brak implementacji dedykowanego układu, albo nadmiarowy wariant.
+- Dla `with-badge` `resolvedVariant` to „with-badge", ale klasy wrappera i akcji są **dokładnie takie same jak dla `centered`**. Zmiana wariantu zmienia **wyłącznie atrybut** `data-cta-banner-variant`. Badge i tak renderuje się nad nagłówkiem również w `centered`.
+- Potwierdzone w adminie (klik karty → identyczne klasy) **oraz** na froncie (opublikowana strona używa `with-badge` i renderuje klasy Centered).
+- **Skutek dla użytkownika:** opis karty obiecuje „Highlights badge above CTA heading", ale wybór tej opcji nie daje żadnej wizualnej różnicy względem „Centered" z włączonym badge. **Mylący/nadmiarowy wariant.**
 
-### 4.2 Tertiary CTA nie pojawia się po samym włączeniu + etykiecie (UX trap, działa zgodnie z kodem)
+### 4.2 Każdy CTA wymaga prawidłowej destynacji, by się wyrenderować (pułapka UX, spójna z kodem)
 
-- Włączenie przełącznika „Enabled" dla Tertiary CTA i wpisanie etykiety **nie powoduje** renderu przycisku.
-- Powód: renderer wymaga ważnego href (`hasTertiary = enabled && label && tertiaryLinkAttrs`). Domyślny `tertiaryCta.href` to pusty string `""`, więc `tertiaryLinkAttrs` jest puste i link się nie renderuje. Primary/secondary mają default `"#"`, więc renderują się od razu.
-- Dopiero po wybraniu strony w polu „Destination" (np. „HomePage" → `/homepage`) tertiary pojawia się jako link tekstowy.
-- **Skutek dla użytkownika:** sekwencja „Enabled = on + wpisz label" wygląda na kompletną, ale w podglądzie nic się nie pojawia, dopóki nie ustawi się destynacji. Brak inline-hintu „ten CTA wymaga celu". Nie jest to defekt renderera (spójny z modelem), ale realna pułapka UX.
+- Wyczyszczenie „Destination" (lub brak href) dla **dowolnego** z trzech CTA powoduje, że przycisk **nie renderuje się** w podglądzie — bo `resolveWidgetLinkAttrs("")` zwraca `null`, a `has{Primary|Secondary|Tertiary}` wymaga prawidłowego href.
+- Szczególnie myli to przy **Tertiary**: domyślnie `tertiaryCta.href === ""`, więc samo „Enabled = on" + wpisanie etykiety **nie pokazuje** przycisku, dopóki nie wybierze się strony w „Destination". Primary/Secondary mają default `"#"`, więc renderują się od razu — ale po kliknięciu „Clear destination" znikają identycznie.
+- Brak inline-hintu „ten CTA wymaga celu". Nie jest to defekt renderera (spójny z modelem), lecz realna pułapka UX.
 
 ### 4.3 Brak feedbacku po „Normalize now" / „Reset to defaults"
 
-- Po potwierdzeniu w dialogu akcja wykonuje się, ale **nie ma żadnego toast/inline** informującego, czy i co się zmieniło (przy Normalize, gdy dane były już poprawne, użytkownik nie wie, czy cokolwiek się stało). Ta sama rodzina uwagi co U7 w raporcie Contact.
+- Po potwierdzeniu w dialogu akcja wykonuje się, ale **nie ma żadnego toast/inline** informującego, czy i co się zmieniło. Przy „Normalize", gdy dane były już poprawne, użytkownik nie wie, czy cokolwiek się stało. (Dla kontrastu — „Save draft" pokazuje toast „Draft saved.")
 
 ### 4.4 Brak regresji smoke
 
-- Brak regresji renderera, ładowania edytora ani trasy publicznej. Front: HTTP OK, 0 błędów konsoli.
+- Brak regresji renderera, ładowania edytora ani trasy publicznej. Front: HTTP OK, 0 błędów/ostrzeżeń konsoli, brak overflow.
 
 ---
 
-## 5. Uwagi UX/UI i dostępności (niuanse, nie zawsze defekty)
+## 5. Czego NIE dało się w pełni zweryfikować (środowisko / fixture)
 
-1. **Pole „Destination" to page-picker (`LinkDestinationField`), nie wolny input.** Dla primary/secondary domyślne `"#"` pokazuje się jako „Saved custom destination" z notką „A custom destination is already configured. Choose a site page to replace it or clear the destination." W Visual **nie da się wpisać** dowolnego hash/relative/URL — można tylko wybrać istniejącą stronę lub wyczyścić. To celowy, bezpieczny wzorzec autoringu, ale ogranicza szybkie linki kotwiczne (`#sekcja`).
-2. **Indywidualne color-pickery to natywny `input[type=color]`** (potwierdzone: `tag=INPUT`, `type=color`). Otwierają systemowy dialog, którego nie da się obsłużyć w headless. Ścieżkę zapisu kolorów zweryfikowałem przez **paletę „Dark"** (zapisuje jawne hexy) oraz odczyt w diagnostyce Advanced. To niuans harnessu, nie defekt.
-3. **Gradient:** edytowalny realnie tylko **suwak kąta** (range). Kolory start/end to natywne `input[type=color]` (systemowy dialog). Zmiana kąta od razu emituje pełny `linear-gradient(...)`.
-4. **Sprzężenie „Background color" ↔ `style.background`.** `updateSurfaceColor` zapisuje jednocześnie `background.color` i `style.background`, a pole czyta `background.color ?? style.background`. Drobna nadmiarowość modelu (dwa pola na kolor powierzchni), bez widocznego problemu w UI.
-5. **Pozytyw dostępności:** korzeń widgetu to `<section>` z `aria-labelledby` (gdy jest title) lub fallback `aria-label="Call to action"` (gdy brak title). To **lepiej** niż Hero (zwykły `<div>` bez landmarku) i Contact (R1: brak `aria-label`). Tytuł renderuje się jako `<h3>`.
-6. **Pozytyw bezpieczeństwa:** „Open in new tab" dodaje `rel="noopener noreferrer"`; motion jest `motion-reduce`-safe.
-7. **Wizard bez akcji.** W odróżnieniu od Hero (selektor „Goal" seedujący treść), Wizard CTA Bannera jest czysto informacyjny (2 wiersze read-only + preview). Dla użytkownika oczekującego „kreatora" może być zaskakująco pusty — to świadomy wybór kontraktu.
-8. **Wszystkie listy wyboru to Radix `Select` (combobox), nie natywny `<select>`** — wymagają kliknięcia triggera i opcji; etykiety w UI bywają kapitalizowane/opisowe („Spacious", „Extra spacious") względem wartości modelu (`lg`, `xl`). Niuans harnessu.
-9. **Tertiary destination** ma inną notkę niż primary/secondary, gdy href pusty: „Choose an existing site page. Custom destinations stay read-only in Wizard and Visual modes." — spójne z bezpiecznym autoringiem.
+Wszystkie pozycje to ograniczenia harnessu/środowiska, **nie** defekty widgetu — podaję dokładną kontrolkę i powód:
+
+1. **Natywny systemowy dialog `input[type=color]`** — pola koloru oraz kolory start/end gradientu to `input[type=color]`. **Sam popup wyboru koloru OS** nie da się otworzyć/obsłużyć w trybie headless. **Ścieżkę zapisu (`onChange`) zweryfikowałem programowo** (ustawienie `value` natywnym setterem + `input`/`change` → render zaktualizowany na `#ff0000`) oraz przez palety (jawne hexy) i diagnostykę Advanced. Klikalny pozostaje cały UI poza samym natywnym próbnikiem.
+2. **Round-trip „Publish" na front** — wykonałem wyłącznie „Save draft" (świadomie, by nie publikować edycji audytowych). Trasa `/test-cta-banner-0516` to **osobna, opublikowana strona** z domyślną treścią, więc front zweryfikowałem pod kątem poprawności renderu/a11y/overflow, a nie round-tripu moich edycji.
+3. **Wariant `split` na froncie** — opublikowana strona używa `with-badge`; `split` testowany tylko w adminie (na froncie nieweryfikowalny bez publikacji).
+4. **Reset to defaults pozostawiony niezapisany** — potwierdziłem powrót do defaultów in-memory; nie zapisywałem go, by zachować sensowny draft. Guard `beforeunload` przy niezapisanych zmianach był weryfikowany w poprzedniej sesji i nie był ponownie wymuszany w tej.
+5. **Współdzielone panele blokowe** (Block layout / Visibility summary) — poza zakresem edytora widgetu, nie testowane jako kontrolki CTA.
 
 ---
 
-## 6. Czego NIE testowałem (świadome luki tej sesji)
+## 6. Uwagi UX/UI i dostępności (niuanse, nie zawsze defekty)
 
-- **Załączenie realnego assetu z Media Library** dla tła obrazu (dialog `MediaPicker`) — testowałem tylko zmianę typu media na „Image" i odsłonięcie pól, nie przypięcie pliku ani `fit`/`position` na realnym obrazie.
-- **Indywidualne color-pickery** (natywny systemowy dialog) — kolory weryfikowałem przez paletę „Dark" + diagnostykę, nie przez ręczne otwarcie pickerów. Dotyczy też **kolorów start/end gradientu**.
-- **Przyciski „Clear"** przy poszczególnych polach kolorów oraz **„Clear destination"** dla primary/secondary — nie klikałem każdego z osobna (model clearable potwierdzony pośrednio przez paletę + Reset).
-- **Wariant `split` na froncie** — opublikowana strona używa `with-badge`; `split` testowany tylko w adminie.
-- **Reprezentatywnie nieklikane kontrolki:** Secondary button size, Banner radius, ikony Chevron/External-link, „Open in new tab" dla secondary/tertiary, ikony tertiary, paleta „Light"/„Brand", motion „Slide up", `fit`/`position` obrazu tła.
-- **Publikacja (Publish)** — wykonałem wyłącznie „Save draft", więc moje edycje nie trafiły na front. **Trasa `/test-cta-banner-0516` to inna, opublikowana strona** (jeden CTA Banner o domyślnej treści), więc front zweryfikowałem pod kątem poprawności renderu, a nie round-tripu moich edycji.
-- **Współdzielone panele blokowe** w Advanced („Block layout summary", „Visibility summary") — poza zakresem edytora widgetu. Odnotowuję jedynie, że fixture ma w „Visibility summary" wpis „Hidden on all devices" (ustawienie blokowe, nie widgetowe) — to nie wpływa na osobną trasę publiczną.
+1. **Kolizja nazw w testach:** w nagłówku admina istnieje przycisk **„Dark"** (przełącznik motywu), o tej samej nazwie co paleta „Dark". To niuans automatyzacji (trzeba targetować paletę po kontenerze/ref), ale też potencjalna drobna niejednoznaczność a11y nazw — dwie różne akcje „Dark" na jednym ekranie.
+2. **„Destination" to page-picker (`LinkDestinationField`), nie wolny input.** Primary/secondary z defaultem `"#"` pokazują „Saved custom destination" z notką „A custom destination is already configured…". W Visual **nie da się wpisać** dowolnego hash/relative/URL — można tylko wybrać istniejącą stronę lub wyczyścić. Tertiary z pustym href ma inną notkę („Choose an existing site page. Custom destinations stay read-only…"). Celowy, bezpieczny wzorzec autoringu, który jednak ogranicza szybkie linki kotwiczne (`#sekcja`).
+3. **Indywidualne color-pickery i kolory gradientu** to natywny `input[type=color]` (systemowy dialog) — patrz 5.1.
+4. **Pole „Primary button border" nie jest „clearable" do pustego** — jego Clear przywraca `transparent` (default pola), więc status zostaje „Transparent". Inne pola kolorów po Clear wracają do tokenu motywu („Theme default"). Drobna niespójność oczekiwań, spójna z kodem (`resolveString` vs `resolveClearableStyleValue`).
+5. **Sprzężenie „Background color" ↔ `style.background`.** `updateSurfaceColor` zapisuje jednocześnie `background.color` i `style.background`; Clear background color kasuje oba. Drobna nadmiarowość modelu (dwa pola na kolor powierzchni), bez widocznego problemu w UI.
+6. **Pozytyw dostępności:** korzeń widgetu to `<section>` z `aria-labelledby` (gdy jest title) lub fallback `aria-label="Call to action"` (gdy brak title). Tytuł renderuje się jako `<h3>`.
+7. **Pozytyw bezpieczeństwa:** „Open in new tab" dodaje `rel="noopener noreferrer"` dla wszystkich trzech CTA; motion jest `motion-reduce`-safe.
+8. **Wszystkie listy wyboru to Radix `Select` (combobox), nie natywny `<select>`** — etykiety w UI bywają opisowe/kapitalizowane („Spacious", „Extra spacious", „Match banner radius") względem wartości modelu (`lg`, `xl`, `inherit`). Niuans harnessu.
+9. **Wizard bez akcji** — czysto informacyjny (2 wiersze read-only + preview). Dla użytkownika oczekującego „kreatora" może być zaskakująco pusty — świadomy wybór kontraktu.
 
 ---
 
@@ -212,14 +262,15 @@ _Zrzuty (lokalne): `cta-banner-public-desktop-28-05.png`, `cta-banner-public-mob
 |---|---|---|---|
 | Renderowanie `centered` | ✅ `flex flex-col items-center gap-4 text-center` | n/d (strona używa with-badge) | — |
 | Renderowanie `with-badge` | ✅ identyczne z centered | ✅ identyczne z centered | ✅ zgodne (oba „puste") |
-| Renderowanie `split` | ✅ `md:flex-row …` | n/d (nietestowane na froncie) | — |
+| Renderowanie `split` | ✅ `md:flex-row …` | n/d (nieopublikowany na froncie) | — |
 | Badge / title / description | ✅ render warunkowy | ✅ badge + `<h3>` | ✅ OK |
-| Przyciski CTA jako `<a>` | ✅ | ✅ primary/secondary jako `<a>` | ✅ OK |
+| Przyciski CTA jako `<a>` | ✅ (3 CTA) | ✅ primary/secondary | ✅ OK |
+| Tło: obraz z Media Library | ✅ `url(.../media/…png)` + fit/position | n/d (default = brak mediów) | ✅ (admin) |
 | `aria-labelledby` na `section` | ✅ `…-cta-title` | ✅ `…-cta-title` | ✅ OK |
-| `target=_blank` + `rel` | ✅ (po włączeniu) | brak (default off) | ✅ zgodne z konfiguracją |
+| `target=_blank` + `rel` | ✅ (po włączeniu, 3/3 CTA) | brak (default off) | ✅ zgodne z konfiguracją |
 | Overflow 1280 / 375 | n/t (canvas) | ✅ brak overflow | ✅ OK |
 
-**Wniosek:** renderer zachowuje się spójnie między adminem a frontem. Wszystkie zaobserwowane różnice treści wynikają z tego, że front to osobna opublikowana strona z domyślną zawartością, a nie edytowany fixture.
+**Wniosek:** renderer zachowuje się spójnie między adminem a frontem. Różnice treści wynikają z tego, że front to osobna opublikowana strona z domyślną zawartością, a nie edytowany fixture.
 
 ---
 
@@ -227,25 +278,22 @@ _Zrzuty (lokalne): `cta-banner-public-desktop-28-05.png`, `cta-banner-public-mob
 
 | Tryb | Charakter | Wynik audytu |
 |---|---|---|
-| **Wizard** | 1 sekcja read-only („Banner layout" + „Headline") + Live preview | ✅ Działa zgodnie z kontraktem (0 kontrolek writable, 2 readonly; bez akcji seedującej) |
-| **Visual** | 5 sekcji edytowalnych | ✅ Wszystkie testowane kontrolki działają, aktualizują podgląd i są trwałe po zapisie. **Jeden mylący wariant (With Badge ≈ Centered)** i **jedna pułapka UX (tertiary wymaga destination)** |
-| **Advanced** | 3 sekcje diagnostyczne read-only + 2 akcje serwisowe | ✅ Diagnostyka wiernie odzwierciedla stan; Normalize i Reset realnie działają (z dialogami); brak feedbacku po akcji |
-| **Front** | `/test-cta-banner-0516` (osobna, opublikowana strona, 1 CTA Banner) | ✅ Ładuje się, 0 błędów konsoli, poprawny render i a11y (`aria-labelledby`), brak overflow (1280/375) |
+| **Wizard** | 1 sekcja read-only + Live preview | ✅ Działa zgodnie z kontraktem (0 writable, 2 readonly; bez akcji seedującej) |
+| **Visual** | 5 sekcji edytowalnych | ✅ **Wszystkie rodziny opcji przeklikane i zweryfikowane** (3 warianty, 5 paddingów, 3 CTA × ikony/new-tab/clear, 3 palety, 10 clear-ów kolorów, transparent, border/radius/button-radius/size, gradient, **media picker + fit/position + clear image**, 3 motion). **Jeden mylący wariant (With Badge ≈ Centered)** i **jedna pułapka UX (każdy CTA wymaga href)** |
+| **Advanced** | 3 sekcje diagnostyczne + 2 akcje | ✅ Diagnostyka wierna; Normalize i Reset realnie działają (z dialogami); brak feedbacku po akcji |
+| **Front** | `/test-cta-banner-0516` (osobna, opublikowana strona) | ✅ Ładuje się, 0 błędów konsoli, poprawny render i a11y, brak overflow (1280/375) |
 
-**Werdykt końcowy:** W przetestowanym zakresie widget `cta-banner` jest w przeważającej części
-sprawny i spójny między edytorem a rendererem. Visual poprawnie obsługuje warianty (Centered/Split),
-padding, treść, trzy CTA (label / nowa karta z `rel` / ikona / widoczność / destination), paletę i jawne
-kolory, ramkę, promień, rozmiary i promień przycisków, motion (reduced-motion-safe) oraz tło
-(kolor / gradient / typ media z warunkowym odsłanianiem). **Cały sprawdzony stan jest trwały po
-Save draft → reload — nie wykryto defektu trwałości.** Wizard i Advanced realizują zadeklarowany
-kontrakt (read-only summary / diagnostyka + akcje serwisowe), a guard `beforeunload` chroni
-niezapisane zmiany.
+**Werdykt końcowy:** Widget `cta-banner` jest w przeważającej części sprawny i spójny między edytorem a
+rendererem. Po tej sesji **domknięto wszystkie luki poprzedniego raportu**: media picker przypina realny
+asset z Media Library (render `url(...)` + `cover/contain` + `center/top/bottom`), wszystkie 10 przycisków
+Clear kolorów oraz wszystkie 3 „Clear destination" działają, a wszystkie rodziny selectów i ikon zostały
+przeklikane. **Cały sprawdzony stan jest trwały po Save draft → reload — nie wykryto defektu trwałości.**
 
-**Najważniejsze ustalenia negatywne (oba realne, oba potwierdzone):**
+**Najważniejsze ustalenia negatywne (oba realne, oba potwierdzone admin + render):**
 1. **Wariant „With Badge" nie ma własnego układu** — renderuje się identycznie jak „Centered" (admin i front). Mylący/nadmiarowy wariant.
-2. **Tertiary CTA wymaga ustawienia destination, by się pojawić** — samo „Enabled" + label nie wystarcza; brak inline-hintu. Pułapka UX (spójna z kodem).
+2. **Każdy CTA wymaga prawidłowej destynacji, by się wyrenderować** — wyczyszczenie href usuwa przycisk (najbardziej myli przy Tertiary, którego default href jest pusty). Brak inline-hintu. Pułapka UX (spójna z kodem).
 
-**Niuanse:** brak feedbacku po Normalize/Reset; „Destination" to page-picker bez wolnego inputu (brak szybkich linków kotwiczących); natywne color-pickery i kolory gradientu nieobsługiwalne w headless (weryfikacja przez paletę). Obszary niezweryfikowane wymieniono jawnie w sekcji 6.
+**Niuanse:** brak feedbacku po Normalize/Reset; „Destination" to page-picker bez wolnego inputu; „Primary button border" Clear wraca do `transparent`, nie do tokenu; natywny próbnik koloru OS nieobsługiwalny w headless (ścieżka `onChange` zweryfikowana programowo). Obszary niezweryfikowane wymieniono jawnie w sekcji 5.
 
 ---
 
@@ -253,7 +301,7 @@ niezapisane zmiany.
 
 | Plik (lokalna etykieta) | Opis |
 |---|---|
-| `cta-banner-public-desktop-28-05.png` | Front `/test-cta-banner-0516`, 1280px (CTA Banner with-badge, brak overflow) |
-| `cta-banner-public-mobile-375-28-05.png` | Front `/test-cta-banner-0516`, 375px (brak overflow) |
+| `cta-banner-public-desktop-29-05.png` | Front `/test-cta-banner-0516`, 1280px (CTA Banner with-badge, brak overflow) |
+| `cta-banner-public-mobile-375-29-05.png` | Front `/test-cta-banner-0516`, 375px (brak overflow) |
 
-> Pliki PNG są wyłącznie lokalnymi etykietami i są ignorowane przez Git.
+> Pliki PNG są wyłącznie lokalnymi etykietami i są ignorowane przez Git (reguła `*.png`).
