@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 10 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 27 tasks
+- **In Progress:** 5 tasks
 - **Done:** 1971 tasks
 
 ---
@@ -38,6 +38,23 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-343-17 | Rich Text Section Audit Remediation Family | Medium | Large | Fix Wizard text-preview drift, TOC ownership, and sanitizer-diagnostic truthfulness from the 28-05-2026 live audit. |
+| TASK-343-16 | Product Gallery Audit Remediation Family | High | Large | Fix preview hydration/stale-source truthfulness and clarify missing route ownership in the 28-05-2026 live audit. |
+| TASK-343-15 | Navigation Audit Remediation Family | High | Large | Close runtime-summary, clear/reset, and silent-link-drop truthfulness drift from the 28-05-2026 live audit. |
+| TASK-343-14 | Form Embed Audit Remediation Family | High | Large | Close inert spacing, false color-override state, and public empty-state truthfulness drift from the 28-05-2026 live audit. |
+| TASK-343-13 | Timeline Audit Remediation Family | Medium | Medium | Unify duplicate mode controls so the select and cards no longer save divergent Timeline state. |
+| TASK-343-12 | Template Section Audit Remediation Family | High | Large | Fix placeholder-only preview and false-zero diagnostics in the Template Section editor. |
+| TASK-343-11 | Team Audit Remediation Family | High | Large | Fix social-platform handle corruption and silent Spotlight truncation from the 28-05-2026 live audit. |
+| TASK-343-10 | Toggle Block Audit Remediation Family | High | Medium | Restore active-trigger contrast and make accent contrast color effective again. |
+| TASK-343-09 | Stack Audit Remediation Family | High | Large | Replace dynamic responsive Tailwind classes with deterministic output so Stack renders consistently across breakpoints. |
+| TASK-343-08 | Compare Timeline Audit Remediation Family | High | Medium | Fix dead `Segment label size` renderer output. |
+| TASK-343-07 | Feature Grid Audit Remediation Family | High | Large | Fix blocked emoji hit targets and destructive silent card-count reduction. |
+| TASK-343-06 | Booking Calendar Audit Remediation Family | Medium | Medium | Close partial surface-clear drift and misleading Advanced booking-flow matching. |
+| TASK-343-05 | FAQ Accordion Audit Remediation Family | High | Medium | Add the missing spacing control and close admin-preview truthfulness drift. |
+| TASK-343-04 | Accordion Audit Remediation Family | High | Large | Fix misleading Wizard count ownership and admin-preview single-open drift. |
+| TASK-343-03 | Newsletter Audit Remediation Family | High | Large | Stop disconnected public Newsletter forms from native Enter-submit leakage. |
+| TASK-343-02 | Appointment Form Audit Remediation Family | High | Medium | Fix dead `No extra validation` phone-validation preset. |
+| TASK-343-01 | Hero Audit Remediation Family | High | Large | Fix Hero CTA persistence and background/overlay renderer defects rediscovered in the 28-05-2026 audit. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -54,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | In progress: all 38 deep-audit reports are classified; 17 first-wave report families are physically promoted, while lower-severity or shared-owner candidates remain documented for later extraction. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
