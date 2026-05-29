@@ -1,361 +1,314 @@
-# RAPORT: Compare Timeline Widget — audyt bieżącego stanu (28-05-2026)
+# RAPORT: Compare Timeline Widget — audyt wyczerpujący (28-05-2026)
 
-> **Status:** Zakończony — pełny audyt trybów Wizard / Visual / Advanced + frontend
+> **Status:** Zakończony — wyczerpujący audyt wszystkich dyskretnych kontrolek fixtury (Wizard / Visual / Advanced + frontend)
 > **Data testu:** 2026-05-29
-> **Sesja przeglądarki:** `claude-29-05-compare-timeline` (izolowana, oddzielna od innych agentów)
+> **Sesja przeglądarki:** `claude-29-05-compare-timeline-exhaustive-v2` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Strona admin:** Contract Test - compare-timeline (`9ad7e86e-e732-4d17-9ea9-07c5bfb32cca`)
 > **Trasa publiczna:** `/test-compare-timeline-0516`
-> **Referencja formatu:** `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`
-> **Poprzedni raport:** `_docs/PLAYWRIGHT/27-05-2026/REPORT_COMPARE_TIMELINE_WIDGET.md` (wówczas clean smoke `passed`, tylko visual/advanced)
+> **Pliki źródłowe:**
+> - `core/widgets/core/compareTimeline.tsx` — renderer, model danych, normalizacja, schema, SSR
+> - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` — edytory Wizard / Visual / Advanced
+> - `core/admin/ui/widgets/editors/SharedColorControl.tsx`, `ClearableFields.tsx`, `LinkDestinationField.tsx` — kontrolki współdzielone
 
 ---
 
-## 0. Metoda i zakres testu
+## 0. Metoda i zakres
 
-Audyt wykonano na **uruchomionej lokalnie aplikacji** przy użyciu `playwright-cli`
-(izolowana sesja). Weryfikacja opierała się na rzeczywistych interakcjach z UI
-edytora (klikanie kart wariantów, przełączanie selectów, wpisywanie tekstu,
-przełączniki) oraz na inspekcji DOM/`eval` na żywym podglądzie admin i na trasie
-publicznej. Każdą zmianę kontrolki sprawdzano przez atrybuty `data-compare-*`,
-klasy CSS i `computed style` w podglądzie.
+Audyt wykonano na **uruchomionej lokalnie aplikacji** przez `playwright-cli` (sesja
+izolowana). W przeciwieństwie do poprzedniej wersji raportu **nie stosowano skrótów
+reprezentatywnych** — przeklikano **każdą dyskretną opcję każdej kontrolki** dostępnej
+w tej fixturze i po każdej zmianie weryfikowano efekt na żywym podglądzie admin przez
+asercje DOM / `computed style` / atrybuty `data-compare-*` oraz klasy Tailwind. Selekty
+Radix obsługiwano realnym klikaniem triggera i opcji; swatch-e kolorów sterowano przez
+natywny setter `input[type=color]` + zdarzenie `input` (czyli realnym `onChange` Reacta).
 
-**Co faktycznie przetestowano:** logowanie, otwarcie fixtury, tryb Wizard (cały),
-tryb Visual (reprezentatywny, ale szeroki przekrój wszystkich 7 sekcji), tryb
-Advanced (diagnostyka read-only + normalizacja), oraz statyczny render SSR trasy
-publicznej z kontrolą a11y, segmentów, markerów, konsoli i responsywności (375px).
+**Zasięg wykonanych interakcji (liczby rzeczywiste z tej sesji):**
+- 17 selektów przeklikanych przez **wszystkie** wartości (łącznie ~70 wyborów opcji),
+- 2 karty wariantu (w obie strony), 7 pól koloru (każde: zmiana + `Clear`),
+- przełącznik `guides.enabled` (OFF/ON), siatki markerów obu ścieżek,
+- `Add step` / `Remove step` / `Add segment` / `Remove segment` (do zera),
+- selekty zakresu segmentu `From`/`To` (w tym przypadek `from > to`),
+- **end-to-end linkowanie** `Step destination` i `Segment destination` (wybór realnej
+  opublikowanej strony + `Clear destination`),
+- pełny przegląd Advanced (diagnostyka + „Show internal support references" + dialog
+  „Normalize compare payload" z potwierdzeniem),
+- frontend SSR + a11y + responsywność 375px + konsola.
 
-**Czego NIE testowano (świadomie):**
-- **Nie zapisywano** zmian (`Save draft` / `Publish`) — aby nie zmutować
-  współdzielonej fixtury dla innych agentów. Wszystkie eksperymenty w admin były
-  w pamięci edytora.
-- **Pól linkowania** `Step destination` i `Segment destination` (komponent
-  `LinkDestinationField`) — wymagają wskazania istniejącej strony docelowej;
-  nie wybierałem celu, więc linkowania kroków/segmentów nie zweryfikowano end-to-end.
-- Przycisków **`Remove step`** i **`Remove segment`** (testowano tylko dodawanie:
-  `Add step`, `Add segment`).
-- **Każdego** pola koloru z osobna — `Marker color` przetestowano w pełni (zmiana +
-  `Clear`); pozostałe pola koloru (highlight, track label, step label, muted, guide,
-  track background) są strukturalnie identyczne i nie były klikane pojedynczo.
-- **Wszystkich** opcji typografii — przetestowano `Track label size`; pozostałe
-  (step/segment label size, 3× font weight) używają tego samego wzorca selecta.
-- Stylów `Soft badge` (highlight) oraz kształtów `Circle`/`Check mark` (testowano
-  `Filled`/`Outlined` oraz `Rounded`/`Numbered`).
-- Dynamicznego przeliczania **contrast advisory** (zaobserwowano tylko stan
-  „unknown" przy domyślnym przezroczystym tle ścieżki).
+**Czego świadomie NIE robiono:** nie klikano `Save draft` / `Publish` — aby nie zmutować
+współdzielonej fixtury. Wszystkie zmiany w admin były wyłącznie w pamięci edytora.
 
-**Screenshoty:** nie przechwytywano plików PNG; weryfikacja odbyła się przez
-asercje DOM/`eval`. Ewentualne nazwy zrzutów Playwright byłyby wyłącznie lokalnymi
-etykietami, ignorowanymi przez Git i nie stanowiłyby wymaganego evidence w repo.
-
-**Pliki źródłowe:**
-- `core/widgets/core/compareTimeline.tsx` — renderer, model danych, normalizacja, schema, SSR
-- `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` — edytory Wizard / Visual / Advanced
+**Screenshoty:** nie przechwytywano plików PNG — weryfikacja odbyła się przez asercje
+DOM/`eval`. Ewentualne nazwy zrzutów Playwright byłyby wyłącznie lokalnymi etykietami
+(ignorowanymi przez Git) i nie stanowiłyby evidence w repo.
 
 ---
 
-## 1. Przegląd widgetu
+## 1. Inwentarz kontrolek (zweryfikowany w DOM)
 
-**Typ:** `compare-timeline` (kategoria: content)
-**Warianty:** `dual-track` (Dual Track), `dual-track-highlight` (Dual Track Highlight)
-**Tryby edytora:** Wizard (read-only setup), Visual (codzienna edycja), Advanced (diagnostyka read-only)
+W wariancie `dual-track-highlight` w edytorze obecne są **36 ścieżek kontrolek**
+(`data-widget-control-path`), policzonych programowo. W `dual-track` 6 z nich (highlight)
+jest warunkowo ukrytych — patrz §6.
 
-Widget renderuje dwutorowe (dwie ścieżki: „a" i „b") porównanie procesu na wspólnej
-osi kroków (3–10 kroków). Każda ścieżka ma etykietę i zestaw aktywnych markerów na
-osi. Wariant `dual-track-highlight` dodatkowo eksponuje **segmenty** (zakresy kroków)
-oraz mechanizm **highlight targets** (która ścieżka / obie są podświetlone). Renderer
-jest w pełni server-side (SSR), z bogatym zestawem `data-compare-*` atrybutów, klas
-Tailwind oraz inline-style dla kolorów/typografii.
+| Sekcja Visual | Kontrolki |
+|---------------|-----------|
+| Variant | 2 karty (`dual-track`, `dual-track-highlight`) |
+| Section heading | `header.title` (input), `header.subtitle` (textarea) |
+| Axis steps & track labels | `axis.steps.count` (select 3–10), `Remove step`, `Add step`, per-krok: `label`/`icon`/`description`/`Step destination`, 2× `tracks.*.label` |
+| Markers & segments | `highlight.targetTrackId` (a/b/both)*, 2× siatka markerów, 2× edytor segmentów* (From/To/label/Add/Remove/Segment destination) |
+| Highlight & guides | `guides.enabled` (switch), `guides.style` (solid/dashed), `style.highlightLabelStyle`* (3) |
+| Colors & typography | 7 pól koloru (1 highlight-only), 3 rozmiary etykiet (1*), 3 wagi czcionki (1*), `markerShape` (4), advisory kontrastu |
+| Spacing & layout | `trackSpacing` (5), `labelPosition` (2), `maxWidth` (5), `padding` (3), `trackOrder` (2), `motion` (3) |
 
-**Model danych (skrót):**
-
-| Sekcja | Pola |
-|--------|------|
-| `header` | `title`, `subtitle` |
-| `axis.steps[]` | `id`, `label`, `description`, `icon`, `href` (3–10 kroków) |
-| `tracks[]` (dokładnie 2) | `id`, `label`, `markers[]`, `segments[]` |
-| `guides` | `enabled`, `style` (solid/dashed) |
-| `layout` | `trackSpacing`, `labelPosition`, `maxWidth`, `padding`, `trackOrder`, `motion` |
-| `highlight` | `targetTrackId`, `targetTrackIds[]` |
-| `style` | kolory (7), rozmiary etykiet (3), font weights (3), `highlightLabelStyle`, `markerShape` |
+`*` = widoczne tylko w `dual-track-highlight`.
 
 ---
 
-## 2. Struktura trybów edytora — istotny niuans IA
+## 2. PRZETESTOWANO — pełna macierz (co kliknięto)
 
-Analogicznie do innych dojrzałych widgetów (np. product-table), lista zakładek
-trybu eksponuje **tylko dwie** zakładki: **Visual** (domyślnie zaznaczona) oraz
-**Advanced**. **Tryb Wizard NIE jest równorzędną zakładką** — jest jednorazowym
-przepływem konfiguracji uruchamianym przyciskiem **„Run setup again"**. Panel boczny
-nad zakładkami pokazuje status **„Setup complete"** z opisem:
-_„Daily edits live in Visual. Advanced is for technical diagnostics."_
+### 2.1 Tryb Wizard — read-only (zgodne z kontraktem)
+- Wejście przyciskiem **„Run setup again"** → panel **„Quick setup"**.
+- Wiersze read-only: **„Highlight mode: Disabled"**, **„Axis step count: 3 steps"**, nota
+  „Visual owns axis wording…" + **„Live preview"** renderowany wspólnym rendererem.
+- Wyjście **„Finish setup and open Visual"** → wraca do zakładki **Visual** (potwierdzone
+  `aria-selected=true`). Brak jakichkolwiek pól zapisujących (kontrakt `writablePaths: []`).
 
-Aby przetestować Wizard, kliknąłem „Run setup again". Wyjście z Wizarda następuje
-przyciskiem **„Finish setup and open Visual"**, który poprawnie przełącza z powrotem
-na zakładkę Visual (zweryfikowane). To świadoma decyzja IA (Wizard = onboarding/setup),
-nie defekt.
+### 2.2 Tryb Visual — przeklikane wszystkie opcje
+- **Variant:** `dual-track → dual-track-highlight → dual-track → dual-track-highlight`
+  (oba kierunki).
+- **Section heading:** `title` → `h2#compare-timeline-heading` + `section[aria-labelledby]`;
+  `subtitle` → `<p>` pod tytułem.
+- **Axis step count:** wszystkie wartości **3,4,5,6,7,8,9,10** (oś i obie ścieżki skalują
+  liczbę komórek 1:1).
+- **Add step / Remove step:** 4→3→4→5 (działają), `Remove` `[disabled]` przy 3,
+  `Add` `[disabled]` przy 10.
+- **Per-krok:** `label` („Plan"→„Planowanie"), `icon` („ROCKET"), `description`
+  („Opis kroku Build" na kroku 2).
+- **Track labels:** „Traditional"→„Tradycyjny", „With us"→„Z nami".
+- **Markery:** toggling pojedynczych komórek obu ścieżek (active↔inactive w `aria-label`);
+  wyczyszczenie wszystkich markerów ścieżki → ostrzeżenie amber.
+- **Highlight targets:** `Tradycyjny` (a), `Z nami` (b), `Both tracks` (a,b) — wszystkie 3.
+- **Segmenty:** edycja `label`, selekty `From`/`To` (w tym `from>to`), `Add segment`,
+  `Remove segment` aż do zera, `Segment destination`.
+- **Guides:** `enabled` OFF/ON; `style` Solid/Dashed.
+- **Highlight label style:** Filled / Outlined / **Soft** (wszystkie 3).
+- **Kolory (7):** każde pole — ustawienie wartości przez swatch + `Clear`.
+- **Advisory kontrastu:** stany unknown / ok / warning (wymuszone realnymi kolorami).
+- **Rozmiary etykiet:** trackLabelSize (4), stepLabelSize (4), segmentLabelSize (4).
+- **Wagi czcionki:** trackLabel (4), stepLabel (4), segmentLabel (4).
+- **Marker shape:** Rounded / Circle / Numbered / Check.
+- **Layout:** trackSpacing (5), labelPosition (2), maxWidth (5), padding (3), trackOrder (2),
+  motion (3).
+
+### 2.3 Tryb Advanced — diagnostyka read-only
+- 4 panele „Runtime layout diagnostics" + „Metadata diagnostics" odzwierciedlają niezapisane
+  zmiany z Visual; `details` „Show internal support references"; dialog „Normalize compare
+  payload" + potwierdzenie.
+
+### 2.4 Frontend (SSR + przeglądarka)
+- SSR HTTP 200, surowy HTML, a11y, responsywność 375px, konsola.
 
 ---
 
-## 3. Tryb Wizard — wynik: DZIAŁA (świadomie read-only)
+## 3. CO DZIAŁA — z dowodami (DOM / computed style)
 
-Wizard zawiera **wyłącznie podsumowanie read-only** (zgodnie z kontraktem edytora:
-sekcja `compare-timeline.wizard.starter-comparison` ma `writablePaths: []`):
+### 3.1 Layout (atrybuty `data-compare-*` + klasy) — 100%
+| Kontrolka | Wynik (wszystkie opcje) | Status |
+|-----------|-------------------------|--------|
+| `motion` | none→brak klasy, fade→`motion-safe:animate-in fade-in-0`, slide→`…slide-in-from-bottom-2` | ✅ |
+| `trackSpacing` | none/sm/md/lg/xl → `space-y-0/3/4/6/8` na wrapperze ścieżek | ✅ |
+| `maxWidth` | none/4xl/5xl/6xl/7xl → `max-w-none/4xl/5xl/6xl/7xl` + `data-compare-max-width` | ✅ |
+| `padding` | sm/md/lg → `px-4 py-6` / `px-4 py-8` / `px-6 py-10` | ✅ |
+| `labelPosition` | top → oś przed ścieżkami `[AXIS,TRACKS]`; bottom → `[TRACKS,AXIS]` | ✅ |
+| `trackOrder` | a-first → DOM `[a,b]`; b-first → `[b,a]`; etykiety opcji dynamiczne | ✅ |
 
-- Sekcja **„Quick setup"** z opisem _„Set comparison baseline without deep styling controls."_
-- Wiersz read-only **„Highlight mode"** → `Disabled` (bo fixtura startuje w `dual-track`)
-- Wiersz read-only **„Axis step count"** → `3 steps`
-- Notka: _„Visual owns axis wording, track labels, marker mapping, and highlight
-  segment editing after setup."_
-- Przycisk **„Finish setup and open Visual"**
-- Żywy panel **„Live preview"** renderujący widget przez współdzielony renderer
+### 3.2 Typografia i kształty — działa (poza jednym wyjątkiem, §5)
+| Kontrolka | Dowód | Status |
+|-----------|-------|--------|
+| `trackLabelSize` | Hidden→16px (dziedziczone), Small→`text-xs`, Default→`text-sm`, Large→`text-base` | ✅ |
+| `stepLabelSize` | Hidden→brak klasy, Tiny→`text-xs`, Small→`text-sm`, Default→`text-base` | ✅ |
+| `trackLabelFontWeight` | computed 400/500/600/700 | ✅ |
+| `stepLabelFontWeight` | computed 400/500/600/700 | ✅ |
+| `segmentLabelFontWeight` | computed 400/500/600/700 (waga segmentu działa) | ✅ |
+| `markerShape` | rounded(•,`rounded-md`,`min-w-6`), circle(•,`rounded-full`,komórka `rounded-[1.5rem]`), numbered(„1/2/3…"), check(✓ aktywny / ○ nieaktywny) | ✅ |
 
-| Test | Akcja | Wynik | Status |
-|------|-------|-------|--------|
-| Wejście do Wizarda | „Run setup again" | Wizard otwiera się, pokazuje summary + live preview | ✅ działa |
-| Brak edytowalnych pól | inspekcja sekcji | potwierdzone — same wiersze summary, brak inputów/selectów | ✅ zgodne z kontraktem |
-| Wyjście | „Finish setup and open Visual" | przełączenie na zakładkę Visual | ✅ działa |
+### 3.3 Markery / segmenty / highlight — działa
+- Toggling markera zmienia `aria-label` komórki (active↔inactive) i tło.
+- **Ostrzeżenie pustej ścieżki:** wyczyszczenie wszystkich markerów ścieżki → amber
+  „This track currently has no active markers, so the runtime row will look empty." (i znika
+  po przywróceniu).
+- **Highlight targets:** `a`→`data-compare-target-tracks="a"` (segmenty tylko na a);
+  `b`→`"b"`; `both`→`"a,b"` (segmenty na obu).
+- **Segmenty:** edycja `label` zmienia tekst badge; `From`/`To` zmieniają `data-compare-segment`;
+  `Add` dodaje (fallback range 0-1), `Remove` usuwa, do zera → „No highlight segments configured."
+- **Normalizacja zakresu:** ustawienie `From=Deliver` przy `To=Build` (from>to) → amber
+  „The saved range will normalize from the earlier step to the later step." a podgląd
+  natychmiast pokazuje znormalizowany zakres `1-2` (min→max).
 
-**Wniosek:** Wizard działa zgodnie z intencją — jest celowo „cienki" i deklaruje
-wprost, że całe modelowanie porównania mieszka w Visual. Nie ma tu nic do
-„zepsucia", bo nie ma kontrolek zapisujących.
+### 3.4 Guides i highlight label style — działa
+- `guides.enabled` OFF → `border-style:none`, kolor `transparent`; ON → `dashed`, `#e2e8f0`.
+- `guides.style` Solid/Dashed → `border-top-style`.
+- `highlightLabelStyle` (inline-style badge segmentu):
+  - **Filled** → bg `#f59e0b`, border `#f59e0b`, color `var(--color-bg)`, opacity 1
+  - **Outlined** → bg `transparent`, border + color `#f59e0b`
+  - **Soft** → bg/border `#f59e0b`, color `var(--color-bg)`, **opacity 0.82**
+
+### 3.5 Kolory (7) — ustawienie + `Clear` działa dla każdego
+| Pole | Set → efekt | Clear → powrót |
+|------|-------------|----------------|
+| `markerColor` | aktywny marker `#ff0000` | `var(--color-primary)` (rgb 226,177,39), btn `[disabled]` |
+| `trackLabelColor` | etykieta ścieżki `#ff0000` | `var(--color-text)` |
+| `stepLabelColor` | etykieta kroku (oś + nieaktywna komórka) `#00ff00` | `var(--color-text)` |
+| `mutedStepColor` | opis nieaktywnego kroku `#ff00ff` | `var(--color-text)` |
+| `guideColor` | obramowanie ścieżki `#0000ff` | `var(--color-border)` |
+| `trackBackgroundColor` | tło ścieżki `#ffeedd` | `transparent` |
+| `highlightColor` | badge + obramowanie komórki segmentu `#123456` | `#f59e0b` |
+
+Każde pole po `Clear` przechodzi w status **„Theme default"** i dezaktywuje przycisk `Clear`.
+
+### 3.6 Advisory kontrastu — wszystkie 3 stany
+- **unknown:** tło ścieżki przezroczyste/theme-default → „Contrast depends on inherited theme
+  or transparent colors." (muted).
+- **ok:** realne tło + czytelne kolory → notka **znika** całkowicie (renderer zwraca `null`).
+- **warning:** np. tło `#000000`, marker `#0a0a0a`, etykiety `#0d0d0d` → obie notki
+  „Configured colors may be hard to read together." w kolorze amber (`text-amber-700`).
+
+### 3.7 Linkowanie kroków/segmentów — DZIAŁA end-to-end (nowość vs poprzedni raport)
+- **`Step destination`:** lista ładuje **50 opublikowanych stron**; wybór „HomePage" →
+  `href="/homepage"`; komórka osi staje się `<a aria-label="Open step Planowanie">`, a komórka
+  ścieżki `<a aria-label="Open Planowanie for Tradycyjny">`; pojawia się „Clear destination"
+  + nota „Links to selected site page: HomePage." `Clear destination` resetuje do
+  „No step destination".
+- **`Segment destination`:** analogicznie — wybór „HomePage" → badge segmentu staje się
+  `<a href="/homepage" aria-label="Open Tradycyjny segment Steps 1-2">`.
+
+### 3.8 Advanced — wierna diagnostyka read-only
+Po edycjach w Visual panele pokazały dokładnie: **Guide lines: Enabled · Dashed**,
+**Highlight target: Both tracks**, **Layout: Spacing The most generous track spacing. ·
+Labels Above axis · Width Extra-wide width**, **Motion and order: Slide in · Tradycyjny first**,
+**Track references: Tradycyjny, Z nami**, **Axis step count: 3 steps · supported range 3-10**.
+„Show internal support references" → „Tracks: Tradycyjny: a, Z nami: b" oraz „Steps:
+Planowanie: step-1, Build: step-2, Deliver: step-3". Dialog **„Normalize compare timeline"**
+(Cancel/Normalize) → potwierdzenie zamyka dialog, diagnostyka spójna, **0 błędów konsoli**
+(bezpieczny no-op, bo dane były już znormalizowane).
+
+### 3.9 Frontend (trasa publiczna) — działa (SSR)
+- HTTP 200, render server-side (atrybuty obecne w surowym HTML).
+- Opublikowana konfiguracja: `dual-track-highlight`, **6 kroków** (Plan, Build, Deliver,
+  Optimize, Scale, Review), ścieżki **„Traditional" / „With us"**, `target-tracks="b"`,
+  `maxWidth=6xl`, `padding=md`, `trackOrder=a-first`, `motion=none`, `markerShape=rounded`,
+  segment ścieżki b `2-5` „Accelerated execution".
+- **a11y:** `<section aria-label="Compare Timeline">` (brak opublikowanego nagłówka →
+  fallback, `aria-labelledby=null`); regiony „Traditional track"/„With us track"; komórki
+  z opisowym `aria-label` (np. „With us: Deliver, active marker, highlighted segment");
+  badge segmentu `aria-label="With us segment Accelerated execution"`; ikony markerów
+  `aria-hidden="true"`.
+- **Responsywność 375px:** brak poziomego przepełnienia (`scrollWidth==clientWidth==375`),
+  siatka osi zwija się do **jednej kolumny** (`grid-template-columns: 343px`).
+- **Konsola:** 0 błędów, 0 ostrzeżeń (admin również 0/0).
 
 ---
 
-## 4. Tryb Visual — wynik: DZIAŁA w całości (przetestowany zakres)
+## 4. CO NIE DZIAŁA (defekt funkcjonalny)
 
-Visual deklaruje 7 sekcji: Variant, Section heading, Axis steps and track labels,
-Markers and segment mapping, Highlight and guide styles, Colors and typography,
-Spacing and layout. Przetestowano szeroki, reprezentatywny przekrój — **każda
-testowana kontrolka aktualizowała podgląd na żywo** i utrzymywała stan w UI.
+### 4.1 `Segment label size` jest wizualnie bezskuteczny — DEFEKT
+**Objaw:** zmiana selektu **„Segment label size"** (Hidden / Tiny / Small / Default) nie
+zmienia faktycznego rozmiaru tekstu badge segmentu — `computed font-size` pozostaje
+**12px** dla każdej opcji.
 
-### 4.1 Co przetestowano i działa
+**Przyczyna (potwierdzona w kodzie i w cascade):** renderer w
+`core/widgets/core/compareTimeline.tsx` buduje klasę badge tak:
+```
+segmentLabelBaseClass = "rounded-full border px-2 py-1 text-xs" + weight
+…
+joinClasses("inline-flex … no-underline", segmentLabelBaseClass, segmentLabelSizeClass)
+```
+Klasa bazowa **na sztywno zawiera `text-xs`**, a klasa wyboru (`text-xs/sm/base` lub `""`)
+jest dopisywana **po niej**. W wygenerowanym CSS reguła `.text-xs` wygrywa kaskadę nad
+`.text-sm`/`.text-base`, więc dopisany rozmiar nigdy nie obowiązuje. Dowód: dla „Default"
+klasa elementu to `… text-xs font-normal text-base`, a `computed font-size = 12px`.
 
-| Sekcja | Kontrolka | Test | Zweryfikowany efekt w podglądzie | Status |
-|--------|-----------|------|----------------------------------|--------|
-| Variant | Karty wariantu | `Dual Track` → `Dual Track Highlight` | `data-compare-variant="dual-track-highlight"`; odsłonięcie kontrolek highlight (targets, segmenty, highlight color, segment size/weight, highlight label style) | ✅ |
-| Section heading | Section title | „Porównanie procesów" | render jako `<h2 id="compare-timeline-heading">` ORAZ `section[aria-labelledby="compare-timeline-heading"]` | ✅ |
-| Section heading | Subtitle | „Tradycyjny proces kontra nasz" | render jako `<p>` pod tytułem | ✅ |
-| Axis | Add step | 3 → 4 kroki | dodano 4. komórkę osi „Optimize" (fallback label); `data-compare-axis` ma 4 dzieci | ✅ |
-| Axis | Step 1 label | „Plan" → „Planowanie" | etykieta kroku w osi i w obu ścieżkach | ✅ |
-| Axis | Step 1 icon | „🚀" | ikona renderowana w komórce osi | ✅ |
-| Axis | Step 1 description | „Etap wstępny" | opis renderowany pod etykietą | ✅ |
-| Axis | Track 1 label | „Traditional" → „Tradycyjny" | etykieta ścieżki w podglądzie + dynamiczne etykiety w „Track order" („Tradycyjny first") | ✅ |
-| Markers | Toggle markera | „Optimize" ON na ścieżce A | `aria-label` komórki: „...Optimize, active marker" | ✅ |
-| Markers | Wyczyszczenie markerów | wszystkie OFF na ścieżce B | pojawia się ostrzeżenie (amber): „This track currently has no active markers, so the runtime row will look empty." | ✅ |
-| Markers | Highlight targets | `With us` → `Both tracks` | `data-compare-target-tracks="a,b"`; renderują się **oba** kontenery segmentów (Long approvals + Accelerated execution) | ✅ |
-| Markers | Segment label | „Long approvals" → „Długie zatwierdzenia" | tekst badge segmentu zmieniony | ✅ |
-| Markers | Add segment | nowy segment na ścieżce A | dodany segment z fallback label „Steps 1-2" (range 0-1) | ✅ |
-| Highlight/guides | Highlight label style | `Filled` → `Outlined badge` | badge segmentu: tło `transparent`, border+text = highlight color (`rgb(245,158,11)`) | ✅ |
-| Highlight/guides | Show guides | toggle OFF | border ścieżki: `style: none`, kolor `transparent` (przed: `dashed`, `#e2e8f0`) | ✅ |
-| Highlight/guides | Guide style | `Dashed` → `Solid` | `border-top-style: solid` na ścieżce | ✅ |
-| Colors | Marker color (swatch) | `#1d4ed8` → `#ff0000` | tło aktywnego markera → `rgb(255,0,0)` | ✅ |
-| Colors | Marker color → Clear | klik „Clear" | tło aktywnego markera wraca do motywu (`var(--color-primary)` = `rgb(226,177,39)`); przycisk „Clear" przechodzi w `[disabled]` | ✅ |
-| Colors | Marker shape | `Rounded` → `Numbered` | `data-compare-marker-shape="numbered"`; badge'y markerów pokazują „1","2","3","4" zamiast „•" | ✅ |
-| Typography | Track label size | `Default` → `Large` | klasa etykiety ścieżki `text-sm` → `text-base` | ✅ |
-| Spacing/layout | Track order | `Tradycyjny first` → `With us first` | `data-compare-track-order="b-first"`; kolejność DOM ścieżek odwrócona na `[b, a]` | ✅ |
-| Spacing/layout | Max width | `Wide` → `Compact width` | `data-compare-max-width="4xl"` + klasa `max-w-4xl` | ✅ |
-| Spacing/layout | Section padding | `Comfortable` → `Spacious padding` | `data-compare-padding="lg"`; klasa sekcji `px-6 py-10` | ✅ |
-| Spacing/layout | Motion | `No animation` → `Slide in` | `data-compare-motion="slide"`; wrapper ścieżek dostaje `slide-in-from-bottom` (motion-safe) | ✅ |
-| Spacing/layout | Axis label position | `Above axis` → `Below axis` | `data-compare-label-position="bottom"`; wiersz osi przesuwa się z [HEADING, AXIS, TRACKS] na [HEADING, TRACKS, AXIS] | ✅ |
-| Spacing/layout | Track spacing | `Comfortable` → `Extra spacious` | wrapper ścieżek dostaje klasę `space-y-8` | ✅ |
+**Zakres:** dotyczy wyłącznie **rozmiaru** etykiety segmentu. **Waga** etykiety segmentu
+(`segmentLabelFontWeight`) działa poprawnie (400→700), bo w klasie bazowej nie ma
+konkurencyjnej klasy wagi. Dla porównania `trackLabelSize`/`stepLabelSize` działają, bo ich
+renderery nie mają zaszytego `text-xs`.
 
-### 4.2 Zachowania warunkowe (conditional rendering) — działają poprawnie
+**Dodatkowy niuans nazewnictwa:** opcja „Hidden" (token `none`) dla segmentu **nie ukrywa
+ani nie czyści** rozmiaru — pozostaje przy bazowym `text-xs` (12px). Dla track/step „Hidden"
+faktycznie usuwa klasę rozmiaru (dziedziczenie). To kolejna niespójność wynikająca z tej
+samej zaszytej klasy.
 
-- Sekcja **Highlight targets**, edytory **segmentów**, **Highlight color**,
-  **Highlight label style**, **Segment label size/weight** są widoczne **tylko**
-  w wariancie `dual-track-highlight`. W `dual-track` są ukryte, a zamiast nich pojawia
-  się komunikat: _„Segment mapping is hidden in Dual Track. Saved segments are
-  preserved and will reappear in Dual Track Highlight."_ — co potwierdza, że
-  segmenty są **zachowywane**, nie kasowane, przy przełączeniu wariantu.
-- Hint na ścieżce niebędącej celem highlight: _„Saved segments stay on this track
-  but render only after you include it in Highlight targets."_ — i faktycznie segment
-  ścieżki A nie renderował się, dopóki nie ustawiłem `Both tracks` (wówczas pojawił
-  się w podglądzie). Zgodne, prawdziwe zachowanie.
-- Przyciski `Remove step` / `Add step` poprawnie się dezaktywują na granicach
-  zakresu (`Remove step` `[disabled]` przy 3 krokach — minimum).
+> To jest jedyny jednoznaczny defekt funkcjonalny znaleziony w tej (wyczerpującej) sesji.
 
-### 4.3 Niuanse UX zaobserwowane w Visual (nie są to defekty)
+---
+
+## 5. NIE DAŁO SIĘ W PEŁNI ZWERYFIKOWAĆ — z dokładną przyczyną
+
+| # | Kontrolka / aspekt | Powód | Co mimo to potwierdzono |
+|---|--------------------|-------|--------------------------|
+| N1 | `Save draft` / `Publish` | Świadomie pominięte, by nie mutować współdzielonej fixtury innych agentów | Wszystkie zmiany działają w pamięci edytora i są wiernie odbijane przez podgląd i Advanced |
+| N2 | Kliknięcie linku kroku/segmentu **na froncie** | Opublikowana konfiguracja **nie ma ustawionych żadnych `href`** kroków/segmentów (0 linków w SSR) | Mechanizm linkowania zweryfikowany **end-to-end w canvasie admin** (§3.7): realna strona → `<a href>` + poprawny `aria-label` |
+| N3 | Panele blokowe „Block layout" / „Device visibility" | To **współdzielone kontrolki page-buildera**, nie kontrolki widgetu compare-timeline | Zaobserwowane (Content width: default, padding Top/Bottom MD, margin none; wszystkie urządzenia „Hidden") — poza zakresem audytu widgetu |
+| N4 | Stabilność frontendu (port 3000) w trakcie sesji | Serwer front chwilowo przestał odpowiadać (ERR_EMPTY_RESPONSE, potem 500) i po ~10 s wrócił (200) — **artefakt środowiska/rebuild**, nie defekt widgetu | Po odzyskaniu pełna weryfikacja SSR/a11y/responsywności/konsoli (§3.9) przeszła pozytywnie |
+
+---
+
+## 6. NIUANSE UX / UI (nie są to defekty)
 
 | # | Niuans | Obszar |
 |---|--------|--------|
-| V1 | Etykiety rozmiarów typografii nie odwzorowują 1:1 tokenów: „Default" → token `base` → klasa `text-sm`, a „Large" → token `lg` → klasa `text-base`. Czytelne dla autora (Default/Large), ale token≠klasa może zmylić przy debugowaniu. | Colors and typography |
-| V2 | **Contrast advisory** pokazuje stan „Contrast depends on inherited theme or transparent colors" (status „unknown"), ponieważ domyślny `Track background color` jest niewypełniony (przezroczysty), więc kontrastu nie da się policzyć. To poprawne (defensywne), ale komunikat jest mało akcjonowalny, dopóki autor nie ustawi tła. | Colors and typography |
-| V3 | `Track background color` ma przycisk „Clear" domyślnie `[disabled]` (brak zapisanej wartości custom) — spójne z resztą pól koloru po wyczyszczeniu. | Colors |
-| V4 | Etykiety „Track order" są dynamiczne i biorą bieżące nazwy ścieżek (po zmianie „Traditional"→„Tradycyjny" opcja zmieniła się na „Tradycyjny first") — dobry UX. | Spacing/layout |
+| U1 | **Wizard nie jest równorzędną zakładką** — zakładkami są tylko Visual i Advanced; Wizard to przepływ „setup" pod „Run setup again". Wizard jest w pełni read-only (cała edycja w Visual). | IA edytora |
+| U2 | **Przełączenie wariantu na `dual-track` nie kasuje segmentów** — są zachowane (komunikat „Segment mapping is hidden in Dual Track. Saved segments are preserved…") i **wracają** w `dual-track-highlight` (potwierdzony round-trip: a=0-1, b=1-2). | Visual / conditional render |
+| U3 | Segmenty ścieżki renderują się dopiero, gdy ścieżka jest w „Highlight targets" — edytor jawnie informuje hintem; potwierdzone na żywo. | Visual / runtime |
+| U4 | **Duplikat `fieldId`/`data-link-destination-field`** = `compare-timeline-segment-1-destination` dla pierwszego segmentu **obu** ścieżek (id zależy tylko od indeksu segmentu, nie od ścieżki). Powoduje zduplikowane `id` w DOM i wymusza celowanie przez `nth` w narzędziach. Drobna kwestia unikalności/a11y. | Markers & segments |
+| U5 | **Ostrzeżenie `from>to`** to lokalny stan transientny — pozostaje widoczne po znormalizowaniu zapisanego zakresu aż do następnej **realnej** zmiany; ponowny wybór tej samej opcji nie odpala `onValueChange` Radix, więc komunikat nie znika od razu. Mylące, ale dane normalizują się poprawnie. | Markers & segments |
+| U6 | **`trackBackgroundColor` = `#ffffff`** (równe `pickerFallback`) jest traktowane jako **„Theme default"** (nie zapisane jako wartość custom), więc advisory kontrastu pozostaje „unknown", dopóki tło nie zostanie ustawione na kolor inny niż fallback. Subtelne sprzężenie swatch-fallback z detekcją „clearable value". | Colors |
+| U7 | Etykiety tokenów rozmiaru ≠ wartości tokenów ≠ klasy (np. „Default"→`base`→`text-sm`, „Large"→`lg`→`text-base`). Czytelne dla autora, ale myli przy debugowaniu. | Typografia |
+| U8 | Pole `icon` kroku przyjmuje **dowolny tekst** (np. „ROCKET") i renderuje go dosłownie (renderer tnie do 16 znaków). Brak walidacji „tylko emoji" — zgodne z modelem, ale potencjalnie nieoczekiwane. | Axis content |
+| U9 | Advanced miesza diagnostykę widgetu ze współdzielonymi panelami blokowymi — granica „co jest widgetu, a co bloku" bywa nieoczywista dla nietechnicznego autora. | Advanced / shared |
+| U10 | **Rozbieżność draft vs published** — draft startuje jako `dual-track` / 3 kroki / „Traditional"+„With us", a publiczny render to `dual-track-highlight` / 6 kroków / segment b `2-5`. Stan zastany (nie zapisywano), ale wyraźny: publiczny render NIE odzwierciedla draftu do czasu ponownej publikacji. | Środowisko / CMS |
 
 ---
 
-## 5. Tryb Advanced — wynik: DZIAŁA (read-only zgodnie z kontraktem)
+## 7. Podsumowanie
 
-Advanced zawiera wyłącznie diagnostykę read-only (kontrakt: 3 sekcje, wszystkie
-`writablePaths: []`). Co istotne — **wiernie odzwierciedlał moje niezapisane zmiany
-z Visual**:
+**Ocena ogólna:** widget `compare-timeline` jest w **dobrym, dojrzałym stanie**. W tej
+wyczerpującej sesji (przeklikano **wszystkie** dyskretne opcje wszystkich kontrolek
+fixtury) znaleziono **jeden jednoznaczny defekt funkcjonalny**:
 
-- **Runtime layout diagnostics:** „Guide lines: Enabled · Solid", „Highlight target:
-  Both tracks", „Layout: Spacing The most generous track spacing. · Labels Below axis
-  · Width Compact width", „Motion and order: Slide in · With us first" — wszystko
-  zgodne z tym, co ustawiłem w Visual. ✅
-- **Metadata diagnostics:** „Track references: Tradycyjny, With us", „Axis step count:
-  4 steps · supported range 3-10", lista kroków z opisami (Planowanie → „Etap wstępny",
-  reszta → „No optional description configured."). Rozwijane **„Show internal support
-  references"** ujawnia ID: „Tracks: Tradycyjny: a, With us: b" oraz „Steps: Planowanie:
-  step-1, Build: step-2, Deliver: step-3, Optimize: step-4". ✅
-- **Normalization support:** „Current axis steps: 4. Runtime rules enforce 3-10 steps,
-  stable IDs, and clamped marker/segment ranges." + przycisk **„Normalize compare payload"**.
+- **`Segment label size` jest wizualnie bezskuteczny** (zaszyty `text-xs` w klasie bazowej
+  badge wygrywa kaskadę nad dopisaną klasą rozmiaru) — §4.1. Wszystkie pozostałe kontrolki
+  Visual (warianty, nagłówek, oś 3–10 + Add/Remove, etykiety/ikony/opisy kroków, etykiety
+  ścieżek, markery + ostrzeżenie, highlight targets a/b/both, segmenty + From/To + Add/Remove
+  + linkowanie, guides, highlight label style ×3, 7 kolorów + Clear, advisory kontrastu ×3,
+  rozmiary track/step, wagi track/step/segment, marker shape ×4, cały layout) **działają**
+  i wiernie odwzorowują się w `data-compare-*`, klasach i `computed style`.
 
-| Test | Wynik | Status |
-|------|-------|--------|
-| Odzwierciedlenie stanu Visual | wszystkie 4 panele diagnostyczne pokazały moje niezapisane zmiany | ✅ |
-| „Show internal support references" | rozwija się, pokazuje ID ścieżek i kroków | ✅ |
-| „Normalize compare payload" | otwiera dialog potwierdzenia „Normalize compare timeline" (Cancel / Normalize) | ✅ |
-| Potwierdzenie normalizacji | dialog zamyka się; podgląd pozostaje spójny (4 kroki, 2 ścieżki) — wizualny no-op, bo dane były już znormalizowane | ✅ |
+**Wizard** i **Advanced** działają zgodnie z ich read-only kontraktami; Advanced wiernie
+odbija niezapisany stan Visual i bezpiecznie normalizuje. **Frontend** renderuje poprawnie
+po stronie serwera, z solidną dostępnością i bez przepełnienia na 375px, 0 błędów konsoli.
 
-**Niuans:** poza 3 sekcjami widgetowymi Advanced renderuje też **współdzielone
-panele blokowe** (nie należące do widgetu): **„Block layout summary"** (Content width:
-default, Padding: Top MD bottom MD, Margin: None) oraz **„Visibility summary"**
-(„Shown on: Hidden on all devices"). Patrz §7 — `Visibility summary` ma znaczenie dla
-zrozumienia rozbieżności draft/published.
+**Czego nie zweryfikowano (uczciwie):** zapisu (Save/Publish — celowo), kliknięcia linku
+**na froncie** (opublikowana konfiguracja nie ma `href` — ale linkowanie potwierdzono
+end-to-end w canvasie admin), współdzielonych paneli blokowych (poza zakresem widgetu);
+dodatkowo front chwilowo nie odpowiadał (artefakt środowiska) i po odzyskaniu został w
+pełni przetestowany.
 
 ---
 
-## 6. Trasa publiczna (frontend) — wynik: DZIAŁA (statyczny render SSR)
-
-URL: `http://localhost:3000/test-compare-timeline-0516` → **HTTP 200**.
-Render jest **server-side** — surowy HTML z serwera (`curl`) zawiera już
-`data-compare-variant="dual-track-highlight"`, więc widget nie zależy od hydracji.
-
-### 6.1 Render opublikowanej konfiguracji
-
-Opublikowana konfiguracja **różni się od draftu w admin** (patrz §7) — na froncie:
-
-- Wariant: **`dual-track-highlight`**
-- Oś: **6 kroków** — Plan, Build, Deliver, Optimize, Scale, Review
-- Ścieżki: „Traditional" / „With us"
-- Highlight target: `b` (`data-compare-target-tracks="b"`)
-- Layout: `maxWidth=6xl`, `padding=md` (sekcja `px-4 py-8`), `trackOrder=a-first`,
-  `motion=none`, `markerShape=rounded`, `labelPosition=top`
-- Markery ścieżki A: Plan/Build/Deliver **active**, Optimize/Scale/Review inactive
-- Markery ścieżki B: Plan **active**, Build inactive, Deliver **active**, reszta inactive
-- Segment ścieżki B: „Accelerated execution", zakres `2-5` — komórki Deliver/Optimize/Scale/Review
-  poprawnie oznaczone w `aria-label` jako „...highlighted segment"
-
-### 6.2 Dostępność (a11y) — pozytywnie
-
-- Kontener to semantyczny **`<section>`**; **brak opublikowanego nagłówka**, więc
-  użyty jest fallback **`aria-label="Compare Timeline"`** (`aria-labelledby` = null) —
-  zgodnie z logiką renderera ✅
-- Każda ścieżka to region z `aria-label`: „Traditional track" / „With us track" ✅
-- Każda komórka markera ma opisowy `aria-label` ze stanem markera i informacją o
-  highlight (np. „With us: Deliver, active marker, highlighted segment") ✅
-- Badge segmentu ma `aria-label="With us segment Accelerated execution"` ✅
-- Ikona markera ma `aria-hidden="true"` ✅
-
-### 6.3 Responsywność (mobile 375px) — pozytywnie
-
-- **Brak poziomego przepełnienia strony** (`scrollWidth == clientWidth == 375`,
-  `pageHorizontalOverflow: false`) ✅
-- Siatka osi (`grid-cols-1 sm:grid-cols-2 lg:[var(--compare-grid-columns)]`) poprawnie
-  zwija się do **jednej kolumny** na 375px (`grid-template-columns: 343px`) ✅
-
-### 6.4 Linki kroków/segmentów
-
-- Na froncie `0` linków w osi i segment nie jest linkiem (`isLink: false`) — w
-  opublikowanej konfiguracji **żaden `href` kroku/segmentu nie jest ustawiony**.
-  To zgodne z danymi (nie testowałem linkowania, bo nie było skonfigurowanej trasy).
-
-### 6.5 Konsola — czysto
-
-Brak błędów i ostrzeżeń w konsoli na trasie publicznej (`Errors: 0, Warnings: 0`).
-W admin również `Errors: 0, Warnings: 0`.
-
----
-
-## 7. Admin (draft) vs Frontend (published) — zaobserwowana rozbieżność
-
-| Aspekt | Admin canvas (draft, stan początkowy przed moimi edycjami) | Public (published) |
-|--------|------------------------------------------------------------|--------------------|
-| Wariant | `dual-track` | `dual-track-highlight` |
-| Liczba kroków osi | 3 (Plan, Build, Deliver) | 6 (Plan, Build, Deliver, Optimize, Scale, Review) |
-| Highlight / segmenty | brak (dual-track) | aktywne (segment „Accelerated execution" 2-5) |
-| `Visibility summary` (Advanced) | „Hidden on all devices" | widget **renderuje się** na publicznej stronie |
-
-**Interpretacja:** zapisany **draft** i wersja **opublikowana** są rozbieżne. To
-**stan zastany** — NIE wynik tej sesji (nie zapisywałem żadnych zmian; pierwszy
-snapshot canvas przed jakąkolwiek edycją pokazywał `dual-track` / 3 kroki). Dodatkowo
-panel `Visibility summary` w draft pokazuje „Hidden on all devices", a mimo to
-publiczna strona renderuje widget — co potwierdza, że publiczna widoczność/konfiguracja
-pochodzi z innej (opublikowanej) migawki niż bieżący draft. Rozbieżność draft/published
-jest normalnie możliwa w CMS, ale tu jest wyraźna — warto, by autor wiedział, że
-publiczny render NIE odzwierciedla aktualnego draftu do czasu ponownej publikacji.
-`Block layout summary` i `Visibility summary` to **współdzielone** funkcje blokowe
-(page builder), nie kontrolki własne widgetu.
-
----
-
-## 8. Dodatkowe niuanse UX/UI (zbiorczo)
-
-| # | Niuans | Obszar |
-|---|--------|--------|
-| U1 | Wizard to przepływ „setup" (przycisk „Run setup again"), a nie równorzędna zakładka — zakładkami są tylko Visual i Advanced. | IA edytora |
-| U2 | Wizard jest w pełni read-only: cała edycja (oś, etykiety, markery, segmenty, highlight, styl, layout) mieszka w Visual — deklarowane wprost w UI. | IA edytora |
-| U3 | Przełączenie wariantu na `dual-track` **nie kasuje** segmentów — są zachowane i wracają w `dual-track-highlight` (potwierdzony komunikat + zachowanie). | Visual |
-| U4 | Segmenty ścieżki renderują się dopiero, gdy ścieżka jest w „Highlight targets" — edytor jawnie o tym informuje (hint). | Visual / runtime |
-| U5 | Etykiety tokenów typografii (Default/Large) ≠ wartości tokenów (base/lg) ≠ klasy (text-sm/text-base). Bez wpływu na użytkownika, ale subtelne dla debugu. (V1) | Typografia |
-| U6 | Contrast advisory pozostaje „unknown", dopóki tło ścieżki jest przezroczyste — komunikat mało akcjonowalny w stanie domyślnym. (V2) | Colors |
-| U7 | Advanced miesza diagnostykę widgetu z współdzielonymi panelami blokowymi (Block layout / Visibility) — dla nietechnicznego autora granica „co jest widgetu, a co bloku" może być nieoczywista. | Advanced |
-| U8 | `Visibility summary: Hidden on all devices` w draft sąsiaduje z faktem, że publiczny render działa — potencjalnie mylące przy diagnozie „dlaczego coś się (nie) pokazuje". | Advanced / shared |
-
----
-
-## 9. Podsumowanie
-
-**Ocena ogólna:** widget `compare-timeline` jest w **dobrym, dojrzałym stanie**.
-W przetestowanym (szerokim) zakresie **wszystkie kontrolki Visual działają** —
-aktualizują podgląd na żywo, utrzymują stan w UI i poprawnie odwzorowują się w
-atrybutach `data-compare-*`, klasach i stylach. Wizard i Advanced działają zgodnie z
-ich (read-only) kontraktami, a frontend renderuje poprawnie po stronie serwera, z
-solidną dostępnością i bez przepełnienia na mobile.
-
-**Co działa (potwierdzone testem):**
-- **Wizard:** wejście („Run setup again"), read-only summary, powrót („Finish setup and open Visual").
-- **Visual:** przełączanie wariantów, nagłówek (h2 + aria-labelledby + subtitle), liczba
-  kroków (Add step), etykieta/ikona/opis kroku, etykiety ścieżek, toggling markerów,
-  ostrzeżenie o braku markerów, highlight targets (single/both), edycja i dodawanie
-  segmentów, highlight label style (outline), toggling i styl guides, kolor markera +
-  Clear (powrót do tokenu motywu), kształt markera (numbered), rozmiar etykiety ścieżki,
-  track order (odwrócenie), max width, padding, motion, label position, track spacing.
-- **Advanced:** wierna diagnostyka read-only stanu Visual, ujawnianie wewnętrznych ID,
-  dialog normalizacji (potwierdzenie → bezpieczny no-op).
-- **Frontend:** SSR render `dual-track-highlight` (6 kroków, segment 2-5), a11y
-  (semantyczny `<section>` + aria-label fallback, regiony ścieżek, opisy markerów/segmentów),
-  responsywność (single-column na 375px, brak overflow), 0 błędów konsoli.
-
-**Co NIE działa / wymaga świadomości:**
-- **Brak jednoznacznych defektów funkcjonalnych** w przetestowanym zakresie — wszystko,
-  co kliknąłem, zadziałało.
-- Rozbieżność **draft vs published** (stan zastany, nie defekt renderera) — patrz §7.
-- `Visibility summary: Hidden on all devices` w draft współistnieje z działającym
-  renderem publicznym — warto, by autor był tego świadomy.
-- Niuanse UX (V1/V2/U5–U8) to drobne kwestie czytelności, nie błędy.
-
-**Czego nie zdołano przetestować (uczciwie):** zapisu (Save/Publish — celowo, by nie
-mutować współdzielonej fixtury), linkowania kroków/segmentów end-to-end (brak wybranej
-trasy docelowej), przycisków Remove step/segment, pozostałych pól koloru pojedynczo,
-pełnej macierzy rozmiarów/wag typografii, stylu „Soft badge" oraz kształtów Circle/Check,
-a także dynamicznego przeliczania contrast advisory przy ustawionym tle.
-
----
-
-## 10. Statystyki testu
+## 8. Statystyki testu
 
 | Kategoria | Wartość |
 |-----------|---------|
-| Tryby przetestowane | 3 (Wizard, Visual, Advanced) |
-| Kontrolki Visual potwierdzone jako działające | 24 (reprezentatywny, szeroki przekrój 7 sekcji) |
-| Defekty funkcjonalne | 0 (w przetestowanym zakresie) |
-| Rozbieżności środowiskowe (draft vs published) | 1 (wariant + liczba kroków + visibility) |
-| Niuanse UX/UI | 8 (U1–U8, w tym V1–V4) |
-| Trasa publiczna | HTTP 200, SSR, dual-track-highlight, 6 kroków, 0 błędów konsoli |
-| Mobile 375px | brak page overflow, oś single-column |
-| Zrzuty PNG | 0 (weryfikacja przez DOM/eval; nazwy zrzutów byłyby tylko lokalnymi etykietami) |
+| Tryby przetestowane | 3 (Wizard, Visual, Advanced) + frontend |
+| Selekty przeklikane przez wszystkie opcje | 17 (≈70 wyborów opcji) |
+| Pola koloru (set + Clear) | 7 / 7 |
+| Linkowanie kroku i segmentu (end-to-end) | 2 / 2 (potwierdzone realnym `href`) |
+| Stany advisory kontrastu | 3 / 3 (unknown / ok / warning) |
+| Marker shapes / highlight label styles | 4 / 4 · 3 / 3 |
+| Defekty funkcjonalne | **1** (Segment label size — wizualnie bezskuteczny) |
+| Niuanse UX/UI | 10 (U1–U10) |
+| Niezweryfikowane (z przyczyną) | 4 (N1–N4) |
+| Trasa publiczna | HTTP 200, SSR, dual-track-highlight, 6 kroków, segment 2-5, 0 błędów konsoli |
+| Mobile 375px | brak page overflow, oś single-column (343px) |
+| Zrzuty PNG | 0 (weryfikacja DOM/eval; nazwy zrzutów byłyby tylko lokalnymi etykietami) |

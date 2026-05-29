@@ -1,192 +1,219 @@
-# RAPORT: Form Embed Widget — audyt bieżącego stanu (29-05-2026, v2)
+# RAPORT: Form Embed Widget — audyt wyczerpujący (29-05-2026, v3 exhaustive)
 
-> **Status:** Zakończony — pełny audyt trybów Wizard / Visual / Advanced + frontend, z asercjami DOM na żywo
+> **Status:** Zakończony — pełny, wyczerpujący przegląd wszystkich dyskretnych kontrolek
+> trybów Wizard / Visual / Advanced + frontend, z asercjami DOM na żywo.
 > **Data testu:** 2026-05-29
-> **Sesja przeglądarki:** `claude-29-05-form-embed-v2` (izolowana, oddzielna od innych agentów)
+> **Sesja przeglądarki:** `claude-29-05-form-embed-exhaustive-v2` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Strona admin:** „Contract Test - form-embed" (`fed7fa7d-b498-439c-858d-72ac0a89926f`)
 > **Trasa publiczna:** `/ctr-form-embed-2305` (tytuł strony: `Contract Test - form-embed`)
-> **Referencja formatu:** `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`
 
 ---
 
 ## 0. Metoda i zakres testu
 
-Audyt wykonano na **uruchomionej lokalnie aplikacji** przy użyciu `playwright-cli`
-(izolowana sesja `claude-29-05-form-embed-v2`). Weryfikacja opierała się na rzeczywistych
-interakcjach z UI edytora (kliknięcia comboboxów, wypełnianie pól, przełączanie switchy,
-zmiana kolorów) oraz na inspekcji DOM (`eval`) zarówno na żywym podglądzie w admin, jak i
-na statycznym renderze SSR trasy publicznej. Stany comboboxów (Radix Select) zmieniano przez
-klikanie triggera i wybór opcji z portalu. Natywne pickery kolorów sterowano programowo
-(natywny setter `value` + zdarzenia `input`/`change`) — i takie zdarzenia **realnie**
-trafiały do handlera React (potwierdzone zmianą tła karty w podglądzie).
+Audyt wykonano od zera na **uruchomionej lokalnie aplikacji** przy użyciu `playwright-cli`
+(izolowana sesja). Weryfikacja opierała się na rzeczywistych interakcjach z UI edytora
+(klikanie comboboxów Radix przez trigger + wybór opcji z portalu, wypełnianie pól tekstowych,
+przełączanie switchy, sterowanie natywnymi pickerami kolorów) oraz na inspekcji DOM (`eval`/
+`run-code`) na żywym podglądzie w admin i na statycznym renderze SSR trasy publicznej.
+
+Ten przebieg był **wyczerpujący — bez skrótów reprezentatywnych**:
+
+- **Każdy** combobox przeklikano przez **wszystkie** jego wartości (i z powrotem do wartości
+  domyślnej), odczytując DOM podglądu po każdej zmianie.
+- **Każdy** switch przełączono w obie strony (on→off→on) z odczytem `aria-checked`/`data-state`.
+- **Każdą** z 8 kontrolek koloru ustawiono swatch'em (natywny setter + zdarzenia `input`/
+  `change` — handler React reaguje) i następnie wyczyszczono przyciskiem „Clear", z odczytem
+  zarówno renderu, jak i etykiety/stanu przycisku.
+- Pole liczbowe TTL przetestowano na granicach (clamp).
+- Pola tekstowe wypełniono i zweryfikowano efekt w podglądzie (gdy istnieje cel).
+- Sprawdzono warianty, przycisk „Add variant preset", oba przejścia trybów oraz generyczne
+  panele bloku (Block layout / Device visibility).
 
 **Najważniejsze ograniczenie środowiska (kluczowe dla całego raportu):**
 
-> W tym środowisku **nie istnieje ani jeden zapisany formularz** — endpoint
-> `/admin/api/forms` (przez `useForms` → `listForms()` → `GET /forms`) zwraca `200 []`
-> (zweryfikowane na żywo fetchem z zalogowanej sesji). Selektor formularza w Wizardzie
-> pokazuje wyłącznie wyłączoną pozycję „No forms found". Fixtura widgetu ma w bazie
-> `data: {}` (czysty default, **bez `formId`**, `editor.wizardCompleted: true`,
-> `visibility.devices: []`) — potwierdzone fetchem `/admin/api/pages/…`.
+> W tym środowisku **nie istnieje ani jeden zapisany formularz**. Endpoint
+> `/admin/api/forms` (przez `useForms` → `GET /forms`) zwraca `200 []` (zweryfikowane na
+> żywo fetchem z zalogowanej sesji). Selektor formularza w Wizardzie ma wyłącznie wyłączoną
+> pozycję „No forms found". Fixtura ma `data: {}` (czysty default, **bez `formId`**,
+> `updatedAt: 2026-05-24T10:52:02.234Z`, jeden blok `form-embed`).
 >
-> W praktyce oznacza to, że **rdzenna funkcja widgetu — osadzenie konkretnego zapisanego
-> formularza — nie może być zweryfikowana**: nie ma jak wybrać formularza, więc widget
-> zawsze renderuje stan pusty. Niemożliwe do przetestowania pozostają: renderowanie pól,
-> submisja, tryb wieloetapowy (multi-step), pasek postępu, nonce, captcha oraz komunikaty
-> sukcesu/błędu runtime.
+> W praktyce **rdzenna funkcja widgetu — osadzenie konkretnego zapisanego formularza — nie
+> może być zweryfikowana**: nie ma jak wybrać formularza, więc widget zawsze renderuje stan
+> pusty. Niemożliwe do przetestowania pozostają: renderowanie pól (13 typów), submisja,
+> tryb wieloetapowy, pasek postępu, przyciski Back/Next, nonce, captcha oraz runtime'owe
+> komunikaty sukcesu/błędu.
 
-**Co faktycznie przetestowano (z asercjami DOM):**
+**Screenshoty:** nie przechwytywano żadnych plików PNG. Cała weryfikacja oparta jest na
+asercjach DOM/`eval`. Ewentualne nazwy zrzutów Playwright byłyby wyłącznie **lokalnymi
+etykietami** przechwyceń, ignorowanymi przez Git i nie stanowiłyby evidence w repo.
 
-- Logowanie do admina, otwarcie fixtury, odnalezienie widgetu na kanwie.
-- Tryb **Wizard**: selektor formularza (pusta lista, jedyna pozycja „No forms found"
-  disabled), sekcja „Setup diagnostics" (read-only), przejścia „Finish setup and open
-  Visual" / „Run setup again".
-- Tryb **Visual**: wariant (jedyny „Standard"), sekcje Content / Layout / Field labels /
-  Style / Multi-step navigation / Submit behavior — kontrolki z obserwowalnym celem
-  zweryfikowane przez asercję DOM podglądu; reszta zweryfikowana jako aktualizacja stanu UI.
-- Tryb **Advanced**: Runtime diagnostics, Submission security, Authoring summary
-  (reaktywne), Contract summary — wszystko read-only.
-- **Frontend**: statyczny render SSR, stan pusty, semantyka a11y, konsola, responsywność 375px.
-- Weryfikacja **braku autozapisu** (fixtura nietknięta po moich edycjach in-memory).
-- Konsola admin i frontend: **0 błędów, 0 ostrzeżeń**.
+**Pliki źródłowe (analizowane dla kontekstu, niezmieniane):**
 
-**Czego NIE przetestowano (świadomie lub z powodu środowiska):**
-
-- **Realnego wyboru formularza** — brak jakiegokolwiek zapisanego formularza (patrz wyżej).
-- **Renderowania pól, submisji, multi-step, paska postępu, nonce, captcha, komunikatów
-  sukcesu/błędu** — wymaga wybranego formularza, którego nie ma.
-- **Zapisu / publikacji** — celowo nie zapisywano (`Save`/`Publish`), aby nie zmutować
-  współdzielonej fixtury. Wszystkie edycje pozostały w pamięci edytora.
-- **Realnego wpisania hex z klawiatury** w pickerze kolorów (kontrolki mają
-  `showValueInput={false}`; wartości ustawiano programowo).
-- Warunkowego ukrywania sekcji multi-step na froncie (brak formularza multi-step).
-- Wszystkich wartości każdego comboboxa — testowano wartości reprezentatywne.
-
-**Screenshoty:** nie przechwytywano plików PNG; weryfikacja przez asercje DOM/`eval`.
-Ewentualne nazwy zrzutów Playwright byłyby wyłącznie **lokalnymi etykietami** przechwyceń,
-ignorowanymi przez Git i nie stanowiłyby wymaganego evidence w repo.
-
-**Pliki źródłowe:**
-
-- `core/widgets/core/formEmbed.tsx` — renderer, model danych, normalizacja, schemat, kontrakt edytora.
+- `core/widgets/core/formEmbed.tsx` — renderer, model danych, normalizacja, schemat, kontrakt.
 - `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` — edytory Wizard / Visual / Advanced.
-- `core/admin/ui/widgets/editors/SharedColorControl.tsx` — współdzielona kontrolka koloru (źródło niuansu I3/I7).
-- `core/admin/services/formsClient.ts` — klient listy formularzy (`GET /forms`).
+- `core/admin/ui/widgets/editors/SharedColorControl.tsx` — współdzielona kontrolka koloru (źródło I3/I7 oraz „Clear nie wraca do domyślnego").
+- `core/admin/services/formsClient.ts` — klient listy formularzy.
 
 ---
 
 ## 1. Przegląd widgetu
 
 **Typ:** `form-embed` (kategoria: forms)
-**Warianty:** wyłącznie `standard` (jeden wariant; w Visual karta „Standard" + nieaktywny biznesowo przycisk „Add variant preset")
+**Warianty:** wyłącznie `standard` (jeden wariant; w Visual karta „Standard" [Selected] + przycisk „Add variant preset")
 **Tryby edytora:** Wizard (jednorazowy setup — wybór formularza), Visual (codzienna edycja prezentacji), Advanced (diagnostyka read-only)
 
-Widget służy do osadzenia **zapisanego formularza** (z modułu Forms) wraz z kontrolą
-prezentacji: tytuł / opis / etykieta submit / komunikat sukcesu, layout (szerokość,
-wyrównanie, paddingi, gap pól), styl (tła, obramowania, zaokrąglenie, rozmiar inputów,
-kolory tytułu / etykiet / helpera / przycisku), widoczność etykiet i wskaźnika
-wymagalności, nawigacja multi-step oraz zachowanie po submisji. Renderer w runtime łączy
-się z formularzem przez `POST /forms/:id/submissions` i wstrzykuje runtime JS **tylko gdy
-formularz ma pola** (`fields.length > 0`).
+Widget służy do osadzenia **zapisanego formularza** (z modułu Forms) wraz z kontrolą prezentacji:
+copy (tytuł/opis/etykieta submit/komunikat sukcesu), layout (alignment, width, paddingi, gap pól,
+poziom nagłówka), styl (tła, obramowanie, zaokrąglenie, rozmiar inputów, kolory tytułu/etykiet/
+helpera/przycisku), widoczność etykiet, nawigacja multi-step oraz zachowanie po submisji. Renderer
+w runtime łączy się z formularzem przez `POST /forms/:id/submissions` i wstrzykuje runtime JS
+**tylko gdy formularz ma pola** (`fields.length > 0`).
 
-**Stan fixtury w chwili testu:** bare widget — `data: {}`. Brak `formId`, brak nadpisań.
-Renderer stosuje defaulty (tytuł „Form", submit „Send message", width `md`, spacing `md`,
-border `1`, radius `md`). Bez wybranego formularza widget pokazuje stan pusty.
-
----
-
-## 2. Model danych i kontrakt edytora (z kodu)
-
-| Sekcja | Pola | Tryb (writable) |
-|--------|------|-----------------|
-| **formId** | id zapisanego formularza | Wizard |
-| **content** | `title`, `description`, `submitLabel`, `successMessage` | Visual |
-| **layout** | `alignment`, `width` (none–xl), `spacing` (none–xl), `buttonAlignment`, `sectionPaddingX` (sm/md/lg), `sectionPaddingY` (none–xl), `fieldGap` (sm/md/lg), `headingLevel` (2/3/4) | Visual |
-| **fields** | `showLabels`, `showRequiredIndicator` | Visual |
-| **style** | `background`, `surface`, `borderColor`, `borderWidth` (0/1/2), `radius`, `inputSize`, `titleColor`, `titleSize`, `titleWeight`, `labelColor`, `helperColor`, `submitBackground`, `submitTextColor` | Visual |
-| **navigation** | `backLabel`, `nextLabel`, `showProgress`, `savedProgressTtlDays` (1–30) | Visual |
-| **submitBehavior** | `loadingLabel`, `successBehavior` (hide/reset/keep) | Visual |
-| **resolved** | `formName`, `status`, `fields[]`, `settings.layoutMode`, `saveProgress`, `submissionAccess`, `submissionNonce`, `botProtection`, `error` | Advanced / Wizard (read-only) |
-
-Podział własności (zgodny z „Contract summary" w Advanced): **Wizard** — wybór formularza +
-diagnostyka pierwszego setupu. **Visual** — copy, layout, widoczność etykiet, styl,
-nawigacja, zachowanie submit. **Advanced** — wyłącznie read-only podsumowania (runtime,
-security, authoring, kontrakt).
+**Stan fixtury w chwili testu:** bare widget — `data: {}`. Renderer stosuje defaulty (tytuł „Form",
+width `md`, spacing `md`, border `1`/Thin, radius `md`, sekcja `px-4 py-8`). Bez wybranego
+formularza widget pokazuje stan pusty.
 
 ---
 
-## 3. Co DZIAŁA (zweryfikowane na żywo asercją DOM)
+## 2. Inwentaryzacja dyskretnych kontrolek (kompletna)
+
+| Sekcja / tryb | Kontrolka | Typ | Wartości |
+|---|---|---|---|
+| Wizard | Saved form | select | tylko „No forms found" [disabled] |
+| Visual / Variants | Standard | karta | 1 (Selected); „Add variant preset" (przycisk) |
+| Visual / Content | Title | input | tekst |
+| Visual / Content | Description | textarea | tekst |
+| Visual / Content | Submit label | input | tekst |
+| Visual / Content | Success message | textarea | tekst |
+| Visual / Layout | Alignment | select | Start / Center / End |
+| Visual / Layout | Width | select | None / Small / Medium / Large / Extra large |
+| Visual / Layout | Spacing | select | None / Compact / Default / Spacious / Extra spacious |
+| Visual / Layout | Button alignment | select | Start / Center / End |
+| Visual / Layout | Side padding | select | Compact / Default / Wide |
+| Visual / Layout | Vertical padding | select | None / Compact / Default / Spacious / Extra spacious |
+| Visual / Layout | Field gap | select | Compact / Default / Spacious |
+| Visual / Field labels | Show labels | switch | on/off |
+| Visual / Field labels | Required indicator | switch | on/off |
+| Visual / Style | Background | color + Clear | swatch (picker) |
+| Visual / Style | Surface | color + Clear | swatch |
+| Visual / Style | Border color | color + Clear | swatch |
+| Visual / Style | Border width | select | None / Thin / Thick |
+| Visual / Style | Radius | select | None / Small / Medium / Large |
+| Visual / Style | Input size | select | None / Small / Medium / Large |
+| Visual / Style | Title color | color + Clear | swatch |
+| Visual / Style | Title size | select | Small / Medium / Large |
+| Visual / Style | Title weight | select | Medium / Semibold / Bold |
+| Visual / Style | Label color | color + Clear | swatch |
+| Visual / Style | Helper color | color + Clear | swatch |
+| Visual / Style | Submit background | color + Clear | swatch |
+| Visual / Style | Submit text color | color + Clear | swatch |
+| Visual / Style | Heading level | select | H2 / H3 / H4 |
+| Visual / Multi-step | Back label | input | tekst |
+| Visual / Multi-step | Next label | input | tekst |
+| Visual / Multi-step | Show progress | switch | on/off |
+| Visual / Multi-step | Saved progress TTL (days) | number | 1–30 (clamp) |
+| Visual / Submit behavior | Loading label | input | tekst |
+| Visual / Submit behavior | Success behavior | select | Hide / Reset / Keep form |
+| Advanced (wszystkie) | Runtime / Security / Authoring / Contract | read-only | — |
+| Generyczne (każdy blok) | Block layout (4 selecty), Device visibility (3 switche) | — | poza kontraktem form-embed |
+
+---
+
+## 3. Co PRZETESTOWANO i DZIAŁA (asercja DOM na żywo)
 
 ### 3.1 Wizard
 
 | Funkcja | Wynik testu |
-|---------|-------------|
-| **Selektor formularza** | Combobox „Saved form" otwiera się; jedyna pozycja to **„No forms found" [disabled]**. ✓ Poprawny stan dla pustego środowiska. |
-| **Setup diagnostics (read-only)** | „Please select a form to preview field coverage, runtime status, and submit behavior." przy braku formularza. ✓ |
-| **Przejście Wizard → Visual** | „Finish setup and open Visual" przełącza na widok „Setup complete" z zakładką Visual zaznaczoną. ✓ |
-| **Przejście Visual → Wizard** | „Run setup again" wraca do Wizarda z selektorem formularza. ✓ |
-| **Live preview w Wizard** | Region „Live preview" odzwierciedla shared renderer (stan pusty). ✓ |
+|---|---|
+| Selektor „Saved form" | Otwiera się; **jedyna** pozycja „No forms found" [disabled]. ✓ Poprawny stan dla pustego środowiska. |
+| Setup diagnostics (read-only) | „Please select a form to preview field coverage, runtime status, and submit behavior." ✓ |
+| Wizard → Visual | „Finish setup and open Visual" przełącza na zakładkę „Visual" (selected) + status „Setup complete". ✓ |
+| Visual → Wizard | „Run setup again" wraca do Wizarda z selektorem formularza. ✓ |
+| Live preview w Wizard | Region „Live preview" odzwierciedla shared renderer (stan pusty). ✓ |
 
-### 3.2 Visual — kontrolki z obserwowalnym efektem w podglądzie
+### 3.2 Visual — kontrolki z OBSERWOWALNYM celem w podglądzie (zweryfikowane wszystkie wartości)
 
-| Funkcja | Akcja → Wynik (asercja DOM) |
-|---------|------------------------------|
-| **Title** | „Kontakt — audyt v2" → zmienia treść `<hN>` natychmiast; `aria-labelledby` nadal wskazuje id nagłówka. ✓ |
-| **Description** | tekst → renderuje `<p>` pod tytułem. ✓ |
-| **Width** | „Extra large" → `data-form-embed-width="xl"` + klasa `max-w-2xl`. ✓ |
-| **Alignment** | „Center" → `items-center text-center` na kontenerze. ✓ |
-| **Heading level** | „H4" → znacznik `<h2>` → `<h4>`, `aria-labelledby` zachowane (id == labelledby). ✓ |
-| **Title size** | „Large" → `text-2xl` na nagłówku. ✓ |
-| **Title weight** | „Bold" → `font-bold` na nagłówku (łącznie `text-2xl font-bold`). ✓ |
-| **Border width** | „None" → `border-0`, computed `border-top-width: 0px`. ✓ (mimo nadmiarowej klasy `border` — patrz I5) |
-| **Radius** | „Large" → `data-form-embed-radius="lg"`, klasa `rounded-xl`. ✓ |
-| **Surface (kolor)** | Ustawienie `#00ff00` przez swatch → tło karty `rgb(0,255,0)`. ✓ (handler React reaguje) |
-| **Clear (Surface)** | Klik „Clear" → tło karty wraca do `rgba(0,0,0,0)` (theme default), etykieta zmienia się na **„Theme default"**, a przycisk „Clear" staje się **[disabled]**. ✓ Reset działa. |
-| **TTL (savedProgressTtlDays)** | Wpisanie `99` → przycięte do `30` (max). ✓ Clamp działa (min 1 / max 30). |
-| **Show labels (toggle)** | Przełącznik flipuje `aria-checked`/`data-state` z `checked` → `unchecked`. ✓ (stan UI aktualizowany) |
+| Kontrolka | Pełen przebieg → wynik (asercja DOM) |
+|---|---|
+| **Title** | „Kontakt — audyt v3" → treść `<hN>` natychmiast; `aria-labelledby` nadal == id nagłówka. ✓ |
+| **Description** | tekst → renderuje `<p class="text-sm">` pod tytułem. ✓ |
+| **Alignment** | Start → `items-start text-left`; Center → `items-center text-center`; End → `items-end text-right`. ✓ (3/3) |
+| **Width** | None → brak `max-w`; Small → `max-w-md`; Medium → `max-w-lg`; Large → `max-w-xl`; Extra large → `max-w-2xl`. ✓ (5/5) |
+| **Side padding** | Compact → `px-4`; Default → `px-6`; Wide → `px-8`. ✓ (3/3) |
+| **Vertical padding** | None → `py-0`; Compact → `py-6`; Default → `py-8`; Spacious → `py-10`; Extra spacious → `py-12`. ✓ (5/5) — **to jest realna kontrolka pionowego odstępu** |
+| **Border width** | None → `border-0` (computed `0px`); Thin → `border` (`1px`); Thick → `border-2` (`2px`). ✓ (3/3) |
+| **Radius** | None → brak klasy; Small → `rounded-md`; Medium → `rounded-lg`; Large → `rounded-xl`; atrybut `data-form-embed-radius` zgodny. ✓ (4/4) |
+| **Input size** | None/Small/Medium/Large → `data-form-embed-input-size` = none/sm/md/lg. ✓ (4/4, atrybut; bez realnych inputów) |
+| **Title size** | Small → `text-lg`; Medium → `text-xl`; Large → `text-2xl`. ✓ (3/3) |
+| **Title weight** | Medium → `font-medium`; Semibold → `font-semibold`; Bold → `font-bold`. ✓ (3/3) |
+| **Heading level** | H2/H3/H4 → znacznik `<h2>`/`<h3>`/`<h4>`; `id` nagłówka i `aria-labelledby` sekcji **zachowane i spójne** przy każdym poziomie. ✓ (3/3, a11y intact) |
+| **Background (kolor)** | `#ff0000` → `section` `background-color: rgb(255,0,0)`. ✓ Handler React reaguje. |
+| **Surface (kolor)** | `#00ff00` → karta `background-color: rgb(0,255,0)`. ✓ |
+| **Border color** | `#0000ff` → karta `border-top-color: rgb(0,0,255)`. ✓ |
+| **Title color** | `#112233` → nagłówek `color: rgb(17,34,51)`. ✓ |
+| **Helper color** | `#abcdef` → opis `<p>` `color: rgb(171,205,239)`. ✓ (cel istnieje, bo ustawiono Description) |
+| **Clear: Background** | tło → `rgba(0,0,0,0)`, etykieta → **„Theme default"**, przycisk Clear → **[disabled]**. ✓ Reset pełny. |
+| **Clear: Surface** | tło karty → `rgba(0,0,0,0)`, etykieta → **„Theme default"**, Clear → **[disabled]**. ✓ Reset pełny. |
 
-### 3.3 Visual — kontrolki działające w UI, ale BEZ celu w podglądzie (brak formularza)
+### 3.3 Visual — kontrolki działające w UI (stan aktualizowany), ale BEZ celu w podglądzie (brak formularza)
 
-Te kontrolki poprawnie aktualizują stan edytora (i są widoczne w Advanced „Authoring
-summary"), ale **nie mają obserwowalnego efektu w podglądzie**, bo bez wybranego formularza
-nie renderuje się ani formularz, ani pola, ani przycisk submit:
+Poprawnie aktualizują stan edytora (potwierdzone w UI i reaktywnie w Advanced „Authoring summary"),
+lecz **nie mają obserwowalnego efektu w podglądzie**, bo bez wybranego formularza nie ma pól,
+przycisku submit ani gridu:
 
-| Funkcja | Obserwacja |
-|---------|------------|
-| **Submit label** | Tekst zapisywany; przycisk submit renderuje się tylko gdy `fields.length > 0`. |
-| **Success message** | Zapisywany; `<p data-form-embed-success>` ukryty dopóki nie ma submisji. |
-| **Button alignment / Field gap** | Dotyczą kontenera przycisku / grida pól — brak pól = brak celu. |
-| **Side padding / Vertical padding** | Sterują `px-*`/`py-*` sekcji — działają na poziomie sekcji (te DZIAŁAJĄ, ale nie zmieniałem ich w tej sesji; default `px-4 py-8`). |
-| **Input size** | Dotyczy inputów — brak inputów = brak celu. |
-| **Label color / Helper color** | Dotyczą etykiet / helperów pól — brak pól = brak celu. |
-| **Submit background / Submit text color** | Dotyczą przycisku submit — nie renderuje się. |
-| **Required indicator (toggle)** | Switch przełącza się w UI, ale brak pól = brak gwiazdki do pokazania. |
-| **Multi-step: Back/Next label, Show progress** | Dotyczą trybu multi-step — brak formularza = brak celu. |
-| **Submit behavior: Success behavior** | Combobox zmienia wartość; efekt wyłącznie w runtime po submisji. |
+| Kontrolka | Obserwacja |
+|---|---|
+| **Submit label** | „Wyślij teraz" zapisane w stanie; przycisk submit renderuje się tylko przy `fields.length > 0`. |
+| **Success message** | „Dziękujemy za audyt." zapisane; brak węzła `[data-form-embed-success]` bez formularza. |
+| **Spacing** | Przeklikane wszystkie 5 wartości — patrz **I2** (zmienia tylko atrybut, brak realnego efektu). |
+| **Button alignment** | Start/Center/End — stan aktualizowany; brak przycisku = brak celu. (3/3 w UI) |
+| **Field gap** | Compact/Default/Spacious — stan aktualizowany; brak gridu pól = brak celu. (3/3 w UI) |
+| **Label color** | Ustawiono `#777777`; brak etykiet pól = brak celu (stan/etykieta aktualizowane). |
+| **Submit background** | Ustawiono `#884400`; brak przycisku submit = brak celu. |
+| **Submit text color** | Ustawiono `#222222`; brak przycisku submit = brak celu. |
+| **Show labels (switch)** | true→false→true (`aria-checked`). ✓ stan; brak pól = brak gwiazdki/etykiety do pokazania. |
+| **Required indicator (switch)** | true→false→true. ✓ stan; brak pól = brak gwiazdki. |
+| **Back label / Next label** | „Wstecz"/„Dalej" zapisane; przyciski nawigacji multi-step renderują się tylko dla formularza multi-step. |
+| **Show progress (switch)** | true→false→true. ✓ stan; pasek postępu tylko przy multi-step. |
+| **Loading label** | „Wysyłanie…" zapisane; widoczne wyłącznie w runtime po submisji. |
+| **Success behavior** | Hide → Reset → Keep → Hide — combobox poprawnie cykluje; efekt wyłącznie runtime. (3/3 w UI) |
 
-### 3.4 Advanced (read-only, reaktywny)
+### 3.4 Saved progress TTL (clamp number) — przetestowane granice
 
-Wszystkie sekcje są **read-only** i **reaktywne** wobec moich edycji in-memory:
+| Wpisano | Wynik (po normalizacji) | Komentarz |
+|---|---|---|
+| `99` | `30` | ✓ clamp max 30 |
+| `45` | `30` | ✓ clamp max 30 |
+| `15` | `15` | ✓ wartość prawidłowa |
+| `-5` | `1` | ✓ clamp min 1 |
+| `0` | `7` | ⚠ **nie** clamp do 1, lecz fallback do 7 (`parseInt("0") || 7`) — patrz N2 |
+| `7` | `7` | ✓ |
+
+### 3.5 Advanced (read-only, reaktywny)
+
+Wszystkie sekcje **read-only** i **reaktywne** wobec edycji in-memory. Zweryfikowano stan
+pristine (po reloadzie) oraz po edycjach:
 
 | Sekcja | Wynik testu |
-|--------|-------------|
-| **Runtime diagnostics** | „Selected form: None", „Field count: No fields yet", „Field types: None", „Layout mode: Single page", „Save progress: Disabled", „Runtime warning: None". ✓ Trafne dla stanu „brak formularza". |
-| **Submission security** | „Submission routing: Not configured", „Submission access: Not available", „Nonce policy: Waiting for runtime projection", „Bot protection: Not configured", „Success behavior: Hide form". ✓ |
-| **Authoring summary** | **Reaktywne**: „Copy: Custom title · custom description · success message configured", „Layout: Extra large width · Center alignment · **Extra spacious spacing**", „Field display: Labels hidden · Required marks visible", „Style: **7 saved color overrides** · Large corners · Medium inputs", „Multi-step: Progress visible · saved for **30** days", „After submit: Hide form". ✓ (uwagi do „spacing" i „overrides" — patrz I2/I4) |
+|---|---|
+| **Runtime diagnostics** | „Selected form: None", „Form detail status: Not selected", „Field count: No fields yet", „Field types: None", „Layout mode: Single page", „Save progress: Disabled", „Runtime warning: None". ✓ Trafne dla „brak formularza". |
+| **Submission security** | „Submission routing: Not configured", „Submission access: Not available", „Nonce policy: Waiting for runtime projection", „Bot protection: Not configured", „Success behavior: Hide form" (reaktywne). ✓ |
+| **Authoring summary** | **Reaktywne**: po edycjach „Copy: Custom title · custom description · success message configured", „Layout: Medium width · Start alignment · Default spacing", „Field display: Labels visible · Required marks visible", „Multi-step behavior: Progress visible · saved for 7 days", „After submit: Hide form". ✓ (uwagi do „spacing"/„overrides" — I2/I4). |
 | **Contract summary** | Poprawny podział własności Wizard / Visual / Advanced. ✓ |
-| **Jawnie read-only** | Brak pól zapisywalnych w całym Advanced. ✓ Zgodne z kontraktem. |
+| **Block layout summary / Visibility summary** | Generyczne panele bloku, read-only („Content width default", „Padding Top MD bottom MD", „Margin None/None", „Shown on: Hidden on all devices"). ✓ (Visibility — patrz I9). |
 
-### 3.5 Frontend (trasa publiczna, SSR)
+### 3.6 Frontend (trasa publiczna, SSR)
 
 | Aspekt | Wynik |
-|--------|-------|
-| Render | 1 instancja widgetu, wariant `standard`, zgodny z zapisaną fixturą `{}` (defaulty: width `md`, spacing `md`, radius `md`, border `1`, sekcja `px-4 py-8`). ✓ |
+|---|---|
+| Render | 1 instancja widgetu, wariant `standard`, defaulty zgodne z fixturą `{}` (width md → `max-w-lg`, `px-4 py-8`, border 1px, radius `rounded-lg`, input-size md). ✓ |
 | Nagłówek | `<h2 id="…-title">Form</h2>` (domyślny tytuł, brak `formId`/`formName`). ✓ |
-| A11y | `aria-labelledby` sekcji wskazuje id nagłówka (gdy tytuł niepusty); `aria-label` = null wtedy. ✓ |
+| A11y | `aria-labelledby` sekcji == id nagłówka (gdy tytuł niepusty); `aria-label` = null wtedy. ✓ |
 | Stan pusty | „**Form unavailable (form_missing).**" (różny od admina — patrz I6). |
-| Brak formularza | Brak `<form>`, 0 inputów, **0 skryptów** (runtime JS wstrzykiwany tylko przy `fields.length > 0`). ✓ Spójne z kodem. |
-| Konsola | 0 błędów, 0 ostrzeżeń. ✓ |
+| Brak formularza | Brak `<form>`, **0 inputów, 0 skryptów** (runtime JS wstrzykiwany tylko przy `fields.length > 0`). ✓ Zgodne z kodem. |
+| Konsola | **0 błędów, 0 ostrzeżeń**. ✓ |
 | Mobile 375px | Brak poziomego scrolla (`bodyScrollW == windowW == 375`); karta `343px` (= 375 − 2×`px-4`). ✓ |
 
 ---
@@ -194,106 +221,130 @@ Wszystkie sekcje są **read-only** i **reaktywne** wobec moich edycji in-memory:
 ## 4. Spójność Admin ↔ Frontend
 
 | Funkcjonalność | Admin Preview | Frontend (SSR) | Zgodność |
-|----------------|---------------|----------------|----------|
+|---|---|---|---|
 | Struktura sekcji / karty / nagłówka | ✓ ten sam renderer `FormEmbedBlock` | ✓ identycznie | ✓ |
 | Domyślny tytuł „Form" + `aria-labelledby` | ✓ | ✓ | ✓ |
-| Defaulty layout / style (zapisane `{}`) | ✓ (`px-4 py-8`, width md, radius md) | ✓ identycznie | ✓ |
-| Nadmiarowa klasa `border` na karcie | ✓ obecna | ✓ obecna | ✓ (obie buggy — I5) |
+| Defaulty layout / style (`{}`) | ✓ (`px-4 py-8`, width md, radius md, border 1px) | ✓ identycznie | ✓ |
+| Podwójna klasa `border` na karcie | ✓ obecna (`…border p-6 border rounded-lg`) | ✓ obecna | ✓ (obie — I5) |
 | **Komunikat stanu pustego** | „No fields configured yet." | „Form unavailable (**form_missing**)." | ✗ **rozbieżność copy** (I6) |
-| Moje edycje in-memory (title, kolory, layout) | widoczne w podglądzie | **NIE wyciekły** | ✓ (brak zapisu) |
+| Moje edycje in-memory | widoczne w podglądzie | **NIE wyciekły** | ✓ (brak zapisu) |
 
 **Wniosek:** renderer jest współdzielony — dla tej samej konfiguracji admin i SSR dają
-identyczny wynik strukturalny. Jedyna różnica to **komunikat stanu pustego**: na froncie
-runtime projektuje `resolved.error = "form_missing"` (i renderer pokazuje surowy kod błędu),
-podczas gdy w admin podglądzie `resolved` jest `undefined`, więc renderer pada na ścieżkę
-„No fields configured yet.". Moje edycje testowe były wyłącznie w pamięci i **nie wpłynęły na
-publikację** (potwierdzone: `data` widgetu nadal `{}`, `updatedAt` = `2026-05-24T10:52:02Z`,
-niezmienione).
+identyczny wynik strukturalny. Jedyna różnica to **komunikat stanu pustego**: na froncie runtime
+projektuje `resolved.error = "form_missing"` (renderer pokazuje surowy kod), a w admin podglądzie
+`resolved` jest `undefined`, więc renderer pada na ścieżkę „No fields configured yet.".
 
 ---
 
-## 5. Co NIE działa / wymaga uwagi
+## 5. Co NIE DZIAŁA / wymaga uwagi (potwierdzone defekty UI/UX)
 
 | # | Obserwacja | Klasyfikacja |
-|---|------------|--------------|
-| I1 | **Brak jakiegokolwiek zapisanego formularza** w środowisku (`GET /forms` → `[]`). Selektor w Wizardzie ma tylko wyłączoną pozycję „No forms found". Rdzennej funkcji widgetu (osadzenie formularza) **nie da się skonfigurować ani przetestować**. | Ograniczenie środowiska (blokujące) |
-| I2 | **Kontrolka „Spacing" jest de facto martwa/dekoracyjna.** Zmiana „Spacing" na „Extra spacious" zmienia wyłącznie atrybut `data-form-embed-spacing="xl"`; klasa sekcji pozostaje `px-4 py-8` (zweryfikowane: brak zmiany `py-*`). Realny padding (`py-*`) i gap pól pochodzą z osobnych pól `sectionPaddingY`/`fieldGap`, które po normalizacji **zawsze** mają jawne wartości i nadpisują wartość pochodną od `spacing`. Jednocześnie Advanced „Authoring summary" opisuje tę wartość jako „… spacing" („Extra spacious spacing"), co **myli** — sugeruje efekt, którego nie ma. | Mylący/martwy kontroler + mylące summary |
-| I3 | **Domyślne kolory CSS-variable są błędnie etykietowane jako „Saved custom color" już przy załadowaniu (bez żadnej edycji).** Na świeżo otwartym widgecie `data: {}` Style pokazuje „Saved custom color" + aktywny „Clear" + hint „A saved custom color is configured" dla: `surface`, `borderColor`, `titleColor`, `labelColor`, `helperColor`, `submitBackground`, `submitTextColor` (7 kontrolek), mimo że użytkownik **niczego nie nadpisał**. Tylko `background` (`transparent`) jest etykietowany poprawnie („Transparent"). Po kliknięciu „Clear" etykieta zmienia się na poprawne **„Theme default"** (zweryfikowane na `surface`). Przyczyna: edytor hydratuje wartością z defaultów widgetu, a `SharedColorControl` (z `form-embed` bez `treatAsThemeDefaultValues`) traktuje każdą wartość nie-hex/nie-`transparent` jako custom. | Mylące UI |
-| I4 | **Zawyżony licznik „saved color overrides".** Advanced „Style" summary pokazał „**7 saved color overrides**" — i to po tym, jak wyczyściłem tylko `surface` (przed edycją liczyłby 8). Licznik zlicza również domyślne kolory CSS-variable jako nadpisania. Ta sama przyczyna co I3 (`describeFormStyleOverrides` liczy każdą niepustą wartość). | Mylące UI |
-| I5 | **Nadmiarowa klasa obramowania.** Karta ma na stałe `border p-6` plus dynamiczną klasę `border-0`/`border`/`border-2`. Dla „None" w DOM współistnieją `border` i `border-0` (`...border p-6 border-0 rounded-…`), ale computed `border-top-width` = `0px` (`border-0` wygrywa). Dla domyślnego „Thin" w DOM widać `border` dwukrotnie. **Funkcjonalnie działa**, pozostaje code smell. | Code smell (bez wpływu na użytkownika) |
-| I6 | **Rozbieżność komunikatu stanu pustego Admin ↔ Frontend i ekspozycja surowego kodu błędu.** Front pokazuje **publicznemu** odbiorcy „Form unavailable (**form_missing**)." (surowy kod runtime), admin — „No fields configured yet.". Surowy kod `form_missing` nie jest przyjazną komunikacją dla końcowego użytkownika. | Niespójność UX + polish (publiczna ekspozycja kodu) |
-| I7 | **Natywny picker koloru bez pola hex.** Wszystkie kontrolki koloru mają `showValueInput={false}` → jedyną drogą jest wizualny `<input type="color">` (picker OS); nie da się wpisać/wkleić hex z klawiatury. (Wartości udało się ustawić **programowo** setterem + zdarzeniami — handler React działa — ale realny użytkownik ma tylko picker.) | Nuta UX / dostępność |
-| I8 | **Sekcja „Multi-step navigation" zawsze widoczna w Visual**, mimo że jej własny opis brzmi „Controls shown only when the selected form resolves as multi-step." Bez wybranego formularza nie sposób potwierdzić, czy faktycznie warunkowo renderuje się tylko dla multi-step. Analogia do `U1` z Contact. | Nuta UX edytora (niezweryfikowane warunkowanie) |
-| I9 | **„Device visibility: Hidden" na wszystkich urządzeniach** dla `visibility.devices: []`, choć widget renderuje się i w podglądzie, i na froncie. To **generyczny panel bloku** (Block layout / Device visibility), nie specyficzny dla form-embed — prawdopodobnie mylna etykieta pustej tablicy urządzeń (puste = „wszystkie widoczne", a UI pokazuje przełączniki jako „Hidden"). | Drobna nuta (panel generyczny) |
+|---|---|---|
+| **I2** | **Kontrolka „Spacing" jest de facto martwa w przepływie edytora.** Przeklikanie wszystkich 5 wartości (None…Extra spacious) zmienia **wyłącznie** atrybut `data-form-embed-spacing`; klasa sekcji pozostaje `px-4 py-8` (brak zmiany `py-*`). Realny pionowy odstęp pochodzi z osobnego pola **„Vertical padding" (`sectionPaddingY`)**, które po normalizacji **zawsze** ma jawną wartość i maskuje wartość pochodną od `spacing`. Advanced „Authoring summary" opisuje to jako „… spacing", co **myli**. | Martwy/mylący kontroler |
+| **I3** | **Domyślne kolory CSS-variable są błędnie etykietowane jako „Saved custom color" już na świeżo załadowanym, nietkniętym widgecie (`data: {}`).** Po reloadzie 7 z 8 kontrolek (`Surface`, `Border color`, `Title color`, `Label color`, `Helper color`, `Submit background`, `Submit text color`) pokazuje „Saved custom color" + aktywny „Clear" + hint „A saved custom color is configured", mimo że użytkownik **niczego nie nadpisał**. Poprawnie etykietowany jest tylko `Background` („Transparent"). Przyczyna: host edytora hydratuje wartość defaultami widgetu, a `SharedColorControl` (bez `treatAsThemeDefaultValues`) traktuje każdą wartość nie-hex/nie-`transparent` (np. `var(--color-text)`) jako custom. | Mylące UI |
+| **I4** | **Zawyżony licznik „saved color overrides".** Na **nietkniętym** widgecie Advanced „Authoring summary" pokazuje **„8 saved color overrides"** (zweryfikowane po reloadzie), choć użytkownik nie nadpisał żadnego koloru. `describeFormStyleOverrides` zlicza każdą niepustą wartość (w tym domyślne CSS-vary i `transparent`). Po wyczyszczeniu wszystkich 8 kolorów licznik nadal pokazuje **„6 saved color overrides"** (patrz N1 — Clear nie usuwa 6 z 8). | Mylące UI |
+| **N1** | **„Clear" nie przywraca stanu „Theme default" dla 6 z 8 kolorów.** Dla `Border color`, `Title color`, `Label color`, `Helper color`, `Submit background`, `Submit text color` kliknięcie „Clear" **wizualnie** resetuje render do koloru motywu (np. border wraca do `rgb(29,23,15)`, tytuł do koloru tekstu), **ale** etykieta kontrolki pozostaje „Saved custom color", a przycisk „Clear" **dalej jest aktywny** — normalizacja (`resolveNonEmptyString`/`resolveOptionalString` w `normalizeFormEmbedData`) natychmiast re-hydratuje domyślny CSS-var jako jawną wartość. Tylko `Background` i `Surface` (ścieżka `resolveClearableStyleValue`) czyszczą się poprawnie (etykieta „Theme default", Clear [disabled]). Niespójność między 2 a 6 kontrolkami koloru. | Bug UI (Clear nieskuteczny w warstwie etykiety/stanu) |
+| **I5** | **Nadmiarowa klasa obramowania.** Karta ma na stałe `border p-6` plus dynamiczną klasę `border-0`/`border`/`border-2`. Dla „Thin" w DOM `border` występuje **dwukrotnie** (`…border p-6 border rounded-lg`); dla „None" współistnieją `border` i `border-0` (computed `0px` — `border-0` wygrywa). **Funkcjonalnie poprawne**, code smell. | Code smell (bez wpływu na użytkownika) |
+| **I6** | **Rozbieżność komunikatu stanu pustego Admin ↔ Frontend + ekspozycja surowego kodu błędu.** Front pokazuje **publicznemu** odbiorcy „Form unavailable (**form_missing**)." (surowy kod runtime), admin — „No fields configured yet.". Surowy `form_missing` nie jest przyjazną komunikacją dla użytkownika końcowego. | Niespójność UX + ekspozycja kodu |
+| **I7** | **Pickery koloru bez pola hex.** Wszystkie 8 kontrolek ma `showValueInput={false}` → jedyną drogą jest wizualny `<input type="color">` (picker OS). Nie da się wpisać/wkleić hex z klawiatury. (W teście wartości ustawiano **programowo** setterem + zdarzeniami — handler React działa — ale realny użytkownik ma tylko picker.) | Nuta UX / dostępność |
+| **N2** | **TTL = 0 nie jest clampowane do minimum (1), lecz cicho zamieniane na 7.** Wpisanie `0` daje wartość `7` (`Number.parseInt("0") || 7`), podczas gdy `-5` poprawnie → `1`, a `99`/`45` → `30`. Drobna niekonsekwencja walidacji granicy dolnej. | Drobny bug walidacji |
+| **N3** | **„success message configured" mylące na pristine.** „Authoring summary → Copy" na nietkniętym widgecie pokazuje „… success message configured", bo domyślny `successMessage` („Thanks for your submission.") jest niepusty — sugeruje skonfigurowanie czegoś przez użytkownika, choć to default. (Tytuł/opis poprawnie raportują „Form title · form description".) | Drobna mylna etykieta |
+| **I8** | **Sekcja „Multi-step navigation" zawsze widoczna w Visual**, mimo opisu „Controls shown only when the selected form resolves as multi-step." Bez formularza multi-step nie sposób potwierdzić warunkowego renderowania. | Nuta UX (niezweryfikowane warunkowanie) |
+| **I9** | **„Device visibility / Visibility summary: Hidden on all devices"** dla pustej tablicy `visibility.devices`, choć widget renderuje się i w podglądzie, i na froncie. To **generyczny panel bloku**, nie specyficzny dla form-embed (puste = „wszystkie widoczne", a UI pokazuje „Hidden"). Przełączniki działają (Desktop on→off zweryfikowane). | Drobna nuta (panel generyczny) |
+| **N4** | **„Add variant preset" jest bezczynne w tej fixturze** — kliknięcie nie otwiera dialogu, nie pokazuje toasta i nie dodaje karty wariantu (pozostaje 1 karta „Standard" [Selected]). Brak obserwowalnego efektu biznesowego dla pojedynczego wariantu. | Drobna nuta UX |
 
-> Uwaga: nie stwierdzono **żadnego twardego buga renderera** ani błędu konsoli (admin i
-> frontend = 0 błędów / 0 ostrzeżeń). Wszystkie kontrolki edytora, które miały obserwowalny
-> cel w tym stanie fixtury, aktualizowały podgląd na żywo. Pozycja I1 oraz większość z 3.3 to
-> brak możliwości weryfikacji w tym środowisku (brak formularza), a nie potwierdzone defekty.
-> I2/I3/I4/I6 to realne niuanse mylącego UI/UX.
+> Uwaga: **nie stwierdzono żadnego twardego buga renderera** ani błędu konsoli (admin i
+> frontend = 0 błędów / 0 ostrzeżeń). Wszystkie kontrolki, które miały obserwowalny cel w tym
+> stanie fixtury, aktualizowały podgląd na żywo. I1 oraz większość pozycji z 3.3 to brak
+> możliwości weryfikacji w tym środowisku (brak formularza), a nie potwierdzone defekty.
+> I2/I3/I4/N1/I6 to realne niuanse mylącego UI/UX (N1 to bug warstwy stanu kontrolki).
 
 ---
 
-## 6. UX / UI — nuty dodatkowe
+## 6. Czego NIE DAŁO SIĘ przetestować (z dokładną przyczyną)
 
-- **Brak autozapisu** — potwierdzone: po wszystkich moich edycjach in-memory (title,
-  description, width, alignment, spacing, heading, title size/weight, border, radius,
-  surface color + clear, TTL, show-labels) `data` widgetu pozostał `{}`, a `updatedAt`
-  bez zmian (`2026-05-24T10:52:02Z`). Wyjście z edytora z niezapisanymi zmianami wywołuje
-  natywny dialog „leave site" — frontend otwarto w **osobnej karcie**, aby uniknąć utraty
-  stanu admina.
-- **Normalizacja wstrzykuje defaulty stylu.** Edytor hydratuje wartością z defaultów widgetu,
-  więc obiekt `style` w edytorze jest pełny (kolory CSS-variable). To źródło I3/I4. Gdyby
-  zapisać widget po jakiejkolwiek edycji, payload przestałby być `{}` i zawierałby pełny
-  `style` z defaultami (zamiana „theme default" na jawnie zapisane wartości + bloat payloadu).
-  **Nie potwierdzone zapisem** (celowo nie zapisywałem) — wniosek z analizy `normalize` i
-  obserwacji etykiet w UI.
-- **Wizard świadomie minimalny** — jedyną zapisywalną kontrolką jest selektor formularza;
-  reszta to read-only diagnostyka. Spójne z kontraktem.
+| Obszar | Dokładna kontrolka / funkcja | Przyczyna |
+|---|---|---|
+| **I1 — rdzeń** | Wybór zapisanego formularza (selektor „Saved form") | **Brak jakiegokolwiek formularza** — `GET /forms` → `200 []`; jedyna pozycja „No forms found" [disabled]. |
+| Renderowanie pól | 13 typów (text, email, phone, date, time, number, range, rating, hidden, textarea, checkbox, select, radio) | Wymaga formularza z polami; `resolved.fields` puste. |
+| Submisja | `POST /forms/:id/submissions`, nonce `__nl_form_nonce`, captcha `captchaToken`, komunikaty `[data-form-embed-success]`/`[data-form-embed-error]` | Brak formularza i runtime JS (wstrzykiwany tylko przy `fields.length > 0`). |
+| Multi-step | grupowanie kroków, pasek postępu (`Show progress`), przyciski **Back/Next**, `stepTitles` | Wymaga formularza `layoutMode: multi_step`; niedostępny. |
+| Style przycisku/pól | **Submit background**, **Submit text color**, **Input size** (realne inputy), **Field gap**, **Button alignment**, **Label color**, **Show labels**, **Required indicator** (gwiazdka) | Brak przycisku submit / pól / gridu w stanie pustym (zweryfikowano tylko aktualizację stanu/atrybutów). |
+| Warunkowanie sekcji | Warunkowe ukrycie „Multi-step navigation" w Visual (I8) | Brak formularza multi-step do potwierdzenia warunku. |
+| Hex z klawiatury | Wpisanie/wklejenie hex w którejkolwiek z 8 kontrolek koloru (I7) | `showValueInput={false}` — tylko picker OS (wartości ustawiano programowo). |
+| Zapis / publikacja | `Save`/`Publish` | **Celowo niewykonane**, aby nie zmutować współdzielonej fixtury (`data` pozostało `{}`). |
+
+---
+
+## 7. UX / UI — nuty dodatkowe
+
+- **Brak autozapisu** — potwierdzone dwukrotnie: po wszystkich edycjach in-memory `data` widgetu
+  pozostał `{}`, a `updatedAt` bez zmian (`2026-05-24T10:52:02.234Z`). Wyjście/reload edytora z
+  niezapisanymi zmianami wywołuje natywny dialog „leave site"; frontend audytowano w **osobnej
+  karcie**, aby nie utracić stanu admina.
+- **Normalizacja wstrzykuje defaulty stylu** — host edytora hydratuje wartość defaultami, więc
+  obiekt `style` w edytorze jest pełny (kolory CSS-variable). To źródło I3/I4/N1. Gdyby zapisać
+  widget po jakiejkolwiek edycji, payload przestałby być `{}` i zawierałby pełny `style` z
+  defaultami (zamiana „theme default" na jawnie zapisane wartości + bloat payloadu). **Nie
+  potwierdzone zapisem** (celowo) — wniosek z analizy `normalize` + obserwacji etykiet.
+- **Wizard świadomie minimalny** — jedyną zapisywalną kontrolką jest selektor formularza; reszta
+  to read-only diagnostyka. Spójne z kontraktem.
 - **Advanced uczciwie read-only** i reaktywny — dobre podsumowanie kontraktu i stanu, ale
-  dziedziczy mylące teksty I2 („spacing") i I4 („overrides").
-- **Pozytywy a11y (w stanie pustym):** `aria-labelledby` sekcji jest poprawnie wiązany z id
-  nagłówka, gdy tytuł niepusty, i pozostaje spójny przy zmianie poziomu nagłówka (H2→H4).
-  Atrybuty pól (`aria-required`, `aria-label`/`aria-labelledby`, `aria-describedby`, `name`,
-  `id`) są obecne w kodzie renderera, ale **niezweryfikowane na żywo** (brak pól do wyrenderowania).
-- **„Add variant preset"** w Visual — przycisk obecny przy jedynym wariancie „Standard";
-  jego biznesowy skutek nie był testowany (poza zakresem — pojedynczy wariant).
+  dziedziczy mylące teksty I2 („spacing"), I4 („overrides") i N3 („success message configured").
+- **Pozytywy a11y (stan pusty):** `aria-labelledby` sekcji jest poprawnie wiązany z id nagłówka
+  i pozostaje spójny przy zmianie poziomu nagłówka (H2→H3→H4). Atrybuty pól (`aria-required`,
+  `aria-label`/`aria-labelledby`, `aria-describedby`, `name`, `id`) są w kodzie renderera, ale
+  **niezweryfikowane na żywo** (brak pól).
+- **Skala stylu**: poprawnie działają trzy „rodziny odstępów" (Side padding, Vertical padding),
+  pięć szerokości, trzy/cztery skale (radius, border, title size/weight) — wszystkie deterministyczne
+  i zgodne z mapami klas w `formEmbed.tsx`.
 
 ---
 
-## 7. Pokrycie testu — podsumowanie
+## 8. Pokrycie testu — podsumowanie
 
-**Przetestowano interaktywnie z asercją DOM:** logowanie, otwarcie fixtury, 3 tryby edytora,
-przejścia trybów (Wizard↔Visual), selektor formularza (pusty), Content (title/description),
-Layout (width/alignment/spacing), Style (heading level/title size/title weight/border
-width/radius/surface color/clear), Field labels (show-labels toggle), Multi-step navigation
-(clamp TTL), reaktywność wszystkich sekcji Advanced, render SSR frontu, a11y nagłówka,
-konsola (admin + front = 0 błędów), responsywność 375px, brak autozapisu.
+**Przetestowano interaktywnie (wyczerpująco, asercja DOM):** logowanie, otwarcie fixtury, 3 tryby
+edytora, oba przejścia (Wizard↔Visual), selektor formularza (pusty), warianty + „Add variant preset",
+Content (4 pola), Layout (Alignment 3/3, Width 5/5, Spacing 5/5, Button alignment 3/3, Side padding
+3/3, Vertical padding 5/5, Field gap 3/3), Field labels (2 switche on/off/on), Style (8 kolorów set+
+Clear, Border width 3/3, Radius 4/4, Input size 4/4, Title size 3/3, Title weight 3/3, Heading level
+3/3), Multi-step (Back/Next/Loading inputs, Show progress switch, TTL clamp 6 przypadków granicznych),
+Submit behavior (Loading label, Success behavior 3/3), reaktywność wszystkich sekcji Advanced, render
+SSR frontu, a11y nagłówka, konsola (admin + front = 0 błędów), responsywność 375px, brak autozapisu,
+generyczne panele bloku (Block layout, Device visibility — toggle zweryfikowany).
 
 **Nie przetestowano (świadomie / z powodu środowiska):** wybór formularza (brak formularzy),
-renderowanie pól, submisja, multi-step, pasek postępu, nonce, captcha, komunikaty sukcesu/
-błędu runtime, zapis/publikacja (ochrona współdzielonej fixtury), realne wpisanie hex w
-pickerze (natywny picker OS), warunkowe ukrywanie sekcji multi-step na froncie.
+renderowanie pól (13 typów), submisja, multi-step, pasek postępu, Back/Next, nonce, captcha,
+runtime'owe komunikaty sukcesu/błędu, realny efekt submit-bg/submit-text/input-size/field-gap/
+button-alignment/label-color/show-labels/required-indicator (brak pól/przycisku), warunkowe ukrycie
+sekcji multi-step, wpisanie hex z klawiatury (picker OS), zapis/publikacja (ochrona współdzielonej
+fixtury).
 
 **Werdykt szczerości:** wszystko, co w tym stanie fixtury **miało obserwowalny cel**, działało
-poprawnie i aktualizowało podgląd na żywo (tytuł, opis, szerokość, wyrównanie, poziom/rozmiar/
-grubość nagłówka, kolory karty, grubość/zaokrąglenie obramowania, clamp TTL, przełączniki,
-Clear). Nie znaleziono twardych bugów renderera ani błędów konsoli. Główne zastrzeżenia to
-**mylące UI** wokół etykietowania kolorów (I3/I4), **martwa kontrolka Spacing** (I2),
-**rozbieżność komunikatu stanu pustego admin↔front z ekspozycją surowego kodu błędu** (I6)
-oraz **blokujące ograniczenie środowiska** — brak jakiegokolwiek formularza (I1), przez co
-rdzennej funkcji widgetu nie dało się zweryfikować.
+poprawnie i aktualizowało podgląd na żywo (tytuł, opis, wyrównanie ×3, szerokość ×5, paddingi
+boczne ×3 i pionowe ×5, kolory tła/karty/obramowania/tytułu/helpera, grubość ×3 i zaokrąglenie ×4
+obramowania, rozmiar ×3 i grubość ×3 tytułu, poziom nagłówka ×3 z zachowaniem a11y, clamp TTL,
+przełączniki, Clear dla Background/Surface). Nie znaleziono twardych bugów renderera ani błędów
+konsoli. Główne zastrzeżenia: **martwa kontrolka Spacing** (I2), **mylące etykiety kolorów** na
+pristine (I3) i **zawyżony licznik overrides „8"** (I4), **nieskuteczny „Clear" dla 6/8 kolorów**
+(N1), **rozbieżność stanu pustego admin↔front z ekspozycją surowego `form_missing`** (I6) oraz
+**blokujące ograniczenie środowiska** — brak jakiegokolwiek formularza (I1), przez co rdzennej
+funkcji widgetu nie dało się zweryfikować.
 
 ---
 
-## 8. Statystyki
+## 9. Statystyki
 
 | Kategoria | Liczba |
-|-----------|--------|
-| Funkcje zweryfikowane jako działające (obserwowalny cel, asercja DOM) | ~14 |
-| Kontrolki działające w UI bez celu w podglądzie (brak formularza) | ~10 |
-| Pozycje niezweryfikowane (ograniczenie środowiska — brak formularza) | rdzeń: pola / submisja / multi-step / nonce / captcha |
-| Mylące UI / UX (I2, I3, I4, I6) | 4 |
-| Drobne nuty / code smell (I5, I7, I8, I9) | 4 |
+|---|---|
+| Kontrolki przeklikane przez wszystkie wartości (selecty) | 14 (~52 wartości) |
+| Switche przetestowane on/off/on | 5 (3 form-embed + 2 device check) |
+| Kontrolki koloru: set + Clear | 8 |
+| Pola tekstowe / number | 7 + 1 (TTL: 6 przypadków granicznych) |
+| Funkcje zweryfikowane jako działające z obserwowalnym celem (asercja DOM) | ~24 |
+| Kontrolki działające w UI bez celu w podglądzie (brak formularza) | ~14 |
+| Potwierdzone niuanse mylącego UI/UX (I2, I3, I4, N1, I6, N2, N3) | 7 |
+| Drobne nuty / code smell (I5, I7, I8, I9, N4) | 5 |
 | Twarde bugi renderera | 0 |
 | Błędy / ostrzeżenia konsoli (admin + frontend) | 0 |
+| Pozycje niezweryfikowane (brak formularza) | rdzeń: pola (13 typów) / submisja / multi-step / nonce / captcha |
