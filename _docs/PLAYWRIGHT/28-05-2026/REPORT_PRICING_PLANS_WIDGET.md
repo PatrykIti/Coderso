@@ -1,19 +1,22 @@
-# RAPORT: Pricing Plans Widget — pogłębiony audyt current-state (Wizard / Visual / Advanced + frontend)
+# RAPORT: Pricing Plans Widget — wyczerpujący audyt current-state (Wizard / Visual / Advanced + frontend)
 
-> **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja Playwright:** `claude-28-05-pricing-plans` (izolowana, oddzielna od innych agentów)
+> **Status:** Zakończony (uzupełniony do pełnego pokrycia kontrolek)
+> **Data bazowa:** 2026-05-28 · **Domknięcie luki pokrycia:** 2026-05-29
+> **Sesja Playwright (domknięcie):** `claude-29-05-pricing-plans-gap-close` (izolowana, oddzielna od innych agentów; podpięta do już otwartej sesji, bez logowania od zera)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Fixture admin:** `/admin/pages/21b6bd3d-6208-46a6-b9f0-e1fdbad76c7e` — strona „Contract Test - pricing-plans", slug **`/ctr-pricing-plans-2305`** (draft, publicznie `404`)
 > **Fixture public:** http://localhost:3000/test-pricing-plans-0516 (**inna** strona — patrz N0)
-> **Pliki źródłowe:** `core/widgets/core/pricingPlans.tsx` (renderer + normalizacja + schema) · `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` (edytory Wizard/Visual/Advanced)
+> **Pliki źródłowe:** `core/widgets/core/pricingPlans.tsx` (renderer + normalizacja + schema) · `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/LinkDestinationField.tsx` (picker celu CTA) · `core/admin/ui/widgets/editors/WidgetEditorControls.tsx` (kontrakt kontrolek)
 
-> Uwaga metodologiczna: ten raport jest celowo bogatszy niż smoke z 27-05-2026.
-> Każde stwierdzenie „działa / nie działa" zostało zweryfikowane realną interakcją
-> w UI oraz inspekcją DOM (atrybuty `data-pricing-*`, klasy Tailwind, ARIA, wartości
-> kontrolek, `data-widget-control-path`), a nie tylko zliczeniem widocznych sekcji.
-> Sekcje 4–8 jasno oddzielają: co działa, co nie działa / jest mylące, co
-> faktycznie przetestowano oraz czego NIE testowano.
+> Uwaga metodologiczna: każde stwierdzenie „działa / nie działa" zostało zweryfikowane
+> realną interakcją w UI (klik/setter) oraz inspekcją DOM — atrybuty `data-pricing-*`,
+> `data-pricing-badge-tone`, `data-pricing-feature-status`, `data-pricing-plan-cta-style`,
+> klasy Tailwind, inline `style`, klasy ikon lucide, ARIA, `data-widget-control-path` —
+> a nie tylko zliczeniem widocznych sekcji. **W sesji domykającej (29-05) kliknięto
+> KAŻDĄ realnie klikalną kontrolkę per-plan / per-feature / per-layout / per-style oraz
+> przełączniki comparison; przebieg każdej opcji potwierdzono w DOM canvasu.** Lista
+> rzeczy, których świadomie NIE wykonano (operacje destrukcyjne i zapis), jest w sekcji 7
+> wraz z konkretną przyczyną.
 
 > Uwaga o screenshotach: w tym audycie **nie** opierałem się na zrzutach ekranu —
 > weryfikacja jest oparta o inspekcję DOM. Ewentualne pliki PNG/YAML w katalogu
@@ -64,22 +67,64 @@ Panel edytora ma **tylko dwie zakładki: `Visual` i `Advanced`**. Tryb **Wizard 
 
 ---
 
-## 3. Co faktycznie przetestowano (zakres interakcji)
+## 3. Co faktycznie przetestowano (pełny zakres interakcji)
 
-Wszystkie poniższe interakcje wykonano w sesji `claude-28-05-pricing-plans`:
+Interakcje pochodzą z dwóch przebiegów: bazowego 28-05 (`claude-28-05-pricing-plans`) oraz domykającego 29-05 (`claude-29-05-pricing-plans-gap-close`). Poniżej **wszystkie** kontrolki, które realnie kliknięto/ustawiono, z weryfikacją w DOM.
 
-- **Wizard:** wejście („Run setup again"), odczyt read-only podsumowania i `FixedPlanCountNotice`, weryfikacja braku kontrolek edytowalnych, weryfikacja „Live preview" (drugi render), wyjście („Finish setup and open Visual").
-- **Visual / Variant:** przełączenie wszystkich 4 wariantów (two → three → four → comparison) z odczytem `data-pricing-variant` / `data-pricing-count` / `data-pricing-hidden-count`; test „Add plan" (utworzenie realnego 4. planu).
-- **Visual / Header:** edycja tytułu i opisu.
-- **Visual / Billing:** włączenie toggla, zmiana `defaultCycle` na Annual (z weryfikacją transformacji ceny i okresu), wyłączenie.
-- **Visual / Plans:** highlight (wymuszenie jednego), edycja nazwy planu, `priceDisplay.mode` = Custom (z labelem), „Add feature".
-- **Visual / Plan remove:** wywołanie destrukcyjnego usuwania planu (potwierdzenie natywnym `window.confirm`, anulowane).
-- **Visual / Comparison behavior:** sticky header (on), header badges (off).
-- **Visual / Layout:** max width = Wide, typography = Prominent, footer note.
-- **Visual / Colors:** card surface (`#ff0000` + Clear), spacing = Spacious, radius = None, feature marker = Check.
-- **Visual / kontrakt:** weryfikacja obecności `data-widget-control-path` na realnych kontrolkach.
-- **Advanced:** odczyt wszystkich sekcji read-only (z porównaniem do edycji z Visual), otwarcie obu dialogów naprawczych (oba anulowane).
-- **Frontend (public):** render comparison-rows, dostępność (region/caption/scroll affordance/CTA aria), CTA href, komórki feature, billing bar (statyczność), konsola, overflow na 375 px.
+**Wizard:** wejście („Run setup again"), odczyt read-only podsumowania i `FixedPlanCountNotice`, weryfikacja braku kontrolek edytowalnych, weryfikacja „Live preview" (drugi render), wyjście („Finish setup and open Visual").
+
+**Visual / Variant + struktura:** przełączenie wszystkich 4 wariantów (two → three → four → comparison) z odczytem `data-pricing-variant` / `data-pricing-count` / `data-pricing-hidden-count`; „Add plan" (utworzenie realnego 4. planu).
+
+**Visual / Header:** edycja tytułu i opisu.
+
+**Visual / Billing:** włączenie toggla, zmiana `defaultCycle` na Annual (transformacja ceny `$19`→`$190` i okresu `/month`→`/year`), wyłączenie.
+
+**Visual / Plany — kontrolki per-plan (wszystkie kliknięte indywidualnie, 29-05):**
+
+- **Badge tone** — wszystkie 3 opcje (`neutral`/`accent`/`highlight`) klikane na planach 1, 2 i 3; weryfikacja `data-pricing-badge-tone` + inline `style`:
+  - `neutral` → `background-color: color-mix(in oklab, var(--color-text) 8%, transparent)`, `color: var(--color-text)`;
+  - `accent` → `color-mix(in oklab, var(--color-primary) 14%, transparent)`, `color: var(--color-primary)`;
+  - `highlight` → `var(--color-primary)`, `color: var(--color-bg)`.
+- **CTA style** — wszystkie 3 opcje (`outline`/`filled`/`ghost`) na planie 1 zweryfikowane podwójnie: atrybut `data-pricing-plan-cta-style` na `<article>` **oraz** klasa realnego `<a>` (`outline` = `border border-[var(--color-border)]`, `filled` = `bg-[var(--color-text)]`, `ghost` = `underline-offset-4`); na planach 2 i 3 zweryfikowano atrybut artykułu.
+- **CTA destination picker** (`LinkDestinationField`) — otwarto picker (lista opublikowanych stron), wybrano „HomePage" → `ctaHref` rozwiązał się do `/homepage`, w canvasie pojawił się `<a>` z `aria-label="Start now for Starter"`.
+- **Price mode** — wszystkie 4 tryby: `legacy` (`$19` `/month`), `structured` (amount=49 + currency USD → **`$49`**, zmiana na EUR → **`€49`** — potwierdza `Intl.NumberFormat`), `free` (domyślne „Free" oraz custom label „Darmowy na zawsze"), `custom` (z 28-05). Po teście przywrócono `legacy`.
+- **Plan surface** (`plans.0.surface`) — ustawienie `#00ff00` → `<article>` inline `background-color: rgb(0, 255, 0)`; „Clear" → powrót do `cardSurface` (`var(--color-bg)`).
+- **Plan reorder** — „Move down" (Starter → poz. 2: `[Growth, Starter, Scale]`) oraz „Move up" (przywrócenie `[Starter, Growth, Scale]`).
+- **Highlight plan** — wymuszenie pojedynczego (z 28-05).
+
+**Visual / Features — kontrolki per-feature (wszystkie kliknięte indywidualnie, 29-05):**
+
+- **Status** — wszystkie 3 (`included`/`premium`/`coming-soon`): `premium` → badge `data-pricing-feature-status="premium"` („Premium"), `coming-soon` → `data-pricing-feature-status="coming-soon"` („Coming soon"), `included` → brak badge (zgodne z `renderFeatureStatusBadge`).
+- **Icon** — wszystkie 4 (`check`/`sparkle`/`lock`/`clock`) przy `featureMarker=status`; weryfikacja po klasie ikony lucide: `lucide-check`, `lucide-sparkles`, `lucide-lock-keyhole`, `lucide-clock3`.
+- **Feature reorder** — „Move down" + „Move up" (zmiana i przywrócenie kolejności w planie 1).
+- **Add feature / Remove feature** — dodanie (3→4) i usunięcie nowego wiersza (4→3, oryginalne featery zachowane). „Remove" feature **nie ma** natywnego `confirm` (usuwa od razu).
+
+**Visual / Comparison behavior (wariant comparison-rows, 29-05) — wszystkie 3 przełączniki:**
+
+- **Sticky header** — on/off → `data-pricing-comparison-sticky` = `true`/`false`.
+- **Header badges** — off → 0 badge'ów w `thead`, on → 3 badge'e (po jednym na plan).
+- **Header CTA** — off → 0 linków CTA w `thead`, on → 1 link (tylko plan z ustawionym `ctaHref`). **To kontrolka pominięta w przebiegu bazowym — domknięta 29-05.**
+
+**Visual / Layout and notes — wszystkie opcje selectów (29-05):**
+
+- **Max width** — `narrow`→`max-w-4xl`, `default`→`max-w-6xl`, `wide`→`max-w-7xl` (+ `data-pricing-max-width`).
+- **Typography** — `compact`/`balanced`/`prominent` (+ `data-pricing-typography`).
+- **Footer note** — tekst (z 28-05).
+
+**Visual / Colors and emphasis — wszystkie opcje + kolory clearable (29-05):**
+
+- **Spacing** — `none`→`gap-0`, `sm`(Compact)→`gap-3`, `md`(Default)→`gap-5`, `lg`(Spacious)→`gap-7` (+ `data-pricing-spacing`).
+- **Radius** — `none`→brak klasy `rounded-*`, `md`→`rounded-md`, `lg`→`rounded-lg`, `xl`→`rounded-xl`.
+- **Feature marker** — `bullet`→`•`, `check`→`✓`, `status`→ikona lucide (`<svg>`).
+- **Card surface** (`style.cardSurface`) — `#ff0000` → `rgb(255, 0, 0)`; „Clear" → inline tło usunięte (`""`, przezroczyste — N4).
+- **Card border** (`style.cardBorder`) — `#0000ff` → `<article>` `border-color: rgb(0, 0, 255)`; „Clear" → `""` (przezroczyste).
+- **Highlight ring** (`style.highlightRing`) — `#ff00ff` → na wyróżnionym planie `box-shadow: rgb(255, 0, 255) 0px 0px 0px 2px` **oraz** baner highlight `background-color: rgb(255, 0, 255)`; „Clear" → powrót do `0 0 0 2px var(--color-primary)` (**motyw**, nie przezroczystość — patrz N8).
+
+**Advanced:** odczyt wszystkich sekcji read-only (z porównaniem do edycji z Visual), otwarcie obu dialogów naprawczych (oba anulowane — patrz §7).
+
+**Frontend (public):** render comparison-rows, dostępność (region/caption/scroll affordance/CTA aria), CTA href, komórki feature, billing bar (statyczność), `data-pricing-badge-tone`, konsola, overflow na 375 px.
+
+**Kontrakt automatyzacji:** atrybuty `data-widget-control-path` obecne na realnych kontrolkach: `plans.0/1/2.surface`, `plans.ctaHref`, `style.cardSurface`, `style.cardBorder`, `style.highlightRing`, `style.spacing`, `style.radius`, `style.featureMarker` (+ współdzielone `layout.*`, `visibility.devices.*`).
 
 ---
 
@@ -88,61 +133,64 @@ Wszystkie poniższe interakcje wykonano w sesji `claude-28-05-pricing-plans`:
 ### 4.1 Wizard („Starter offer")
 
 - Tryb jest **w 100% read-only** — sekcja „Starter offer" ma **0 pól edytowalnych**, jedyny przycisk to „Finish setup and open Visual".
-- Pokazuje read-only „Pricing layout: Two Plans", `FixedPlanCountNotice` („Two Plans shows 2 plans." + „1 preserved plan is hidden in this layout and will reappear when you switch to a wider variant…") oraz read-only listę widocznych planów (Starter / Growth, z adnotacją „Visual owns details").
-- **„Live preview"** renderuje drugi, żywy instancję widgetu przez współdzielony renderer; w trakcie testu obie instancje pokazywały spójnie `two-plans/2`.
-- „Finish setup and open Visual" poprawnie wraca do zakładki Visual i usuwa render live preview (z 2 instancji → 1). ✓
+- Pokazuje read-only „Pricing layout: Two Plans", `FixedPlanCountNotice` oraz read-only listę widocznych planów (z adnotacją „Visual owns details").
+- **„Live preview"** renderuje drugi, żywy instancję widgetu przez współdzielony renderer; obie instancje pokazywały spójnie ten sam wariant/`count`.
+- „Finish setup and open Visual" poprawnie wraca do zakładki Visual i usuwa render live preview. ✓
 
-### 4.2 Visual — wszystkie poniższe zweryfikowane na żywo w canvas (DOM)
+### 4.2 Visual — kontrolki zweryfikowane na żywo w canvas (DOM)
 
-| Kontrolka | Test | Efekt w canvas (zweryfikowany) |
-|-----------|------|--------------------------------|
-| Variant cards | two/three/four/comparison | `data-pricing-variant` + `data-pricing-count` aktualizują się live; karta „Selected"; `comparison-rows` renderuje `[data-pricing-comparison]`. ✓ |
-| Add plan | dodanie planu przy four-plans | tablica planów 3→4, canvas renderuje **4** karty, `data-pricing-count=4`, 4. karta „Plan 4". ✓ |
-| Header — Title | „Wybierz plan dla swojego zespołu" | `<h3>` w canvas aktualizuje się natychmiast. ✓ |
-| Header — Description | tekst PL | `<header><p>` aktualizuje się. ✓ |
-| Billing — Enable | włączenie | pojawia się `[data-pricing-billing-toggle="static"]`, `data-pricing-cycle="monthly"`, etykiety „Monthly[active] / Annual[inactive]". ✓ |
-| Billing — Default cycle = Annual | zmiana selecta | etykiety → „Monthly[inactive] / Annual[active]", cena Starter `$19`→**`$190`**, okres `/month`→**`/year`** (transformacja `resolveBillingPeriodLabel`). ✓ |
-| Billing — Disable | wyłączenie | `[data-pricing-billing-toggle]` znika. ✓ |
-| Highlight plan | przełączenie planu 1 | plan 1 `data-pricing-highlighted=true`, **plan 2 automatycznie `false`** (wymuszenie pojedynczego), baner „Most popular". ✓ |
-| Plan — Name | „Pakiet Start" | nazwa w canvas aktualizuje się. ✓ |
-| Price mode = Custom | + label „Wycena indywidualna" | cena renderuje custom label zamiast `$19` (patrz uwaga T1 — fill vs setter). ✓ |
-| Add feature | plan 1 | nowy wiersz „New feature"; w comparison tabela 9→10 wierszy feature. ✓ |
-| Card surface | `#ff0000` | karta dostaje inline `background-color: rgb(255,0,0)`, badge „Selected color". ✓ |
-| Card surface — Clear | po ustawieniu | inline tło usunięte (`rgba(0,0,0,0)` — przezroczyste), badge „Theme default". ✓ (uwaga N4) |
-| Spacing = Spacious | select | `data-pricing-spacing="lg"`, grid `gap-7`. ✓ |
-| Radius = None | select | karta traci klasę `rounded-*`. ✓ |
-| Feature marker = Check | select | marker `•` → `✓`. ✓ |
-| Max width = Wide | select | `data-pricing-max-width="wide"`, klasa `max-w-7xl`. ✓ |
-| Typography = Prominent | select | `data-pricing-typography="prominent"`. ✓ |
-| Footer note | tekst PL | renderuje `[data-pricing-footer-note]`. ✓ |
-| Comparison — Sticky header | on | `data-pricing-comparison-sticky="true"`. ✓ |
-| Comparison — Header badges | off | liczba badge'ów w `thead` 3→0. ✓ |
-| Plan — Remove (configured) | klik „Remove" | wyzwala natywny `window.confirm` („Remove plan N? This action cannot be undone."); anulowane — plan zachowany. ✓ |
-
-**Kontrakt automatyzacji (TASK-342):** atrybuty `data-widget-control-path` są obecne na realnych kontrolkach: `plans.0/1/2.surface`, `plans.ctaHref`, `style.cardSurface`, `style.cardBorder`, `style.highlightRing`, `style.spacing`, `style.radius`, `style.featureMarker` (+ współdzielone `layout.*`, `visibility.devices.*`). **Luka „metadata-gap" zgłoszona w raporcie z 27-05 jest naprawiona** — przy obecnym fixture kontrolki Visual mają ownership ścieżki kontroli.
+| Kontrolka | Zakres testu | Efekt w canvas (zweryfikowany) |
+|-----------|--------------|--------------------------------|
+| Variant cards | two/three/four/comparison | `data-pricing-variant` + `data-pricing-count` live; karta „Selected"; `comparison-rows` → `[data-pricing-comparison]`. ✓ |
+| Add plan | dodanie planu | tablica 3→4, `data-pricing-count=4`. ✓ |
+| Header — Title / Description | tekst | `<h3>` / `<header><p>` aktualizują się. ✓ |
+| Billing — Enable / cycle / Disable | on → Annual → off | `[data-pricing-billing-toggle="static"]`, cena `$19`→`$190`, okres `/month`→`/year`. ✓ |
+| **Plan — Badge tone** | **neutral/accent/highlight × plany 1,2,3** | `data-pricing-badge-tone` + inline style zgodne z `resolvePlanBadgeStyle` (8% text / 14% primary / pełny primary). ✓ |
+| **Plan — CTA style** | **outline/filled/ghost** | `data-pricing-plan-cta-style` na `<article>` + klasa `<a>` z `ctaStyleClassMap`. ✓ |
+| **Plan — CTA destination** | **picker → wybór „HomePage"** | `ctaHref=/homepage`, `<a>` z `aria-label="Start now for Starter"`. ✓ |
+| **Plan — Price mode** | **legacy/structured/free/custom** | structured → `Intl.NumberFormat` (`$49`/`€49`); free → „Free"/custom label; legacy → `$19 /month`. ✓ |
+| **Plan — Surface + Clear** | `#00ff00` → Clear | inline `background-color: rgb(0,255,0)` → powrót do `var(--color-bg)`. ✓ |
+| **Plan — Reorder** | Move up / Move down | kolejność `p[id]` w canvas zmienia się i wraca. ✓ |
+| Highlight plan | przełączenie | `data-pricing-highlighted`, drugi plan auto `false`, baner „Most popular". ✓ |
+| **Feature — Status** | **included/premium/coming-soon** | `data-pricing-feature-status` (badge dla premium/coming-soon, brak dla included). ✓ |
+| **Feature — Icon** | **check/sparkle/lock/clock** | klasa ikony lucide: `lucide-check`/`lucide-sparkles`/`lucide-lock-keyhole`/`lucide-clock3`. ✓ |
+| **Feature — Reorder** | Move up / Move down | kolejność `<li>` zmienia się i wraca. ✓ |
+| **Feature — Add / Remove** | dodanie + usunięcie | 3→4→3, bez `confirm` dla Remove. ✓ |
+| **Comparison — Sticky** | on/off | `data-pricing-comparison-sticky=true/false`. ✓ |
+| **Comparison — Header badges** | on/off | badge'e w `thead`: 3 ↔ 0. ✓ |
+| **Comparison — Header CTA** | on/off | linki CTA w `thead`: 1 ↔ 0. ✓ |
+| **Max width** | narrow/default/wide | `max-w-4xl`/`max-w-6xl`/`max-w-7xl` + `data-pricing-max-width`. ✓ |
+| **Typography** | compact/balanced/prominent | `data-pricing-typography`. ✓ |
+| **Spacing** | none/sm/md/lg | `gap-0`/`gap-3`/`gap-5`/`gap-7` + `data-pricing-spacing`. ✓ |
+| **Radius** | none/md/lg/xl | brak / `rounded-md` / `rounded-lg` / `rounded-xl`. ✓ |
+| **Feature marker** | bullet/check/status | `•` / `✓` / `<svg>`. ✓ |
+| **Card surface + Clear** | `#ff0000` → Clear | `rgb(255,0,0)` → tło usunięte (przezroczyste, N4). ✓ |
+| **Card border + Clear** | `#0000ff` → Clear | `border-color: rgb(0,0,255)` → usunięte. ✓ |
+| **Highlight ring + Clear** | `#ff00ff` → Clear | box-shadow + baner `rgb(255,0,255)` → powrót do `var(--color-primary)` (N8). ✓ |
+| Plan — Remove (configured) | klik „Remove" | wyzwala natywny `window.confirm`; **anulowane** (patrz §7). ✓ (tylko pojawienie dialogu) |
 
 ### 4.3 Advanced (read-only diagnostyka)
 
-Tryb Advanced ma **0 pól edytowalnych** i wiernie odzwierciedla stan z mojej sesji w Visual:
+Tryb Advanced ma **0 pól edytowalnych** i wiernie odzwierciedla stan z sesji w Visual:
 
-- **Visual-owned tokens:** „Spacing token: **lg**", „Radius token: **none**" — zgodne z edycjami z Visual. ✓
-- **Runtime summary:** „Visible plans in this layout: **3**" (comparison-rows), „Configured plans: **4 of 4**", „Hidden preserved plans: **1**", „Billing toggle: **Disabled**". Wszystko zgodne ze stanem sesji. ✓
-- **Fix and reset** — 2 akcje naprawcze z **prawidłowymi dialogami potwierdzenia** (komponent React `ConfirmActionDialog`, NIE natywny confirm):
-  - „Review plan alignment" → „Align plans to current layout? This rewrites the saved plan list to 3 plans for the current layout. Preserved hidden plans may be removed." (anulowane). ✓
-  - „Review payload cleanup" → „Clean pricing payload? This reapplies schema-owned defaults and removes unsupported pricing values without exposing raw JSON." (anulowane). ✓
-- Dodatkowo współdzielone „Block layout summary" i „Visibility summary" (read-only).
+- **Visual-owned tokens:** „Spacing token" / „Radius token" zgodne z edycjami z Visual. ✓
+- **Runtime summary:** „Visible plans", „Configured plans", „Hidden preserved plans", „Billing toggle" — zgodne ze stanem sesji. ✓
+- **Fix and reset** — 2 akcje naprawcze z **prawidłowymi dialogami potwierdzenia** (React `ConfirmActionDialog`, NIE natywny confirm):
+  - „Review plan alignment" → „Align plans to current layout? …" (**anulowane**). ✓
+  - „Review payload cleanup" → „Clean pricing payload? …" (**anulowane**). ✓
+- Współdzielone „Block layout summary" i „Visibility summary" (read-only).
 
 ### 4.4 Frontend (public `/test-pricing-plans-0516`)
 
-Strona zwraca `200` i renderuje **zapisany** stan fixture (wariant **`comparison-rows`**, 3 plany, billing włączony — patrz N0/N5):
+Strona zwraca `200` i renderuje **zapisany** stan fixture (wariant **`comparison-rows`**, 3 plany, billing włączony — patrz N0/N5). Stan ponownie potwierdzony 29-05:
 
-- `section role="region"`, `aria-labelledby` **rozwiązuje się** do realnego `<h3>` „Choose the plan that fits your workflow"; opis sekcji obecny. ✓
-- **Tabela porównawcza:** `<caption class="sr-only">Pricing plan comparison`, kontener skrolu `tabindex=0` + `aria-label="Pricing plan comparison"` + `aria-describedby`→hint „Scroll horizontally to compare all plans.", `data-overflow-intentional="true"`. ✓
-- **Plany:** Starter `$19/month` (badge „For individuals"), Growth `$49/month` („Most popular", `highlighted=true`), Scale `$99/month` (badge „For teams"). ✓
-- **CTA:** 6 linków (nagłówek + wiersz akcji), każdy z `aria-label` typu „Start now for Starter"; `href="#"` (placeholder fixture — patrz N6). ✓
+- `section role="region"`, `aria-labelledby` **rozwiązuje się** do realnego `<h3>` „Choose the plan that fits your workflow". ✓
+- **Tabela porównawcza:** `<caption class="sr-only">Pricing plan comparison`, kontener skrolu `tabindex=0` + `aria-label="Pricing plan comparison"` + `aria-describedby`→„Scroll horizontally to compare all plans.", `data-overflow-intentional="true"`. ✓
+- **Plany / badge tone:** `data-pricing-badge-tone="neutral"` dla „For individuals" i „For teams"; badge planu wyróżnionego (Growth) **świadomie ukryty**, bo pokrywa się z highlight label („Most popular") — patrz N9. Kolumna wyróżniona: `data-pricing-comparison-highlighted` = `[false, true, false]`. ✓
+- **CTA:** 6 linków (nagłówek + wiersz akcji), każdy z `aria-label` typu „Start now for Starter"; `href="#"` (placeholder fixture — N6). ✓
 - **Komórki feature:** włączone → ikona + `aria-label="Included"`; brak → „-" + `aria-label="Not included"`. ✓
-- **Billing bar:** `role="status"`, `aria-live="polite"`, `aria-label="Billing cycle: Monthly pricing shown"`, etykiety „Monthly[active]/Annual[inactive]". ✓ (ale statyczny — N5)
-- **Responsywność 375 px:** brak poziomego overflow strony (`html.scrollWidth == clientWidth == 375`); przewijanie tabeli jest **zamknięte w intencjonalnym afordansie** (kontener skroluje wewnętrznie, strona nie). ✓
+- **Billing bar:** `role="status"`, `aria-live="polite"`, `data-pricing-billing-toggle="static"`. ✓ (ale statyczny — N5)
+- **Responsywność 375 px:** brak poziomego overflow strony (`scrollWidth == clientWidth == 375`). ✓
 - **Konsola:** **0 błędów, 0 ostrzeżeń**. ✓
 
 ---
@@ -151,72 +199,81 @@ Strona zwraca `200` i renderuje **zapisany** stan fixture (wariant **`comparison
 
 | # | Obszar | Obserwacja |
 |---|--------|-----------|
-| **N0 — Admin i public to RÓŻNE strony** | Fixture | Strona admin podana w zadaniu (`21b6bd3d` = slug **`/ctr-pricing-plans-2305`**, draft) i trasa public (**`/test-pricing-plans-0516`**) to **dwie odrębne strony** z różną zapisaną konfiguracją: admin = `two-plans` z domyślną treścią bez `ctaHref`; public = `comparison-rows` z 3 planami i CTA. `/ctr-pricing-plans-2305` zwraca publicznie **`404`** (draft, nieopublikowany). W praktyce **nie da się** zrobić ścisłego round-tripu „edycja w adminie → propagacja na ten sam front". Oba widgety używają tego samego renderera `PricingPlansBlock` i produkują spójny, poprawny output — różnice wynikają wyłącznie z zapisanych danych, nie z zachowania renderera. |
-| **N1 — Wariant deklaruje więcej planów niż realnie renderuje** | Visual / Wizard | `FixedPlanCountNotice` dla „Four Plans" pokazuje **„Four Plans shows 4 plans."**, ale canvas renderuje tylko **3** karty (`data-pricing-count=3`), bo zapisana tablica ma 3 plany. Liczba kart = `min(visibleCount_wariantu, długość_tablicy_planów)`. Aby uzyskać realny 4. plan, trzeba kliknąć „Add plan". Notka mówi o nominalnej pojemności wariantu, nie o faktycznym renderze — to realna pułapka UX (analogiczna do N1 z raportów `accordion`/`tabs`). |
-| **N2 — Wizard odsyła do kontrolki, której w Wizardzie nie ma** | Wizard | `FixedPlanCountNotice` (widoczny też w Wizardzie) instruuje: „Use the variant switch to change how many plans appear in preview." — ale **przełącznik wariantu jest w Visual, nie w Wizardzie**. Wizard pricing-plans jest czysto informacyjny (0 kontrolek) — uboższy niż Wizard `accordion`/`tabs`, które miały realne selecty (count / initially open). |
-| **N3 — Niespójna mechanika potwierdzeń destrukcyjnych** | Visual vs Advanced | Usuwanie planu w Visual („Remove") używa **natywnego `window.confirm`** (surowy dialog przeglądarki). Akcje naprawcze w Advanced używają stylizowanego React `ConfirmActionDialog`. Dwa różne wzorce potwierdzenia dla destrukcyjnych operacji w obrębie jednego widgetu. |
-| **N4 — „Clear" koloru = przezroczystość, nie kolor motywu** | Visual / colors | Po „Clear" na „Card surface" karta traci inline `background-color` całkowicie (`rgba(0,0,0,0)`), a nie wraca do `var(--color-bg)`. Badge pokazuje „Theme default", lecz wizualnie karta staje się przezroczysta. Zgodne z semantyką clearable, ale subtelnie mylące (identyczne jak N7 z raportu `accordion`). |
-| **N5 — „Billing toggle" nie jest klikalnym togglem** | Renderer / frontend | Na froncie billing bar ma **0 interaktywnych kontrolek** (`interactiveButtons=0`) — to statyczny `role="status"` pokazujący, który cykl jest aktywny (`defaultCycle`). Dwie pigułki „Monthly / Annual" wyglądają jak przełącznik, ale są nieklikalne `<span>`. Odwiedzający prawdopodobnie spróbuje kliknąć i nic się nie stanie; zmiana cyklu cen wymaga edytora (`defaultCycle`). Nazwa „toggle" w edytorze jest myląca względem statycznego renderu. |
-| **N6 — CTA fixture wskazują `#`** | Public / treść | Wszystkie 6 linków CTA na froncie ma `href="#"` (placeholder). Linki są poprawne semantycznie i mają trafne `aria-label`, ale prowadzą donikąd — to treść fixture, nie błąd renderera. |
-| **N7 — Advanced bez surowego JSON** | Advanced | Advanced **świadomie nie pokazuje** surowego JSON („Advanced does not show raw pricing JSON. Human diagnostics only."). To celowy wybór produktowy, ale różni się od części innych widgetów (np. `contact`/`accordion` historycznie miały JSON snapshot). Dla zaawansowanego debugowania brak wglądu w surowy payload. |
+| **N0 — Admin i public to RÓŻNE strony** | Fixture | Strona admin (`21b6bd3d` = slug **`/ctr-pricing-plans-2305`**, draft) i trasa public (**`/test-pricing-plans-0516`**) to **dwie odrębne strony** z różną zapisaną konfiguracją. `/ctr-pricing-plans-2305` zwraca publicznie **`404`** (draft). **Nie da się** zrobić ścisłego round-tripu „edycja w adminie → propagacja na ten sam front". Oba widgety używają tego samego renderera `PricingPlansBlock` i produkują spójny output — różnice wynikają wyłącznie z zapisanych danych. |
+| **N1 — Wariant deklaruje więcej planów niż realnie renderuje** | Visual / Wizard | `FixedPlanCountNotice` dla „Four Plans" mówi **„shows 4 plans."**, ale canvas renderuje tyle kart, ile jest w tablicy planów (`min(visibleCount, długość_tablicy)`). Aby uzyskać realny 4. plan, trzeba kliknąć „Add plan". Notka opisuje nominalną pojemność wariantu, nie faktyczny render — realna pułapka UX. |
+| **N2 — Wizard odsyła do kontrolki, której w Wizardzie nie ma** | Wizard | `FixedPlanCountNotice` instruuje „Use the variant switch…", ale **przełącznik wariantu jest w Visual, nie w Wizardzie**. Wizard pricing-plans jest czysto informacyjny (0 kontrolek). |
+| **N3 — Niespójna mechanika potwierdzeń destrukcyjnych** | Visual vs Advanced | Usuwanie planu w Visual („Remove") używa **natywnego `window.confirm`**. Akcje naprawcze w Advanced używają stylizowanego React `ConfirmActionDialog`. Dodatkowo usuwanie feature („Remove" w wierszu cechy) **nie ma żadnego potwierdzenia** — usuwa natychmiast. Trzy różne wzorce destrukcji w jednym widgecie. |
+| **N4 — „Clear" surface/border = przezroczystość, nie kolor motywu** | Visual / colors | Po „Clear" na „Card surface"/„Card border" inline kolor jest **całkowicie usuwany** (`""`/przezroczystość), a nie wraca do `var(--color-bg)`/`var(--color-border)`. Badge pokazuje „Theme default", lecz wizualnie element traci tło/obrys. Zgodne z semantyką clearable, ale subtelnie mylące. |
+| **N5 — „Billing toggle" nie jest klikalnym togglem** | Renderer / frontend | Na froncie billing bar ma **0 interaktywnych kontrolek** — to statyczny `role="status"` pokazujący aktywny cykl (`defaultCycle`). Dwie pigułki „Monthly / Annual" wyglądają jak przełącznik, ale są nieklikalnymi `<span>`. Zmiana cyklu wymaga edytora (`defaultCycle`). Nazwa „toggle" jest myląca względem statycznego renderu. |
+| **N6 — CTA fixture wskazują `#`** | Public / treść | Wszystkie 6 linków CTA na froncie ma `href="#"` (placeholder fixture). Linki są poprawne semantycznie i mają trafne `aria-label`, ale prowadzą donikąd — treść fixture, nie błąd renderera. |
+| **N7 — Advanced bez surowego JSON** | Advanced | Advanced **świadomie nie pokazuje** surowego JSON („Human diagnostics only."). Celowy wybór produktowy, ale różni się od części innych widgetów. |
+| **N8 — „Clear" highlight ring ≠ „Clear" surface/border** | Visual / colors | W przeciwieństwie do N4, „Clear" na „Highlight ring" **nie** daje przezroczystości — `highlightRing` jest normalizowany przez `resolveString` do domyślnego `var(--color-primary)`. Po „Clear" box-shadow wyróżnionego planu wraca do `0 0 0 2px var(--color-primary)`. Dwie różne semantyki „Clear" w obrębie jednej sekcji „Colors and emphasis" (surface/border → przezroczyste, ring → motyw). |
+| **N9 — Badge planu wyróżnionego bywa ukrywany** | Renderer | `renderPlanBadge` zwraca `null`, gdy tekst badge'a == highlight label (`hideText`). Dla planu wyróżnionego, którego badge brzmi np. „Most popular", badge **nie** renderuje `data-pricing-badge-tone` (zamiast tego widać baner highlight). Kontrolka „Badge tone" nadal zapisuje stan, ale dla takiego planu jest niewidoczna w renderze. (W teście plan 2 miał badge „Best value" ≠ highlight label, więc tonację dało się zweryfikować.) |
 
-**Nie wykryto** żadnego błędu konsoli (ani w adminie, ani na froncie), żadnego twardego buga renderowania, ani rozjazdu między testowanymi opcjami w canvas a ich odzwierciedleniem w atrybutach DOM. Każda kontrolka Visual, którą kliknąłem, działa i aktualizuje podgląd na żywo; Advanced wiernie podsumowuje stan; frontend jest dostępny i bez overflow.
+**Nie wykryto** żadnego błędu konsoli (admin ani front), żadnego twardego buga renderowania, ani rozjazdu między klikniętą opcją a jej odzwierciedleniem w DOM. **Każda** kontrolka Visual (select, toggle, reorder, kolor, picker) działa i aktualizuje podgląd na żywo; Advanced wiernie podsumowuje stan; frontend jest dostępny i bez overflow.
 
 ---
 
 ## 6. Porównanie Admin (canvas) vs Frontend
 
 > **Zastrzeżenie (N0):** to NIE jest porównanie tego samego zapisanego stanu — admin
-> (`/ctr-pricing-plans-2305`, `two-plans`) i public (`/test-pricing-plans-0516`,
-> `comparison-rows`) to różne strony. Poniżej porównuję **zachowanie współdzielonego
-> renderera** w obu kontekstach, nie round-trip danych.
+> (`/ctr-pricing-plans-2305`) i public (`/test-pricing-plans-0516`, `comparison-rows`)
+> to różne strony. Poniżej porównuję **zachowanie współdzielonego renderera** w obu
+> kontekstach, nie round-trip danych.
 
-| Aspekt | Admin canvas (`two-plans`) | Frontend (`comparison-rows`) | Zgodność renderera |
-|--------|----------------------------|------------------------------|--------------------|
+| Aspekt | Admin canvas | Frontend (`comparison-rows`) | Zgodność renderera |
+|--------|--------------|------------------------------|--------------------|
 | Atrybuty `data-pricing-*` | ✓ obecne, żywe | ✓ obecne, identyczna konwencja | ✓ |
-| `role="region"` + `aria-labelledby`/`aria-label` | ✓ | ✓ (`aria-labelledby` rozwiązuje się do `<h3>`) | ✓ |
-| Reakcja na zmiany Visual | ✓ live (zweryfikowane dla ~15 kontrolek) | n/d (inna strona, brak zapisu) | — |
-| Layout kartowy | ✓ `[data-pricing-plan]` | n/d (front to tabela) | ✓ (oba ścieżki renderera obecne) |
-| Layout comparison + scroll affordance | ✓ (po przełączeniu w Visual) | ✓ pełny (caption sr-only, hint, tabindex) | ✓ |
+| `role="region"` + `aria-labelledby`/`aria-label` | ✓ | ✓ (rozwiązuje się do `<h3>`) | ✓ |
+| Reakcja na zmiany Visual | ✓ live (zweryfikowane dla **wszystkich** kontrolek) | n/d (inna strona, brak zapisu) | — |
+| `data-pricing-badge-tone` | ✓ (neutral/accent/highlight wymuszone) | ✓ (`neutral` z fixture) | ✓ |
+| `data-pricing-plan-cta-style` | ✓ (outline/filled/ghost) | ✓ (klasy `ctaStyleClassMap`) | ✓ |
+| Layout comparison + scroll affordance | ✓ (po przełączeniu w Visual) | ✓ pełny | ✓ |
 | Billing bar statyczny | ✓ (`data-pricing-billing-toggle="static"`) | ✓ (`role=status`, 0 kontrolek) | ✓ |
-| CTA z `aria-label` | n/d (fixture admin bez `ctaHref`) | ✓ „<label> for <plan>" | ✓ |
 | Konsola | 0 błędów | 0 błędów | ✓ |
-| Niezapisane edycje z Visual | widoczne w sesji; **po reload draft wrócił do `two-plans`** | nieobecne | ✓ poprawna izolacja (nic nie zapisano) |
+| Niezapisane edycje z Visual | widoczne w sesji; **nie zapisane** | nieobecne | ✓ poprawna izolacja |
 
 **Wniosek:** renderer jest wspólny i zachowuje się spójnie w obu kontekstach. Różnice między admin a front wynikają wyłącznie z **różnej zapisanej treści dwóch odrębnych stron** (N0), a nie z rozbieżności w logice renderowania.
 
 ---
 
-## 7. Czego NIE testowano (uczciwe ograniczenia)
+## 7. Czego NIE wykonano (uczciwe ograniczenia — z konkretną przyczyną)
 
-- **Zapis i publikacja:** świadomie **nie** klikałem „Save draft" ani „Publish", aby nie zmieniać współdzielonego fixture. Niezapisane edycje z Visual zostały odrzucone (reload przywrócił `two-plans`) — to potwierdza izolację, ale oznacza, że **trwałość i propagacja na front nie zostały zweryfikowane**.
-- **Round-trip tego samego widgetu admin→front:** niemożliwy (N0 — `/ctr-pricing-plans-2305` jest draft/`404`, a front to inna strona).
-- **Per-plan surface color** (`plans.N.surface`) indywidualnie — testowałem tylko współdzielony `style.cardSurface`.
-- **CTA destination picker** (`LinkDestinationField` — wybór strony) — nie otwierałem pickera.
-- **Price mode = Structured** (formatowanie `Intl.NumberFormat` z `amount`/`currency`) oraz **Free** — nie przetestowane (sprawdziłem tylko Custom).
-- **Selecty per-plan:** Badge tone, CTA style, oraz Status/Icon dla feature — obecne, dzielą ten sam wzorzec kodu, ale nie klikałem każdego z osobna.
-- **Reordering:** Move up/down planów oraz Move up/down feature — nie wykonane.
-- **Realna egzekucja destrukcyjnych akcji:** usunięcie planu, „Align plans", „Clean payload" — wszystkie dialogi **anulowane** (zweryfikowałem tylko, że dialog się pojawia z poprawną treścią).
-- **Klawiaturowe przewijanie** tabeli comparison — potwierdziłem tylko fokusowalność (`tabindex=0`), nie samą interakcję strzałkami.
+Po domknięciu 29-05 **wszystkie realnie klikalne kontrolki konfiguracyjne** (selecty per-plan/per-feature, picker celu CTA, kolory clearable, selecty layout/style, przełączniki comparison, reorder planów i cech) zostały przeklinane i zweryfikowane w DOM. Pozostają wyłącznie poniższe, świadomie pominięte pozycje:
+
+- **Egzekucja destrukcyjnego „Remove" planu** — zweryfikowano tylko **pojawienie się** natywnego `window.confirm` z poprawną treścią; dialog **anulowano**. Realnego usunięcia planu nie wykonano, aby nie zmieniać stanu fixture. (Mechanika: `removePlan` egzekwuje min 2 plany i pyta o potwierdzenie tylko dla „configured" planu.)
+- **Egzekucja akcji Advanced „Align plans" / „Clean payload"** — oba `ConfirmActionDialog` otwarto i **anulowano**; faktycznego przepisania payloadu nie uruchomiono (operacja przepisuje/normalizuje zapisaną tablicę planów).
+- **Zapis i publikacja (`Save draft` / `Publish`)** — **świadomie nie klikane**, aby nie mutować współdzielonego fixture. W efekcie **trwałość i propagacja na front nie zostały zweryfikowane**; wszystkie edycje z tej sesji są niezapisane i zostaną odrzucone. Sesja miała status „Unsaved changes" — celowo go nie utrwalono.
+- **Round-trip admin→front tego samego widgetu** — **niemożliwy** (N0: `/ctr-pricing-plans-2305` jest draft/`404`, a front to inna strona `/test-pricing-plans-0516`).
+- **„Clear destination" w pickerze CTA oraz powrót do opcji „No destination"** — zweryfikowano **wybór** strony (ustawienie `ctaHref`); osobnego kliknięcia przycisku „Clear destination"/opcji pustej nie powtórzono (ta sama ścieżka `onChange("")`).
+- **Proste pola tekstowe per-plan, których nie wpisywano w tej sesji indywidualnie:** `description`, `badge`, `highlightLabel`, `period`, `prices.monthly`, `prices.annual`, `ctaLabel`, oraz etykiety billing (`monthlyLabel`, `annualLabel`, `annualSavingsLabel`). Korzystają z **tej samej** ścieżki wiązania `updatePlan`/`updateBillingToggle`, co pola już zweryfikowane przez realne wpisanie (`name`, `header.title/description`, `footerNote`, `price`, structured `amount`, `currency`, `freeLabel`) — nie są to selecty/kontrolki z listy luki, lecz zwykłe `<input>`/`<textarea>`.
+- **Klawiaturowe przewijanie tabeli comparison** — potwierdzono tylko fokusowalność (`tabindex=0`), nie samą interakcję strzałkami.
 - **`prefers-reduced-motion`, tryb dark/motyw, inne breakpointy** poza 375 px i desktop.
-- **Uwaga techniczna T1 (harness, nie bug widgetu):** `playwright-cli fill` nie utrwalił wartości w warunkowo renderowanym polu „Custom label" (pole montowane/odmontowywane przy re-normalizacji na keystroke). Ustawienie wartości przez natywny setter + zdarzenie `input` zadziałało poprawnie i cena pokazała custom label — czyli **funkcja widgetu działa**, problem dotyczył tylko metody wpisywania w harnessie. To samo pole na innych prostych inputach (name/header/footer) `fill` działał bez zarzutu.
+- **Uwaga techniczna T1 (harness, nie bug widgetu):** wartości pól warunkowo montowanych (np. structured `amount`/`currency`, `freeLabel`, `surface`, kolory) ustawiano natywnym setterem `value` + zdarzeniami `input`/`change`, ponieważ pola te potrafią re-montować się przy re-normalizacji na keystroke. Efekt w canvasie był poprawny — **funkcje widgetu działają**, niuans dotyczył wyłącznie metody wpisywania w harnessie. Selecty (Radix) klikano normalnie (trigger → opcja).
 
 ---
 
 ## 8. Podsumowanie
 
-- Widget **pricing-plans jest w dobrym stanie funkcjonalnym**. Wszystkie ~15 przetestowanych kontrolek Visual (4 warianty, add plan, header, billing + cykl annual, highlight z wymuszeniem pojedynczego, nazwa planu, custom price mode, add feature, card surface + Clear, spacing, radius, feature marker, max width, typography, footer note, 2 przełączniki comparison) **działają i aktualizują podgląd na żywo**. Advanced jest read-only i **wiernie** podsumowuje stan z Visual. Frontend (comparison-rows) jest **dostępny** (region/caption/scroll affordance/CTA aria/feature aria) i **bez overflow** na 375 px, z **0 błędów konsoli**.
-- **Kontrakt automatyzacji naprawiony:** `data-widget-control-path` jest obecny na realnych kontrolkach Visual — luka „metadata-gap" z raportu 27-05 nie występuje przy obecnym fixture.
+- Widget **pricing-plans jest w dobrym stanie funkcjonalnym**. W przebiegu domykającym 29-05 **przeklinano każdą realnie klikalną kontrolkę konfiguracyjną**, z weryfikacją w DOM:
+  - **per-plan:** badge tone (3 opcje ×3 plany), CTA style (3 opcje, atrybut + klasa `<a>`), picker celu CTA (wybór strony → `ctaHref`), price mode (legacy/structured/`Intl`/free/custom), surface + Clear, reorder (up/down), highlight;
+  - **per-feature:** status (3), icon (4, po klasach lucide), reorder (up/down), add/remove;
+  - **comparison:** sticky / header badges / **header CTA** (ta ostatnia była luką — domknięta);
+  - **layout/style:** max width (3), typography (3), spacing (4), radius (4), feature marker (3);
+  - **kolory clearable:** card surface, card border, highlight ring — każdy set + Clear.
+- Advanced jest read-only i **wiernie** podsumowuje stan z Visual. Frontend (comparison-rows) jest **dostępny** (region/caption/scroll affordance/CTA aria/feature aria/badge tone) i **bez overflow** na 375 px, z **0 błędów konsoli**.
 - **Najważniejsze niuanse:**
-  - **N0** — admin (`ctr-pricing-plans-2305`, draft, `two-plans`) i public (`test-pricing-plans-0516`, `comparison-rows`) to różne strony; brak ścisłego round-tripu.
-  - **N1** — wariant deklaruje nominalną liczbę planów (notka „shows 4 plans"), ale renderuje tyle, ile jest w danych (3) — rozjazd notki vs realny render.
+  - **N0** — admin i public to różne strony; brak ścisłego round-tripu.
+  - **N1** — wariant deklaruje nominalną liczbę planów, ale renderuje tyle, ile jest w danych.
   - **N5** — „billing toggle" jest na froncie **statyczny i nieklikalny** mimo wyglądu przełącznika.
-  - **N3** — niespójne potwierdzenia destrukcyjne (natywny `confirm` w Visual vs `ConfirmActionDialog` w Advanced).
-  - Drobne: „Clear" koloru = przezroczystość (N4), Wizard odsyła do kontrolki spoza Wizarda (N2), CTA fixture = `#` (N6), Advanced bez raw JSON (N7).
+  - **N3** — trzy niespójne wzorce destrukcji (natywny `confirm` przy Remove planu vs `ConfirmActionDialog` w Advanced vs **brak** potwierdzenia przy Remove feature).
+  - **N4 vs N8** — niespójna semantyka „Clear": surface/border → przezroczystość, highlight ring → kolor motywu.
+  - Drobne: Wizard odsyła do kontrolki spoza Wizarda (N2), CTA fixture = `#` (N6), Advanced bez raw JSON (N7), badge planu wyróżnionego bywa ukrywany (N9).
 - **Nie znaleziono** żadnego błędu renderowania ani rozbieżności w logice renderera między admin a front; wszystkie różnice wynikają z odrębnej treści dwóch fixture (N0) lub z celowych decyzji produktowych.
+- **Pozostałe luki są wyłącznie świadomie pominięte i nazwane w §7:** egzekucja destrukcyjnych operacji (Remove planu, Align/Clean w Advanced), zapis/publikacja oraz round-trip admin→front (niemożliwy z powodu N0). Nie wynikają one z niemożności kliknięcia kontrolki, lecz z decyzji o nienaruszaniu współdzielonego fixture.
 
 ---
 
 ## 9. Screenshoty (lokalne etykiety)
 
-W tym audycie **nie** korzystałem ze zrzutów ekranu jako evidence — weryfikacja oparta jest o inspekcję DOM (atrybuty `data-pricing-*`, klasy Tailwind, ARIA, `data-widget-control-path`, wartości kontrolek). Pliki YAML/PNG generowane automatycznie w `.playwright-cli/` są **wyłącznie lokalnymi etykietami** (katalog ignorowany przez Git), nie są wymaganym evidence i nie zostały dołączone do żadnego pliku źródłowego.
+W tym audycie **nie** korzystałem ze zrzutów ekranu jako evidence — weryfikacja oparta jest o inspekcję DOM (atrybuty `data-pricing-*`, `data-pricing-badge-tone`, `data-pricing-feature-status`, `data-pricing-plan-cta-style`, klasy Tailwind/lucide, ARIA, `data-widget-control-path`, wartości kontrolek). Pliki YAML/PNG generowane automatycznie w `.playwright-cli/` są **wyłącznie lokalnymi etykietami** (katalog ignorowany przez Git), nie są wymaganym evidence i nie zostały dołączone do żadnego pliku źródłowego.
