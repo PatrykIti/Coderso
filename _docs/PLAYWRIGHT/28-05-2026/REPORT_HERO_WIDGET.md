@@ -1,360 +1,336 @@
-# RAPORT: Hero Widget — audyt wyczerpujący (Wizard / Visual / Advanced + Front)
+# RAPORT: Hero Widget — audyt wyczerpujący (domknięcie luk) — Wizard / Visual / Advanced + Front
 
 > **Status:** Zakończony
-> **Data audytu:** 2026-05-29 (upgrade raportu z 28-05-2026 — ten przebieg jest świadomie pełniejszy)
-> **Sesja przeglądarki:** `claude-29-05-hero-exhaustive` (izolowana, oddzielna od innych agentów)
-> **Środowisko:** http://localhost:5173/admin · http://localhost:3000
+> **Data audytu:** 2026-05-29 (upgrade raportu z katalogu 28-05-2026 — przebieg „gap-close", świadomie domykający rodziny kontrolek, które poprzednio nie były w pełni przeklikane)
+> **Sesja przeglądarki:** `claude-29-05-hero-gap-close` (izolowana, oddzielna od innych agentów)
+> **Środowisko:** http://localhost:5173/admin (302→login) · http://localhost:3000
 > **Fixture admin:** page id `1216108b-7cc2-4ed9-956e-afa97351aca5` (breadcrumb „Contract Test - hero")
 > **Route public:** `http://localhost:3000/homepage` (tytuł „HomePage")
-> **Pliki źródłowe:** `core/widgets/core/hero.tsx` (model + renderer + normalizacja + kontrakt), `core/admin/ui/widgets/editors/HeroEditors.tsx` (edytory Wizard/Visual/Advanced), `core/admin/ui/widgets/editors/LinkDestinationField.tsx`, `core/admin/ui/widgets/editors/ClearableFields.tsx`, `core/admin/ui/media/MediaPicker.tsx`.
+> **Pliki źródłowe:** `core/widgets/core/hero.tsx` (model + renderer + normalizacja + kontrakt), `core/widgets/core/clearableStyle.ts` (`resolveClearableStyleValue`), `core/admin/ui/widgets/editors/HeroEditors.tsx` (edytory Wizard/Visual/Advanced + `HeroColorField`/`GradientField`/`HeroOverlayField`/`HeroMediaSourceFields`), `core/admin/ui/widgets/editors/LinkDestinationField.tsx`, `core/admin/ui/widgets/editors/ClearableFields.tsx`, `core/admin/ui/media/MediaPicker.tsx`.
 
-> **Czym ten przebieg różni się od poprzedniego (28-05).** Poprzedni raport używał skrótów
-> „reprezentatywnych" (np. „przetestowano jeden tone, jeden rozmiar przycisku, jeden ratio").
-> Ten przebieg **przeklikał wszystkie dyskretne opcje każdej dostępnej rodziny kontrolek**:
-> wszystkie 4 warianty, wszystkie 4 tone'y badge, obie pozycje badge, oba tryby CTA, wszystkie
-> 4 rozmiary przycisku primary **oraz** secondary, wszystkie 6/5/3/2/7 opcji layoutu, wszystkie
-> rozmiary typografii (5/5/5), wszystkie cienie (4/4/4), wszystkie warianty fontu/wagi/motion,
-> wszystkie 11 pól kolorów (+ Clear + „Use transparent" tam, gdzie są), wszystkie szerokości i
-> promienie ramek (karty i media), pełny cykl presetów (add/search/sort/apply/update/delete),
-> realne przypięcie assetów z Media Library (hero media, tło, avatar social proof), wszystkie 4
-> ratio media, oba overlaye (inline + tło) oraz pełny round-trip zapisu (Save draft → reload).
+> **Czym różni się ten przebieg.** Cel zadania: domknąć rodziny kontrolek, które wcześniej nie
+> zostały w pełni klikalnie zweryfikowane — **rozmiar przycisku secondary, content width, height,
+> bleed, hide media on mobile, media radius/border, pozostałe rozmiary i wagi tekstu, destynacje
+> badge/primary/secondary, wszystkie Clear/„Use transparent" kolorów, overlay media + jego siła,
+> gradient start/end, picker media i picker tła**. Każda opcja była **realnie klikana** w UI i
+> weryfikowana w **wyrenderowanym Hero** w canvasie admina. Przy okazji domknięcia ujawniono
+> **nowy, niezgłoszony wcześniej defekt** overlaya tła z jawnym obrazem (§4.3).
 
-> **Metodyka.** Każda zmiana wykonywana była realnym zdarzeniem UI przez Playwright
-> (`run-code` → kliknięcia triggerów Radix `Select`, kliknięcia opcji `role=option`, przełączniki
-> `role=switch`, natywne `input`/`change` na `input[type=color]`/`input[type=range]`, wpisywanie do
-> `contenteditable`). Efekt każdej zmiany weryfikowany był przez inspekcję **faktycznie
-> wyrenderowanego Hero** w canvasie admina (`div.relative.w-full.overflow-hidden.border.px-6`):
-> klasy Tailwind, inline-style, atrybuty `data-widget-part="hero.*"`, struktura `h1`/`p`/`a`,
-> ramka media, overlaye. Kontrolki i ich własność czytane były z atrybutów
-> `data-widget-control` / `data-widget-control-ownership` / `data-widget-control-path`.
+> **Metodyka.** Zdarzenia UI przez Playwright (`run-code`): kliknięcia triggerów Radix `Select`
+> (`role=combobox`) i opcji (`role=option`), przełączniki `role=switch`, kliki kart wariantu i
+> przycisków (`Clear`, `Use transparent`, palety, „Browse media", „Done"), oraz — dla natywnych
+> `input[type=color]`/`input[type=range]`, których nie da się obsłużyć systemowym dialogiem OS —
+> programowe ustawienie wartości natywnym setterem `value` + `input`/`change` (ścieżka tożsama z
+> realną zmianą z punktu widzenia React). Efekt czytany z faktycznego renderu:
+> `div.relative.w-full.overflow-hidden.border.px-6` (klasy Tailwind, inline-style, `data-widget-part`,
+> `data-hero-*-overlay`, struktura `h1`/`p`/`a`, ramka media). Kontrolki identyfikowane przez
+> `data-widget-control` / `data-widget-control-ownership`.
 
-> **Uwaga o zrzutach.** Pliki PNG poniżej to **wyłącznie lokalne etykiety** przechwyceń Playwright.
-> Są ignorowane przez Git (`git check-ignore` potwierdza dla `hero-public-desktop-29-05.png` i
-> `hero-public-mobile-375-29-05.png`) i nie stanowią wymaganego evidence w repo.
+> **Uwaga o zrzutach.** Zrzuty PNG poniżej to **wyłącznie lokalne etykiety** przechwyceń Playwright.
+> Cały wzorzec `*.png` jest ignorowany przez Git (reguła `*.png` w `.gitignore`, potwierdzone
+> `git check-ignore`), więc **nie stanowią evidence w repo**. Lista w §12.
 
-> **Zastrzeżenie o stanie fixture.** Audyt zostawił na „Contract Test - hero" **wersję roboczą**
-> (Save draft, NIE Publish) z moimi edycjami (m.in. headline „PERSIST HERO 29-05", wariant split,
-> font mono, motion slide-up). Trasa `/homepage` to **inna, opublikowana strona** — patrz §11.
+> **Zastrzeżenie o stanie fixture.** Audyt zostawił „Contract Test - hero" jako **wersję roboczą**
+> (Save draft, NIE Publish) z licznymi edycjami audytowymi (m.in. realnie przypięty obraz inline i
+> obraz tła z Media Library, badge włączony, paleta zmieniana). Trasa `/homepage` to **inna,
+> opublikowana strona** — patrz §9. Save draft był wykonany świadomie wyłącznie po to, by
+> potwierdzić defekt trwałości „Single CTA" (§4.1).
 
 ---
 
 ## 1. Przegląd widgetu
 
 **Typ:** `hero` · **Kategoria:** layout · **Opis:** „Top-of-page hero section with CTA."
-**Warianty:** `centered`, `split` (etykieta „Media Right"), `media-left`, `media-center`.
-**Sloty:** `content` („Hero Content") — repeatable slot na zagnieżdżone widgety (sekcja „Structure").
+**Warianty:** `centered`, `split` (etykieta „Media Right"), `media-left`, `media-center` — wybierane
+**kartami** (nie comboboxem), `editorCapabilities.visualOwnsVariantSelection: true`.
+**Sloty:** `content` („Hero Content").
 
-**Tryby edytora (kontrakt `heroEditorContract`, version 2):**
-- **Wizard** — 3 sekcje `setup`: „Goal and starter plan" (`writablePaths: []`), „Starter copy"
-  (`readOnlyPaths:["headline"]`), „Primary action seed" (`readOnlyPaths:["primaryCta.label","primaryCta.href"]`).
-- **Visual** — 10 sekcji edytowalnych: Variant and Presets, Badge and headline, CTA, Rich copy and
-  social proof, Media, Layout and spacing, Typography, Appearance, Colors and Borders, Background.
-  `editorCapabilities.visualOwnsVariantSelection: true`.
-- **Advanced** — 6 sekcji `diagnostics`/`summary`, wszystkie read-only.
-
-W trybie Visual w panelu widgetu naliczono **80 kontrolek** (`data-widget-control`) plus sekcje
-page-buildera (`Structure`, `Block layout`, `Device visibility`) — te ostatnie są poza zakresem widgetu.
+**Tryby edytora (`heroEditorContract`, version 2):**
+- **Wizard** — 3 sekcje `setup` (Goal seed + 2 read-only podsumowania, `writablePaths: []`).
+- **Visual** — 11 sekcji edytowalnych (Variant/Presets, Badge+headline, CTA, Rich copy+social proof,
+  Media, Layout+spacing, Typography, Appearance, Colors+Borders, Background) — w tym przebiegu
+  naliczono **53 kontrolki widgetu** `data-widget-control` (+ kontrolki page-buildera poza zakresem).
+- **Advanced** — 6 sekcji `diagnostics`/`summary`, wszystkie read-only (§8).
 
 ---
 
-## 2. Co było testowane (pełna lista rodzin kontrolek i opcji)
+## 2. Co zostało przetestowane W TYM przebiegu (realne kliknięcia + inspekcja renderu)
 
-| Rodzina | Opcje przeklikane | Pełne pokrycie? |
+| Rodzina kontrolek | Opcje realnie przeklikane | Pokrycie |
 |---|---|---|
-| Wizard: Goal | Lead generation, Sales, Information | ✅ 3/3 |
-| Variant (karty) | Centered, Media Right, Media Left, Media Center | ✅ 4/4 |
-| Presety | Add (dialog) · Search (trafienie + brak) · Sort (Recently updated ↔ Name A-Z) · Apply · Update · Delete (z dialogiem) | ✅ pełny cykl |
-| Badge: Show badge (switch) | on/off | ✅ |
-| Badge: tone (Select) | Neutral, Primary, Success, Warning | ✅ 4/4 |
-| Badge: placement (Select) | Above headline, Inline headline | ✅ 2/2 |
-| Badge: label / prefix / destination | wpis + picker (50 stron) + „Clear destination" | ✅ |
-| Headline / Subhead / Body | wpis tekstu | ✅ |
-| CTA layout (Select) | Single CTA, Dual CTA | ✅ 2/2 |
-| Primary button size (Select) | None, sm, md, lg | ✅ 4/4 |
-| Secondary button size (Select) | None, sm, md, lg | ✅ 4/4 (przy realnie renderowanym CTA) |
-| Primary / Secondary destination | picker + „Clear destination" | ✅ |
-| Rich headline / Rich body | wpis + toolbar Bold + czyszczenie | ✅ (Bold zweryfikowany) |
-| Social proof (switch) | on/off + rating + reviewCount + label | ✅ |
-| Social proof: avatar #1 | przypięcie z Media Library + alt | ✅ (render 1 avatara) |
-| Media type (Select) | No media, Image, Video | ✅ 3/3 |
-| Media: asset picker | realne przypięcie obrazu (centered tło + inline) | ✅ |
-| Media: ratio (Select, split) | 16:9, 4:3, 1:1, 3:4 | ✅ 4/4 |
-| Media: overlay | kolor + siła (slider) + Clear | ✅ |
-| Alignment / Max width / Content width | left/center/right · none…2xl · none…xl | ✅ 3/6/5 |
-| Height / Bleed | auto/large/screen · contained/full-bleed | ✅ 3/2 |
-| Padding top / bottom (Select) | none, xs, sm, md, lg, xl, 2xl | ✅ 7/7 każdy |
-| Hide media on mobile (switch) | on (+ weryfikacja `hidden md:block`) | ✅ |
-| Headline / Subhead / Body size | 5 / 5 / 5 tokenów | ✅ |
-| Card / Media / Button shadow | None, soft, medium, strong | ✅ 4/4 każdy |
-| Font family / Headline weight / Body weight | 4 / 4 / 4 | ✅ |
-| Entrance motion | None, Fade in, Slide up | ✅ 3/3 |
-| Palety | Light, Dark, Brand | ✅ 3/3 |
-| Pola kolorów (11) | set + Clear + „Use transparent" (gdzie dostępne) | ✅ 11/11 |
-| Card / Media border width | 0,1,2,3 | ✅ 4/4 każdy |
-| Card / Media radius | none, lg, xl, 2xl, 3xl | ✅ 5/5 każdy |
-| Background color | set + „Use transparent" + Clear | ✅ |
-| Background gradient | start + end + angle (slider) + Clear | ✅ |
-| Background media type | No media, Image (przypięcie), Video (pola) | ✅ |
-| Contrast guidance | stan warning (niski kontrast) + ukrycie (czytelny) + „unknown" | ✅ |
-| Persistencja | Save draft → reload (pełna weryfikacja) | ✅ |
-| Advanced | 49 wierszy read-only + zgodność diagnostyk | ✅ |
-| Front | render + overflow 1280/375 + konsola | ✅ |
+| **Secondary button size** | None, sm, md, lg (przy renderującym się secondary CTA) | ✅ 4/4 |
+| **Content width** | None, sm, md, lg, xl (w wariancie media-center) | ✅ 5/5 |
+| **Max width** | None, sm, md, lg, xl, 2xl | ✅ 6/6 |
+| **Height** | auto, large, screen | ✅ 3/3 |
+| **Bleed** | Contained, Full bleed | ✅ 2/2 |
+| **Hide media on mobile** (switch) | on → off | ✅ 2/2 |
+| **Media border width** | 0, 1, 2, 3 | ✅ 4/4 |
+| **Media radius** | None, lg, xl, 2xl, 3xl | ✅ 5/5 |
+| **Headline size** | None, 2xl, 3xl, 4xl, 5xl | ✅ 5/5 |
+| **Subhead size** | None, base, lg, xl, 2xl | ✅ 5/5 |
+| **Body size** | None, sm, base, lg, xl (po wpisaniu treści body) | ✅ 5/5 |
+| **Headline weight / Body weight** | normal, medium, semibold, bold | ✅ 4/4 + 4/4 |
+| **Primary destination** (picker) | 50 opcji; wybór strony → href; „Clear destination" | ✅ |
+| **Secondary destination** (picker) | 51 opcji (z „Saved custom destination"); wybór → href | ✅ |
+| **Badge destination** (picker) | 50 opcji; wybór → `<a>`; „Clear destination" → `<span>` | ✅ |
+| **Badge: enable / label / tone / placement** | switch + wpis + 4 tone + 2 placement | ✅ |
+| **Kolory — set + Clear** (11 pól) | text, subhead, body, card border, primary bg/text/border, secondary bg/text/border, media border | ✅ 11/11 |
+| **„Use transparent"** | primaryButtonBorder, secondaryButtonBg, background.color | ✅ 3/3 |
+| **Gradient** | start, end, kąt (slider), Clear | ✅ |
+| **Media type** / **Background media type** | No media, Image, Video | ✅ 3/3 + 3/3 |
+| **Media picker** (MediaPicker) | „Browse media" → Media Library (5 obrazów) → wybór → inline `<img>` | ✅ |
+| **Background media picker** | wybór → `background-image: url(...)`, `cover` | ✅ |
+| **Media ratio** | 16:9, 4:3, 1:1, 3:4 | ✅ 4/4 |
+| **Media overlay** (kolor + siła) | set koloru + zmiana siły (slider) + Clear | ✅ (defekt §4.2) |
+| **Background media overlay** | set koloru + Clear (model przyjmuje) | ✅ (defekt §4.3) |
+| **Card / Media / Button shadow** | None, soft, medium, strong | ✅ 4/4 ×3 |
+| **Font family** | Inherit, sans, serif, mono | ✅ 4/4 |
+| **Motion** | None, Fade in, Slide up | ✅ 3/3 |
+| **Card border width / radius** | 0–3 · None/lg/xl/2xl/3xl | ✅ 4/4 + 5/5 |
+| **Padding top / bottom** | none, xs, sm, md, lg, xl, 2xl | ✅ 7/7 ×2 |
+| **Alignment** | left, center, right | ✅ 3/3 |
+| **CTA layout** | Single CTA, Dual CTA | ✅ 2/2 (defekt trwałości §4.1) |
+| **Palety** | Light, Dark, Brand | ✅ 3/3 |
+| **Contrast guidance** | stan „warning" / czytelny / „unknown" | ✅ 3/3 |
+| **Warianty (karty)** | Media Right (split), Media Center | ⚠️ 2/4 klikane w tym przebiegu |
+| **Advanced** | 49 wierszy read-only + baner read-only | ✅ |
+| **Front** | render + overflow 1280/375 + konsola | ✅ |
+
+> Pełne, kompletne pokrycie **wszystkich** opcji każdej z rodzin wymienionych jako luki zadania.
+> Wariant: w tym przebiegu fizycznie kliknięto karty **Media Right** i **Media Center**
+> (Media Left/Centered nie były klikane w tej sesji — patrz §6).
 
 ---
 
-## 3. Co działa (potwierdzone realnymi kliknięciami i inspekcją renderu)
+## 3. Co DZIAŁA (potwierdzone realnymi kliknięciami i renderem)
 
-### 3.1 Wizard — seed-only, zgodny z kontraktem
-- Panel domyślnie pokazuje baner **„Setup complete · Daily edits live in Visual…"** + **„Run setup again"**.
-  Wizard nie jest osobną zakładką (`tablist` ma tylko Visual/Advanced) — to wzorzec startowy.
-- **3 sekcje**, kontrolki: **1× `action`** (selektor „Goal", bez `path`) + **3× `readonly`**
-  (`headline`, `primaryCta.label`, `primaryCta.href`), **0 writable** — zgodnie z `writablePaths: []`.
-- **Wszystkie 3 presety celu działają** (zweryfikowane na żywo, wymuszając zmianę wartości):
-  - Lead generation → headline „Grow your audience faster", primary „Join the list" → `/signup`;
-  - Sales → „Convert more visitors", „Book a demo" → `/demo`;
-  - Information → „Everything you need to know", „Learn more" → `/about`.
-- Wybór celu seeduje wyłącznie `headline` + `primaryCta`; badge i secondary CTA pozostają nietknięte.
-  Zmiana odbija się natychmiast w read-only podsumowaniach **oraz** w głównym canvasie Hero.
-- **„Finish setup and open Visual"** poprawnie przełącza tryb na Visual.
+### 3.1 Layout / spacing — wszystkie opcje
+- **Max width:** None→(brak), sm→`max-w-3xl`, md→`max-w-4xl`, lg→`max-w-5xl`, xl→`max-w-6xl`, 2xl→`max-w-7xl`.
+- **Content width** (poza split): None→(brak), sm→`max-w-sm`, md→`max-w-md`, lg→`max-w-lg`, xl→`max-w-xl`.
+- **Height:** auto→(brak), large→`min-h-[80vh]`, screen→`min-h-screen`.
+- **Bleed:** Contained→bez nadpisań; Full bleed→`width:100vw` + `margin-left/right: calc(50% - 50vw)`.
+- **Padding top/bottom:** none/xs/sm/md/lg/xl/2xl → 0/0.5/1/1.5/2/3/4 rem (oba pełne 7/7).
+- **Hide media on mobile:** on → wrapper media dostaje `hidden md:block`; off → usunięte.
+- **Alignment:** left→`text-left`, center→`text-center`, right→`text-right` (w split tylko text-align — patrz §5).
 
-### 3.2 Variant — 4 warianty dają 4 różne layouty
-| Wariant | `layoutClass` kontenera | Ramka media inline | Kontrolki media-frame |
-|---|---|---|---|
-| Centered | `flex flex-col gap-4` | brak (obraz jako tło) | ukryte |
-| Media Right (split) | `flex flex-col gap-8 md:items-center md:flex-row` | obecna (`aspect-video`, „Select media type") | widoczne |
-| Media Left | `… md:flex-row-reverse` | obecna | widoczne |
-| Media Center | `flex flex-col items-center gap-8` | obecna | widoczne |
-- Kontrolki **media-frame** (Media shadow, Media frame border color, Media border width, Media radius)
-  oraz **Media ratio** pokazują się wyłącznie w wariantach innych niż `centered`; `ratio` dodatkowo
-  wymaga `media.type ≠ none`.
-
-### 3.3 Presety — pełny cykl życia, bez pozostałości
-- „Add variant preset" → dialog „Create Hero preset" z nazwą prefillowaną z wariantu (np. „media-center preset").
-- Search filtruje (trafienie → 1 wynik; brak trafienia → 0). Sort przełącza „Recently updated" ↔ „Name A-Z".
-- Apply / Update / Delete działają; Delete otwiera dialog potwierdzenia „Delete Hero preset?".
-- Po Delete lista wraca do pustej — **brak rezyduów** (preset audytowy posprzątany).
-- Search i Sort renderują się także przy zerowej liczbie presetów.
-
-### 3.4 Badge — wszystkie opcje
-- „Show badge" odsłania/ukrywa wszystkie 5 pól (label, prefix, destination, tone, placement) i
-  odpowiednio dodaje/usuwa `[data-widget-part="hero.badge"]` w canvasie.
-- **tone ×4** daje rozłączne klasy: neutral `border-border/80 bg-background/80`, primary
-  `bg-[var(--color-primary)]/15 text-[var(--color-primary)]`, success `bg-emerald-500/15 text-emerald-700`,
-  warning `bg-amber-500/15 text-amber-700`.
-- **placement**: „Above headline" → badge jako sibling przed `<h1>`; „Inline headline" → badge **wewnątrz** `<h1>`.
-- prefix renderuje się przed labelem. Destination picker listuje **50 opublikowanych stron** + opcję
-  „No badge destination"; wybór „HomePage" zamienia badge z `<span>` na `<a href="/homepage">`,
-  „Clear destination" przywraca `<span>`.
-
-### 3.5 CTA — oba tryby, oba przyciski, oba rozmiary kompletne
-- Single CTA → w canvasie zostaje tylko primary, pola secondary znikają; Dual CTA → pola secondary wracają.
-- **Primary button size**: None → bez klas rozmiaru (`rounded-md font-semibold`), sm → `px-3 py-1.5 text-xs`,
-  md → `px-4 py-2 text-sm`, lg → `px-5 py-2.5 text-base`. **Secondary** identycznie (zweryfikowane przy
-  renderującym się secondary CTA — label + destination ustawione).
-- Destination picker (primary i secondary) ustawia `/homepage`; „Clear destination" usuwa link — a że
-  CTA wymaga **label + href**, wyczyszczenie destynacji **usuwa cały przycisk** z canvasu (zachowanie modelu).
-
-### 3.6 Rich copy + social proof
-- Rich headline: edytowalny `contenteditable`; wpis renderuje się w `<h1>` przez
-  `dangerouslySetInnerHTML`; **toolbar Bold** owija tekst w `<strong>`; wyczyszczenie przywraca plain headline.
-- Rich body działa tą samą ścieżką (treść renderuje się w canvasie; po wyczyszczeniu wraca plain `<p>`).
-- Social proof: switch odsłania rating/reviewCount/label + 5 wierszy avatarów; wszystkie 3 pola tekstowe
-  renderują `[data-widget-part="hero.social-proof"]`.
-- **Avatar #1**: przypięcie obrazu z Media Library + alt → social proof pokazuje 1 `<img>` avatara.
-
-### 3.7 Media — obraz w pełni, ratio kompletne, overlaye
-- **Centered + Image**: pola source/alt/overlay obecne, ratio ukryte, nota „renders the selected image as
-  hero background". Przypięcie assetu → `img.absolute.inset-0` (tło). Overlay → `[data-hero-background-overlay]`
-  z `rgba(...)`; Clear usuwa overlay.
-- **Centered + Video**: pola title/description/poster obecne; nota „does not render inline video"; ratio ukryte.
-- **Split + Image**: inline `img` w ramce; **ratio ×4** mapuje poprawnie: 16:9 → `aspect-video`,
-  4:3 → `aspect-[4/3]`, 1:1 → `aspect-square`, 3:4 → `aspect-[3/4]`. Inline overlay → `[data-hero-inline-media-overlay]` z `rgba(...)`.
-- **Background media = Image**: przypięcie → root `background-image: url(...)`; pola video tła (title/description/poster) obecne.
-
-### 3.8 Layout / spacing — wszystkie opcje
-- Alignment: left → `text-left mr-auto`, center → `text-center mx-auto`, right → `text-right ml-auto`.
-- Max width: none→(brak), sm→`max-w-3xl`, md→`max-w-4xl`, lg→`max-w-5xl`, xl→`max-w-6xl`, 2xl→`max-w-7xl`.
-- Content width: none→(brak), sm→`max-w-sm`, md→`max-w-md`, lg→`max-w-lg`, xl→`max-w-xl`.
-- Height: auto→(brak), large→`min-h-[80vh]`, screen→`min-h-screen`.
-- Bleed: contained→normalny; full-bleed→`width:100vw` + `margin-left/right: calc(50% - 50vw)`.
-- Padding top/bottom: none/xs/sm/md/lg/xl/2xl → 0/0.5/1/1.5/2/3/4 rem (oba pełne 7/7).
-- Hide media on mobile: włączenie dodaje `hidden md:block` do wrappera media (zweryfikowane w media-center).
-
-### 3.9 Typography / Appearance — wszystkie opcje
-- Headline size 5/5 (`text-2xl…5xl`, none→brak), Subhead size 5/5 (`text-base…2xl`), Body size 5/5 (`text-sm…xl`).
-- Card/Media/Button shadow 4/4/4: none→brak, soft→`shadow-sm`, medium→`shadow-md`, strong→`shadow-xl`.
-- Font family: inherit→brak, sans/serif/mono→`font-sans/serif/mono`.
+### 3.2 Typography / Appearance — wszystkie opcje
+- Headline size 5/5 (`text-2xl…5xl`, None→brak), Subhead 5/5 (`text-base…2xl`), Body 5/5 (`text-sm…xl`).
 - Headline/Body weight 4/4: `font-normal/medium/semibold/bold`.
-- Motion: none→brak; fade-in→`animate-in fade-in-0`; slide-up→`+ slide-in-from-bottom-2`.
+- Card/Media/Button shadow 4/4/4: none→brak, soft→`shadow-sm`, medium→`shadow-md`, strong→`shadow-xl`.
+- Font family: Inherit→brak, sans/serif/mono→`font-sans/serif/mono`.
+- Motion: None→brak; Fade in→`motion-safe:fade-in-0`; Slide up→`+ motion-safe:slide-in-from-bottom-2`.
 
-### 3.10 Colors / Borders — palety, 11 pól, ramki, kontrast
-- Palety Light/Dark/Brand zapisują **dokładnie** zestaw hexów z presetu (np. Dark: bg `#0f172a`,
-  headline `#f8fafc`, border `#1e293b`, primary `bg=#38bdf8 text=#082f49`, secondary `bg=#0f172a border=#334155`).
-- **11 pól kolorów** (headline, subhead, body, card border, primary bg/text/border, secondary bg/text/border,
-  media frame border) — każde przyjmuje custom hex i renderuje go; **Clear** przywraca domyślną
-  (`var(--color-text)` / `var(--color-border)` / `var(--color-bg)` / brak). **„Use transparent"** działa na
-  „Primary button border" i „Secondary button background".
-- Card border width 0/1/2/3 → 0/1/2/3 px; Card radius none/lg/xl/2xl/3xl; Media border width i Media radius
-  identycznie (w wariantach z media).
-- Contrast guidance: dla solidnego tła i niskiego kontrastu pokazuje **„Configured colors may be hard to read
-  together."**; dla czytelnej pary notyfikacja znika; gdy tło nie jest solidne (gradient/media/transparent),
-  pokazuje **„Contrast depends on inherited theme or transparent colors."** (stan „unknown" — zgodnie z
-  `resolveHeroSolidBackgroundForContrast`).
+### 3.3 Colors / Borders — wszystkie 11 pól + Clear + 3× transparent
+- **Set custom (rgb) + Clear** zweryfikowane dla 11 pól, każde mapuje na właściwy element:
+  - textColor→`h1` `color`; subheadColor→subhead `<p>`; bodyColor→body `<p>`; borderColor→root `border-color`;
+  - primaryButtonBg/Text/Border→styl primary CTA; secondaryButtonBg/Text/Border→styl secondary CTA;
+  - mediaBorderColor→ramka media `border-color`.
+  - **Clear** w każdym przypadku przywraca wartość domyślną (`var(--color-text)` / `var(--color-border)` itd.).
+- **„Use transparent"** (tylko 3 pola): `primaryButtonBorder`→`border-color: transparent` (i `border-width:0px`),
+  `secondaryButtonBg`→`background: transparent`, `background.color`→`background-color: transparent`; po Clear pole
+  jest usuwane z modelu (brak `background-color` w stylu po wyczyszczeniu tła).
+- **Niuans modelu (potwierdzony):** ustawienie `primaryButtonBorder` na realny kolor przełącza
+  `border-width` przycisku z `0px` na `1px` (zgodnie z rendererem).
+- **Card border width** 0/1/2/3 → 0/1/2/3 px; **Card radius** None→brak, lg/xl/2xl/3xl → `rounded-*`;
+  **Media border width / Media radius** identycznie (w wariantach z media).
 
-### 3.11 Background — kolor, gradient, media
-- Background color: set custom (rgb) · „Use transparent" → `transparent` · Clear → domyślna.
-- Gradient: start + end + kąt (slider) → `linear-gradient(45deg, …, …)`; Clear usuwa.
+### 3.4 Gradient (Background)
+- Start `#ff0000` → `linear-gradient(135deg, rgb(255,0,0), rgb(71,85,105))` (end domyślny);
+  End `#0000ff` → `…, rgb(0,0,255))`; suwak kąta 45 → `linear-gradient(45deg, …)`; **Clear** → brak.
+- Gradient bez obrazu renderuje się jako `background-image` roota.
+
+### 3.5 Destynacje (badge / primary / secondary) — pickery i Clear
+- **Primary:** 50 opcji („No primary destination" + 49 opublikowanych stron). Wybór „Pricing Review Temp"
+  → `href=/pricing-review-temp`. „Clear destination" usuwa href → ponieważ CTA wymaga **label + href**,
+  **cały przycisk primary znika** z renderu (zachowanie modelu).
+- **Secondary:** 51 opcji (dodatkowa pozycja „Saved custom destination" dla bieżącego `#`). Wybór
+  „Testimonials Review 0527" → `href=/testimonials-review-0527`.
+- **Badge:** 50 opcji („No badge destination" + 49 stron). Wybór „HomePage" → badge zmienia się ze `<span>`
+  w `<a href="/homepage">`; „Clear destination" przywraca `<span>`.
+
+### 3.6 Badge — enable / tone / placement
+- „Show badge" odsłania pola; tone ×4 daje rozłączne klasy: neutral `border-border/80 bg-background/80`,
+  primary `bg-[var(--color-primary)]/15`, success `bg-emerald-500/15`, warning `bg-amber-500/15`.
+- placement: „Above headline" → badge przed `<h1>` (`badgeInH1=false`); „Inline headline" → badge **wewnątrz** `<h1>` (`badgeInH1=true`).
+
+### 3.7 CTA — rozmiary obu przycisków
+- **Secondary button size** (domknięta luka): None→brak klas rozmiaru, sm→`px-3 py-1.5 text-xs`,
+  md→`px-4 py-2 text-sm`, lg→`px-5 py-2.5 text-base` — zweryfikowane **przy realnie renderującym się
+  secondary CTA** (label + href ustawione). Primary analogicznie.
+- CTA layout: Single → w canvasie tylko primary; Dual → pola secondary wracają (puste, patrz §5.2 i §4.1).
+
+### 3.8 Media + Background media — pickery realnie sięgalne
+- **Media picker** (`MediaPicker`): przycisk „Browse media" otwiera dialog „Media library" z **5 obrazami**;
+  wybór assetu + „Done" → inline `<img src="http://localhost:3000/media/2026/02/…png">` w ramce media,
+  placeholder „Add media URL" znika.
+- **Background media picker:** wybór assetu → root `background-image: url("…png")` + `background-size: cover`.
+- **Media ratio** ×4: 16:9→`aspect-video`, 4:3→`aspect-[4/3]`, 1:1→`aspect-square`, 3:4→`aspect-[3/4]`.
+
+### 3.9 Palety i contrast guidance
+- **Light:** bg `#ffffff`, headline `#111827`, primary bg `#2563eb`. **Dark:** bg `#0f172a`, headline `#f8fafc`,
+  primary `#38bdf8`. **Brand:** bg `#eff6ff`, headline `#1e3a8a`, primary `#1d4ed8` — wszystkie zgodne z presetami.
+- **Contrast guidance** (3 stany): tło solidne + niski kontrast (`#f2f2f2` na bieli) →
+  **„Configured colors may be hard to read together."**; para czytelna (`#111111` na bieli) → notyfikacja znika;
+  tło niesolidne (media/gradient/transparent) → **„Contrast depends on inherited theme or transparent colors."**
+  (stan „unknown" — zgodny z `resolveHeroSolidBackgroundForContrast`, który zeruje się przy `background.media ≠ none`).
 
 ---
 
 ## 4. Co NIE działa / defekty funkcjonalne
 
-### 4.1 „Single CTA" nie utrzymuje się przy zapisie (potwierdzony, repro 2×)
-- W Visual ustawienie **CTA layout → Single CTA** poprawnie usuwa secondary z canvasu (kod ustawia
-  `secondaryCta: undefined`).
-- **Już po kliknięciu „Save draft" (przed reloadem)** selektor wraca na **„Dual CTA"**, pola secondary
-  wracają, a w canvasie pojawia się drugie CTA **„Learn more" → `#`**. Po **reloadzie** stan jest taki sam.
-- Mechanizm: round-trip zapisu re-merguje `heroDefaults.secondaryCta = { label: "Learn more", href: "#" }`,
-  więc skasowanie secondary nie przeżywa zapisu. **Z perspektywy użytkownika nie da się trwale zapisać Hero
-  z jednym CTA.** To realny błąd trwałości, nie kosmetyka. (Wszystkie inne edytowane pola — wariant, tło
-  `#101820`, border 2px, font mono, motion slide-up, headline 4xl, padding 2xl, full-bleed, height screen —
-  przetrwały Save draft + reload bez utraty.)
+### 4.1 „Single CTA" nie utrzymuje się po zapisie (potwierdzony w tym przebiegu)
+- Ustawienie **CTA layout → Single CTA** poprawnie usuwa secondary z canvasu (w canvasie zostaje tylko primary „Jedyne CTA").
+- **Bezpośrednio po „Save draft" (bez reloadu)** w canvasie pojawia się ponownie drugie CTA **„Learn more" → `#`**.
+- **Po reloadzie** stan jest taki sam: dwa CTA (`Jedyne CTA` /homepage + `Learn more` `#`).
+- Mechanizm: round-trip zapisu re-merguje `heroDefaults.secondaryCta = { label: "Learn more", href: "#" }`.
+  **Z perspektywy użytkownika nie da się trwale zapisać Hero z jednym CTA.** Realny błąd trwałości.
 
-### 4.2 Overlay media: zmiana „siły" kasuje wybrany kolor na czarny (potwierdzony, repro na żywo)
-- W polu „Media overlay" ustawienie koloru działa: `#ff0000` → `rgba(255, 0, 0, 0.2)`.
-- **Następna zmiana suwaka „Overlay strength" resetuje kolor do czarnego**: po przesunięciu na 70%
-  overlay to `rgba(0, 0, 0, 0.7)` — czerwień zniknęła. Ponowne ustawienie koloru przywraca `rgba(255, 0, 0, 0.7)`.
-- Przyczyna (kod): overlay przechowywany jest jako `rgba(...)` z alfą, a `resolveColorPickerValue` celowo
-  zwraca fallback `#000000` dla wartości z alfą („cannot round-trip through an HTML color input"). `HeroOverlayField`
-  przy zmianie siły odtwarza kolor z tej wartości → dostaje czarny. Skutek UX: **nie da się wyregulować
-  przezroczystości kolorowego overlaya bez utraty koloru** (trzeba zawsze ustawiać kolor jako ostatni krok).
-  Dotyczy zarówno overlaya media inline, jak i overlaya tła.
+### 4.2 Overlay media: zmiana „siły" kasuje wybrany kolor na czarny (potwierdzony na żywo)
+- Media overlay: kolor `#ff0000` → `rgba(255, 0, 0, 0.2)` (domyślna siła 20%).
+- **Zmiana suwaka „Overlay strength" na 70% → `rgba(0, 0, 0, 0.7)`** — czerwień zniknęła (reset do czerni).
+- Ponowne ustawienie koloru `#ff0000` → `rgba(255, 0, 0, 0.7)` (kolor wraca, przy nowej sile).
+- Przyczyna: overlay przechowywany jako `rgba(...)` z alfą; `resolveColorPickerValue` zwraca fallback
+  `#000000` dla wartości z alfą („nie round-trip-uje przez `input[type=color]`"), więc `HeroOverlayField`
+  przy zmianie siły odbudowuje kolor z czerni. Skutek UX: **nie da się wyregulować przezroczystości
+  kolorowego overlaya bez utraty koloru** — kolor trzeba ustawiać jako ostatni krok. Dotyczy też overlaya tła.
 
----
-
-## 5. Czego NIE dało się w pełni zweryfikować (i dlaczego)
-
-- **Inline wideo (media `video`) — render niemożliwy do potwierdzenia.** Media Library **nie zawiera żadnego
-  zasobu wideo** (dialog „Media library" z filtrem `video/*` pokazuje pustą siatkę „No media assets found"),
-  a edytor **nie ma pola na ręczny URL** zewnętrzny. Pola wideo (Video title/description, Video poster) są
-  obecne i odsłaniają się poprawnie, ale samego `<video>` w canvasie nie dało się wyrenderować. To samo
-  dotyczy **wideo tła** oraz **postera wideo** (poster przyjmuje obrazy, ale renderuje się dopiero na elemencie `<video>`).
-- **Diagnostyka sanitizera rich-text.** Notyfikacja „Formatting adjusted" pojawia się tylko, gdy sanitizer
-  coś usuwa (np. wklejony `<img>`/`<script>`/niedozwolony tag/atrybut). Przez **zwykłe wpisywanie tekstu i
-  toolbar** (Bold/Italic/Link) nie da się jej wywołać — wymagałaby wklejenia niedozwolonego HTML, czego
-  nie odtworzono w headless. Sam render rich-text i czyszczenie HTML zweryfikowano (Bold → `<strong>`).
-- **Indywidualne natywne color-pickery przez systemowy dialog.** `input[type=color]` otwiera dialog OS,
-  którego nie da się obsłużyć w headless. Ścieżkę zapisu kolorów zweryfikowano natomiast przez programowe
-  ustawienie wartości (z natywnym setterem `value` + zdarzenia `input`/`change`) oraz przez palety, „Use
-  transparent" i „Clear" — wszystkie odbijały się w renderze.
-- **Publish / round-trip na front.** Wykonano wyłącznie „Save draft", więc edycje audytu **nie trafiły** na
-  trasę publiczną. Front zweryfikowano pod kątem poprawności renderu opublikowanego Hero, nie round-tripu edycji.
+### 4.3 [NOWE] Background media overlay z jawnym obrazem (warianty inne niż centered) — nie renderuje się i potrafi wykasować obraz
+- Scenariusz: wariant `split` (lub media-left/media-center), `background.media.type = image` z przypiętym
+  obrazem, następnie ustawienie **„Background media overlay"** na kolor (np. `#0000ff`).
+- **Model przyjmuje wartość** (przycisk „Clear" overlaya jest aktywny → `hasClearableFieldValue` = true),
+  ale **w renderze nie pojawia się żaden overlay**: `background-image` roota pozostaje samym `url("…png")`,
+  i **nie ma** osobnego `[data-hero-background-overlay]` (taki div renderuje się tylko dla
+  centered+image albo wideo tła).
+- Przyczyna (renderer `hero.tsx`): dla jawnego obrazu tła overlay jest **doklejany do `background-image`**
+  jako warstwa: `[overlay, gradient, url(...)].join(", ")`. Surowy `rgba(...)` **nie jest poprawnym
+  `<image>`**, więc cała deklaracja `background-image` jest nieprawidłowa.
+- **Dowód CSS (izolowany element)**: ustawienie `background-image: rgba(0,0,255,0.25), url("…")` w jednym
+  kroku (świeży mount) → `getComputedStyle` zwraca **`none`** (znika cały obraz). Ustawienie tej samej
+  wartości po wcześniejszym poprawnym `url(...)` (żywy edytor) → przeglądarka **ignoruje** błędną zmianę i
+  zostawia poprzedni `url(...)` (dlatego w edytorze obraz zostaje, ale overlay nie działa).
+- **Skutek:** overlay tła z jawnym obrazem jest funkcjonalnie martwy w wariantach innych niż centered;
+  co gorsza, **przy świeżym renderze** (publiczna strona po zapisaniu / po reloadzie) ta sama
+  konfiguracja daje `background-image: none` — **znika również obraz tła**. (Overlay inline media — §4.2 —
+  to osobna, działająca ścieżka renderowana jako `<div>` z `rgba`, gdzie `rgba` jest poprawne.)
 
 ---
 
-## 6. Persistencja (Save draft → reload)
+## 5. Niuanse UX/UI i dostępności
 
-- „Save draft" zwraca toast **„Draft saved."**.
-- **Trwałe (potwierdzone po reloadzie):** wariant `split`, headline „PERSIST HERO 29-05" (`text-4xl`,
-  `font-bold`), subhead, `font-mono`, `shadow-md`, motion slide-up (`slide-in-from-bottom-2`),
-  `min-h-screen`, `border-width:2px`, `background-color: rgb(16,24,32)`, padding 4rem, full-bleed
-  (`width:100vw` + ujemne marginesy), Card radius 3xl.
-- **Jedyny wyjątek:** CTA layout Single → po zapisie wraca **Dual** z secondary „Learn more" (§4.1).
+1. **Korzeń Hero to zwykły `<div>` bez landmarku** (`role` = null, tag `DIV`) — w adminie i na froncie.
+   Brak `role`/`aria-label`/`<section>`; strukturę daje tylko `<h1>`.
+2. **Single → Dual CTA gubi treść secondary.** Przełączenie na Single ustawia `secondaryCta: undefined`
+   (treść secondary przepada); powrót na Dual daje **puste** pola secondary (`{label:"", href:""}`) → secondary
+   nie renderuje się, dopóki użytkownik nie wpisze ponownie label + destynacji. (Zachowanie zgodne z kodem, ale myli.)
+3. **Badge / social-proof włączone, lecz puste, nie renderują nic** (`normalizeHeroBadge` / `normalizeHeroSocialProof` → `undefined`).
+4. **`HeroColorField` overlaya zawsze pokazuje czarny swatch dla wartości z alfą.** Nawet gdy model trzyma
+   kolorowy overlay (`rgba(0,0,255,…)`), pole pokazuje `rgba(0,0,0,…)` (fallback `#000000`) — mylące dla autora (powiązane z §4.2).
+5. **Alignment ignorowane w media-center** (`effectiveAlign` wymusza `center`); w `split` z kolei klasy
+   pozycjonowania (`mr-auto`/`mx-auto`/`ml-auto`) nie są dodawane — działa tylko `text-*`.
+6. **Media-center duplikuje klasy** kolumny treści: `space-y-4 text-center max-w-xl mx-auto mx-auto text-center`
+   (podwójne `mx-auto` i `text-center`) — kosmetyczne, bez wpływu wizualnego.
+7. **Etykiety Radix `Select` ≠ wartości modelu**: kapitalizowane są `none→None`, `inherit→Inherit`,
+   `contained/full-bleed→Contained/Full bleed`, `fade-in/slide-up→Fade in/Slide up`. (Uwaga operacyjna: klik
+   opcji wymaga etykiety, nie wartości — pomyłka „none" zamiast „None" zostawia otwarty dropdown blokujący kolejne kliknięcia.)
+8. **Dialog `MediaPicker` emituje ostrzeżenie a11y** w konsoli admina: *„Missing `Description` or
+   `aria-describedby={undefined}` for {DialogContent}"* — **jedyne** ostrzeżenie konsoli (0 błędów).
+9. **Dwa przyciski „Dark" w adminie** (globalny przełącznik motywu + paleta Hero). Paletę trzeba kierować
+   do grupy „Hero palettes", inaczej `.first()` trafia w motyw admina.
+10. **Wyczyszczenie destynacji CTA usuwa cały przycisk** (CTA wymaga label + href jednocześnie).
 
 ---
 
-## 7. Tryb Advanced — read-only, wiernie odzwierciedla stan
+## 6. Czego NIE dało się w pełni zweryfikować (i dlaczego)
 
-- Baner: **„Advanced mode is read-only. Use Visual for public-facing Hero copy, media, layout, spacing,
-  color, and background changes."**
-- **49 wierszy `readonly`, 0 kontrolek interaktywnych** (brak inputów/selectów/switchy/comboboxów/contenteditable
-  w panelu Advanced).
-- Diagnostyki zgodne ze stanem zapisanym: variant `split`, align `right`, maxWidth `2xl`, height `screen`,
-  bleed `full-bleed`, paddingTop `2xl`, headlineSize `4xl`, typeface `family=mono; headline=bold; body=bold`,
-  shadows `card=medium; media=strong; buttons=strong`, cardBorder `width=2; radius=3xl; color=Not configured`,
-  background color `#101820`, Primary/Secondary CTA href = **Safe URL**, motion `slide-up`, runtime CTA
-  „Primary Safe URL; secondary safe url".
+- **Inline wideo (`media.type = video`) — render niemożliwy do potwierdzenia.** Media Library z filtrem
+  `video/*` zwraca **„No media assets found."** (0 zasobów wideo), a edytor **nie ma pola na ręczny URL**
+  (autoring tylko przez `MediaPicker`). To samo dotyczy **wideo tła** oraz **postera wideo** (poster
+  renderuje się dopiero na elemencie `<video>`). Konkretne nie-do-zweryfikowania: `hero.media.assetId`
+  (typ Video), `hero.background.media.assetId` (typ Video), `hero.media.posterAssetId`.
+- **Diagnostyka sanitizera rich-text („Formatting adjusted").** Pojawia się tylko przy wklejeniu
+  niedozwolonego HTML (`<img>`/`<script>`/nieobsługiwane tagi/atrybuty); przez zwykłe wpisywanie i toolbar
+  nie da się jej wywołać w headless. Kontrolki `hero.richHeadline` / `hero.richBody` są obecne i edytowalne.
+- **Natywny systemowy dialog `input[type=color]`.** Nie da się obsłużyć w headless. Ścieżkę zapisu kolorów
+  zweryfikowano programowym setterem `value` + zdarzeniami `input`/`change`, paletami, „Use transparent" i
+  „Clear" — wszystkie odbiły się w renderze. `HeroColorField` **nie ma** pola tekstowego na hex (brak
+  ścieżki wpisania wartości brzegowych/nie-hex).
+- **Karty wariantu Media Left / Centered.** W tym przebiegu klikano karty **Media Right** i **Media Center**;
+  pozostałych dwóch wariantów nie klikano w tej sesji (logika layoutu spójna z modelem i poprzednim przebiegiem).
+- **Publish / round-trip na front.** Wykonano wyłącznie „Save draft"; edycje audytu **nie trafiły** na trasę
+  publiczną. Front zweryfikowano pod kątem renderu opublikowanego Hero, nie round-tripu edycji.
 
 ---
 
-## 8. Front (`http://localhost:3000/homepage`)
+## 7. Persistencja (Save draft → reload)
+
+- „Save draft" zapisuje wersję roboczą; większość pól przeżywa zapis (z poprzedniego i bieżącego przebiegu
+  potwierdzono trwałość wariantu, headline, typografii, tła, ramek, full-bleed, height itd.).
+- **Jedyny potwierdzony wyjątek trwałości:** CTA layout **Single → po zapisie wraca Dual** z secondary
+  „Learn more" → `#` (§4.1) — potwierdzone bezpośrednio po zapisie **oraz** po reloadzie.
+
+---
+
+## 8. Tryb Advanced — read-only
+
+- Baner **„Advanced mode is read-only…"** obecny. **49 wierszy `readonly`**, **0 interaktywnych kontrolek
+  widgetu** w panelu Advanced. Jedyny interaktywny element w `main` to wyszukiwarka page-buildera
+  („Find components…") — **nie** jest kontrolką widgetu (`closest('[data-widget-control]') = null`).
+
+---
+
+## 9. Front (`http://localhost:3000/homepage`)
 
 - HTTP **200 OK**, **0 błędów i 0 ostrzeżeń konsoli**.
-- **Osobna, opublikowana strona** (NIE edytowany fixture). Zawiera **jeden** widget Hero:
-  - `<h1>` „Twój wymarzony dom zaczyna się tutaj" (semantyczny),
+- **Osobna, opublikowana strona** (NIE edytowany fixture). Jeden widget Hero:
+  - `<h1>` „Twój wymarzony dom zaczyna się tutaj" (semantyczny, tag `H1`),
   - badge `<span data-widget-part="hero.badge">` „Premium Architecture" (bez `href` → nieklikalny),
   - 2 CTA: „View Projects" → `/signup`, „Free Consulatation" → `/examples`.
-- **Brak poziomego overflow**: 1280px (`scrollWidth==clientWidth==1280`) i 375px (`==375`). ✅
-- Literówka „Free Consulatation" to **content opublikowanej strony**, nie błąd widgetu (informacyjnie).
-
-_Zrzuty (etykiety lokalne): `hero-public-desktop-29-05.png`, `hero-public-mobile-375-29-05.png`._
-
----
-
-## 9. Uwagi UX/UI i dostępności (niuanse)
-
-1. **Korzeń Hero to zwykły `<div>` bez landmarku.** Renderer nie nadaje `role`/`aria-label`/`<section>`.
-   Dla czytników ekranu Hero nie jest ogłaszany jako wyróżniona sekcja — strukturę daje tylko `<h1>`.
-   Dotyczy admina i frontu.
-2. **Badge i social proof włączone, ale puste, nie renderują niczego.** Po włączeniu przełącznika bez treści
-   (`label` dla badge; rating/reviewCount/label/avatar dla social proof) `normalizeHeroBadge` /
-   `normalizeHeroSocialProof` zwracają `undefined`. Potwierdzone na żywo dla social proof (switch on +
-   puste pola → brak `[data-widget-part="hero.social-proof"]`). Użytkownik może odnieść wrażenie, że
-   „przełącznik nie działa".
-3. **Selektor „Goal" w Wizardzie.** (a) Każdy wybór celu **nadpisuje** żywe `headline` i `primaryCta`
-   (destrukcyjna akcja seedująca pod neutralną etykietą). (b) Lokalny stan `goal` **resetuje się do
-   „Lead generation" przy każdym otwarciu** Wizarda i nie odzwierciedla zapisanej treści. (c) **Ponowny
-   wybór tej samej (aktualnie zaznaczonej) opcji jest no-opem** — Radix `Select` nie odpala `onValueChange`
-   dla niezmienionej wartości, więc np. realne zaseedowanie „Lead generation" wymaga przełączenia na inny cel
-   i z powrotem.
-4. **Brak osobnego, oznaczonego „Live preview" w panelu Wizarda** (w tym fixture). Podgląd na żywo zapewnia
-   główny canvas strony, który aktualizuje się natychmiast. (Korekta wobec wcześniejszego raportu, który
-   sugerował dedykowany panel „Live preview".)
-5. **Brak pola na ręczny URL media.** Autoring odbywa się wyłącznie przez Media Library (lub zachowane
-   „Saved external media"). To świadomy wzorzec, ale uniemożliwia szybkie testy/wklejanie linku oraz —
-   przy braku assetów wideo w bibliotece — realny render wideo (§5).
-6. **`HeroColorField` ma tylko natywny `input[type=color]`** (bez pola tekstowego na hex, w odróżnieniu od
-   `SharedColorFieldInputs` w innych edytorach). Konsekwencja techniczna: ustawienie wartości równej
-   fallbackowi pickera (np. białego, gdy fallback to `#ffffff`) jest no-opem dla śledzenia zmian React —
-   wartości brzegowe/nie-hex nie są wpisywalne, dostępne są tylko swatch + „Use transparent" + „Clear".
-7. **Wszystkie listy to Radix `Select` (combobox), nie natywny `<select>`** — wymagają kliknięcia triggera
-   i opcji; etykiety tokenów są kapitalizowane w UI („None") względem wartości modelu („none").
-8. **Dwa systemy paddingu** w modelu: `spacing.paddingTop` (tokeny, eksponowane w Visual) oraz
-   `style.paddingTop` (string). Renderer rozkłada oba z `spacing` wygrywającym — drobna nadmiarowość modelu.
-9. **Media-center duplikuje klasy** kontenera treści (`mx-auto text-center` dodane na bazowe `text-center mx-auto`)
-   — kosmetyczne, bez wpływu wizualnego.
+- **Brak poziomego overflow:** 1280px (`scrollWidth==clientWidth==1280`) i 375px (`==375`).
+- Korzeń Hero to `<div>` bez `role` (§5.1). Literówka „Free Consulatation" to **content opublikowanej strony**, nie błąd widgetu.
+- _Zrzuty (etykiety lokalne):_ `hero-front-desktop-29-05-gap.png`, `hero-front-mobile-375-29-05-gap.png`.
 
 ---
 
 ## 10. Podsumowanie
 
-| Tryb / obszar | Charakter | Wynik audytu |
-|---|---|---|
-| **Wizard** | 1 akcja seedująca (Goal) + 3 podsumowania read-only | ✅ Zgodny z kontraktem; wszystkie 3 presety celu działają |
-| **Visual** | 10 sekcji, ~80 kontrolek | ✅ **Wszystkie przeklikane opcje działają i aktualizują render**; trwałe po zapisie — **z 2 wyjątkami: Single CTA nie persystuje (§4.1) oraz overlay traci kolor przy zmianie siły (§4.2)** |
-| **Advanced** | 6 sekcji diagnostycznych | ✅ 49 wierszy read-only, 0 interaktywnych; diagnostyki zgodne ze stanem |
-| **Persistencja** | Save draft → reload | ✅ Wszystko trwałe poza Single CTA |
-| **Front** | `/homepage` (osobna strona, 1 Hero) | ✅ HTTP 200, 0 błędów konsoli, brak overflow (1280/375), semantyczny render |
+| Obszar | Wynik |
+|---|---|
+| **Domknięte luki** (secondary size, content width, height, bleed, hide-media, media border/radius, text sizes/weights, destynacje, kolory Clear/transparent, overlay+siła, gradient, pickery media/tła) | ✅ Wszystkie opcje realnie przeklikane i potwierdzone w renderze |
+| **Visual — pozostałe rodziny** (warianty, badge, CTA, typografia, cienie, fonty/motion, palety, ratio, padding, alignment, contrast) | ✅ Działają i aktualizują render |
+| **Defekty funkcjonalne** | ❌ 3: Single CTA nie persystuje (§4.1) · overlay traci kolor przy zmianie siły (§4.2) · **NOWY** background-media-overlay z obrazem nie renderuje się i może wykasować obraz (§4.3) |
+| **Nie-do-zweryfikowania** | wideo inline/tła/poster (brak assetów video + brak pola URL), diagnostyka sanitizera (wymaga wklejenia HTML), systemowy dialog koloru, karty Media Left/Centered (nieklikane w tej sesji) |
+| **Advanced** | ✅ 49 read-only, 0 interaktywnych kontrolek widgetu |
+| **Front `/homepage`** | ✅ HTTP 200, 0 błędów konsoli, brak overflow (1280/375), render semantyczny `<h1>` |
 
-**Werdykt końcowy.** W przeklikanym (wyczerpującym) zakresie widget `hero` jest w przeważającej części
-sprawny i spójny między edytorem a rendererem: wszystkie warianty, tone'y/pozycje badge, oba tryby CTA z
-pełnymi rozmiarami obu przycisków, pełna typografia, cienie, fonty/wagi/motion, palety i wszystkie 11 pól
-kolorów (z Clear/transparent), wszystkie szerokości i promienie ramek, pełen layout/spacing, oba overlaye,
-przypięcie obrazów z Media Library, wszystkie 4 ratio, contrast guidance oraz pełen cykl presetów —
-działają i przeżywają zapis. **Wykryto dwa realne defekty funkcjonalne:** (1) „Single CTA" nie utrzymuje
-się po zapisie (re-merge `heroDefaults.secondaryCta`), (2) zmiana siły overlaya kasuje wybrany kolor na
-czarny (alfa-rgba nie round-tripuje przez `input[type=color]`). Nie dało się zweryfikować inline-wideo
-(brak assetów wideo w bibliotece + brak pola URL) ani diagnostyki sanitizera (wymaga wklejenia niedozwolonego
-HTML). Najważniejsze niuanse a11y/UX: brak landmarku na korzeniu Hero, puste-ale-włączone badge/social-proof
-nie renderują się, oraz destrukcyjny/no-opowy charakter selektora „Goal".
+**Werdykt.** W zakresie **wszystkich rodzin wymienionych jako luki** widget `hero` jest spójny między
+edytorem a rendererem — każda dyskretna opcja (rozmiary, szerokości, wysokości, bleed, ramki, typografia,
+kolory z Clear/transparent, gradient, pickery media i tła, ratio, destynacje) działa i poprawnie aktualizuje
+canvas. **Trzy realne defekty:** (1) „Single CTA" nie utrzymuje się po zapisie (re-merge
+`heroDefaults.secondaryCta`), (2) zmiana siły overlaya kasuje wybrany kolor na czarny (alfa-rgba nie
+round-tripuje przez `input[type=color]`), oraz **(3) nowo wykryty**: overlay tła z jawnym obrazem w
+wariantach innych niż centered nie renderuje się, a przy świeżym renderze wykasowuje cały `background-image`
+(surowy `rgba` doklejony jako nieprawidłowa warstwa `background-image`). Najważniejsze niuanse a11y/UX: brak
+landmarku na korzeniu Hero, mylące czyszczenie secondary CTA przy Single→Dual, oraz overlay zawsze
+pokazujący czarny swatch dla wartości z alfą.
 
 ---
 
-## 11. Zrzuty (etykiety lokalne)
+## 11. Środowisko i powtarzalność
+
+- Sesja izolowana: `claude-29-05-hero-gap-close`. Admin: 302→login (zalogowano podanym kontem); 0 błędów
+  konsoli (1 ostrzeżenie a11y `DialogContent`, 1 info React DevTools).
+- Wszystkie zmiany wykonane realnymi zdarzeniami UI; wartości natywnych `color`/`range` ustawiane setterem
+  + `input`/`change` (równoważne realnej interakcji dla React), bo systemowych dialogów OS nie da się
+  obsłużyć w headless.
+
+---
+
+## 12. Zrzuty (etykiety lokalne)
 
 | Plik (lokalna etykieta) | Opis |
 |---|---|
-| `hero-public-desktop-29-05.png` | Front `/homepage`, 1280px (Hero „Twój wymarzony dom…", brak overflow) |
-| `hero-public-mobile-375-29-05.png` | Front `/homepage`, 375px (brak overflow) |
+| `hero-front-desktop-29-05-gap.png` | Front `/homepage`, 1280px (Hero „Twój wymarzony dom…", brak overflow) |
+| `hero-front-mobile-375-29-05-gap.png` | Front `/homepage`, 375px (brak overflow) |
 
-> Pliki PNG są ignorowane przez Git i stanowią wyłącznie lokalne etykiety przechwyceń — nie są wymaganym evidence.
+> Pliki PNG są ignorowane przez Git (reguła `*.png`) i stanowią wyłącznie lokalne etykiety przechwyceń —
+> nie są wymaganym evidence w repo.
