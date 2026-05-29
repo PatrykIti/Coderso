@@ -45,3 +45,17 @@ Ta fala jest **zakonczona**.
   evidence.
 - Te raporty nie zastępują finalnych smoke wynikow z innych fal (`TASK-342`),
   tylko je uzupelniaja o glebszy, widget-by-widget audit UX/UI.
+
+## Routing TASK-343
+
+Reconciliation on 2026-05-29 confirmed that the original `17` promoted
+families were under-scoped. Authoritative routing now lives in
+`_docs/_TASKS/TASK-343_Widget_Report_Driven_Remediation_After_the_28-05-2026_Audit_Wave.md`.
+
+- `30` physical remediation families are promoted: `28` widget-local leaves and
+  `2` shared-owner leaves.
+- Shared owners are explicit for block layout/device visibility
+  (`TASK-343-21`) and repeated color-state truthfulness drift
+  (`TASK-343-30`).
+- Current-state/deferred reports are explicitly documented in the umbrella so
+  lower-risk notes are not mistaken for lost findings.

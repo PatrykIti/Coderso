@@ -19,11 +19,13 @@ owners, and execution-ready leaf scope.
 This umbrella does not reopen the whole widget surface blindly. It classifies
 all `38/38` reports into:
 
-- first-wave actionable families promoted now as physical `TASK-343-*` leaves;
-- second-wave candidates where the evidence is real but mostly lower-severity,
-  shared-wrapper, or still better extracted into a later focused family;
-- current-state-sufficient or environment-only reports that do not justify a
-  new implementation family yet.
+- physical `TASK-343-*` remediation families for every report-backed finding
+  that needs execution-ready implementation scope;
+- shared-owner remediation families when several widget reports prove the same
+  block wrapper, visibility, or color-state owner;
+- explicitly deferred/current-state-sufficient reports where the 28-05 evidence
+  is environment-only, already documented product behavior, or too minor for a
+  physical implementation family in this wave.
 
 ## Current Evidence
 
@@ -37,9 +39,13 @@ all `38/38` reports into:
 
 ## Report Classification
 
-### First-Wave Actionable Families Promoted Now
+### Promoted Actionable Families
 
-| Widget | Family | Main reason |
+After the full 38-report reconciliation, `17` was under-scoped. The current
+task breakdown promotes `30` physical families: `28` widget-local families plus
+`2` shared-owner families.
+
+| Report owner | Family | Main reason |
 |---|---|---|
 | `hero` | `TASK-343-01` | Confirmed persistence + overlay renderer defects. |
 | `appointment-form` | `TASK-343-02` | Confirmed dead `No extra validation` preset. |
@@ -58,29 +64,35 @@ all `38/38` reports into:
 | `navigation` | `TASK-343-15` | Diagnostics incompleteness, clear/reset gaps, and silent link drop. |
 | `product-gallery` | `TASK-343-16` | Preview hydration and route-truthfulness are misleading. |
 | `rich-text-section` | `TASK-343-17` | Wizard/TOC/sanitizer diagnostics are misleading or incomplete. |
+| `listing-filters` | `TASK-343-18` | High-priority missing facet option authoring, empty-facet guidance, and public a11y gaps. |
+| `posts-feed` | `TASK-343-19` | Wrong audit fixture/public `404` plus missing route/view-all truthfulness. |
+| `search-box` | `TASK-343-20` | Public a11y gaps, stale source checkbox state, and compact-mode truthfulness. |
+| shared block wrapper / `product-compare` | `TASK-343-21` | Product Compare proves inherited block layout and Device Visibility shared-owner drift. |
+| `cta-banner` | `TASK-343-22` | Indistinguishable `With Badge` variant, missing CTA guidance, and no repair feedback. |
+| `gallery-mosaic` | `TASK-343-23` | Admin lightbox preview binding, accessible naming, and destructive count reduction. |
+| `logo-cloud` | `TASK-343-24` | Silent logo-count truncation and saved-vs-effective strip/grid state. |
+| `pricing-plans` | `TASK-343-25` | Nominal count copy, Wizard-to-Visual pointer drift, destructive confirmations, and static billing toggle. |
+| `stats-kpi` | `TASK-343-26` | Inert inline card surface controls, divider toggle truthfulness, reset/normalize feedback. |
+| `tabs` | `TASK-343-27` | Dead `triggerOverflow=scroll`, Wizard/slot count drift, and destructive removal inconsistency. |
+| `split-layout` | `TASK-343-28` | Contradictory ratio disclosure and silent device-override reset. |
+| `entry-teaser` | `TASK-343-29` | Section accessible name, non-link CTA guidance, and contextual Clear labels. |
+| shared color controls / `content-list` and others | `TASK-343-30` | Repeated false `Saved custom color`/fallback/Clear semantics across reports. |
 
-### Second-Wave Candidates Not Yet Promoted
+### Explicitly Deferred Or Current-State Sufficient
 
 | Widget | Classification |
 |---|---|
-| `cta-banner` | Real UX drift; likely a small follow-up family after first-wave promotion. |
-| `pricing-plans` | Real truthfulness drift; largely UX and copy semantics, lower urgency than first-wave bugs. |
-| `tabs` | Real truthfulness drift, but close to the Accordion shared slot-story; defer extraction until after `TASK-343-04`. |
-| `listing-filters` | Real useability drift, but several findings look shared to listing-runtime/editor shell. |
-| `product-compare` | Real wrapper/layout truthfulness drift, but primarily shared wrapper owner rather than widget-local logic. |
-| `product-table` | Real wrapper/layout truthfulness drift, but primarily shared wrapper owner rather than widget-local logic. |
-| `gallery-mosaic` | Real admin-preview/runtime drift, but lower severity than first-wave bugs. |
-| `stats-kpi` | Real UX truthfulness drift, but no confirmed runtime failure. |
-| `entry-teaser` | Real a11y/truthfulness drift, but bounded and lower severity. |
-| `logo-cloud` | Real truthfulness drift, but no confirmed hard renderer failure. |
-
-### Current-State Sufficient Or Environment-Only
-
-`section`, `spacer`, `divider`, `split-layout`, `grid-columns`, `contact`,
-`content-list`, `footer`, `posts-feed`, `search-box`, `testimonials`.
+| `contact` | Current-state sufficient: report found no widget-local functional defect; remaining limitations are fixture/runtime branches. |
+| `divider` | Deferred minor UX/a11y notes only: no functional defect; labeled separator semantics can be revisited outside this wave. |
+| `footer` | Current-state sufficient for footer-local scope; shared MediaPicker dialog warning is outside footer renderer ownership. |
+| `grid-columns` | Current-state sufficient: report explicitly found no functional/rendering bugs. |
+| `product-table` | Current-state/environment-only: current report supersedes the stale second-wave classification and found no functional defect; missing route effects are settings/fixture limitations. |
+| `section` | Current-state sufficient: no functional defect; media diagnostics polish is low-priority documentation debt. |
+| `spacer` | Current-state sufficient: report found full editor/runtime consistency; custom length UI remains an intentional product limit. |
+| `testimonials` | Deferred minor UX notes only: no functional defect; formatted quote `<br>` behavior and CTA hint can be revisited after higher-risk families. |
 
 These reports still contain useful notes, but the current branch evidence does
-not justify a new implementation family yet.
+not justify a physical implementation family in `TASK-343`.
 
 ## Sub-Tasks
 
@@ -101,6 +113,19 @@ not justify a new implementation family yet.
 - [ ] TASK-343-15: Navigation Audit Remediation Family
 - [ ] TASK-343-16: Product Gallery Audit Remediation Family
 - [ ] TASK-343-17: Rich Text Section Audit Remediation Family
+- [ ] TASK-343-18: Listing Filters Audit Remediation Family
+- [ ] TASK-343-19: Posts Feed Audit Remediation Family
+- [ ] TASK-343-20: Search Box Audit Remediation Family
+- [ ] TASK-343-21: Shared Block Layout and Device Visibility Audit Remediation Family
+- [ ] TASK-343-22: CTA Banner Audit Remediation Family
+- [ ] TASK-343-23: Gallery Mosaic Audit Remediation Family
+- [ ] TASK-343-24: Logo Cloud Audit Remediation Family
+- [ ] TASK-343-25: Pricing Plans Audit Remediation Family
+- [ ] TASK-343-26: Stats KPI Audit Remediation Family
+- [ ] TASK-343-27: Tabs Audit Remediation Family
+- [ ] TASK-343-28: Split Layout Audit Remediation Family
+- [ ] TASK-343-29: Entry Teaser Audit Remediation Family
+- [ ] TASK-343-30: Shared Widget Color State Truthfulness Audit Remediation Family
 
 ## Files To Change
 
@@ -111,18 +136,24 @@ not justify a new implementation family yet.
 | `_docs/PLAYWRIGHT/28-05-2026/*.md` | Keep report routing and final remediation evidence synchronized with the owning task family. |
 | `core/admin/ui/widgets/editors/*.tsx` | Widget-local editor truthfulness fixes owned by the promoted families. |
 | `core/widgets/core/*.tsx` | Widget-local runtime fixes owned by the promoted families. |
-| `core/widgets/renderers/widgetRenderer.tsx` | Shared wrapper follow-up only if a promoted family proves the owner is shared rather than widget-local. |
-| `core/admin/ui/pages/builder/blockUtils.ts` | Shared layout/visibility follow-up only if a promoted family proves the owner is shared rather than widget-local. |
+| `core/widgets/renderers/widgetRenderer.tsx` | Shared wrapper visibility/rendering fixes owned by `TASK-343-21` where proven shared. |
+| `core/admin/ui/pages/builder/blockUtils.ts` | Shared layout/visibility fixes owned by `TASK-343-21`. |
+| Shared color/clearable editor controls | Shared color-state fixes owned by `TASK-343-30`. |
 | `tests/vitest/ui/*.test.tsx` | Add targeted editor/admin-preview coverage for each promoted family. |
 | `tests/vitest/widgets/*.test.tsx` | Add targeted renderer/runtime coverage for each promoted family. |
 
 ## Implementation Order
 
-1. Start with the first-wave families above; do not promote second-wave notes
-   into implementation until their owner boundary is clearer.
-2. Prefer widget-local truthfulness fixes before shared-wrapper extraction.
-3. If a first-wave family proves the real owner is shared, split or promote a
-   dedicated shared family instead of silently widening the widget leaf.
+1. Start with the high-risk public/runtime and destructive-data families:
+   `TASK-343-01`, `TASK-343-03`, `TASK-343-07`, `TASK-343-09`,
+   `TASK-343-10`, `TASK-343-14`, `TASK-343-18`, `TASK-343-19`,
+   `TASK-343-21`, and `TASK-343-30`.
+2. Then close medium-risk widget-local truthfulness families in dependency
+   order, especially families that depend on shared decisions (`TASK-343-24`,
+   `TASK-343-25`, `TASK-343-27` after `TASK-343-30`; `TASK-343-28` after
+   shared layout decisions if overlap appears).
+3. Prefer widget-local truthfulness fixes before shared-wrapper extraction, but
+   do not duplicate shared color/layout fixes in every widget leaf.
 4. Only after implementation families land, update the affected reports and the
    changelog.
 
@@ -131,7 +162,12 @@ not justify a new implementation family yet.
 Umbrella orchestration only:
 
 ```ts
-type AuditFindingPromotion = "promoted" | "phase2" | "current-state-sufficient";
+type AuditFindingPromotion =
+  | "promoted-widget"
+  | "promoted-shared"
+  | "deferred-minor"
+  | "current-state-sufficient"
+  | "environment-only";
 
 type WidgetAuditClassification = {
   widget: string;
@@ -142,10 +178,13 @@ type WidgetAuditClassification = {
 
 function classifyWidgetAudit(report: WidgetAuditReport): WidgetAuditClassification {
   if (report.containsConfirmedRendererBug || report.containsConfirmedControlTruthfulnessDrift) {
-    return { widget: report.widget, promotion: "promoted", owner: report.owner, taskId: report.taskId };
+    return { widget: report.widget, promotion: "promoted-widget", owner: report.owner, taskId: report.taskId };
   }
-  if (report.containsRealButLowerSeverityFollowup || report.requiresSharedOwnerExtraction) {
-    return { widget: report.widget, promotion: "phase2", owner: report.owner };
+  if (report.requiresSharedOwnerExtraction) {
+    return { widget: report.widget, promotion: "promoted-shared", owner: report.owner, taskId: report.taskId };
+  }
+  if (report.containsMinorUxOnlyFollowup) {
+    return { widget: report.widget, promotion: "deferred-minor", owner: report.owner };
   }
   return { widget: report.widget, promotion: "current-state-sufficient", owner: report.owner };
 }
@@ -154,10 +193,10 @@ function classifyWidgetAudit(report: WidgetAuditReport): WidgetAuditClassificati
 Data flow:
 
 - Each report is classified once in this umbrella.
-- Promoted reports get a physical `TASK-343-*` family with execution-ready
+- Promoted widget-local and shared reports get a physical `TASK-343-*` family with execution-ready
   owner files, pseudocode, and regression-test shape.
-- Second-wave candidates stay documented here until their owner boundary or
-  severity justifies promotion.
+- Deferred-minor/current-state/environment-only reports stay documented here
+  with explicit reasons so they are not mistaken for lost findings.
 
 ## Security Contract
 
@@ -191,8 +230,7 @@ Each promoted family owns its concrete lint/type/test commands.
 
 - All `38` reports from the 28-05-2026 wave are classified into a concrete
   owner state.
-- First-wave actionable reports have physical execution-ready `TASK-343-*`
+- Actionable widget-local and shared-owner reports have physical execution-ready `TASK-343-*`
   families.
-- Lower-severity or shared-owner candidates are explicitly documented instead of
-  being lost in free-form notes.
-
+- Deferred, current-state, or environment-only reports are explicitly documented
+  instead of being lost in free-form notes.

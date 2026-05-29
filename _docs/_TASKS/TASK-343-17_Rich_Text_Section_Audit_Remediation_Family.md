@@ -14,7 +14,8 @@
 
 Close the Rich Text Section truthfulness drift where the Wizard hides real rich
 text content, TOC/anchor generation ignores the section heading, and sanitizer
-diagnostics under-report what the editor just did.
+diagnostics under-report what the editor just did. The same report also routes
+inert embed aspect controls and sanitizer shadowing to this family.
 
 ## Drift Evidence
 
@@ -31,15 +32,19 @@ diagnostics under-report what the editor just did.
 - [ ] Surface real sanitizer activity in Visual/Advanced instead of near-always
   zero diagnostics.
 - [ ] Add a visible drift signal when `body.html` and `body.blocks` diverge.
+- [ ] Hide, disable, or explain embed aspect-ratio controls while embeds render
+  only as link cards.
+- [ ] Preserve or surface `href_rewritten` and other sanitizer events that are
+  currently shadowed by the upstream editor serializer.
 
 ## Files To Change
 
 | File | Required change |
 |---|---|
-| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Fix Wizard preview text and sanitizer diagnostics UX. |
-| `core/widgets/core/richTextSection.tsx` | Reconcile TOC/anchor rules and sanitized-drift reporting. |
-| `tests/vitest/widgets/richTextSection.test.tsx` | Cover TOC/anchor and sanitizer output. |
-| `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Cover Wizard preview text and diagnostics truthfulness. |
+| `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` | Fix Wizard preview text, embed-aspect truthfulness, and sanitizer diagnostics UX. |
+| `core/widgets/core/richTextSection.tsx` | Reconcile TOC/anchor rules, embed rendering summaries, and sanitized-drift reporting. |
+| `tests/vitest/widgets/richTextSection.test.tsx` | Cover TOC/anchor, embed aspect semantics, and sanitizer output. |
+| `tests/vitest/ui/rich-text-section-editor-wave.test.tsx` | Cover Wizard preview text, sanitizer guidance persistence, and diagnostics truthfulness. |
 
 ## Implementation Pseudocode
 
@@ -49,6 +54,10 @@ function summarizeRichTextBlock(block: RichTextBlock) {
   if (html) return stripHtmlToPreviewText(html);
   return block.content?.trim() || "No paragraph text yet";
 }
+
+function resolveEmbedAspectControl(renderMode: RichTextEmbedRenderMode) {
+  return renderMode === "link-card" ? { enabled: false, reason: "link-card" } : { enabled: true };
+}
 ```
 
 ## Regression Test Shape
@@ -56,6 +65,8 @@ function summarizeRichTextBlock(block: RichTextBlock) {
 - Wizard preview shows text for blocks backed by `contentHtml`.
 - TOC behavior for the section heading is explicit and tested.
 - Sanitizer diagnostics surface real rewritten/removed content events.
+- Embed aspect-ratio controls do not appear writable when the renderer cannot
+  express their value.
 
 ## Security Contract
 
@@ -80,4 +91,4 @@ weaken.
 
 - Wizard no longer presents rich-text blocks as empty when they contain HTML.
 - TOC and sanitizer diagnostics are explicit and trustworthy.
-
+- Sanitizer feedback is not silently lost across Visual/Advanced boundaries.

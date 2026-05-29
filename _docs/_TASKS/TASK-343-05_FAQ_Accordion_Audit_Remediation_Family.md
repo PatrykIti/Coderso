@@ -74,7 +74,7 @@ No API routes are added. Existing schema and JSON-LD boundaries stay strict.
 ## Documentation Updates Required
 
 - Update `_docs/PLAYWRIGHT/28-05-2026/REPORT_FAQ_ACCORDION_WIDGET.md`.
-- Update `_docs/_WIDGETS/FAQ_ACCORDION.md`.
+- Update `_docs/_WIDGETS/FAQ.md`.
 - Update `_docs/_TASKS/README.md` on status changes.
 
 ## Acceptance Criteria

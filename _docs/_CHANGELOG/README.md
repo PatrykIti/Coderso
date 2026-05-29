@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 995 | 2026-05-29 | TASK-343 report classification correction | QA/Widgets/Playwright/Docs |
 | 994 | 2026-05-28 | TASK-342 widget Playwright gap closure | QA/Widgets/Playwright/Docs |
 | 993 | 2026-05-28 | TASK-342 evidence reconciliation | QA/Widgets/Playwright/Docs |
 | 992 | 2026-05-28 | TASK-342 commerce populated fixture wave | QA/Widgets/Commerce/Playwright |

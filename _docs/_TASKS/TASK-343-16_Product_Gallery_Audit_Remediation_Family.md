@@ -14,7 +14,8 @@
 
 Close the Product Gallery preview and truthfulness drift where product data is
 not hydrated until Advanced runs, source edits stay stale without refresh, and
-route/CTA affordances are opaque when no detail route exists.
+route/CTA affordances are opaque when no detail route exists. The report also
+requires public section naming and truthful `view all` disappearance handling.
 
 ## Drift Evidence
 
@@ -29,17 +30,21 @@ route/CTA affordances are opaque when no detail route exists.
 - [ ] Surface stale-source state and refresh ownership more clearly in daily
   modes.
 - [ ] Make missing `link.basePath` consequences explicit for cards and CTA.
+- [ ] Explain or prevent silent `view all` link disappearance when the destination
+  is cleared or `total <= items.length`.
 - [ ] Decide whether the orphan `fields.showMediaHint` should be removed or
   wired through.
+- [ ] Add an accessible name for the public Product Gallery section, including a
+  fallback when the section title is omitted.
 
 ## Files To Change
 
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` | Improve preview hydration and stale-source messaging. |
-| `core/widgets/core/productGallery.tsx` | Keep route/CTA behavior and field ownership truthful. |
-| `tests/vitest/widgets/productGallery.test.tsx` | Cover route/CTA truthfulness and orphan-field ownership. |
-| `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover preview hydration and stale-source UX. |
+| `core/widgets/core/productGallery.tsx` | Keep route/CTA/view-all behavior, accessible section naming, and field ownership truthful. |
+| `tests/vitest/widgets/productGallery.test.tsx` | Cover route/CTA/view-all truthfulness, accessible naming, and orphan-field ownership. |
+| `tests/vitest/ui/product-gallery-editor-wave.test.tsx` | Cover preview hydration, stale-source UX, and missing-route guidance. |
 
 ## Implementation Pseudocode
 
@@ -51,6 +56,13 @@ function shouldHydrateProductGalleryPreview(mode: EditorMode, previewState: Prev
 function resolveProductGalleryRouteNotice(basePath?: string) {
   return basePath ? "configured" : "missing";
 }
+
+function resolveViewAllVisibility(data: ProductGalleryData, total: number, shown: number) {
+  if (data.pagination?.mode !== "view-all") return "disabled";
+  if (!data.pagination.viewAllHref) return "missing_destination";
+  if (total <= shown) return "all_products_visible";
+  return "visible";
+}
 ```
 
 ## Regression Test Shape
@@ -58,6 +70,8 @@ function resolveProductGalleryRouteNotice(basePath?: string) {
 - Visual/Wizard no longer open on a misleading empty preview when products are
   resolvable.
 - Missing route configuration is explicitly reflected in card/CTA guidance.
+- `view all` disappearance and section accessible naming are covered in renderer
+  tests.
 
 ## Security Contract
 
@@ -80,4 +94,5 @@ No new public route. Existing commerce/admin preview boundaries stay unchanged.
 
 - Product Gallery preview is hydrated truthfully in daily modes.
 - Missing route configuration is visible and understandable from the editor.
-
+- Product Gallery sections expose an accessible name and hidden links are
+  explained by explicit state.

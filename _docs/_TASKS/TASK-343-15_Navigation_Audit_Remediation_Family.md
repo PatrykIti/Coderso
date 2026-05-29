@@ -14,7 +14,8 @@
 
 Close the Navigation truthfulness drift around incomplete runtime diagnostics,
 silent destination removal, broken clear-image fallback, and partial reset
-affordances for color controls.
+affordances for color controls. The same report also proves admin preview
+runtime boundaries and theme-token color state need truthful copy.
 
 ## Drift Evidence
 
@@ -25,6 +26,11 @@ affordances for color controls.
 ## Sub-Tasks
 
 - [ ] Complete the Advanced runtime summary for all declared read-only paths.
+- [ ] Make admin preview limitations explicit for drawer/sub-menu/collapse and
+  active-link runtime behavior, or provide bounded React-local preview state.
+- [ ] Reconcile `var(--color-bg)` preview resolution so admin and public do not
+  imply different default navigation backgrounds without explanation.
+- [ ] Stop labeling pristine theme-token defaults as user-saved custom colors.
 - [ ] Make link clearing truthful with inline feedback instead of silent render
   removal.
 - [ ] Fix `Clear image` so image mode does not fall back to a broken `"Coderso"`
@@ -38,7 +44,7 @@ affordances for color controls.
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | Expand diagnostics, add clearer guidance, and align reset affordances. |
 | `core/widgets/core/navigation.tsx` | Fix image fallback and keep normalized items/render output truthful. |
 | `tests/vitest/widgets/navigation.test.tsx` | Cover image fallback, item removal semantics, and runtime summary output. |
-| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Cover editor diagnostics and clear/reset affordances. |
+| `tests/vitest/ui/navigation-editor-wave.test.tsx` | Cover editor diagnostics, preview-boundary copy, theme-token state, and clear/reset affordances. |
 
 ## Implementation Pseudocode
 
@@ -58,6 +64,9 @@ function normalizeNavigationItems(items: NavigationItemInput[]) {
 - Clearing a logo image no longer yields a broken fallback `src`.
 - Advanced summary surfaces `transparent`, `mobileMode`, `hideCtaOnMobile`,
   and `activeLinkMode`.
+- Admin preview copy does not imply public runtime behaviors are interactive
+  when React has not mounted the navigation runtime script.
+- Pristine theme-token colors are not counted or labeled as author overrides.
 - Clearing a destination gives truthful feedback before the render disappears.
 
 ## Security Contract
@@ -82,4 +91,4 @@ No API routes are added. Existing safe-link rules remain unchanged.
 
 - Navigation diagnostics cover all declared runtime behavior fields.
 - Image clear and destination clear are both truthful and recoverable.
-
+- Color/default and admin-preview messaging match the real runtime boundary.
