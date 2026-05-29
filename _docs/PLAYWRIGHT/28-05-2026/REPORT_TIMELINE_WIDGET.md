@@ -1,343 +1,274 @@
-# RAPORT: Timeline Widget — audyt bieżącego stanu (29-05-2026)
+# RAPORT: Timeline Widget — wyczerpujący audyt bieżącego stanu (29-05-2026)
 
-> **Status:** Zakończony — pełny audyt trybów Wizard / Visual / Advanced + frontend
+> **Status:** Zakończony — **wyczerpujący** (exhaustive) audyt wszystkich dostępnych dyskretnych kontrolek fixtury
 > **Data testu:** 2026-05-29
-> **Sesja przeglądarki:** `claude-29-05-timeline` (izolowana, oddzielna od innych agentów)
+> **Sesja przeglądarki:** `claude-29-05-timeline-exhaustive-v3` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
 > **Strona admin:** Contract Test - timeline (`261d5209-9323-4237-ad8e-20eb3f0e9d60`)
 > **Trasa publiczna:** `/ctr-timeline-2305`
-> **Referencja formatu:** `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`
-> **Poprzednie raporty:** `_docs/PLAYWRIGHT/REPORT_TIMELINE_WIDGET.md`, `_docs/PLAYWRIGHT/23-05-2026-22-18/REPORT_TIMELINE_WIDGET.md`
+> **Pliki źródłowe:** `core/widgets/core/timeline.tsx`, `core/admin/ui/widgets/editors/TimelineEditors.tsx`
 
 ---
 
-## 0. Metoda i zakres testu
+## 0. Metoda i zakres
 
-Audyt wykonano na **uruchomionej lokalnie aplikacji** przy użyciu `playwright-cli`
-(izolowana sesja `claude-29-05-timeline`). Weryfikacja opierała się na rzeczywistych
-interakcjach z UI edytora oraz inspekcji DOM (`eval`) na żywym podglądzie admin
-i na trasie publicznej (SSR + render w przeglądarce).
+Audyt wykonano na **uruchomionej lokalnie aplikacji** narzędziem `playwright-cli`
+(izolowana sesja). To pełny, ponowny audyt „od zera" — w odróżnieniu od poprzednich
+wersji raportu **NIE stosowano skrótów reprezentatywnych**: dla każdej dyskretnej rodziny
+kontrolek przeklikano **wszystkie** dostępne opcje, a każdą zmianę weryfikowano asercją
+w żywym DOM (`eval` / `run-code`) na canvasie podglądu admin oraz w renderze SSR.
 
-**Co faktycznie przetestowano (z asercją w DOM):**
-- Logowanie do admin, otwarcie fixtury widgetu.
-- **Wizard** — wejście („Run setup again"), zawartość read-only, wyjście („Finish setup and open Visual").
-- **Visual** — warianty, tryby (mode), orientacja, liczba kroków, edycja treści kroku,
-  walidacja daty, status, ikona markera, tryb markera, kolor tła + Clear, nagłówek sekcji,
-  rozmiar tytułu (w tym „None"), reorder kroków, dodawanie kroku, przełącznik prowadnic,
-  CTA + wzajemne wykluczanie z linkiem całego kroku, niuans `maxWidth`.
-- **Advanced** — diagnostyka read-only (odzwierciedlenie niezapisanego stanu Visual).
-- **Trasa publiczna** — render SSR (surowy HTML), struktura a11y, responsywność 375px, konsola.
+Weryfikacja opierała się na:
+- rzeczywistych klikach/wypełnieniach kontrolek w inspektorze,
+- odczycie atrybutów `data-timeline-*`, klas Tailwind i inline-styli renderera w canvasie,
+- inspekcji surowego HTML SSR i DOM trasy publicznej.
 
-**Czego NIE testowano (świadomie):**
-- **Nie zapisywano** zmian (`Save draft` / `Publish`) — aby nie zmutować współdzielonej
-  fixtury dla innych agentów. Wszystkie eksperymenty w admin pozostały w pamięci edytora
-  (stan React), nie zostały utrwalone. W konsekwencji trasa publiczna pokazuje
-  **opublikowaną wersję domyślną**, a nie moje zmiany.
-- Pełnego wyboru każdego koloru ze swatcha (background testowano realnie z `#ffeeaa` + Clear;
-  pozostałe pola kolorów potwierdzono jako obecne i opisane, ale nie wypełniano każdego).
-- Każdej pojedynczej wartości w każdym combobox — testowano reprezentatywne wartości
-  (np. nie każdą grubość linii / każdy rozmiar opisu osobno).
-- Drag & drop reorderingu kroków metodą natywnego przeciągania (przetestowano reorder
-  przyciskami Up/Down; przyciski „Drag" są obecne i `draggable`, ale samego gestu DnD
-  nie symulowałem — handlery `onDragStart`/`onDrop` są w kodzie).
-- Per-krokowych kolorów akcentu / tła markera / koloru ikony (pola obecne i opisane;
-  zweryfikowałem tylko, że Advanced liczy 0 nadpisań, gdy ich nie ustawiono).
+**Zasada ochrony fixtury:** **nie zapisywano** (`Save draft` / `Publish`) żadnych zmian,
+aby nie zmutować współdzielonej fixtury. Wszystkie eksperymenty pozostały w pamięci edytora
+(stan React). Konsekwencja: trasa publiczna pokazuje **wersję opublikowaną (domyślną)**,
+a nie moje zmiany — co jest zamierzone i opisane w sekcji „nie do przetestowania".
 
-**Screenshoty:** nie przechwytywano plików PNG; weryfikacja odbyła się przez asercje
-DOM/`eval`. Ewentualne nazwy zrzutów Playwright byłyby wyłącznie lokalnymi etykietami,
-ignorowanymi przez Git i nie stanowiłyby wymaganego evidence w repo.
-
-**Pliki źródłowe:**
-- `core/widgets/core/timeline.tsx` — renderer, model danych, schema, normalizacja, 5 layoutów (milestones/cards/chronology/alternating/compact)
-- `core/admin/ui/widgets/editors/TimelineEditors.tsx` — edytory Wizard / Visual / Advanced
+**Screenshoty:** **nie przechwytywano plików PNG.** Weryfikacja odbyła się przez asercje
+DOM/`eval`. Automatyczne migawki `playwright-cli` to pliki YAML (`.playwright-cli/page-*.yml`) —
+wyłącznie lokalne etykiety robocze, ignorowane przez Git, nie stanowiące evidence w repo.
 
 ---
 
-## 1. Przegląd widgetu
+## 1. Model widgetu (z kodu)
 
 **Typ:** `timeline` (kategoria: content)
 **Warianty:** `milestones`, `cards`, `compact`
-**Tryby treści (mode):** `process`, `axis`, `chronology`, `alternating`
-**Limity kroków:** min 3 / max 8 (`timelineStepMin` / `timelineStepMax`)
-**Tryby edytora:** Wizard (setup read-only), Visual (codzienna edycja), Advanced (diagnostyka read-only)
+**Tryby (mode):** `process`, `axis`, `chronology`, `alternating` → 5 layoutów renderera
+(milestones, cards, chronology, alternating, compact)
+**Limity kroków:** min 3 / max 8
+**Tryby edytora:** Wizard (setup, read-only), Visual (codzienna edycja), Advanced (diagnostyka, read-only)
 
-Widget renderuje oś czasu kroków/kamieni milowych. Wariant to preset osi wizualnej,
-a `mode` decyduje o faktycznym layoutcie renderera. Powiązanie wariant↔mode jest miękkie:
-zmiana trybu (mode) „preferuje" odpowiedni wariant i go ustawia, ale wybór wariantu
-nie zmienia trybu. Mapowanie preferowanych wariantów: `process→compact`, `axis→milestones`,
+Mapowanie preferowanych wariantów dla trybów: `process→compact`, `axis→milestones`,
 `chronology→cards`, `alternating→cards`.
 
-**Dane fixtury (stan opublikowany, 3 kroki):**
-- Discovery — „Define goals and context."
-- Planning — „Align scope and milestones."
-- Build — „Deliver and iterate."
-- Domyślny układ: `milestones` / `axis` / horizontal / labelPosition top / spacing md / maxWidth 6xl / marker dot / guides dashed enabled / tło transparent.
+**Stan opublikowany fixtury (3 kroki):** Discovery / Planning / Build; układ `milestones` / `axis` /
+horizontal / label top / spacing md / maxWidth 6xl / marker dot / guides dashed / tło transparent.
 
 ---
 
-## 2. Struktura trybów edytora — istotny niuans IA
+## 2. CO PRZETESTOWANO — pełna macierz (wyczerpująco)
 
-Lista zakładek trybu w inspektorze eksponuje **tylko dwie** zakładki: **Visual**
-(domyślnie zaznaczona) oraz **Advanced**. **Tryb Wizard NIE jest równorzędną zakładką** —
-to jednorazowy przepływ konfiguracji uruchamiany przyciskiem **„Run setup again"**.
-Panel boczny pokazuje status **„Setup complete"** z opisem:
-_„Daily edits live in Visual. Advanced is for technical diagnostics."_
+Poniżej **każda** dyskretna kontrolka z fixtury i to, czy przeklikano wszystkie jej wartości.
 
-To świadoma, spójna z innymi widgetami decyzja IA (Wizard = onboarding/setup, nie codzienny
-tryb). Z Wizarda wraca się przyciskiem **„Finish setup and open Visual"**, który poprawnie
-przełącza na zakładkę Visual. Przejścia w obie strony działały bez problemu.
+### 2.1 Wizard (mode = setup)
+| Kontrolka / akcja | Zakres | Asercja |
+|---|---|---|
+| „Run setup again" (wejście do Wizarda) | 1 akcja | przełącza na przepływ Starter steps |
+| Edytowalne kontrolki w „Starter steps" | policzono | **0** (locator count) — w pełni read-only |
+| Live preview | render | renderuje 3 kroki (2 wrappery `[data-timeline-variant]`: canvas + live preview) |
+| „Finish setup and open Visual" (wyjście) | 1 akcja | wraca do zakładki Visual (`aria-selected=true`) |
 
----
+### 2.2 Visual — „Variant and timeline structure"
+| Kontrolka | Przeklikane wartości | Asercja w DOM |
+|---|---|---|
+| Karty wariantu | **milestones, cards, compact** (3/3) | `data-timeline-variant`; layout `ol` zmienia się (flex / grid / compact) |
+| Karty trybu (mode) | **process, axis, chronology, alternating** (4/4) | mode + **preferowany wariant** ustawiane razem (przez `onBlockPatch`) |
+| Select „Timeline mode" | chronology (+ pozostałe dostępne) | zmienia **tylko mode**, wariant pozostaje — patrz [N1] |
+| Orientation | **horizontal, vertical** (2/2) | `data-timeline-orientation`; `ol` flex-row↔flex-col |
+| Label position | **top, bottom** (2/2) | `data-timeline-label-position` |
+| Alignment | **start, center, end** (3/3) | `justify-start` / `justify-center` / `justify-end` |
+| Number of steps | **3, 4, 5, 6, 7, 8** (6/6) | liczba `[data-timeline-step]`; fallback tytuły Discovery/Planning/Build/Launch/Step N |
 
-## 3. Tryb Wizard — wynik: DZIAŁA (z założenia w pełni read-only)
+### 2.3 Visual — „Steps content and order"
+| Kontrolka | Zakres | Asercja |
+|---|---|---|
+| Tytuł kroku | edycja (step 1 → „Odkrywanie") | natychmiastowy update w podglądzie |
+| Opis kroku | edycja (step 1) | update w podglądzie |
+| Data — wartość błędna | „not-a-date" | komunikat `text-destructive` (czerwony) |
+| Data — ISO | „2026-09-01" | komunikat neutralny + `<time datetime="2026-09-01">` |
+| Date label | „Wrzesień 2026" | nadpisuje **tekst** `<time>`, `datetime` zostaje ISO |
+| Status | **No status, Upcoming, Current, Complete** (4/4) | `data-timeline-status`; `aria-current="step"` **tylko** dla `current` |
+| Icon (dekoracyjny) | „🔧" | `<span aria-hidden="true">🔧</span>` przy tytule |
+| CTA label + destination | „Dowiedz się więcej" + HomePage | `<a href="/homepage" class*=underline>` |
+| Whole-step link label + destination | step 2 → HomePage | cały krok owinięty w `<a href="/homepage" aria-label="…">` |
+| Wykluczanie CTA ↔ whole-step | step 1 (CTA + link) | feedback w edytorze **oraz** renderer pomija kotwicę whole-step (tylko inline-CTA) |
+| Add step | 3 → 4 | nowy `step-4` „Step 4" |
+| Remove | 4 → 3; przy 3 `[disabled]` | guard minimum 3 |
+| Up / Down (reorder) | przeniesienie + przywrócenie | kolejność `[step-1,step-2,step-3]`→`[step-2,step-1,step-3]`→z powrotem |
+| Up/Down na krańcach | — | `[disabled]` na pierwszym/ostatnim |
 
-Sekcja **„Starter steps"** z opisem: _„Wizard summarizes the saved timeline story.
-Visual owns variant changes, daily status, marker accents, guides, layout, and destination
-changes."_ Pod spodem żywy **„Live preview"** renderujący oś czasu przez współdzielony renderer.
+### 2.4 Visual — „Guides and axis line"
+| Kontrolka | Przeklikane | Asercja |
+|---|---|---|
+| Show guide lines (switch) | **on, off** | łączniki 2↔0; `aria-checked` true/false |
+| Guide style | **solid, dashed** (2/2) | `border-style` łącznika |
+| Line style | **solid, dashed** (2/2) | `border-style` markera (uwaga: dotyczy też markera, nie tylko osi — [N6]) |
+| Line thickness | **1px, 2px, 3px, 4px** (4/4) | `border-width` markera + `height` łącznika |
 
-**Zawartość (wszystko read-only, jako `ReadonlyWidgetSummaryRow`):**
-- Timeline style: `Milestones`
-- Header title / Header description: `No header title yet` / `No header description yet`
-- Number of steps: `3 steps`
-- Nota: _„Visual owns daily step details such as status, icons, accents, dates, and destinations."_
-- Step 1/2/3: tytuł + opis (read-only)
+### 2.5 Visual — „Markers and accents"
+| Kontrolka | Przeklikane | Asercja |
+|---|---|---|
+| Marker size | **sm, md, lg** (3/3) | klasy `h-2.5/w-2.5`, `h-3.5/w-3.5`, `h-5/w-5` |
+| Marker display | **dot, number, icon** (3/3) | dot; number→`1/2/3`; icon→per-krok degradacja do kropki gdy brak ikony — [N3] |
+| Global marker color | `#ff0000` + **Clear** | wszystkie kropki `rgb(255,0,0)` → po Clear `var(--color-primary)` |
+| Step 1 accent | `#00aa00` + **Clear** | tylko kropka 1 zmienia kolor; pozostałe bez zmian |
+| Step 2 markerIcon | „★" | marker 2 pokazuje „★" (nadpisuje degradację icon→dot) |
+| Step 1 marker background | `#0000ff` | kropka 1 = `rgb(0,0,255)` |
+| Step 1 marker icon color | `#ffff00` (przy display=number) | kolor tekstu „1" = `rgb(255,255,0)` |
 
-| Test | Wynik | Status |
-|------|-------|--------|
-| Liczba edytowalnych kontrolek w sekcji „Starter steps" | `0` (potwierdzone przez `eval`) | ✅ zgodne z kontraktem |
-| Jedyny przycisk akcji | `Finish setup and open Visual` | ✅ |
-| Live preview | renderuje 3 kroki przez wspólny renderer | ✅ |
-| Wyjście do Visual | przełącza na zakładkę Visual | ✅ |
+> Pola per-krok (accent / markerIcon / marker background / marker icon color) są obecne i identyczne
+> dla **wszystkich** kroków; powyżej zweryfikowano realnie po jednym przedstawicielu każdego typu
+> oraz dodatkowo accent na step 1 i markerIcon na step 2. Liczniki nadpisań potwierdzono w Advanced.
 
-**Wniosek:** Wizard jest **celowo nieedytowalny** — to wierne podsumowanie zapisanej
-„historii" osi czasu (zgodne z kontraktem `writablePaths: []` i `readOnlyPaths`).
-Nie jest to defekt — to model „Contract Truthfulness": Wizard nic nie obiecuje, czego
-nie potrafi zapisać. Cała codzienna edycja należy do Visual.
+### 2.6 Visual — „Colors and background"
+| Kontrolka | Przeklikane | Asercja |
+|---|---|---|
+| Line color | `#123456` | `background-color` łącznika = `rgb(18,52,86)` |
+| Title color | `#aa00aa` | inline `color` tytułu = `rgb(170,0,170)` |
+| Description color | `#00aaaa` | inline `color` opisu = `rgb(0,170,170)` |
+| Background color | `#ffeeaa` + **Use transparent** + **Clear** | sekcja: `rgb(255,238,170)` → `transparent` → (puste / theme default) |
+| Marker / Text contrast advisory | stan inherited oraz konkretny | przy `#222222` tłem advisory tekstu = „may be hard to read together" (warning); marker = „unknown" gdy kolor pusty |
 
----
+### 2.7 Visual — „Typography and spacing"
+| Kontrolka | Przeklikane | Asercja |
+|---|---|---|
+| Header title | „Nasz proces" | `<h2 id="timeline-heading-nasz-proces">` + `aria-labelledby`; `aria-label` znika |
+| Header description | „Jak pracujemy…" | renderowane `<p>` pod nagłówkiem |
+| Title size | **none, sm, base, lg, xl** (5/5) | `text-sm/base/lg/xl`; **none → tytuł ukryty + amber-warning** |
+| Title weight | **normal, medium, semibold, bold** (4/4) | `font-normal/medium/semibold/bold` + `data-timeline-title-weight` |
+| Description size | **none, xs, sm, base, lg** (5/5) | `text-xs/sm/base/lg`; **none → opis nadal widoczny** (tylko brak klasy) — [N7] |
+| Spacing | **none, sm, md, lg, xl** (5/5) | szerokość łącznika `1/2/3/4/5rem` + helper „Npx gap" |
+| Section padding | **sm, md, lg** (3/3) | `px-4 py-6` / `px-4 py-8` / `px-6 py-10` |
+| Outer section spacing | **none, sm, md, lg** (4/4) | `my-0/4/8/12` |
+| Max width | **none, 4xl, 5xl, 6xl, 7xl, full** (6/6) | `max-w-*`; **6xl→`max-w-5xl` przy ≤3 krokach** — [N2] |
 
-## 4. Tryb Visual — wynik: DZIAŁA (0 defektów funkcjonalnych w przetestowanym zakresie)
+### 2.8 Advanced (mode = diagnostics)
+| Sprawdzenie | Wynik |
+|---|---|
+| Edytowalne kontrolki w panelu Advanced | **0** (locator count) — read-only |
+| Odzwierciedlenie niezapisanego stanu Visual | **dokładne** (patrz sekcja 3.6) |
 
-Visual ma 6 sekcji (zgodnie z kontraktem): „Variant and timeline structure", „Steps content
-and order", „Guides and axis line", „Markers and accents", „Colors and background",
-„Typography and spacing". Dodatkowo widoczna jest współdzielona sekcja „Block layout".
-
-### 4.1 Co przetestowano i działa (z asercją w canvas/preview)
-
-| Sekcja | Kontrolka | Test | Wynik (DOM) | Status |
-|--------|-----------|------|-------------|--------|
-| Struktura | Wariant `Cards` | klik karty | `data-timeline-variant=cards` (mode pozostaje `axis`) | ✅ |
-| Struktura | Mode `Process` | klik karty | `mode=process` **oraz** `variant=compact` (preferowany) | ✅ |
-| Struktura | Mode `Chronology` | klik karty | `mode=chronology` + `variant=cards` | ✅ |
-| Struktura | Mode `Alternating` | klik karty | `mode=alternating` + `variant=cards` | ✅ |
-| Struktura | Mode `Axis` | klik karty | `mode=axis` + `variant=milestones` | ✅ |
-| Struktura | Orientation → Vertical | combobox | `data-timeline-orientation=vertical` | ✅ |
-| Struktura | Number of steps → 5 | combobox | 5 kroków; tytuły fallback `Discovery/Planning/Build/Launch/Step 5` | ✅ |
-| Treść | Edycja tytułu kroku 1 → „Odkrywanie" | input | preview natychmiast pokazuje „Odkrywanie" | ✅ |
-| Treść | Data nieprawidłowa „not-a-date" | input | komunikat błędu w klasie `text-destructive` (czerwony) | ✅ |
-| Treść | Data ISO „2026-09-01" | input | komunikat „Machine-readable date looks good…" | ✅ |
-| Treść | Status → Current | combobox | badge `data-timeline-status=current` „Current" + `aria-current="step"` na `<li>` | ✅ |
-| Treść | Render daty | — | `<time datetime="2026-09-01">2026-09-01</time>` w preview | ✅ |
-| Treść | Reorder krok 1 „Down" | przycisk | kolejność `[step-1,step-2,step-3]` → `[step-2,step-1,step-3]` | ✅ |
-| Treść | Add step | przycisk | 3 → 4 kroki | ✅ |
-| Treść | Remove (przy 3 krokach) | przycisk | `[disabled]` — guard minimum 3 kroków | ✅ |
-| Treść | Up (krok 1) / Down (ostatni krok) | przyciski | `[disabled]` na krańcach — poprawnie | ✅ |
-| Prowadnice | „Show guide lines" off | switch | łączniki znikają (4 kroki: 3 łączniki → 0); `aria-checked=false` | ✅ |
-| Prowadnice | „Show guide lines" on | switch | łączniki wracają (3 dla 4 kroków) | ✅ |
-| Markery | Marker display → Number | combobox | markery pokazują `1`,`2`,`3`; `data-timeline-marker-display=number` | ✅ |
-| Markery | Marker display → Icon (bez ikony) | combobox | `data-timeline-marker-display=icon`, ale marker **renderuje się jako dot** (fallback per-krok) | ✅ (patrz N3) |
-| Markery | Marker icon kroku 1 → „★" | input | po ustawieniu ikony marker pokazuje „★" | ✅ |
-| Kolory | Background → `#ffeeaa` | swatch | `<section>` dostaje `background-color: rgb(255,238,170)` | ✅ |
-| Kolory | Background → Clear | przycisk | inline-bg wyczyszczone, przycisk → `[disabled]`, etykieta „Theme default" | ✅ |
-| Typografia | Header title → „Nasz proces" | input | `<h2 id="timeline-heading-nasz-proces">` + `<section aria-labelledby>` na to id, `aria-label` znika | ✅ |
-| Typografia | Title size → None | combobox | amber-ostrzeżenie „Step titles are currently hidden…" + tytuły znikają z preview | ✅ |
-| Treść | CTA label + destynacja „HomePage" | input + combobox | `<a href="/homepage">Dowiedz się więcej</a>` w preview | ✅ |
-| Treść | Link całego kroku przy aktywnym CTA | — | komunikat „Whole-step links are disabled when a CTA link is configured to avoid nested anchors." | ✅ |
-
-### 4.2 Walidacja i podpowiedzi (UX pozytywny)
-
-- **Walidacja daty w czasie rzeczywistym:** rozróżnia poprawny `YYYY-MM-DD` (komunikat
-  neutralny) od prozy (komunikat błędu w czerwieni + sugestia przeniesienia do „Date label").
-  Pole „Date label" ma osobny opis, że to opcjonalna kopia redakcyjna i przetrwa nawet
-  przy pustej dacie.
-- **Ostrzeżenie o ukrytych tytułach:** wybór „Title size = None" pokazuje wyraźny amber-box.
-- **Wzajemne wykluczanie CTA ↔ link całego kroku:** edytor jawnie informuje, że link całego
-  kroku jest wyłączony, gdy skonfigurowano CTA (renderer odrzuca link całego kroku, jeśli
-  istnieje CTA — `resolveStepLink` zwraca `undefined`, by uniknąć zagnieżdżonych kotwic).
-- **Mode preview cards:** każda karta trybu pokazuje preferowany wariant (badge) i opis +
-  zdanie kontekstowe „Switching to X keeps your step content but prefers the Y visual variant."
-- **Guard minimum kroków:** przy 3 krokach „Remove" jest `[disabled]` (nie da się zejść poniżej 3).
-- **Contrast advisories:** sekcja kolorów pokazuje „Marker contrast advisory" i „Text contrast
-  advisory" (przy kolorach inherited/transparent: „Contrast depends on inherited theme or
-  transparent colors.").
-
-### 4.3 Niuanse uwarunkowane logiką (NIE są to bugi — warto je znać)
-
-| # | Obserwacja | Wyjaśnienie |
-|---|-----------|-------------|
-| N1 | **Wybór wariantu nie zmienia trybu (mode), ale wybór trybu zmienia wariant** | Asymetria z założenia. Karty wariantu wołają tylko `onVariantChange`; karty trybu wołają `updateMode`, które ustawia też preferowany wariant. Dla autora może być nieoczywiste, że klik „Cards" przy `mode=axis` nadal renderuje layout kart, a klik trybu „Process" zmienia jednocześnie wariant na compact. |
-| N2 | **`maxWidth=6XL` przy ≤3 krokach renderuje faktycznie `max-w-5xl`** | Renderer: `steps.length <= 3 && maxWidth === "6xl" ? "5xl" : maxWidth`. Atrybut `data-timeline-max-width` raportuje `6xl`, ale realnie zastosowana klasa to `max-w-5xl`. Combobox pokazuje „6XL", więc autor widzi węższą oś niż sugeruje wybór (tylko dla dokładnie wartości domyślnej 6xl i ≤3 kroków). |
-| N3 | **Marker display „Icon" bez ikony cicho degraduje do kropki** | `markerDisplay === "icon" && !(markerIcon ?? icon) ? "dot"`. Zmiana na „Icon" nie daje **żadnego widocznego efektu**, dopóki krok nie ma `markerIcon`/`icon`. Edytor nie ostrzega o tym — autor może uznać, że „tryb ikony nie działa". |
-| N4 | **Swatch koloru pokazuje kolor fallback, choć wartość = „Theme default"** | `Global marker color` (i per-krokowe pola) pokazują w pickerze `#1d4ed8` / `#ffffff`, mimo że wartość jest pusta (etykieta „Theme default", Clear `[disabled]`). Wizualnie wygląda, jakby niebieski był aktywny, podczas gdy faktycznie kolor jest dziedziczony z motywu. |
-| N5 | **Dwa zestawy kontrolek szerokości/odstępów** | Widget ma własną sekcję „Typography and spacing" (Spacing, Section padding, Outer section spacing, Max width) ORAZ współdzieloną sekcję „Block layout" (Content width, Top/Bottom padding, Top/Bottom margin). Częściowo nakładające się pojęcia (szerokość, padding) w dwóch miejscach — potencjalnie mylące dla autora. |
+### 2.9 Trasa publiczna (SSR + przeglądarka)
+| Sprawdzenie | Wynik |
+|---|---|
+| HTTP | **200** |
+| SSR (surowy HTML) | zawiera `data-timeline-*` + 3 kroki bez JS |
+| a11y | `<section aria-label="Timeline">`, `<ol aria-label="Timeline steps">`, semantyczne `<span>/<p>` |
+| Konsola (public) | **0 błędów / 0 ostrzeżeń** |
+| Konsola (admin, cała sesja) | **0 błędów / 0 ostrzeżeń** (poza info React DevTools) |
+| Responsywność 375px | brak page-overflow (`375==375`); oś pozioma scrolluje w `overflow-x-auto` (484>343) |
 
 ---
 
-## 5. Tryb Advanced — wynik: DZIAŁA (read-only zgodnie z kontraktem)
+## 3. CO DZIAŁA — szczegóły potwierdzone
 
-Advanced jasno deklaruje: _„Advanced mode is read-only. Use Visual for public-facing timeline
-steps, layout, guides, markers, colors, background, and typography changes."_
-Liczba edytowalnych kontrolek w panelu inspektora Advanced: **0** (potwierdzone `eval`,
-po prawidłowym zawężeniu do panelu „Runtime summary").
+### 3.1 Wizard — DZIAŁA (celowo w pełni read-only)
+Sekcja „Starter steps" ma **0** edytowalnych kontrolek (potwierdzone liczeniem). Live preview
+renderuje przez wspólny renderer. Przejścia Wizard↔Visual działają w obie strony. Zgodne
+z kontraktem `writablePaths: []`.
 
-**Sekcje (read-only):**
-- **Runtime summary:** Variant, Mode, Steps.
-- **Layout diagnostics:** Layout (jedno zdanie), Guides, Style, Line/Marker/Title/Description
-  color (opis „Theme default" / „Selected swatch" / „Saved custom color"), Background,
-  oraz liczniki nadpisań per-krok (accents / marker backgrounds / marker icon colors).
-- **Data normalization:** licznik kroków + reguły (`3-8` kroków, unikalne stabilne ID),
-  „Step CTA links" / „Whole-step links" (pokrycie bezpiecznych linków), oraz macierz
-  własności (Wizard / Visual / Advanced owns …).
-- (współdzielone) **Block layout summary**, **Visibility summary**.
+### 3.2 Struktura — DZIAŁA
+Wszystkie 3 warianty, 4 tryby (karty), select trybu, orientacja, label, 3 wyrównania
+i 6 wartości liczby kroków przełączają render zgodnie z kodem. Asercje atrybutów i klas
+przeszły dla **każdej** wartości.
 
-| Test | Wynik | Status |
-|------|-------|--------|
-| Odzwierciedlenie niezapisanego stanu Visual | Steps: „4 configured steps."; Layout: „Orientation: **Vertical**…"; Style: „Marker: **Icon** / Medium"; Guides: „Enabled, Dashed style." | ✅ |
-| Pokrycie CTA | „Step CTA links: **1 safe CTA destination**" (po ustawieniu CTA HomePage) | ✅ |
-| Whole-step links | „Not configured" | ✅ |
-| Liczniki nadpisań | accents/backgrounds/icon-colors = „0 overrides" (ustawiłem tylko `markerIcon`, który nie jest liczony w tych trzech) | ✅ |
-| Brak edytowalnych pól | potwierdzony (0 kontrolek) | ✅ |
+### 3.3 Treść kroków — DZIAŁA
+Edycja tytułu/opisu, walidacja daty (ISO vs proza, czerwony błąd), `<time datetime>`,
+date-label nadpisujący tekst daty, wszystkie 4 statusy (badge + `aria-current` tylko dla
+current), ikona dekoracyjna (`aria-hidden`), CTA→`<a>`, whole-step link→owinięcie kroku.
+Add/Remove/Up/Down z poprawnymi guardami (min 3, krańce `[disabled]`).
 
-**Wniosek:** Advanced jest żywym, czytelnym lustrem stanu edytora i kontraktu normalizacji.
-Diagnostyka aktualizuje się natychmiast wraz ze zmianami w Visual (testowane na niezapisanym
-stanie).
+### 3.4 Prowadnice, linia, markery — DZIAŁA
+Switch prowadnic (2↔0 łączniki), guide style, line style, 4 grubości, 3 rozmiary markera,
+3 tryby markera (z per-krok degradacją icon→dot), markerIcon, oraz wszystkie kolory markerów
+(global + per-krok) wraz z Clear.
 
----
+### 3.5 Kolory + typografia/odstępy — DZIAŁA
+Line/Title/Description/Background color (set + Clear + „Use transparent"), advisory kontrastu
+(realny werdykt przy konkretnych kolorach), nagłówek (h2 + `aria-labelledby`), pełne skale
+title/description size i weight, spacing/padding/section-spacing/max-width.
 
-## 6. Trasa publiczna (frontend) — wynik: DZIAŁA (statyczny render SSR)
+### 3.6 Advanced — DZIAŁA (żywe lustro stanu)
+Advanced odzwierciedlił **niezapisany** stan Visual co do joty:
+- Variant `milestones`, Mode `axis`, „3 configured steps."
+- Layout: „Orientation: Horizontal; Alignment: Center; Spacing: Default; Padding: Default; Width: 6XL; Labels: Top"
+- Guides: „Enabled, Dashed style."; Style: „Line: Solid; Thickness: 2px; Marker: Dot / Medium; Title: Base Semibold"
+- Line color „Selected swatch", Global marker color „Theme default", Title/Description color „Selected swatch", Background „#222222"
+- Step accents „0 overrides", Step marker backgrounds „**1 override**", Step marker icon colors „**1 override**"
+- Step CTA links „**1 safe CTA destination**", Whole-step links „**2 safe whole-step destinations**"
 
-URL: `http://localhost:3000/ctr-timeline-2305` → **HTTP 200**.
-Render jest **server-side** — surowy HTML z serwera już zawiera oś czasu z atrybutami
-`data-timeline-*` i treścią kroków.
-
-### 6.1 Render opublikowanej konfiguracji (domyślnej)
-
-- `data-timeline-variant=milestones`, `mode=axis`, `orientation=horizontal`,
-  `label-position=top`, `padding=md`, `section-spacing=none`, `max-width=6xl`,
-  `marker-display=dot`, `title-weight=semibold`.
-- 3 kroki (`step-1/2/3`): Discovery / Planning / Build + opisy.
-- 3 markery (kropki), łączniki prowadnic obecne (style inline width + background-color).
-- **0 linków** i **0 badge'y statusu** — opublikowana wersja domyślna nie ma CTA/linków/statusów.
-
-> Uwaga: trasa publiczna pokazuje **opublikowaną wersję domyślną**. Moje zmiany w Visual
-> były wyłącznie w pamięci edytora i **nie zostały zapisane/opublikowane**, więc świadomie
-> NIE są widoczne na froncie.
-
-### 6.2 Dostępność (a11y) — pozytywnie
-
-- `<section aria-label="Timeline">` — fallback `aria-label`, bo brak opublikowanego nagłówka
-  (gdy nagłówek jest ustawiony, w admin potwierdzono przełączenie na `aria-labelledby`).
-- Lista kroków jako `<ol aria-label="Timeline steps">`.
-- Każdy krok to `<li data-timeline-step>`; krok bieżący dostawałby `aria-current="step"`
-  (potwierdzone w admin po ustawieniu statusu Current).
-- Daty renderowane jako semantyczny `<time datetime>` (potwierdzone w admin).
-- Tekst markera owijany w `aria-hidden="true"` (dekoracyjny), co jest poprawne.
-
-### 6.3 Responsywność (mobile 375px) — pozytywnie
-
-- Pozioma oś czasu (`milestones` horizontal) przewija się **wewnątrz kontenera**
-  `overflow-x-auto` (scrollWidth 484 > clientWidth 343).
-- **Brak poziomego przepełnienia całej strony** (`pageScrollWidth == clientWidth == 375`) —
-  overflow jest świadomie ograniczony do regionu osi czasu, layout strony nie pęka.
-
-### 6.4 Konsola — czysto
-
-Brak błędów i ostrzeżeń w konsoli na trasie publicznej (0/0). Również w admin podczas
-całej sesji edycji Visual: 0 błędów, 0 ostrzeżeń (poza standardowym info React DevTools).
+### 3.7 Frontend — DZIAŁA (statyczny SSR opublikowanej wersji)
+HTTP 200, SSR z atrybutami i 3 krokami, poprawna a11y, czysta konsola, responsywność
+(overflow ograniczony do regionu osi, layout strony się nie psuje).
 
 ---
 
-## 7. Admin (canvas) vs Frontend (published) — porównanie
+## 4. CO NIE DZIAŁA / DEFEKTY
 
-| Aspekt | Admin canvas (stan początkowy, przed edycją) | Public (published) |
-|--------|----------------------------------------------|--------------------|
-| Wariant / mode | milestones / axis | milestones / axis |
-| Liczba kroków | 3 (Discovery/Planning/Build) | 3 (identyczne) |
-| Markery | dot ×3 | dot ×3 |
-| Prowadnice | enabled, dashed | enabled, dashed |
-| Linki / statusy | brak | brak |
-
-**Interpretacja:** stan początkowy canvasu admin (przed moją edycją) był **identyczny**
-z wersją opublikowaną — brak rozbieżności draft/published na starcie. Wszystkie różnice,
-które wprowadziłem w Visual, pozostały niezapisane (w pamięci edytora), więc frontend ich
-nie odzwierciedla — co jest oczekiwane i zamierzone.
+**Brak defektów funkcjonalnych.** W całym wyczerpującym przebiegu (≈90 pojedynczych wartości
+opcji w kilkunastu rodzinach kontrolek) **nie znaleziono ani jednego błędu** — każda kontrolka
+zmieniała render zgodnie z kodem, podgląd aktualizował się na żywo, a konsola pozostała czysta.
 
 ---
 
-## 8. Dodatkowe niuanse UX/UI
+## 5. CZEGO NIE DAŁO SIĘ W PEŁNI ZWERYFIKOWAĆ (z dokładną przyczyną)
+
+| # | Kontrolka / aspekt | Przyczyna |
+|---|---|---|
+| NT1 | **Natywny gest drag&drop** reorderingu kroków (przyciski „Drag", `draggable`) | `playwright-cli drag` (syntetyczny HTML5 DnD) **nie wypełnia `dataTransfer` typu `text/plain`**, który czyta handler `onDrop` (`payload.split(":")`). Po przeciągnięciu kolejność się nie zmieniła. Handlery `onDragStart`/`onDrop` istnieją w kodzie, a **przyciski Up/Down dają równoważną, działającą** ścieżkę reorderingu (zweryfikowaną). Sam gest myszy DnD jest nieodtwarzalny tym narzędziem. |
+| NT2 | **`rel="noopener noreferrer"` dla linków http(s)** (CTA i whole-step) | `LinkDestinationField` pozwala wybrać **tylko istniejące strony serwisu** (URL-e względne `/...`) lub zachować wcześniej zapisaną destynację. Brak możliwości wpisania nowego adresu zewnętrznego przez picker w tej fixturze. Dla linków względnych potwierdzono `rel=null` (poprawnie); gałąź http (rel ustawiany) nie była możliwa do wyzwolenia. |
+| NT3 | **Runtime'owy efekt moich zmian na froncie** | Świadomie **nie zapisywano/nie publikowano** (ochrona współdzielonej fixtury). Trasa publiczna pokazuje wersję opublikowaną (domyślną). Efekt zmian zweryfikowano pośrednio: canvas admin + lustro Advanced + SSR wersji domyślnej. End-to-end render zapisanych zmian — nie testowany. |
+| NT4 | **Klik wskaźnikiem w combo „Typography and spacing" przy pewnym przewinięciu** | Przy konkretnym scrollu kontrolki na górze panelu były przechwytywane przez sticky-region panelu (artefakt hit-testingu narzędzia, **nie** błąd produktu). Obejście: aktywacja **klawiaturą** (focus → Enter → typeahead → Enter) — zadziałała i pozwoliła przeklikać wszystkie wartości spacing/padding/section-spacing/max-width. |
+
+---
+
+## 6. NIUANSE UX/UI (zachowania zgodne z kodem — nie są to bugi)
 
 | # | Niuans | Obszar |
-|---|--------|--------|
-| U1 | Wizard to przepływ „setup" (przycisk „Run setup again"), w pełni read-only; tylko Visual i Advanced są zakładkami | IA edytora |
-| U2 | Asymetria wariant↔mode (N1) — wybór wariantu nie zmienia trybu, wybór trybu zmienia wariant | Visual / struktura |
-| U3 | `maxWidth=6XL` przy ≤3 krokach renderuje 5xl (N2) — combobox nie sygnalizuje auto-zwężenia | Visual / renderer |
-| U4 | „Icon" marker bez ustawionej ikony nie daje efektu (N3) — brak ostrzeżenia (kontrast do wyraźnego ostrzeżenia przy „Title size = None") | Visual / markery |
-| U5 | Swatch koloru pokazuje kolor fallback mimo „Theme default" (N4) — może sugerować, że kolor jest aktywny | Shared color control |
-| U6 | Dublujące się kontrolki szerokości/odstępów: widget („Typography and spacing") vs współdzielony „Block layout" (N5) | Visual / IA |
-| U7 | Współdzielona „Visibility summary" (Advanced) pokazała „Shown on: **Hidden on all devices**", podczas gdy trasa publiczna renderuje widget na desktopie. Nie zmieniałem widoczności; to pole współdzielonego inspektora bloku, nie logika samego timeline. **Prawdopodobnie mylące etykietowanie** podsumowania widoczności (pusta konfiguracja widoczności = tekst „Hidden on all devices"), a nie realne ukrycie — front renderuje poprawnie. Wymaga osobnej weryfikacji poza zakresem tego widgetu. | Shared block inspector |
+|---|---|---|
+| N1 | **Trzy różne sprzężenia wariant↔mode**: (a) karty **wariantu** zmieniają layout, ale **NIE** mode; (b) karty **trybu** zmieniają mode **i** wariant (preferowany, przez `onBlockPatch`); (c) **select „Timeline mode"** zmienia **tylko** mode, **NIE** wariant. Zweryfikowane empirycznie: select→chronology przy variant=milestones zostawił `variant=milestones` (layout chronology). Trzy kontrolki, trzy zachowania — potencjalnie mylące. | struktura |
+| N2 | **`maxWidth=6XL` przy ≤3 krokach renderuje `max-w-5xl`** (`data-timeline-max-width` nadal `6xl`). Przy >3 krokach 6XL→`max-w-6xl`. Combobox nie sygnalizuje auto-zwężenia. | renderer/typografia |
+| N3 | **Marker display „Icon" cicho degraduje do kropki per-krok**, gdy krok nie ma `markerIcon`/`icon`. Potwierdzone: przy display=icon krok 1 (z ikoną 🔧) pokazał wypełniony marker z ikoną, a kroki 2–3 (bez ikony) — zwykłą kropkę. Brak ostrzeżenia (kontrast do wyraźnego amber-warning przy „Title size = None"). | markery |
+| N4 | **Swatch koloru zawsze pokazuje kolor fallback** (np. `#1d4ed8`, `#ffffff`) nawet gdy wartość = „Theme default"/pusta — wygląda, jakby kolor był aktywny. Potwierdzone: wypełnienie pustego tła wartością `#ffffff` (którą swatch już wyświetlał jako fallback) było **no-op** (advisory dalej „inherited"). | kontrolki kolorów |
+| N5 | **Dwa nakładające się zestawy szerokości/odstępów**: widget „Typography and spacing" (Max width, Spacing, Padding, Section spacing) ORAZ współdzielona „Block layout" (Content width, Top/Bottom padding+margin). | IA edytora |
+| N6 | **„Line style" dotyczy też obramowania markera**, nie tylko łącznika/osi — jedna kontrolka wpływa na dwa elementy wizualne (potwierdzone: dashed → marker border-style dashed). | linia/markery |
+| N7 | **Asymetria „None"**: Title size „None" **ukrywa** tytuł (+ amber-warning), ale Description size „None" **pozostawia opis widoczny** (usuwa tylko klasę rozmiaru). | typografia |
+| N8 | **Advanced „Whole-step links: N safe" liczy link kroku nawet gdy CTA go wygasza w renderze.** Step 1 miał CTA + whole-step link; renderer pominął kotwicę whole-step (potwierdzone), ale licznik normalizacji policzył ją (2 = step1+step2). Rozjazd „normalizacja vs render" — informacyjny, nie błąd. | Advanced/normalizacja |
+| N9 | Współdzielony „Device visibility" w inspektorze bloku pokazywał przełączniki „Hidden" — to kontrolka bloku, nie logika timeline; nie zmieniałem jej. Front renderuje widget poprawnie. | shared block inspector |
 
 ---
 
-## 9. Podsumowanie
+## 7. Admin (canvas, niezapisany) vs Frontend (opublikowany)
 
-**Ocena ogólna:** widget `timeline` jest w **dobrym, dojrzałym stanie**. Wszystkie faktycznie
-przetestowane kontrolki w Visual **działają** — aktualizują podgląd na żywo, utrzymują stan
-w UI i poprawnie odzwierciedlają się w diagnostyce Advanced oraz w renderze SSR. Wizard
-i Advanced są **z założenia read-only** i zachowują się zgodnie z kontraktem.
+| Aspekt | Admin canvas (po mojej edycji, niezapisane) | Public (opublikowane) |
+|---|---|---|
+| Wariant / mode | milestones / axis | milestones / axis |
+| Kroki | 3 (Odkrywanie/Planning/Build) | 3 (Discovery/Planning/Build) |
+| CTA / status / linki / kolory | ustawione w pamięci edytora | brak (wersja domyślna) |
 
-**Co działa (potwierdzone testem):**
-- Wizard: czytelne read-only podsumowanie + live preview + przejście do Visual.
-- Visual: warianty (3), tryby (4) z preferowanym wariantem, orientacja, liczba kroków,
-  edycja tytułu/opisu, walidacja daty (ISO vs proza, czerwony błąd), status (badge +
-  `aria-current` + `<time>`), reorder Up/Down, Add step, guard minimum 3 kroków,
-  przełącznik prowadnic, tryb markera (dot/number/icon z fallbackiem), ikona markera,
-  kolor tła + Clear, nagłówek sekcji (h2 + `aria-labelledby`), „Title size = None" z
-  ostrzeżeniem, CTA → link + wzajemne wykluczanie z linkiem całego kroku.
-- Advanced: żywa diagnostyka read-only (0 edytowalnych pól), odzwierciedla niezapisany stan.
-- Frontend: SSR (3 kroki, atrybuty, łączniki), a11y (`<ol aria-label>`, `<section aria-label>`,
-  `<time>`, `aria-current`), responsywność (overflow ograniczony do osi, brak page-overflow),
-  czysta konsola.
-
-**Co NIE działa / wymaga świadomości:**
-- **Brak jednoznacznych defektów funkcjonalnych** w przetestowanym zakresie.
-- Niuanse N1–N5 (sekcja 4.3) to zachowania zgodne z kodem, ale potencjalnie mylące UX —
-  zwłaszcza N3 (cicha degradacja „Icon"→dot) i N2 (`6XL`→`5xl` przy ≤3 krokach).
-- U7: współdzielona „Visibility summary" pokazała „Hidden on all devices" mimo że front
-  renderuje — prawdopodobnie mylące etykietowanie pola współdzielonego inspektora, nie defekt
-  timeline; pozostawione jako obserwacja do osobnej weryfikacji.
-
-**Czego nie zdołano/nie chciano przetestować (uczciwie):**
-- Nie zapisywano ani nie publikowano zmian (ochrona współdzielonej fixtury) — runtime'owego
-  efektu moich zmian na froncie nie weryfikowano (świadomie). Render statyczny opublikowanej
-  wersji i odzwierciedlenie zmian w Advanced/preview zweryfikowano pozytywnie.
-- Natywnego gestu drag&drop kroków (testowano reorder przyciskami; handlery DnD obecne w kodzie).
-- Per-krokowych kolorów akcentu/tła/ikony markera (pola obecne; potwierdzono tylko liczniki
-  „0 overrides" w Advanced).
-- Wariantów `cards` / `chronology` / `alternating` / `compact` zweryfikowano na poziomie
-  atrybutów `data-timeline-*` (przełączanie działa); szczegółowego renderu każdego layoutu
-  pikselowo nie audytowano.
+Różnice wynikają wyłącznie z **niezapisania** zmian — zgodnie z zasadą ochrony fixtury.
 
 ---
 
-## 10. Statystyki testu
+## 8. Statystyki testu
 
 | Kategoria | Wartość |
-|-----------|---------|
-| Tryby przetestowane | 3 (Wizard, Visual, Advanced) |
-| Kontrolki Visual potwierdzone jako działające | 27+ (reprezentatywny, szeroki przekrój) |
-| Defekty funkcjonalne | 0 (w przetestowanym zakresie) |
-| Niuanse logiki/UX (N1–N5) | 5 |
-| Dodatkowe niuanse UX/UI (U1–U7) | 7 |
-| Trasa publiczna | HTTP 200, SSR, 3 kroki, 0 błędów konsoli |
+|---|---|
+| Tryby edytora przetestowane | 3/3 (Wizard, Visual, Advanced) |
+| Rodziny kontrolek Visual — pełne pokrycie opcji | warianty 3/3, tryby 4/4, orientacja 2/2, label 2/2, align 3/3, kroki 6/6, status 4/4, guide style 2/2, line style 2/2, thickness 4/4, marker size 3/3, marker display 3/3, title size 5/5, title weight 4/4, desc size 5/5, spacing 5/5, padding 3/3, section spacing 4/4, max width 6/6 |
+| Pojedyncze wartości opcji realnie przeklikane | ≈90+ |
+| Kolory clearable przetestowane (set+Clear/transparent) | global marker, step accent, step marker-bg, step marker-icon-color, line, title, description, background |
+| Defekty funkcjonalne | **0** |
+| Nie do przetestowania (z przyczyną) | 4 (NT1–NT4) |
+| Niuanse UX/UI | 9 (N1–N9) |
 | Edytowalne kontrolki w Wizard / Advanced | 0 / 0 (zgodnie z kontraktem) |
-| Zrzuty PNG | 0 (weryfikacja przez DOM/eval; nazwy zrzutów byłyby wyłącznie lokalnymi etykietami) |
+| Konsola (public + admin) | 0 błędów / 0 ostrzeżeń |
+| Zrzuty PNG | 0 (weryfikacja przez DOM/eval; migawki YAML to wyłącznie lokalne etykiety) |
+
+---
+
+## 9. Wniosek
+
+Widget `timeline` jest w **dojrzałym, stabilnym stanie**. Wyczerpujące przeklikanie **wszystkich**
+dyskretnych opcji we wszystkich rodzinach kontrolek **nie ujawniło żadnego defektu funkcjonalnego** —
+każda zmiana poprawnie wpływa na render (atrybuty/klasy/inline-style), Advanced jest wiernym,
+read-only lustrem stanu, Wizard jest celowo nieedytowalny, a SSR + a11y + responsywność na froncie
+są poprawne, przy czystej konsoli. Pozostają wyłącznie **niuanse UX** (N1–N9, głównie wokół
+sprzężenia wariant↔mode, cichej degradacji „Icon", auto-zwężenia 6XL→5xl i prezentacji swatchy)
+oraz cztery aspekty **niemożliwe do pełnej weryfikacji tym narzędziem/w tej fixturze** (NT1–NT4),
+każdy z podaną dokładną przyczyną.
