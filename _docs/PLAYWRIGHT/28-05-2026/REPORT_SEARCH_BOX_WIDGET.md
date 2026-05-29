@@ -1,309 +1,400 @@
-# RAPORT: Search Box Widget — pogłębiony audyt current-state (Wizard / Visual / Advanced + frontend)
+# RAPORT: Search Box Widget — audyt bieżącego stanu (UX/UI + weryfikacja działania)
 
-> **Status:** Zakończony
-> **Data:** 2026-05-28
-> **Sesja Playwright:** `claude-28-05-search-box` (izolowana, oddzielna od innych agentów)
+> **Status:** Zakończony (re-audyt domykający luki po pierwszej fali)
+> **Data:** 2026-05-29
+> **Sesja Playwright:** `claude-29-05-search-box-gap-close` (izolowana, oddzielna od innych agentów)
 > **Środowisko:** http://localhost:5173/admin · http://localhost:3000
-> **Fixture admin (UŻYTY, poprawny):** `/admin/pages/b4734a85-b68d-470f-b65d-54ea42f92eaa` (breadcrumb „Contract Test - search-box", status `Published`)
-> **Fixture admin (PODANY w zadaniu, NIEDZIAŁAJĄCY):** `/admin/pages/11c2d2c1-8b06-4317-86a8-dd239b6ff74b` — zwraca HTTP 500 / `page_not_found` (patrz sekcja 0)
-> **Fixture public:** http://localhost:3000/ctr-search-box-2305
-> **Pliki źródłowe:** `core/widgets/core/searchBox.tsx` (renderer + typy + normalizacja) · `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/widgets/core/listingRuntimeScript.ts` (wstrzykiwany skrypt runtime listing + global search)
+> **Strona admin (fixture):** `Contract Test - search-box` (ID: `b4734a85-b68d-470f-b65d-54ea42f92eaa`, status `Published`)
+> **Trasa publiczna:** http://localhost:3000/ctr-search-box-2305
+> **Pliki źródłowe:** `core/widgets/core/searchBox.tsx` (renderer `SearchBoxBlock` + typy + normalizacja) · `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` (kontrolka koloru) · `core/admin/ui/widgets/editors/LinkDestinationField.tsx` (page-picker) · `core/widgets/core/listingRuntimeScript.ts` (wstrzykiwany skrypt runtime)
 
-> Uwaga metodologiczna: ten raport jest celowo bogatszy niż smoke z 27-05-2026.
-> Każde stwierdzenie „działa / nie działa" zostało zweryfikowane realną interakcją
-> w UI oraz inspekcją DOM (atrybuty `data-*`, klasy Tailwind, inline `style`,
-> `name`/`action`/`method` formularzy, stan `checked`/`defaultChecked`), a nie tylko
-> zliczeniem widocznych sekcji. Sekcje 4–8 jasno oddzielają: co działa, co nie
-> działa / jest mylące, co faktycznie przetestowano i czego NIE testowano.
+> **Uwaga o zrzutach:** w tej sesji **nie zapisywano ani nie commitowano** żadnych
+> plików PNG. Całą weryfikację oparłem o inspekcję DOM/CSS podglądu (`eval`) oraz
+> snapshoty struktury (YAML w `.playwright-cli/`, katalog ignorowany przez Git).
+> Gdyby powstały jakieś przechwycenia, ich nazwy (np. `search-box-public-mobile-375`)
+> byłyby **wyłącznie lokalnymi etykietami** stanu przeglądarki — nie są wymaganym
+> evidence ani plikiem w repo.
 
-> Uwaga o screenshotach: w tym audycie weryfikację oparłem **wyłącznie o inspekcję
-> DOM** (`eval`) oraz snapshoty struktury — nie zapisywałem zrzutów PNG. Gdyby jakieś
-> powstały, ich nazwy byłyby **wyłącznie lokalnymi etykietami** przechwyceń w katalogu
-> `.playwright-cli/` (ignorowany przez Git), nie są wymaganym evidence i nie zostały
-> dołączone do repo.
+> **Uwaga o zakresie:** raport opisuje **stan faktyczny zaobserwowany w UI** w dniu
+> testu. Każdą interakcję potwierdzono inspekcją DOM (atrybuty `data-*`, klasy
+> Tailwind, inline `style`, `name`/`action`/`method` formularzy, stan
+> `defaultChecked`/`checked`), a nie tylko zliczeniem widocznych sekcji. Sekcje
+> rozdzielają: (4) co przetestowano i DZIAŁA, (5) czego NIE da się w pełni
+> zweryfikować w tym fixture/środowisku (z dokładną przyczyną), (6) front, (8)
+> niuanse UX/UI, (9) błędy.
 
-> Uwaga o trwałości: świadomie **nie** klikałem „Save draft" ani „Publish", aby nie
-> nadpisać współdzielonego fixture. Przy nawigacji z edytora na front pojawił się
-> natywny prompt „unsaved changes" — co potwierdza, że moje edycje były niezapisane;
-> prompt odrzuciłem bez zapisu. W konsekwencji trwałość/propagacja moich edycji na
-> front **nie** była weryfikowana (patrz sekcja 7).
-
----
-
-## 0. Krytyczna obserwacja infrastrukturalna — niepoprawne ID fixture w zadaniu
-
-Podane w zadaniu ID strony admina **`11c2d2c1-8b06-4317-86a8-dd239b6ff74b` nie istnieje**:
-
-- Wejście na `/admin/pages/11c2d2c1-...` pokazuje breadcrumb **„Homepage"**, baner
-  **„Page error — page_not_found"** i renderuje awaryjnie treść strony głównej
-  (widgety Hero + Compare Timeline), **nie** search-box.
-- Endpoint, z którego korzysta edytor, zwraca **HTTP 500**:
-  `GET /admin/api/pages/11c2d2c1-...` → `{"error":{"code":"internal_error","message":"page_not_found"}}`,
-  stack: `core/server/routes/pageRoutes.ts:108`. (Drobny niuans backendu:
-  „nie znaleziono strony" jest mapowane na **500 internal_error**, a nie na 404 —
-  semantycznie to powinien być 404/`not_found`.)
-
-Prawidłowa strona „Contract Test - search-box" (slug `/ctr-search-box-2305`, status
-**published**) ma ID **`b4734a85-b68d-470f-b65d-54ea42f92eaa`** — ustalone z listy
-`GET /admin/api/pages`. **Cały audyt admina przeprowadziłem na poprawnym ID.**
-Slug publiczny `/ctr-search-box-2305` działa niezależnie i był osiągalny.
+> **Domknięte luki z poprzedniej wersji raportu (27/28-05):** w tej sesji
+> przetestowano **empirycznie, na żywo**: (a) **Frame border color** zmieniony
+> pickerem (poprzednio tylko obecność kontrolki), (b) **`displayMode: compact` w
+> trybie `route-submit`** (poprzednio „z kodu") — potwierdzono realne zwężenie
+> `max-w-3xl`, ciaśniejszy `space-y-2` i ukrycie opisu, (c) **wszystkie trzy
+> przełączniki źródeł global** (pages/entries/posts w obie strony), (d) **„Clear"
+> na wszystkich trzech swatchach koloru**, (e) **picker „Search results page" +
+> „Clear destination"**. Ustalono też **przyczynę** etykiety „Saved custom color"
+> na świeżym widgecie (sekcja 8 pkt 2). Szczegóły niżej.
 
 ---
 
 ## 1. Przegląd widgetu
 
-**Typ:** `search-box` · **Kategoria:** `content` · **Opis:** „Scoped listing search or global public search widget." · **Warianty:** tylko jeden — `default` („Search input with optional source scoping.").
+**Typ:** `search-box` · **Kategoria:** `content`
+**Tytuł / opis:** „Search Box" / „Scoped listing search or global public search widget."
+**Warianty:** jeden — `default` („Search input with optional source scoping.").
 
-**Model danych (`SearchBoxData`):**
+Renderer (`SearchBoxBlock`) ma **cztery rozłączne gałęzie** zależne od `mode` i
+obecności `listingQueryId` — to kluczowy niuans architektury:
+
+| Tryb | Co renderuje | Skrypt runtime | Formularz |
+|------|--------------|----------------|-----------|
+| `listing` **bez** `listingQueryId` | kafel `border-dashed` + tekst „Select a listing query in widget settings…" | **brak** | brak |
+| `listing` **z** `listingQueryId` | `form[data-listing-runtime-form]`, input `name="lq.{id}.__q"` (token `__q`), `data-listing-auto-apply`, opcjonalny hint | **tak** (`getListingRuntimeClientScript`) | runtime (fetch + DOM replace, bez przeładowania) |
+| `route-submit` | natywny `form method=get action={targetRoute}`, input `name={queryParam}` | **brak** | natywny GET (nawigacja do strony wyników) |
+| `global` | `form[data-global-search-form] action=/api/search`, input `name="q"`, 3 checkboxy `sources`, kontener `[data-global-search-results]` | **tak** | debounce + min 2 znaki, fetch `/api/search`, render listy wyników |
+
+**Stan zapisany fixture (admin i public, zweryfikowany przez `/admin/api/pages`):**
+blok search-box ma **pusty `data: {}`** w `currentData` **i** `publishedData`. Po
+normalizacji daje to `mode=listing`, **bez** `listingQueryId` → renderuje się
+**kafel placeholder**. Tj. publiczny fixture **nie pokazuje** działającego pola
+wyszukiwania, tylko komunikat „wybierz listing query" (patrz N1 w sekcji 8 i
+ograniczenia w sekcji 5).
+
+---
+
+## 2. Model danych (`SearchBoxData`)
 
 | Pole | Znaczenie |
 |------|-----------|
 | `mode` | `listing` \| `global` \| `route-submit` (domyślnie `listing`) |
 | `displayMode` | `full` \| `compact` |
-| `listingQueryId` | id listing-query (tylko dla `listing`) |
+| `listingQueryId` | id listing-query (efektywne tylko dla `listing`) |
 | `title`, `description`, `placeholder`, `submitLabel` | copy widoczne dla odwiedzającego |
 | `autoApply` | bool — auto-submit przy wpisywaniu (efektywne tylko dla `listing`) |
 | `endpoint` | domyślnie `/api/search` (support-owned, dla `global`) |
-| `targetRoute`, `queryParam` | strona wyników + param (tylko `route-submit`; `q` domyślnie) |
+| `targetRoute`, `queryParam` | strona wyników + nazwa parametru (**tylko** `route-submit`; `q` domyślnie) |
 | `sources.{pages,entries,posts}` | źródła global search (domyślnie pages+entries=on, posts=off) |
 | `style.{frameBackground,frameBorderColor,actionBackground}` | 3 kolory (clearable) |
 | `resolved.{query,rejectedTokens,error}` | tylko-do-odczytu stan runtime (diagnostyka) |
 
-**Trzy gałęzie renderera (`SearchBoxBlock`) — kluczowy niuans architektury:**
-
-| Tryb | Co renderuje | Skrypt runtime | Formularz |
-|------|--------------|----------------|-----------|
-| `listing` **bez** `listingQueryId` | kafel z `border-dashed` i tekstem „Select a listing query in widget settings…" | **brak** | brak |
-| `listing` **z** `listingQueryId` | `form[data-listing-runtime-form]`, input `name="lq.{id}.__q"` (token `__q`), `data-listing-auto-apply`, hint auto-apply | **tak** (`getListingRuntimeClientScript`) | runtime (fetch + DOM replace, bez przeładowania) |
-| `route-submit` | natywny `form method=get action={targetRoute}`, input `name={queryParam}` | **brak** | natywny GET (nawigacja do strony wyników) |
-| `global` | `form[data-global-search-form] action=/api/search`, input `name="q"`, checkboxy `sources`, kontener wyników `[data-global-search-results]` | **tak** | debounce 220 ms, min 2 znaki, fetch `/api/search`, render listy wyników |
-
-**Stan zapisany obu fixture (admin i public) jest identyczny:** `mode=listing`,
-**bez** wybranego `listingQueryId`, `displayMode=full` → renderuje się **kafel
-placeholder** (`border-dashed`). Tj. domyślnie publiczny fixture **nie pokazuje**
-działającego pola wyszukiwania, tylko komunikat „wybierz listing query".
+**Niuanse normalizacji potwierdzone w kodzie i działaniu:**
+- `targetRoute`/`queryParam` są w payloadzie **tylko** gdy `mode === "route-submit"`
+  — poza tym trybem są usuwane (potwierdzone w Advanced — patrz §4.3 i N5/N8).
+- `resolveTargetRoute` odrzuca ścieżki niezaczynające się od `/` oraz `/api/…`
+  (fallback do `/search`); `resolveQueryParam` wymusza wzorzec
+  `^[A-Za-z][A-Za-z0-9_-]{0,31}$` (fallback do `q`) — bezpieczne domyślne.
 
 ---
 
-## 2. Architektura trybów edytora (istotny niuans UX)
+## 3. Tryby edytora — co zawierają (stan faktyczny)
 
-Panel edytora po prawej ma **tylko dwie zakładki: `Visual` i `Advanced`**. Tryb
-**Wizard nie jest równorzędną zakładką** — wchodzi się do niego przyciskiem
-**„Run setup again"** (komunikat: *„Setup complete — Daily edits live in Visual.
-Advanced is for technical diagnostics."*), a kończy przyciskiem **„Finish setup and
-open Visual"**. To ten sam wzorzec co w `team`, `faq-accordion`, `tabs`, `stats-kpi`.
+W prawym panelu są **dwie zakładki: „Visual" i „Advanced"**. Tryb **Wizard** to
+osobny przepływ „setup" uruchamiany przyciskiem **„Run setup again"** (status:
+„Setup complete — Daily edits live in Visual. Advanced is for technical
+diagnostics."), kończony przyciskiem **„Finish setup and open Visual"**.
 
-| Tryb | Jak otworzyć | Zawartość |
-|------|--------------|-----------|
-| **Wizard** | „Run setup again" | Jedna sekcja **„Search source"**: Select „Search mode" + kontrolki zależne od trybu. Dodatkowo własny blok **„Live preview"** renderujący stan przez wspólny renderer. |
-| **Visual** | zakładka „Visual" | „Search Box Variants" (jeden kafel **Default** + „Add variant preset"), **„Search copy"**, **„Search interaction"**, **„Search surface"** + wspólne **Block layout**, **Device visibility**. |
-| **Advanced** | zakładka „Advanced" | **W 100% read-only**: „Runtime diagnostics", „Runtime status", „Contract summary" + wspólne „Block layout summary", „Visibility summary". **0 edytowalnych kontrolek, 0 przycisków akcji** (potwierdzone inspekcją). |
+### 3.1 Wizard — „Search source"
+Jedna sekcja z `Select` **„Search mode"** + kontrolki **zależne od trybu**:
+- `listing` → `Select` **„Listing query"** (lista z `useListingQueries`),
+- `global` → blok informacyjny + 3 przełączniki **„Global search sources"** (Pages/Entries/Posts),
+- `route-submit` → **„Search results page"** (`LinkDestinationField` + „Clear destination") + tekst, że nazwa parametru jest „support-owned".
 
-**Niuans:** kontrolki w „Search source" (Wizard) są **zależne od wybranego trybu**:
-- `listing` → Select **„Listing query"** (lista z `useListingQueries`),
-- `global` → tekst informacyjny + 3 przełączniki **„Global search sources"** (Pages/Entries/Posts),
-- `route-submit` → pole **„Search results page"** (`LinkDestinationField`) + tekst, że nazwa parametru jest „support-owned".
+Dodatkowo własny blok **„Live preview"** („Reflects the current Wizard state
+through the shared widget renderer.") renderujący stan przez wspólny renderer.
 
-Analogicznie w Visual przełącznik **„Auto apply on input"** pojawia się **tylko**
-gdy `mode=listing`; dla `global`/`route-submit` w tym miejscu jest tekst pomocniczy.
+### 3.2 Visual (pełna edycja)
+„Search Box Variants" (kafel **Default** + „Add variant preset"), **„Search copy"**,
+**„Search interaction"**, **„Search surface"**. Pod nimi wspólne panele bloku:
+**Block layout**, **Device visibility** (należą do bloku, nie do widgetu).
+Przełącznik **„Auto apply on input"** pojawia się **tylko** dla `mode=listing`;
+dla `global`/`route-submit` jest w tym miejscu tekst pomocniczy.
 
----
-
-## 3. Co faktycznie przetestowano (zakres interakcji)
-
-Wszystkie interakcje w sesji `claude-28-05-search-box`, zweryfikowane inspekcją DOM:
-
-- **Wizard / Search mode:** przełączenie wszystkich 3 trybów (listing → global → route-submit → listing) z weryfikacją gałęzi renderera w canvas + Live preview.
-- **Wizard / listing:** wybór realnego listing-query („House Projects Catalog Query 517544d2", id `74019e35-…`) → render runtime-formularza.
-- **Wizard / global:** odczyt domyślnych źródeł (pages+entries on, posts off), przełączenie **Posts** → on.
-- **Wizard / route-submit:** picker **„Search results page"** → wybór „HomePage" (zmiana `targetRoute` + `action`).
-- **Visual / copy:** edycja Title, Description, Placeholder, Submit label (live update canvas).
-- **Visual / interaction:** Display mode `full`→`compact`; Auto apply `on`→`off`.
-- **Visual / surface:** Frame background (swatch `#ff8800` + „Clear"), Action background (swatch `#10b981`).
-- **Advanced:** odczyt wszystkich sekcji read-only i porównanie ze stanem mojej sesji; potwierdzenie braku edytowalnych kontrolek.
-- **Public (`/ctr-search-box-2305`):** render zapisanego stanu (placeholder), konsola, responsywność 375 px, brak skryptu runtime w gałęzi placeholder.
-- **Runtime API (auxiliary):** bezpośrednie `GET /api/search?q=…` (charakterystyka backendu global search).
+### 3.3 Advanced (wyłącznie diagnostyka)
+Trzy sekcje **w 100% read-only**: **Runtime diagnostics**, **Runtime status**,
+**Contract summary**. Brak edytora JSON i przycisku normalizacji. Potwierdzone
+liczbowo: **0 edytowalnych kontrolek** (`input/textarea/select/button/switch/
+combobox`) w całym tabpanelu Advanced (łącznie z podsumowaniami Block layout /
+Device visibility, które też są read-only).
 
 ---
 
-## 4. Co DZIAŁA — szczegóły
+## 4. Co realnie PRZETESTOWANO i DZIAŁA (Admin UI)
 
-### 4.1 Wizard — „Search source"
+Wszystkie interakcje wykonano w sesji `claude-29-05-search-box-gap-close` i
+potwierdzono inspekcją DOM podglądu (canvas + Live preview). **Każda kontrolka
+zadziałała poprawnie i natychmiast aktualizowała podgląd.**
+
+### 4.1 Wizard — „Search source" (3 tryby)
 
 | Kontrolka | Test | Efekt (zweryfikowany w DOM) |
 |-----------|------|------------------------------|
-| Search mode → **Listing runtime search** | wybór | gałąź `listing`; po wybraniu query renderuje runtime-form. ✓ |
-| Listing query → realny query | wybór `74019e35-…` | canvas i Live preview przestają być placeholderem: `form[data-listing-runtime-form]`, `data-listing-query-id="74019e35-…"`, input `name="lq.74019e35-….__q"`, `data-listing-token="__q"`, `data-listing-auto-apply="1"`, hint „Search updates automatically as you type." ✓ |
-| Search mode → **Global public search** | wybór | gałąź `global`: tekst „Global search uses the built-in public search service…", przełączniki Pages(on)/Entries(on)/Posts(off); canvas renderuje `form[data-global-search-form] action="/api/search"`, input `name="q"`, checkboxy `sources`, kontener wyników z tekstem „Type at least two characters to search across selected sources." ✓ |
-| Global sources → **Posts** | toggle on | przełącznik edytora przechodzi w stan `checked` (dane = `posts:true`), a renderer emituje `<input … checked>` (`defaultChecked=true`, atrybut `checked` obecny w markup). ✓ (z niuansem N4 dot. żywego podglądu) |
-| Search mode → **Route submit search** | wybór | gałąź `route-submit`: pole „Search results page" + „Clear destination", tekst „…the technical parameter name stays support-owned."; canvas: `data-search-box-mode="route-submit"`, `data-search-target-route="/search"`, `data-search-query-param="q"`, `form method="get" action="/search"`, input `name="q"`, **brak** skryptu runtime (natywny GET). ✓ |
-| Search results page (picker) → **HomePage** | wybór | `data-search-target-route="/homepage"` i `form action="/homepage"`. ✓ |
+| Search mode → **Listing runtime search** | wybór | gałąź `listing`; placeholder do czasu wyboru query |
+| Listing query → realny query | wybór „House Projects Catalog Query 517544d2" (`74019e35-…`) | canvas **i** Live preview: `form[data-listing-runtime-form]`, `data-listing-query-id="74019e35-…"`, input `name="lq.74019e35-….__q"`, `data-listing-token="__q"`, `data-listing-auto-apply="1"`, hint „Search updates automatically as you type.", skrypt runtime obecny ✓ |
+| Search mode → **Global public search** | wybór | gałąź `global`: `form[data-global-search-form] action="/api/search"`, input `name="q"`, 3 checkboxy `sources` (pages=on, entries=on, posts=off), kontener `[data-global-search-results]` z tekstem „Type at least two characters…", skrypt obecny ✓ |
+| Global sources → **Posts** | toggle on | emitowany markup checkboxa: `defaultChecked=true`, atrybut `checked` obecny ✓ (z niuansem N3 dot. żywej właściwości `.checked`) |
+| Global sources → **Pages** / **Entries** | toggle off | emitowany markup: `defaultChecked=false` dla obu ✓ |
+| Search mode → **Route submit search** | wybór | gałąź `route-submit`: `data-search-box-mode="route-submit"`, `form method="get" action="/search"`, input `name="q"`, `data-search-target-route="/search"`, `data-search-query-param="q"`, **brak** skryptu runtime (natywny GET) ✓ |
+| Search results page (picker) → **HomePage** — **LUKA DOMKNIĘTA** | wybór | `data-search-target-route="/homepage"` i `form action="/homepage"` ✓ |
+| **Clear destination** — **LUKA DOMKNIĘTA** | klik | `targetRoute` wraca do domyślnego `/search`, `form action="/search"` ✓ |
 
-Wizard ma też własny blok **„Live preview"** („Reflects the current Wizard state
-through the shared widget renderer.") — odzwierciedla stan na żywo, identycznie jak
-canvas (wspólny renderer; w DOM istnieją dwie instancje sekcji `search-box`).
+**Persystencja wyboru przy zmianie trybu (zweryfikowane):** po przejściu z
+`route-submit` z powrotem na `listing` wybrany wcześniej `listingQueryId`
+(`74019e35-…`) **został zachowany** (runtime-form pojawił się od razu). Natomiast
+`targetRoute` ustawiony w `route-submit` **znika** z payloadu poza tym trybem
+(patrz N5/N8) — oba zachowania są poprawne wg normalizatora.
 
 ### 4.2 Visual — kontrolki i efekt w canvas
 
 | Kontrolka | Test | Efekt w canvas |
 |-----------|------|----------------|
-| Title | „Szukaj projektów" | `<p class="font-semibold uppercase">` w formularzu → „Szukaj projektów". ✓ live |
-| Description | „Przeszukaj katalog na żywo." | drugi `<p>` zaktualizowany. ✓ live |
-| Placeholder | „Wpisz nazwę projektu..." | `input@placeholder`. ✓ live |
-| Submit label | „Znajdź" | tekst `button[type=submit]`. ✓ live |
-| Display mode | `full`→`compact` | `data-search-box-display-mode="compact"` + wiersz input/przycisk z `flex-nowrap` (zamiast `flex-wrap`). **Patrz N3** — w trybie `listing` to praktycznie cały widoczny efekt. ✓ (z zastrzeżeniem) |
-| Auto apply on input | `on`→`off` | `data-listing-auto-apply` `1`→`0`; hint „Search updates automatically as you type." **znika**. ✓ live |
-| Frame background (swatch) | `#ff8800` | inline `style` ramki → `background-color: rgb(255,136,0)`; `border-color` pozostaje `var(--color-border)`. ✓ live |
-| Frame background → **Clear** | clear | `background-color` **usunięte całkowicie** z inline-style (zostaje tylko `border-color`). ✓ (semantyka „clearable" = transparentność, patrz N6) |
-| Action background (swatch) | `#10b981` | `button[type=submit]` inline `style` → `background-color: rgb(16,185,129)`. ✓ live |
+| Title | „Szukaj projektów" | `<p class="… uppercase">` → „Szukaj projektów" ✓ live |
+| Description | „Przeszukaj katalog na żywo." | drugi `<p>` zaktualizowany ✓ live |
+| Placeholder | „Wpisz nazwę projektu..." | `input@placeholder` ✓ live |
+| Submit label | „Znajdź" | tekst `button[type=submit]` ✓ live |
+| Display mode `full`→`compact` (**route-submit**) — **LUKA DOMKNIĘTA** | wybór | `max-w-5xl`→**`max-w-3xl`**, form `space-y-4`→**`space-y-2`**, wiersz `flex-wrap`→**`flex-nowrap`**, **opis ukryty** (`!compact && description`) ✓ live |
+| Display mode `full`→`compact` (**listing**) | wybór | **tylko** `flex-wrap`→`flex-nowrap` + atrybut; sekcja **zostaje** `max-w-4xl`, form `grid gap-3` bez zmian (N4) ✓ |
+| Auto apply on input (listing) `on`→`off` | toggle | `data-listing-auto-apply` `1`→`0`; hint „Search updates automatically…" **znika** ✓ live |
+| Auto apply — w `route-submit` | — | przełącznik **nie istnieje**; zamiast niego tekst „Route-submit mode forwards the visitor query…" ✓ (zgodne z kontraktem) |
+| Frame background (swatch) | `#ff8800` | inline `style` ramki → `background-color: rgb(255,136,0)` ✓ live |
+| Frame background → **Clear** | clear | `background-color` **usunięte całkowicie** z inline-style (ramka transparentna) ✓ (semantyka N6) |
+| Frame **border** (swatch) — **LUKA DOMKNIĘTA** | `#22aa55` | inline `style` → `border-color: rgb(34,170,85)` ✓ live |
+| Frame border → **Clear** — **LUKA DOMKNIĘTA** | clear | `border-color` usunięte z inline-style ✓ |
+| Action background (swatch) | `#10b981` | `button[type=submit]` inline `style` → `background-color: rgb(16,185,129)` ✓ live |
+| Action background → **Clear** — **LUKA DOMKNIĘTA** | clear | inline `style` przycisku usunięte całkowicie ✓ |
+| „Search Box Variants" — kafel **Default** | — | zaznaczony (jedyny wariant) ✓ |
+| „Add variant preset" | klik | **brak widocznego efektu**: nie dochodzi nowy kafel wariantu (nadal 1), nie otwiera się dialog, brak błędu w konsoli (patrz §5) |
 
-„Search Box Variants" zawiera **jeden** kafel **Default** (zaznaczony) + przycisk
-„Add variant preset" (wspólny mechanizm presetów — nietestowany, patrz sekcja 7).
+> **Niuans metodologiczny (nie błąd widgetu):** swatch koloru to natywny
+> `input[type="color"]`. Wymuszenie jego `onChange` przez `eval` wymagało
+> zresetowania wewnętrznego `_valueTracker` Reacta — zwykły `fill`/`dispatchEvent`
+> nie był wystarczający. Po prawidłowym wyzwoleniu zdarzenia wszystkie trzy swatche
+> zaktualizowały podgląd natychmiast. To ograniczenie sterowania kontrolką z
+> automatu, a nie wada widgetu.
 
-### 4.3 Advanced (read-only)
+### 4.3 Advanced (read-only) — wierność stanu
 
-Tryb Advanced jest w 100% read-only (**0 inputów/combo/switchy, 0 przycisków akcji**
-w panelu — potwierdzone) i **wiernie** odzwierciedlał stan mojej sesji:
-
-- **Runtime diagnostics:** Mode „listing", Listing query „74019e35-4a8f-4a7d-b8eb-f39882157b4d" (**surowe UUID** — support-owned), Search provider „Built-in public search service" (endpoint = default), Results page „Default search results page", Search term routing „Standard search term routing". ✓
+Po ustawieniu w sesji `mode=listing` + query `74019e35-…` Advanced pokazał:
+- **Runtime diagnostics:** Mode „listing", Listing query „74019e35-4a8f-4a7d-b8eb-f39882157b4d" (**surowe UUID** — support-owned), Search provider „Built-in public search service" (endpoint domyślny), **Results page „Default search results page"**, Search term routing „Standard search term routing". ✓
 - **Runtime status:** Last visitor query „No query captured", Ignored filters „No ignored tokens", Runtime health „No runtime errors reported" (stan nominalny — `resolved.*` puste). ✓
 - **Contract summary:** „Built-in endpoints, query keys, and runtime state are support-owned implementation details." ✓
-- W przeciwieństwie do edytora Contact, Advanced search-box **nie** ma przycisku „Apply normalization" ani snapshotu JSON — to czyste podsumowania.
 
-**Spójność stanu:** po ustawieniu w Wizard `route-submit` + „/homepage", a następnie
-powrocie na `listing`, Advanced pokazał „Results page: **Default** search results
-page" — co potwierdza, że normalizacja **odrzuca** `targetRoute`/`queryParam` poza
-trybem `route-submit` (są częścią payloadu tylko gdy `mode==="route-submit"`). To
-poprawne zachowanie kontraktu, ale warto je znać (patrz N7).
+**Spójność stanu (potwierdzenie N5/N8):** mimo że wcześniej w sesji ustawiłem
+`route-submit` + „/homepage", po powrocie na `listing` Advanced pokazał „Results
+page: **Default** search results page" — co potwierdza, że normalizacja **odrzuca**
+`targetRoute`/`queryParam` poza trybem `route-submit`. Poprawne zachowanie kontraktu.
 
-### 4.4 Frontend (public `/ctr-search-box-2305`)
+---
 
-Strona zwraca tytuł „Contract Test - search-box" i renderuje **zapisany** stan:
-`mode=listing`, **bez** query → **kafel placeholder** (`border-dashed`,
-„Select a listing query in widget settings to enable scoped listing search.").
+## 5. Czego NIE DA SIĘ w pełni zweryfikować (z dokładną przyczyną)
 
+- **End-to-end runtime na froncie (listing + global) — kontrolka: cały żywy skrypt
+  `getListingRuntimeClientScript`.** Opublikowany stan fixture to `listing` **bez**
+  `listingQueryId` → gałąź **placeholder** → na froncie **nie ma** ani formularza,
+  ani wstrzykniętego skryptu. Aby uruchomić na żywo: (listing) debounced fetch +
+  podmianę bloków bez przeładowania (`replaceListingBlocksFromHtml`, auto-apply na
+  `change`), albo (global) debounce + min 2 znaki + render wyników w
+  `[data-global-search-results]`, fixture musiałby mieć **opublikowany** query lub
+  tryb `global`. Świadomie **nie publikowałem** współdzielonego fixture. Zamiast
+  tego zweryfikowałem: **strukturę** formularzy/skryptu w canvas admina oraz
+  **endpoint** `/api/search` bezpośrednio (§6.3).
+
+- **Persystencja i publikacja.** Świadomie **nie** klikałem „Save draft" ani
+  „Publish". W trakcie edycji pojawił się badge **„Unsaved changes"** (potwierdza
+  śledzenie brudnego draftu); po sesji `GET /admin/api/pages/b4734a85-…` nadal
+  zwracał `data: {}` w `currentData` **i** `publishedData` — **moje edycje nie
+  zostały zapisane**. W konsekwencji trwałość i propagacja zmian na front **nie**
+  były weryfikowane.
+
+- **`queryParam` (nazwa parametru) — brak kontrolki w edytorze.** Tryb `route-submit`
+  pokazuje wprost, że nazwa parametru jest „support-owned"; nie ma pola edycji.
+  Walidację `resolveQueryParam` (regex) potwierdziłem wyłącznie z kodu — wymaga
+  zaseedowania niestandardowej wartości, czego edytor nie wytwarza.
+
+- **Stany błędu/odrzuconych tokenów runtime** (`resolved.error`,
+  `resolved.rejectedTokens`). Advanced pokazywał wyłącznie stan nominalny („No
+  runtime errors", „No ignored tokens"). Edytor nie pozwala wstrzyknąć stanu
+  runtime, więc gałęzie „błąd"/„ignored tokens" w rendererze widziałem tylko w
+  kodzie.
+
+- **„Add variant preset".** Przycisk jest obecny i klikalny, ale w tym fixture
+  **nie wywołał** widocznej akcji (brak nowego kafla wariantu, brak dialogu, brak
+  błędu w konsoli). Przepływ zapisu/zastosowania presetu (mechanizm współdzielony,
+  jeden wariant `default`) **nie był** dalej wymuszany.
+
+- **`displayMode: compact` + `global` na żywo.** Zweryfikowałem `compact` na żywo w
+  `listing` (N4) **oraz** w `route-submit` (luka domknięta). Gałąź `global` używa
+  tych samych klas co `route-submit` (`maxWidthClass`/`shellGapClass`), ale jej
+  `compact` re-testowałem tylko strukturalnie/przez kod, nie osobnym przełączeniem.
+
+---
+
+## 6. Testy na froncie (trasa publiczna)
+
+> **URL:** http://localhost:3000/ctr-search-box-2305 · **Data:** 2026-05-29
+> (otwarte w **osobnej karcie**, by nie porzucić brudnego draftu w adminie).
+
+### 6.1 Wyrenderowany widget (opublikowany stan)
+Front renderuje **zapisany** stan: `mode=listing`, **bez** query → **kafel
+placeholder** (`border-dashed`, „Select a listing query in widget settings to
+enable scoped listing search.").
 - `data-search-box-display-mode="full"`, `data-listing-block-id="blk-1"`, `data-listing-query-id=""`. ✓
-- **Brak formularza** i **brak wstrzykniętego skryptu runtime** w gałęzi placeholder (poprawnie — skrypt jest tylko w gałęzi z query / global). ✓
+- **Brak formularza** i **brak skryptu runtime** w gałęzi placeholder (poprawnie). ✓
+- `aria-label` na `<section>` = **`null`** (N2 — a11y). Tytuł renderowany jako `<p>`, nie nagłówek.
 - **Konsola: 0 błędów, 0 ostrzeżeń.** ✓
-- **Responsywność 375 px:** brak poziomego overflow (`scrollWidth == clientWidth == 375`). ✓
 
-### 4.5 Runtime global search — endpoint (auxiliary)
+### 6.2 Responsywność
+- **375 px:** brak poziomego overflow (`scrollWidth == clientWidth == 375`). ✓
+- Powrót do 1280 px bez artefaktów.
 
-Bezpośredni `GET /api/search` (to endpoint, który wołałby skrypt klienta w trybie `global`):
-- `?q=ab` → **200 JSON**, `items[]` z pól pages+entries (gdy brak param `sources`, backend domyślnie używa wszystkich trzech źródeł). ✓
-- `?q=house&sources=pages,entries` → **200 JSON**, `sources:["pages","entries"]`, `items:[]` (brak dopasowania). ✓
+### 6.3 Runtime global search — endpoint `/api/search` (auxiliary)
+Bezpośrednie wywołania `fetch` z kontekstu frontu (to endpoint, który wołałby
+skrypt klienta w trybie `global`):
 
-Backend global search jest sprawny i respektuje parametr `sources`. (To charakterystyka
-endpointu — nie jest to test żywego skryptu widgetu, patrz sekcja 7.)
+| Zapytanie | Wynik |
+|-----------|-------|
+| `?q=a` (1 znak) | **200**, `sources:[pages,entries,posts]`, `items: 0` |
+| `?q=ab` (2 znaki) | **200**, `sources:[pages,entries,posts]`, `items: 3` |
+| `?q=house&sources=pages,entries` | **200**, `sources:[pages,entries]`, `items: 0` |
+| `?q=test&sources=posts` | **200**, `sources:[posts]`, `items: 3` |
+| **brak `q`** | **400** (body z polem `error`) |
 
----
-
-## 5. Co NIE działa / jest mylące / wymaga uwagi (niuanse UX/UI)
-
-| # | Obszar | Obserwacja |
-|---|--------|-----------|
-| **N1 — Niepoprawne ID fixture w zadaniu** | infrastruktura | Podane ID `11c2d2c1-…` zwraca **HTTP 500 / page_not_found** (`pageRoutes.ts:108`), a edytor pokazuje awaryjnie Homepage z banerem błędu. Poprawne ID to `b4734a85-…`. Dodatkowo „page not found" jest serwowane jako **500 internal_error**, a powinno być **404** (drobny defekt semantyki HTTP). |
-| **N2 — Publiczny fixture NIGDY nie pokazuje działającego wyszukiwania** | dane fixture / front | Zapisany stan to `listing` **bez** query → na `/ctr-search-box-2305` widać wyłącznie kafel „wybierz listing query". Realne pole wyszukiwania, skrypt runtime i wyniki **nie są demonstrowane publicznie** dla tego fixture. Działanie formularzy zweryfikowałem strukturalnie w canvas admina (po wybraniu query/trybu), ale **end-to-end na froncie nie było wykonalne** bez zapisu zmian. |
-| **N3 — `displayMode: compact` jest niemal bezczynne w trybie `listing`** | renderer | W gałęzi `listing` renderer **na sztywno** używa `max-w-4xl` (linia ~331) i `grid gap-3` — `compact` zmienia jedynie `flex-wrap`→`flex-nowrap` w wierszu input+przycisk oraz atrybut `data-*`. Dokumentowane „zwężenie" (`max-w-3xl`) i ciaśniejszy `space-y-2` (`shellGapClass`) **stosują się tylko** do gałęzi `global`/`route-submit` (potwierdzone z kodu). Efekt: autor domyślnego (listing) widgetu wybierając „compact" widzi prawie żadną zmianę — **mylące**. |
-| **N4 — Podgląd checkboxów `sources` nie odświeża „ptaszka" do reloadu** | canvas/preview | Toggle **Posts** poprawnie aktualizuje dane (przełącznik edytora = `checked`) i **emitowany markup** (`defaultChecked=true`, atrybut `checked` obecny → świeży render byłby zaznaczony). Jednak **żywa właściwość `.checked`** już zamontowanego checkboxa w canvas/preview pozostaje `false` do przeładowania (input niekontrolowany — React nie nadpisuje `defaultChecked` na istniejącym węźle). Dane i HTML są poprawne; jedynie żywy podgląd „pozostaje w tyle". Niski priorytet. |
-| **N5 — Brak dostępnej nazwy sekcji i etykiety pola wyszukiwania (a11y)** | renderer / dostępność (front i admin) | We **wszystkich** gałęziach `<section>` widgetu nie ma `aria-label`/`aria-labelledby` (potwierdzone na froncie: `aria-label = null`). Tytuł renderuje się jako stylizowany `<p class="uppercase">`, **nie** jako nagłówek (`<h2/h3>`). Pole `<input>` ma tylko `placeholder` — **brak** `<label>`, `aria-label`, `id`. Dla czytników ekranu: brak nazwanego landmarku i brak dostępnej nazwy pola wyszukiwania. |
-| **N6 — „Clear" koloru = transparentność, nie kolor motywu** | Visual / colors | „Clear" na Frame background usuwa inline `background-color` całkowicie (ramka staje się przezroczysta), zamiast wracać do wartości domyślnej `color-mix(... var(--color-bg) …)`. Zgodne z semantyką „clearable", lecz subtelnie mylące (to samo zachowanie co w team/contact/faq). |
-| **N7 — Domyślne kolory pokazywane jako „Saved custom color"** | Visual / surface | Trzy swatch'e startowo pokazują fallbacki `#ffffff` / `#d4d4d8` / `#2563eb` i badge **„Saved custom color"**, mimo że to wartości domyślne (realne defaulty to `color-mix(...)`, `var(--color-border)`, `var(--color-primary)` — których natywny `input[type=color]` nie potrafi sparsować). Komunikat „custom" sugeruje edycję, której nie było. Drobne, ale mylące. |
-| **N8 — `targetRoute`/`queryParam` znikają poza `route-submit`** | normalizacja | Ustawienie strony wyników w `route-submit`, a potem zmiana trybu na `listing`/`global` **kasuje** tę wartość z payloadu (Advanced wraca do „Default search results page"). Poprawne wg kontraktu, ale autor może być zaskoczony utratą konfiguracji po zmianie trybu. |
-
-**Nie wykryto** żadnych błędów konsoli (admin i front: 0/0 poza infem React DevTools),
-żadnego twardego buga renderowania ani rozjazdu między rendererem admin↔front. Wszystkie
-przetestowane kontrolki Wizard i Visual **działają i aktualizują podgląd na żywo**
-(z zastrzeżeniem N3/N4); Advanced jest w pełni read-only i wiernie podsumowuje stan;
-front jest wolny od overflow i błędów.
+Backend jest sprawny: **respektuje parametr `sources`**, a przy jego braku domyślnie
+używa wszystkich trzech źródeł; brak `q` jest poprawnie walidowany (400). To
+charakterystyka endpointu — **nie** jest to test żywego skryptu widgetu (patrz §5).
 
 ---
 
-## 6. Porównanie Admin (canvas) vs Frontend
+## 7. Admin Preview vs Frontend — zgodność
 
-| Aspekt | Admin canvas (moja sesja) | Frontend (`/ctr-search-box-2305`) | Zgodność |
-|--------|---------------------------|-----------------------------------|----------|
-| Wspólny renderer `SearchBoxBlock` | ✓ żywy, live wg edycji | ✓ ten sam, wg stanu zapisanego | ✓ |
-| Stan zapisany | (wyjściowo) `listing` bez query | `listing` bez query | ✓ identyczny |
-| Render placeholder (`border-dashed`) | ✓ (stan wyjściowy) | ✓ | ✓ |
-| Runtime-form `listing` (po wybraniu query) | ✓ (moja niezapisana edycja) | ✗ brak (fixture bez query) | ⚠ różnica wynika z danych, nie z kodu |
-| Skrypt runtime w gałęzi placeholder | brak | brak | ✓ |
-| `aria-label` na `<section>` | brak | brak (`null`) | ✓ (oba bez nazwy — N5) |
-| Konsola | 0/0 | 0/0 | ✓ |
-| Moje niezapisane edycje (mode/query/copy/kolory) | widoczne w sesji | **nieobecne** (front = stan zapisany) | ✓ poprawna izolacja |
+| Aspekt | Admin (podgląd, moja sesja) | Frontend (publish) | Uwaga |
+|--------|------------------------------|--------------------|-------|
+| Wspólny renderer `SearchBoxBlock` | ✓ żywy, live wg edycji | ✓ ten sam, wg stanu zapisanego | zgodne |
+| Stan zapisany | (wyjściowo) `listing` bez query (`data:{}`) | `listing` bez query | ✓ identyczny |
+| Render placeholder (`border-dashed`) | ✓ (stan wyjściowy) | ✓ | zgodne |
+| Runtime-form `listing` (po wyborze query) | ✓ (moja niezapisana edycja) | ✗ brak (fixture bez query) | ⚠ różnica z **danych**, nie z kodu |
+| Skrypt runtime w gałęzi placeholder | brak | brak | zgodne |
+| `aria-label` na `<section>` | brak | brak (`null`) | zgodne (oba bez nazwy — N2) |
+| Konsola | 0 błędów / 0 ostrzeżeń | 0 / 0 | zgodne |
+| Moje niezapisane edycje (mode/query/copy/kolory) | widoczne w sesji | **nieobecne** | ✓ poprawna izolacja (front = stan opublikowany) |
 
-**Wniosek:** renderer jest wspólny i spójny. Jedyna różnica admin↔front to **dane**:
-w canvas widziałem swoje niezapisane edycje (m.in. wybrane query → działający
-formularz), a front pokazuje swój zapisany stan (placeholder bez query). Brak
-rozbieżności na poziomie kodu.
-
----
-
-## 7. Czego NIE testowano (uczciwe ograniczenia)
-
-- **Zapis i publikacja:** świadomie **nie** zapisywałem (odrzuciłem prompt „unsaved
-  changes" przy wyjściu z edytora). Trwałość moich edycji i ich propagacja na front
-  **nie** zostały zweryfikowane. Zweryfikowana została spójność w obrębie sesji
-  (Visual/Wizard → Advanced wiernie podsumowuje) oraz izolacja (front = własny stan zapisany).
-- **End-to-end runtime na froncie:** fixture publiczny nie ma query, więc **nie**
-  wpisywałem zapytań do żywego formularza listing/global na froncie i **nie**
-  uruchomiłem debounced skryptu klienta renderującego wyniki w DOM. Zweryfikowałem
-  jedynie sam endpoint `GET /api/search` (zwraca 200 + wyniki) oraz **strukturę**
-  formularzy w canvas admina (atrybuty, `name`, `action`, skrypt obecny/nieobecny).
-- **Listing runtime live (fetch + DOM replace):** mechanika podmiany bloków bez
-  przeładowania (`replaceListingBlocksFromHtml`, auto-apply przy `change`) — opisana
-  z kodu, **nie** uruchomiona na żywo (brak query w fixture, brak zapisu).
-- **`route-submit`/`global` + `compact`:** różnica `max-w-3xl` / `shellGapClass` /
-  ukrywanie opisu przy `compact` w tych gałęziach — **z kodu**, nie re-testowana na
-  żywo (na żywo testowałem `compact` tylko w `listing`).
-- **Frame border color (swatch):** potwierdziłem obecność kontrolki + „Clear";
-  samej wartości nie zmieniałem pickerem (ten sam `SharedColorControl`, co
-  przetestowane Frame background i Action background).
-- **„Add variant preset":** zapis/zastosowanie presetu nie testowane (jeden wariant
-  Default; mechanizm presetów współdzielony).
-- **Stany błędu/odrzuconych tokenów runtime** (`resolved.error`, `resolved.rejectedTokens`):
-  widziałem tylko stan nominalny w Advanced; nie wstrzykiwałem stanu runtime.
-- **Wspólne sekcje wrappera (Block layout, Device visibility):** poza zakresem audytu
-  search-box; nie modyfikowałem.
+**Wniosek:** renderer jest wspólny i spójny. Jedyna różnica admin↔front wynika z
+**danych** (front = zapisany placeholder bez query; canvas = moje niezapisane
+edycje z wybranym query/trybem). Brak rozbieżności na poziomie kodu.
 
 ---
 
-## 8. Podsumowanie
+## 8. Niuanse UX/UI (obserwacje)
 
-- **Search Box jest w dobrym stanie funkcjonalnym w warstwie edytora.** Wszystkie
-  przetestowane kontrolki Wizard (3 tryby: listing/global/route-submit, wybór
-  listing-query, przełączniki źródeł global, picker strony wyników) oraz Visual
-  (title/description/placeholder/submit, display mode, auto-apply, 2 z 3 kolorów +
-  „Clear") **działają i aktualizują podgląd na żywo**. Advanced jest w 100% read-only
-  i wiernie podsumowuje stan. Renderer ma trzy poprawnie rozdzielone gałęzie
-  (placeholder / listing-runtime / route-submit / global) i wstrzykuje skrypt runtime
-  tylko tam, gdzie jest potrzebny.
-- **Najważniejsze realne znaleziska:**
-  - **N1** — podane w zadaniu ID fixture jest błędne (HTTP 500/`page_not_found`);
-    audyt wykonano na poprawnym ID `b4734a85-…`. Dodatkowo „not found" jest zwracane
-    jako 500 zamiast 404.
-  - **N2** — publiczny fixture (listing bez query) pokazuje wyłącznie placeholder;
-    realne wyszukiwanie nie jest demonstrowane na froncie.
-  - **N3** — `displayMode: compact` jest niemal bezczynne w domyślnym trybie `listing`
-    (tylko `flex-nowrap` + atrybut), co jest mylące względem nazwy opcji.
-- **Drobniejsze niuanse:** podgląd checkboxów `sources` nie odświeża „ptaszka" do
-  reloadu (N4, dane/markup poprawne); brak `aria-label` sekcji i etykiety pola
-  wyszukiwania, tytuł jako `<p>` zamiast nagłówka (N5, a11y); „Clear" koloru = transparentność
-  (N6); domyślne kolory oznaczone jako „Saved custom color" (N7); `targetRoute`/`queryParam`
-  znikają po zmianie trybu (N8, zgodne z kontraktem).
-- **Plus względem innych widgetów:** czysta konsola (0/0 admin i front), brak overflow
-  na 375 px, spójny renderer admin↔front, sprawny endpoint global search `/api/search`,
-  bezpieczne `targetRoute`/`queryParam` (walidacja w `resolveTargetRoute`/`resolveQueryParam`
-  — odrzuca ścieżki `/api/…` i niepoprawne nazwy paramów do bezpiecznych domyślnych).
-- Nie znaleziono żadnego twardego buga renderowania ani rozbieżności admin↔front na
-  poziomie kodu — jedyna różnica wynika z **danych** (front = zapisany placeholder bez
-  query; canvas = moje niezapisane edycje z wybranym query).
+1. **N1 — Publiczny fixture NIGDY nie pokazuje działającego wyszukiwania.** Zapisany
+   stan to `listing` bez query → na `/ctr-search-box-2305` widać wyłącznie kafel
+   „wybierz listing query". Realne pole, skrypt runtime i wyniki **nie są
+   demonstrowane publicznie** dla tego fixture. Działanie zweryfikowano strukturalnie
+   w canvas admina + przez endpoint, ale end-to-end na froncie nie było wykonalne bez
+   publikacji.
+
+2. **N2 — Domyślne kolory pokazywane jako „Saved custom color" (ustalona przyczyna).**
+   Mimo że zapisany `data` jest **pusty** (`{}`), wszystkie trzy swatche startowo
+   pokazują fallbacki `#ffffff` / `#d4d4d8` / `#2563eb` i badge **„Saved custom
+   color"** oraz komunikat „A saved custom color is configured…". Przyczyna: edytor
+   seeduje pełne **domyślne** `style` (`color-mix(in srgb, var(--color-bg) 80%,
+   transparent)`, `var(--color-border)`, `var(--color-primary)`), których natywny
+   `input[type=color]` nie potrafi sparsować (`isPickerRepresentableColorValue=false`)
+   → `SharedColorControl` klasyfikuje je jako „custom". **`SearchBoxEditors` nie
+   przekazuje propa `treatAsThemeDefaultValues`**, więc te wartości nie są rozpoznane
+   jako „Theme default". Komunikat „custom" sugeruje edycję, której nie było —
+   mylące. (To samo zachowanie co w team/contact/faq.)
+
+3. **N3 — Podgląd checkboxów `sources` nie odświeża „ptaszka" do reloadu.** Toggle
+   **Posts** poprawnie aktualizuje dane i **emitowany markup** (`defaultChecked=true`,
+   atrybut `checked` obecny → świeży render byłby zaznaczony). Jednak **żywa
+   właściwość `.checked`** już zamontowanego checkboxa pozostaje `false` do
+   przeładowania (input niekontrolowany — React nie nadpisuje `defaultChecked` na
+   istniejącym węźle; potwierdzone: `liveChecked=false`, `defaultChecked=true`). Dane
+   i HTML są poprawne; jedynie żywy podgląd „pozostaje w tyle". Niski priorytet.
+
+4. **N4 — `displayMode: compact` jest niemal bezczynne w trybie `listing`.**
+   Potwierdzone na żywo bezpośrednim porównaniem klas: w gałęzi `listing` `compact`
+   zmienia **wyłącznie** `flex-wrap`→`flex-nowrap` w wierszu input+przycisk oraz
+   atrybut `data-*`; sekcja zostaje na sztywno `max-w-4xl`, a form `grid gap-3`. Dla
+   kontrastu w `route-submit` (i analogicznie `global`) `compact` realnie zwęża
+   shell do `max-w-3xl`, zacieśnia `space-y-2` i **ukrywa opis**. Efekt: autor
+   domyślnego (listing) widgetu wybierając „compact" widzi prawie żadną zmianę —
+   mylące względem nazwy opcji.
+
+5. **N5 — `targetRoute`/`queryParam` znikają poza `route-submit`.** Ustawienie strony
+   wyników w `route-submit`, a potem zmiana trybu na `listing`/`global` **kasuje** tę
+   wartość z payloadu (Advanced wraca do „Default search results page"). Poprawne wg
+   kontraktu, ale autor może być zaskoczony utratą konfiguracji po zmianie trybu.
+   Dla kontrastu `listingQueryId` **jest** zachowywany przy zmianach trybu.
+
+6. **N6 — „Clear" koloru = transparentność, nie kolor motywu.** „Clear" na Frame
+   background usuwa inline `background-color` całkowicie (ramka staje się
+   przezroczysta), zamiast wracać do domyślnego `color-mix(... var(--color-bg) …)`.
+   Zgodne z semantyką „clearable", lecz subtelnie mylące (to samo w team/contact/faq).
+
+7. **N7 — „Search results page" to PAGE-PICKER, nie pole URL.** Domyślny `/search`
+   pokazywany jest jako **„Saved custom destination"** z ostrzeżeniem „A custom
+   destination is already configured…", bo nie jest znaną stroną serwisu. Autor może
+   wybrać stronę wewnętrzną albo wyczyścić (powrót do `/search`); wpisanie dowolnego
+   zewnętrznego URL tą kontrolką jest nieoczywiste.
+
+8. **N8 — Brak dostępnej nazwy sekcji i etykiety pola (a11y).** We **wszystkich**
+   gałęziach `<section>` nie ma `aria-label`/`aria-labelledby` (na froncie:
+   `aria-label = null`). Tytuł renderuje się jako stylizowany `<p class="uppercase">`,
+   **nie** jako nagłówek (`<h2/h3>`). `<input>` ma tylko `placeholder` — **brak**
+   `<label>`/`aria-label`/`id`. Dla czytników ekranu: brak nazwanego landmarku i brak
+   dostępnej nazwy pola wyszukiwania.
+
+9. **Badge „Unsaved changes" + brak Save/Publish.** Edycje uruchomiły wskaźnik
+   „Unsaved changes" (potwierdza śledzenie zmian); świadomie nie zapisywałem, by nie
+   nadpisać współdzielonego fixture.
 
 ---
 
-## 9. Screenshoty (lokalne etykiety)
+## 9. Co NIE DZIAŁA / błędy
 
-> W tym audycie **nie** zapisywałem zrzutów PNG — całą weryfikację oparłem o inspekcję
-> DOM (`eval`) oraz snapshoty struktury (YAML w `.playwright-cli/`, katalog ignorowany
-> przez Git). Ewentualne pliki PNG byłyby **wyłącznie lokalnymi etykietami** przechwyceń,
-> nie są wymaganym evidence i nie zostały dołączone do repo.
+**Błędy funkcjonalne: 0.** Każda z przetestowanych w tej sesji interakcji
+(3 tryby Wizard, listing-query picker, 3 przełączniki źródeł, route-submit page
+picker + Clear destination, 4 pola copy, display mode w `listing` i `route-submit`,
+auto-apply, **wszystkie trzy** swatche koloru + „Clear" każdego) **zadziałała i
+natychmiast aktualizowała podgląd**. Advanced jest w 100% read-only i wiernie
+odzwierciedlał stan.
+
+**Konsola:** admin **0 błędów / 0 ostrzeżeń** (poza infem React DevTools); front
+**0 / 0**. Brak twardego buga renderowania i brak rozjazdu renderera admin↔front.
+
+Jedyny element bez widocznego efektu to **„Add variant preset"** (brak nowego
+kafla / dialogu / błędu — patrz §4.2 i §5) — nie zakwalifikowałem go jako bug, bo
+to współdzielony mechanizm, a fixture ma jeden wariant `default`.
+
+Zastrzeżenia mają charakter **UX/a11y** (§8): publiczny fixture bez query (N1),
+mylące „Saved custom color" na domyślnych kolorach (N2), żywy podgląd checkboxów
+(N3), niemal bezczynne `compact` w `listing` (N4), znikanie `targetRoute` poza
+trybem (N5), „Clear" = transparentność (N6), page-picker zamiast URL (N7), brak
+`aria-label`/etykiety pola (N8). Niezweryfikowane/odcięte ścieżki i przyczyny — §5.
+
+---
+
+## 10. Podsumowanie
+
+| Kategoria | Obserwacja |
+|-----------|------------|
+| Tryby edytora | Wizard (setup źródła: 3 tryby), Visual (pełna edycja copy/interakcji/koloru), Advanced (tylko diagnostyka, 0 kontrolek) |
+| Przetestowane kontrolki | Wizard ×3 tryby + listing-query + 3 źródła + page-picker + clear; Visual: 4×copy, display ×2 tryby, auto-apply, 3×swatch + 3×Clear, variant tile — **wszystkie działają** |
+| Domknięte luki tej sesji | Frame **border** picker, `compact` w `route-submit` (live), wszystkie 3 toggle źródeł, „Clear" na 3 swatchach, page-picker + „Clear destination", ustalona przyczyna „Saved custom color" |
+| Błędy funkcjonalne | **0** |
+| Błędy / ostrzeżenia konsoli | admin 0/0, front 0/0 |
+| Renderer | 4 poprawnie rozdzielone gałęzie (placeholder / listing-runtime / route-submit / global); skrypt runtime wstrzykiwany tylko tam, gdzie potrzebny; bezpieczne `targetRoute`/`queryParam` |
+| Dostępność | **minus:** brak `aria-label`/`aria-labelledby` na `<section>`, tytuł jako `<p>` zamiast nagłówka, `<input>` bez etykiety (N8) |
+| Główne niuanse UX | publiczny fixture bez query (N1); „Saved custom color" na domyślnych kolorach (N2); `compact` niemal bezczynne w `listing` (N4); znikanie `targetRoute` po zmianie trybu (N5) |
+| Nietestowalne (z przyczyną) | live runtime listing/global na froncie (fixture w placeholderze); persystencja/publish (nie zapisywano); `queryParam` (brak kontrolki); stany `resolved.error`/`rejectedTokens` (brak wstrzyknięcia); „Add variant preset" (brak efektu w fixture) |
+| API global search `/api/search` | sprawny: respektuje `sources`, domyślnie wszystkie 3 źródła, 400 przy braku `q` |
+| Front vs Admin | spójne (wspólny renderer); różnice treści wynikają z innych **opublikowanych** danych, nie z rozbieżności rendererów |
+
+---
+
+## 11. Screenshoty (lokalne etykiety)
+
+> W tym audycie **nie** zapisywano zrzutów PNG — całą weryfikację oparłem o inspekcję
+> DOM (`eval`) oraz snapshoty struktury (YAML w `.playwright-cli/`, katalog
+> ignorowany przez Git). Ewentualne przechwycenia (np. `search-box-public-mobile-375`)
+> byłyby **wyłącznie lokalnymi etykietami** stanu przeglądarki, nie są wymaganym
+> evidence i nie zostały dołączone do repo.
