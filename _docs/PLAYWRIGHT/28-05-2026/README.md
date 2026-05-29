@@ -3,10 +3,10 @@
 ## Cel
 
 Wykonac poglebiony, widget-by-widget audit z naciskiem na realne klikanie
-opcji w admin UI i weryfikacje efektu na froncie, z `claude` jako
-reviewer/audytorem UX/UI na zywej instancji.
+opcji w admin UI i weryfikacje efektu na froncie, z `claude` jako glownym
+reviewerem/audytorem UX/UI na zywej instancji.
 
-To NIE jest kolejny smoke-report. Kazdy raport ma dokumentowac:
+To NIE jest kolejny smoke-report. Kazdy raport w tym katalogu dokumentuje:
 
 - co zostalo faktycznie klikniete,
 - co dziala,
@@ -20,37 +20,28 @@ To NIE jest kolejny smoke-report. Kazdy raport ma dokumentowac:
 2. Osobne sesje `playwright-cli` per widget.
 3. `claude` uruchamiany per widget z dedykowanym promptem, fixture page i
    public route.
-4. Raport zapisywany bezposrednio do tego katalogu.
+4. W koncowej fazie, po nagromadzeniu starych wiszacych daemonow
+   `playwright-cli`, ostatni widget (`contact`) zostal domkniety przez
+   bezposredni fallback Playwright w adminie oraz oddzielny frontend pass,
+   nadal na tej samej lokalnej instancji i tej samej metodzie live-check.
+5. Raporty zapisywane bezposrednio do tego katalogu.
 
 ## Status tej fali
 
-Ta fala jest **w toku**. W tej turze `claude` zdazyl wygenerowac raporty dla:
+Ta fala jest **zakonczona**.
 
-- `section`
-- `template-section`
-- `grid-columns`
-- `tabs`
+- `38/38` raportow widgetowych znajduje sie w tym katalogu.
+- Raporty sa bogatsze niz fala `27-05-2026` i dokumentuja realny current-state,
+  a nie tylko smoke pass.
+- W trakcie pracy wystepowaly limity sesji `claude` oraz stare wiszace sesje
+  `playwright-cli`, ale finalny zestaw raportow zostal skompletowany.
 
-Zapisane raporty:
+## Najwazniejsze uwagi
 
-- [REPORT_SECTION_WIDGET.md](./REPORT_SECTION_WIDGET.md)
-- [REPORT_TEMPLATE_SECTION_WIDGET.md](./REPORT_TEMPLATE_SECTION_WIDGET.md)
-- [REPORT_GRID_COLUMNS_WIDGET.md](./REPORT_GRID_COLUMNS_WIDGET.md)
-- [REPORT_TABS_WIDGET.md](./REPORT_TABS_WIDGET.md)
-
-## Blocker w tej turze
-
-Podczas odpalania kolejnych widgetow lokalny `claude` zwrocil:
-
-`You've hit your session limit · resets 8:30pm (UTC)`
-
-To jest zewnetrzny limiter sesji po stronie `claude`, nie blad widgetow ani
-repo. Przez to druga paczka (`split-layout`, `accordion`, `toggle-block`,
-`spacer`, `divider`) nie zostala jeszcze zapisana w tym katalogu.
-
-## Uwagi
-
-- Raporty z tego katalogu sa bardziej rozbudowane niz fala `27-05-2026`.
+- Raporty z tego katalogu sa current-state evidence z realnych interakcji
+  admin/front.
 - Jesli w raportach pojawiaja sie wzmianki o screenshotach, sa to tylko lokalne
   etykiety przechwycen Playwright i nie sa one commitowane jako wymagane
   evidence.
+- Te raporty nie zastępują finalnych smoke wynikow z innych fal (`TASK-342`),
+  tylko je uzupelniaja o glebszy, widget-by-widget audit UX/UI.
