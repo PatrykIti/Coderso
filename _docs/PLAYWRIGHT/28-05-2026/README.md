@@ -52,10 +52,11 @@ Reconciliation on 2026-05-29 confirmed that the original `17` promoted
 families were under-scoped. Authoritative routing now lives in
 `_docs/_TASKS/TASK-343_Widget_Report_Driven_Remediation_After_the_28-05-2026_Audit_Wave.md`.
 
-- `30` physical remediation families are promoted: `28` widget-local leaves and
-  `2` shared-owner leaves.
+- `31` physical remediation families are promoted: `28` widget-local leaves and
+  `3` shared-owner leaves.
 - Shared owners are explicit for block layout/device visibility
   (`TASK-343-21`) and repeated color-state truthfulness drift
-  (`TASK-343-30`).
+  (`TASK-343-30`), plus shared MediaPicker dialog accessibility
+  (`TASK-343-31`).
 - Current-state/deferred reports are explicitly documented in the umbrella so
   lower-risk notes are not mistaken for lost findings.

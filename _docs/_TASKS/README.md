@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 40 tasks
+- **To Do:** 41 tasks
 - **In Progress:** 5 tasks
 - **Done:** 1971 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-343-31 | Shared MediaPicker Dialog Accessibility Audit Remediation Family | Medium | Medium | Fix repeated shared MediaPicker/Radix Dialog description warnings from the 28-05-2026 widget audit reports. |
 | TASK-343-30 | Shared Widget Color State Truthfulness Audit Remediation Family | High | Large | Fix repeated false saved-custom/default/fallback/Clear color-state drift across the 28-05-2026 live audit reports. |
 | TASK-343-29 | Entry Teaser Audit Remediation Family | Medium | Medium | Add section accessible naming, CTA non-link guidance, and contextual Clear labels from the 28-05-2026 live audit. |
 | TASK-343-28 | Split Layout Audit Remediation Family | Medium | Medium | Fix contradictory ratio disclosure and silent device-override reset from the 28-05-2026 live audit. |
@@ -84,7 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | In progress: all 38 deep-audit reports are classified; the 2026-05-29 reconciliation promotes 30 physical families, including 28 widget-local leaves and 2 shared-owner leaves. |
+| TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | In progress: all 38 deep-audit reports are classified; the 2026-05-29 reconciliation promotes 31 physical families, including 28 widget-local leaves and 3 shared-owner leaves. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

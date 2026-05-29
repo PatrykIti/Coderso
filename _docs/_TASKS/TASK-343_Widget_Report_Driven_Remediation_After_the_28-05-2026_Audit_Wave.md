@@ -42,8 +42,8 @@ all `38/38` reports into:
 ### Promoted Actionable Families
 
 After the full 38-report reconciliation, `17` was under-scoped. The current
-task breakdown promotes `30` physical families: `28` widget-local families plus
-`2` shared-owner families.
+task breakdown promotes `31` physical families: `28` widget-local families plus
+`3` shared-owner families.
 
 | Report owner | Family | Main reason |
 |---|---|---|
@@ -77,6 +77,7 @@ task breakdown promotes `30` physical families: `28` widget-local families plus
 | `split-layout` | `TASK-343-28` | Contradictory ratio disclosure and silent device-override reset. |
 | `entry-teaser` | `TASK-343-29` | Section accessible name, non-link CTA guidance, and contextual Clear labels. |
 | shared color controls / `content-list` and others | `TASK-343-30` | Repeated false `Saved custom color`/fallback/Clear semantics across reports. |
+| shared MediaPicker dialog | `TASK-343-31` | Repeated Radix Dialog description warning in widget media-picker flows. |
 
 ### Explicitly Deferred Or Current-State Sufficient
 
@@ -84,7 +85,7 @@ task breakdown promotes `30` physical families: `28` widget-local families plus
 |---|---|
 | `contact` | Current-state sufficient: report found no widget-local functional defect; remaining limitations are fixture/runtime branches. |
 | `divider` | Deferred minor UX/a11y notes only: no functional defect; labeled separator semantics can be revisited outside this wave. |
-| `footer` | Current-state sufficient for footer-local scope; shared MediaPicker dialog warning is outside footer renderer ownership. |
+| `footer` | Current-state sufficient for footer-local scope; shared MediaPicker dialog warning is routed to `TASK-343-31`. |
 | `grid-columns` | Current-state sufficient: report explicitly found no functional/rendering bugs. |
 | `product-table` | Current-state/environment-only: current report supersedes the stale second-wave classification and found no functional defect; missing route effects are settings/fixture limitations. |
 | `section` | Current-state sufficient: no functional defect; media diagnostics polish is low-priority documentation debt. |
@@ -126,6 +127,7 @@ not justify a physical implementation family in `TASK-343`.
 - [ ] TASK-343-28: Split Layout Audit Remediation Family
 - [ ] TASK-343-29: Entry Teaser Audit Remediation Family
 - [ ] TASK-343-30: Shared Widget Color State Truthfulness Audit Remediation Family
+- [ ] TASK-343-31: Shared MediaPicker Dialog Accessibility Audit Remediation Family
 
 ## Files To Change
 
@@ -139,6 +141,7 @@ not justify a physical implementation family in `TASK-343`.
 | `core/widgets/renderers/widgetRenderer.tsx` | Shared wrapper visibility/rendering fixes owned by `TASK-343-21` where proven shared. |
 | `core/admin/ui/pages/builder/blockUtils.ts` | Shared layout/visibility fixes owned by `TASK-343-21`. |
 | Shared color/clearable editor controls | Shared color-state fixes owned by `TASK-343-30`. |
+| `core/admin/ui/media/MediaPicker.tsx` | Shared dialog accessibility fixes owned by `TASK-343-31`. |
 | `tests/vitest/ui/*.test.tsx` | Add targeted editor/admin-preview coverage for each promoted family. |
 | `tests/vitest/widgets/*.test.tsx` | Add targeted renderer/runtime coverage for each promoted family. |
 
@@ -147,7 +150,7 @@ not justify a physical implementation family in `TASK-343`.
 1. Start with the high-risk public/runtime and destructive-data families:
    `TASK-343-01`, `TASK-343-03`, `TASK-343-07`, `TASK-343-09`,
    `TASK-343-10`, `TASK-343-14`, `TASK-343-18`, `TASK-343-19`,
-   `TASK-343-21`, and `TASK-343-30`.
+   `TASK-343-21`, `TASK-343-30`, and `TASK-343-31`.
 2. Then close medium-risk widget-local truthfulness families in dependency
    order, especially families that depend on shared decisions (`TASK-343-24`,
    `TASK-343-25`, `TASK-343-27` after `TASK-343-30`; `TASK-343-28` after
