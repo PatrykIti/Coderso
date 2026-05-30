@@ -45,10 +45,36 @@ the effective desktop ratio.
 ## Implementation Pseudocode
 
 ```ts
-function getSplitLayoutRatioDisclosure(ratio: SplitRatio, starter: SplitRatio) {
-  const explicit = hasExplicitDeviceRatio(ratio);
-  const effectiveMatch = ratiosEqual(resolveEffectiveRatio(ratio), starter);
-  return { explicit, effectiveMatch };
+function getSplitLayoutRatioDisclosure(
+  data: SplitLayoutData,
+  variant: string
+): SplitLayoutRatioDisclosure & { effectiveMatchesStarter: boolean } {
+  const resolvedVariant = resolveSplitLayoutVariant(variant);
+  const normalized = normalizeSplitLayoutData(data, resolvedVariant);
+  const ratios = normalized.ratio ?? {
+    desktop: resolvedVariant,
+    tablet: resolvedVariant,
+    mobile: resolvedVariant,
+  };
+  const disclosure = {
+    variant: resolvedVariant,
+    desktop: ratios.desktop ?? resolvedVariant,
+    tablet: ratios.tablet ?? resolvedVariant,
+    mobile: ratios.mobile ?? ratios.tablet ?? resolvedVariant,
+    hasExplicitMobile: typeof data.ratio?.mobile !== "undefined",
+    hasOverride:
+      ratios.desktop !== resolvedVariant ||
+      ratios.tablet !== resolvedVariant ||
+      ratios.mobile !== ratios.tablet ||
+      (typeof data.ratio?.mobile !== "undefined" && ratios.mobile !== resolvedVariant),
+  };
+  return {
+    ...disclosure,
+    effectiveMatchesStarter:
+      disclosure.desktop === disclosure.variant &&
+      disclosure.tablet === disclosure.variant &&
+      disclosure.mobile === disclosure.variant,
+  };
 }
 
 function applySplitPresetWithGuard(current: SplitLayoutData, preset: SplitPreset) {
@@ -62,6 +88,8 @@ function applySplitPresetWithGuard(current: SplitLayoutData, preset: SplitPreset
 Extend the existing disclosure helper instead of adding a parallel summary
 path. Guard preset application around the current variant/preset sync flow so
 `buildVariantSyncedSplitLayoutData` cannot silently wipe device overrides.
+`hasDeviceOverrides`, `presetWouldResetOverrides`, and `applySplitPresetWithGuard`
+are implementation targets for the editor guard path, not existing helpers.
 
 ## Regression Test Shape
 

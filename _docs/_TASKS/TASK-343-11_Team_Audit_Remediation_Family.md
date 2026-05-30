@@ -47,10 +47,25 @@ handles and the Wizard silently truncates members when switching to Spotlight.
 ## Implementation Pseudocode
 
 ```ts
-function updateMemberSocialPlatform(member: TeamMember, nextPlatform: TeamSocialPlatform) {
-  const currentProfile = readTeamSocialProfile(member.social.href);
-  const handle = currentProfile.handle === "in" ? readPortableHandle(member.social.href) : currentProfile.handle;
-  return buildTeamSocialHref(nextPlatform, handle);
+function updateMemberSocialPlatform(
+  value: TeamData,
+  onChange: (next: TeamData) => void,
+  memberIndex: number,
+  socialIndex: number,
+  nextPlatform: TeamSocialPlatform
+) {
+  const member = normalizeTeamMembers(value.members)[memberIndex];
+  const link = member ? normalizeTeamSocialLinks(member.socialLinks)[socialIndex] : undefined;
+  if (!link) return;
+
+  const currentPlatform = resolveTeamSocialPlatform(link);
+  const profile = readTeamSocialProfile(currentPlatform, link.url);
+  const portableProfile =
+    currentPlatform === "linkedin" && profile.startsWith("in/") ? profile.slice(3) : profile;
+  updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
+    label: teamSocialPlatformLabels[nextPlatform],
+    url: buildTeamSocialHref(nextPlatform, portableProfile),
+  });
 }
 
 function changeVariantWithGuard(current: TeamData, next: TeamVariantId) {

@@ -90,6 +90,7 @@ task breakdown promotes `31` physical families: `28` widget-local families plus
 | Widget | Classification |
 |---|---|
 | `contact` | Current-state sufficient: report found no widget-local functional defect; remaining limitations are fixture/runtime branches. |
+| `content-list` | Current-state sufficient for widget-local scope: report found no functional defect; shared color-state wording is covered by `TASK-343-30`. |
 | `divider` | Deferred minor widget-local UX/a11y notes only: no functional defect; labeled separator semantics can be revisited outside this wave, while shared color wording is covered by `TASK-343-30` if touched. |
 | `footer` | Current-state sufficient for footer-local functional scope; footer-local destination/page-picker polish is deferred, and the shared MediaPicker dialog warning is routed to `TASK-343-31`. |
 | `grid-columns` | Current-state sufficient for widget-local scope: report found no functional/rendering bugs; shared visibility wording routes to `TASK-343-21` and shared color wording to `TASK-343-30` if touched. |

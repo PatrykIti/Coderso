@@ -42,7 +42,8 @@ actionable editor feedback.
 | File | Required change |
 |---|---|
 | `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` | Surface route/link and view-all ownership truthfully. |
-| `core/widgets/core/postsFeed.tsx` | Keep missing-route card/link output explicit and accessible. |
+| `core/widgets/core/postsFeed.tsx` | Keep Posts Feed-to-Content List mapping truthful for route/link state. |
+| `core/widgets/core/contentList.tsx` | Keep missing-route card/link and view-all output explicit and accessible, because Posts Feed delegates card rendering through Content List. |
 | Fixture/bootstrap data for widget audit pages | Reconcile Posts Feed admin fixture and public route. |
 | `tests/unit/widgets/postsFeedWidget.test.tsx` | Extend existing Bun-owned Posts Feed widget/resolver coverage for missing-route and view-all visibility semantics. |
 | `tests/vitest/ui/posts-feed-editor-wave.test.tsx` | Cover editor route guidance and fixture assumptions. |
@@ -50,12 +51,12 @@ actionable editor feedback.
 ## Implementation Pseudocode
 
 ```ts
-function resolvePostsFeedRouteState(settings: SiteRouteSettings, data: PostsFeedData) {
-  if (!settings.postsBasePath) return { mode: "missing_detail_route" };
+function resolvePostsFeedRouteState(resolved: PostsFeedData["resolved"], data: PostsFeedData) {
+  if (!resolved?.listPath?.trim()) return { mode: "missing_detail_route" };
   if (data.pagination?.mode === "view-all" && !data.pagination.viewAllHref) {
     return { mode: "missing_view_all_destination" };
   }
-  return { mode: "ready", basePath: settings.postsBasePath };
+  return { mode: "ready", basePath: resolved.listPath };
 }
 ```
 

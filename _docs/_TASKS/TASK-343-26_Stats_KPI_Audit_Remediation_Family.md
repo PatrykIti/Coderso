@@ -47,7 +47,7 @@ actions have no visible feedback.
 ## Implementation Pseudocode
 
 ```ts
-function resolveStatsKpiCardSurfaceState(variant: StatsKpiVariant) {
+function resolveStatsKpiCardSurfaceState(variant: StatsKpiVariantId) {
   return variant === "inline" ? { writable: false, reason: "inline_has_no_cards" } : { writable: true };
 }
 

@@ -19,7 +19,7 @@ accessible description or explicit `aria-describedby={undefined}` policy.
 
 ## Drift Evidence
 
-- `_docs/PLAYWRIGHT/28-05-2026/REPORT_HERO_WIDGET.md:179-220` (MediaPicker
+- `_docs/PLAYWRIGHT/28-05-2026/REPORT_HERO_WIDGET.md:218-240` (MediaPicker
   warning noted during Hero media picker coverage)
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_LOGO_CLOUD_WIDGET.md:222-282`
 - `_docs/PLAYWRIGHT/28-05-2026/REPORT_FOOTER_WIDGET.md:320-328`

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 998 | 2026-05-30 | TASK-343 Claude cross-check | QA/Widgets/Docs |
 | 997 | 2026-05-29 | TASK-343 code alignment audit | QA/Widgets/Docs |
 | 996 | 2026-05-29 | TASK-343 shared MediaPicker routing | QA/Widgets/Admin UI/Accessibility/Docs |
 | 995 | 2026-05-29 | TASK-343 report classification correction | QA/Widgets/Playwright/Docs |

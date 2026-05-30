@@ -58,7 +58,7 @@ type SharedBlockValue<T> =
   | { source: "inherited"; effective: T }
   | { source: "saved"; saved: T; effective: T };
 
-function resolveSharedBlockLayoutState(block: WidgetBlock, defaults: BlockLayoutDefaults) {
+function resolveSharedBlockLayoutState(block: WidgetBlock, defaults: WidgetLayoutDefaults) {
   return {
     padding: block.layout?.padding
       ? { source: "saved", saved: block.layout.padding, effective: block.layout.padding }
@@ -66,13 +66,13 @@ function resolveSharedBlockLayoutState(block: WidgetBlock, defaults: BlockLayout
   };
 }
 
-function isVisibleInPreviewDevice(visibility: BlockVisibility, device: PreviewDevice) {
+function isVisibleInPreviewDevice(visibility: WidgetVisibility, device: PreviewDevice) {
   if (visibility.enabled === false) return false;
   const shownDevices = visibility.devices ?? ["desktop", "tablet", "mobile"];
   return shownDevices.includes(device);
 }
 
-function resolvePublicVisibilityPolicy(visibility: BlockVisibility) {
+function resolvePublicVisibilityPolicy(visibility: WidgetVisibility) {
   if (visibility.enabled === false) return { render: false };
   if (visibility.devices?.length === 0) return { render: false };
   return { render: true, deviceSpecific: Boolean(visibility.devices) };

@@ -49,8 +49,8 @@ destructive actions use inconsistent confirmation patterns, and the public
 ## Implementation Pseudocode
 
 ```ts
-function describePlanCapacity(variant: PricingVariant, plans: PricingPlan[]) {
-  const capacity = pricingVariantCapacity[variant];
+function describePlanCapacity(variant: PricingPlansVariantId, plans: PricingPlanItem[]) {
+  const capacity = resolvePricingPlanCountForVariant(variant);
   return { capacity, rendered: Math.min(capacity, plans.length), missing: Math.max(0, capacity - plans.length) };
 }
 

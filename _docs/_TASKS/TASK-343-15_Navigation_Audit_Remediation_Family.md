@@ -57,7 +57,9 @@ function normalizeNavigationLogoImage(value: string | undefined, type: Navigatio
 }
 
 function normalizeNavigationItems(items: NavigationItemInput[]) {
-  return items.filter((item) => hasRenderableNavigationDestination(item));
+  return items
+    .map((item) => ({ ...item, label: toTrimmedString(item.label), href: normalizeNavigationHref(item.href) }))
+    .filter((item) => item.label && item.href);
 }
 ```
 
