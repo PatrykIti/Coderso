@@ -1010,10 +1010,8 @@ test("GridColumns visual editor keeps CSS variable colors visible with fallback 
     expect(queryInputByPlaceholder(surfaceSection, "var(--color-border)")).toBeUndefined();
     expect(backgroundSwatch.value).toBe("#f8fafc");
     expect(borderSwatch.value).toBe("#e2e8f0");
-    expect(normalizeText(surfaceSection.textContent)).toContain("saved custom color");
-    expect(normalizeText(surfaceSection.textContent)).toContain(
-      "pick a swatch to replace it, or clear the field"
-    );
+    expect(normalizeText(surfaceSection.textContent)).toContain("theme token");
+    expect(normalizeText(surfaceSection.textContent)).toContain("a theme token is saved");
   } finally {
     view.cleanup();
   }
@@ -1054,10 +1052,8 @@ test("GridColumns visual editor keeps CSS variable per-column overrides visible 
     expect(queryInputByPlaceholder(behaviorSection, "var(--color-border)")).toBeUndefined();
     expect(backgroundSwatch.value).toBe("#f8fafc");
     expect(borderSwatch.value).toBe("#e2e8f0");
-    expect(normalizeText(behaviorSection.textContent)).toContain("saved custom color");
-    expect(normalizeText(behaviorSection.textContent)).toContain(
-      "pick a swatch to replace it, or clear the field"
-    );
+    expect(normalizeText(behaviorSection.textContent)).toContain("theme token");
+    expect(normalizeText(behaviorSection.textContent)).toContain("a theme token is saved");
   } finally {
     view.cleanup();
   }

@@ -422,9 +422,9 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     for (const label of thicknessLabels) {
       expect(normalizeText((lineSection as ParentNode).textContent)).toContain(label);
     }
-    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("saved custom color");
+    expect(normalizeText((lineSection as ParentNode).textContent)).toContain("theme token");
     expect(normalizeText((lineSection as ParentNode).textContent)).toContain(
-      "pick a swatch to replace it"
+      "a theme token is saved"
     );
     setInputValue(findInputByAriaLabel(lineSection as ParentNode, "Line color swatch"), "#94a3b8");
     expect(latestValue.color).toBe("#94a3b8");
