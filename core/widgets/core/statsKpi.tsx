@@ -511,6 +511,58 @@ export const resolveStatsKpiVariant = (variant: string): StatsKpiVariantId => {
   return "cards";
 };
 
+export type StatsKpiCardSurfaceState =
+  | {
+      writable: true;
+      reason: "card_surfaces_render";
+    }
+  | {
+      writable: false;
+      reason: "inline_has_no_cards";
+    };
+
+export function resolveStatsKpiCardSurfaceState(
+  variant: StatsKpiVariantId
+): StatsKpiCardSurfaceState {
+  return variant === "inline"
+    ? { writable: false, reason: "inline_has_no_cards" }
+    : { writable: true, reason: "card_surfaces_render" };
+}
+
+export type StatsKpiDividerState = {
+  saved: boolean;
+  rendered: boolean;
+  writable: boolean;
+  intensity: StatsKpiDividerIntensity;
+  reason: "inline_enabled" | "inline_disabled" | "variant_has_no_dividers";
+};
+
+export function resolveStatsKpiDividerState(
+  variant: StatsKpiVariantId,
+  style: StatsKpiStyle | undefined
+): StatsKpiDividerState {
+  const saved = typeof style?.divider === "boolean" ? style.divider : true;
+  const intensity = resolveStatsKpiDividerIntensity(style?.dividerIntensity);
+
+  if (variant !== "inline") {
+    return {
+      saved,
+      rendered: false,
+      writable: false,
+      intensity,
+      reason: "variant_has_no_dividers",
+    };
+  }
+
+  return {
+    saved,
+    rendered: saved,
+    writable: true,
+    intensity,
+    reason: saved ? "inline_enabled" : "inline_disabled",
+  };
+}
+
 export const normalizeStatsKpiItemCount = (value: number) => {
   if (!Number.isFinite(value)) return statsKpiDefaults.items.length;
   return Math.min(statsKpiItemMax, Math.max(statsKpiItemMin, Math.floor(value)));
@@ -845,8 +897,9 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
   const labelColor = style.labelColor ?? "var(--color-text)";
   const descriptionColor = style.descriptionColor ?? "var(--color-text)";
   const valueSize = resolveStatsKpiValueSize(style.valueSize);
-  const divider = Boolean(style.divider);
-  const dividerIntensity = resolveStatsKpiDividerIntensity(style.dividerIntensity);
+  const dividerState = resolveStatsKpiDividerState(resolvedVariant, style);
+  const divider = dividerState.rendered;
+  const dividerIntensity = dividerState.intensity;
   const maxWidth = resolveStatsKpiMaxWidth(style.maxWidth);
   const padding = resolveStatsKpiPadding(style.padding);
   const minHeight = resolveStatsKpiMinHeight(style.minHeight);
@@ -897,7 +950,8 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
       data-stats-kpi-count={String(items.length)}
       data-stats-kpi-alignment={alignment}
       data-stats-kpi-spacing={spacing}
-      data-stats-kpi-divider={String(divider)}
+      data-stats-kpi-divider={String(dividerState.rendered)}
+      data-stats-kpi-divider-saved={String(dividerState.saved)}
       data-stats-kpi-divider-intensity={dividerIntensity}
       data-stats-kpi-value-size={valueSize}
       data-stats-kpi-max-width={maxWidth}

@@ -233,21 +233,28 @@ vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
   PostRichTextAdapter: ({
     value,
     onChange,
+    onUnsafeLinkAttempt,
     placeholder,
     ariaLabel,
   }: {
     value: string;
     onChange: (value: string) => void;
+    onUnsafeLinkAttempt?: (href: string) => void;
     placeholder?: string;
     ariaLabel?: string;
   }) => (
-    <textarea
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      aria-label={ariaLabel}
-      data-rich-text-adapter="true"
-    />
+    <div>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        data-rich-text-adapter="true"
+      />
+      <button type="button" onClick={() => onUnsafeLinkAttempt?.("javascript:alert(1)")}>
+        unsafe-link
+      </button>
+    </div>
   ),
 }));
 
@@ -383,6 +390,13 @@ const findTextareaByPlaceholder = (container: ParentNode, placeholder: string, i
   return textarea instanceof HTMLTextAreaElement ? textarea : undefined;
 };
 
+const findSelectByOptionValues = (container: ParentNode, values: string[]) =>
+  Array.from(container.querySelectorAll("select")).find((element) => {
+    if (!(element instanceof HTMLSelectElement)) return false;
+    const optionValues = Array.from(element.options).map((option) => option.value);
+    return values.every((value) => optionValues.includes(value));
+  });
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -397,7 +411,7 @@ test("RichTextSection wizard editor seeds layout while block previews stay read-
     body: {
       html: "<p>Existing HTML body</p>",
       blocks: [
-        { id: "block-1", heading: "Original", content: "Alpha" },
+        { id: "block-1", heading: "Original", contentHtml: "<p>Alpha from HTML</p>" },
         { id: "block-2", heading: "Second", content: "Beta" },
       ],
     },
@@ -447,12 +461,13 @@ test("RichTextSection wizard editor seeds layout while block previews stay read-
     expect(findInputByPlaceholder(view.container, "Heading 1")).toBeUndefined();
     expect(findTextareaByPlaceholder(view.container, "Paragraph 1")).toBeUndefined();
     expect(view.container.textContent).toContain("Original");
-    expect(view.container.textContent).toContain("Alpha");
+    expect(view.container.textContent).toContain("Alpha from HTML");
+    expect(view.container.textContent).not.toContain("No paragraph text yet");
 
     expect(latestValue.titleBlock).toBeUndefined();
     expect(latestValue.body?.blocks?.[0]).toMatchObject({
       heading: "Original",
-      content: "Alpha",
+      contentHtml: "<p>Alpha from HTML</p>",
     });
     expect(latestValue.options?.outputMode).toBe("html");
   } finally {
@@ -547,6 +562,9 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     expect(view.container.textContent).toContain(
       "Rich text body is the only rendered source for this preference."
     );
+    expect(view.container.textContent).toContain(
+      "Body HTML and structured blocks contain different text."
+    );
 
     clickByText(view.container, "Two Column");
     expect(latestVariant).toBe("two-column");
@@ -571,15 +589,26 @@ test("RichTextSection visual editor shows source ownership, sanitizes body edits
     expect(latestValue.titleBlock?.title).toBe("Deeper narrative");
     expect(latestValue.titleBlock?.headingLevel).toBe(1);
 
+    const bodySection = findSectionByTitle(view.container, "Body content");
+    clickByText(bodySection ?? view.container, "unsafe-link");
     setTextareaValue(
-      findTextareaByPlaceholder(view.container, "Write the primary story body here..."),
-      '<h1>Bad heading</h1><p>Updated body</p><img src="x">'
+      findTextareaByPlaceholder(
+        bodySection ?? view.container,
+        "Write the primary story body here..."
+      ),
+      '<h1>Bad heading</h1><p>Updated body</p><a href="#">Unsafe link</a><img src="x">'
     );
     expect(latestValue.body?.html).not.toContain("<h1");
     expect(latestValue.body?.html).not.toContain("<img");
+    expect(latestValue.body?.sanitizerDiagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "href_rewritten", attributeName: "href" }),
+        expect.objectContaining({ code: "tag_removed", tagName: "h1" }),
+        expect.objectContaining({ code: "tag_removed", tagName: "img" }),
+      ])
+    );
     expect(view.container.textContent).toContain("Sanitizer guidance");
 
-    const bodySection = findSectionByTitle(view.container, "Body content");
     const sourcePreferenceSelect = bodySection?.querySelector("select");
     setSelectValue(sourcePreferenceSelect, "blocks");
     expect(latestValue.options?.outputMode).toBe("blocks");
@@ -713,6 +742,12 @@ test("RichTextSection visual editor manages image, attachment, and embed blocks 
       url: "https://www.youtube.com/watch?v=abc123",
       title: "Release walkthrough",
     });
+    const aspectRatioSelect = findSelectByOptionValues(view.container, ["16:9", "4:3", "1:1"]);
+    expect(aspectRatioSelect).toBeInstanceOf(HTMLSelectElement);
+    expect((aspectRatioSelect as HTMLSelectElement).disabled).toBe(true);
+    expect(view.container.textContent).toContain(
+      "Current embeds render as link cards, so aspect ratio is kept as legacy metadata"
+    );
   } finally {
     view.cleanup();
   }
@@ -809,6 +844,7 @@ test("RichTextSection advanced editor keeps source diagnostics read-only with tr
     body: {
       html: "<p>Existing body</p>",
       blocks: [{ id: "block-1", kind: "text", heading: "Intro", contentHtml: "<p>Alpha</p>" }],
+      sanitizerDiagnostics: [{ code: "href_rewritten", tagName: "a", attributeName: "href" }],
     },
     options: {
       outputMode: "blocks-fallback",
@@ -874,6 +910,11 @@ test("RichTextSection advanced editor keeps source diagnostics read-only with tr
     expect(outputSection?.textContent).toContain("Reason:");
     expect(outputSection?.textContent).toContain("blocks-fallback");
     expect(outputSection?.textContent).toContain("Rich content, output preference");
+    expect(outputSection?.textContent).toContain(
+      "Body HTML and structured blocks contain different text."
+    );
+    expect(view.container.textContent).toContain("Unsafe link URLs are rewritten");
+    expect(view.container.textContent).toContain("Latest editor events: 1");
     expect(view.container.textContent).toContain("Wizard owns");
     expect(view.container.textContent).toContain("Visual owns");
     expect(view.container.textContent).toContain("Advanced owns");

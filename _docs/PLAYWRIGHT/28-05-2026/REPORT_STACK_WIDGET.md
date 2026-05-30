@@ -243,6 +243,12 @@ produkcja nie odtworzy. (Gap `lg:gap-*` i `md:gap-6` są zepsute w **obu** build
 > Naprawą B1–B3 byłoby użycie **statycznych, pełnych literałów klas** w mapach (per breakpoint)
 > albo **safelista** tych klas w konfiguracji Tailwind.
 
+**Status TASK-343-09:** B1–B3 są naprawione w kodzie. `core/widgets/core/stack.tsx` nie buduje już
+responsywnych klas przez runtime prefix composition; `direction`, `gap`, `align`, `justify` i
+`wrap` mają jawne mapy literałów dla mobile, `md:` i `lg:`. Test
+`tests/vitest/widgets/stack.test.tsx` iteruje wszystkie tokeny każdej rodziny i potwierdza emisję
+klas bazowych, tabletowych oraz desktopowych, w tym domyślne `gap-4`, `md:gap-6`, `lg:gap-6`.
+
 ---
 
 ## 5. CZEGO NIE DAŁO SIĘ PRZETESTOWAĆ (jawne luki + przyczyny)
@@ -288,9 +294,10 @@ produkcja nie odtworzy. (Gap `lg:gap-*` i `md:gap-6` są zepsute w **obu** build
    podsumowania aktualnego wariantu/kierunków. „Live preview" obok kompensuje to częściowo.
 4. **Niespójność tytułu Advanced: kontrakt vs UI.** `stackEditorContract` deklaruje sekcję
    „Runtime summary", a render pokazuje „Runtime stack summary". Kosmetyczny rozjazd metadanych.
-5. **Advanced opisuje DANE, nie realny render.** „Runtime stack summary" raportuje np.
-   „Extra spacious spacing" dla desktopu, mimo że wizualnie desktop i tak dostaje gap mobilny
-   (B1). Podsumowanie jest więc „optymistyczne" — sugeruje efekt, którego front nie pokazuje.
+5. **Advanced opisuje DANE, nie computed CSS.** Historycznie „Runtime stack summary" było
+   optymistyczne, bo brakujące klasy CSS sprawiały, że front nie odtwarzał części danych (B1).
+   TASK-343-09 usuwa ten brak klas; Advanced nadal pozostaje podsumowaniem zapisanych danych,
+   nie runtime CSS probe.
 6. **Token `0` ukryty w selekcie odstępu** (`gapOptions` filtruje `0` jako duplikat `none`) →
    w UI 10 z 11 tokenów; celowa deduplikacja.
 7. **Switch wrap ma czytelny, dwustanowy opis** („Items stay on one line." / „Items can wrap.")
@@ -332,11 +339,10 @@ produkcja nie odtworzy. (Gap `lg:gap-*` i `md:gap-6` są zepsute w **obu** build
 | `lg:flex-wrap` | ❌ | ❌ | ✅ (oba zepsute) |
 | Konsola | 0 błędów / 0 ostrzeżeń | 0 błędów / 0 ostrzeżeń | ✅ |
 
-**Wniosek:** Edytor (warstwa danych) i renderer atrybutów są w pełni spójne admin↔front
-(78/78 opcji). Rozjazd pojawia się **wyłącznie w warstwie CSS Tailwind** — część klas
-responsywnych istnieje w buildzie admina (Vite JIT), a nie w produkcyjnym (`md:gap-8`,
-`lg:flex-col`, `md:items-end`), a klasy gapów per-breakpoint (`lg:gap-*`, `md:gap-6`) nie
-istnieją nigdzie. To czyni podgląd admina miejscami **niewiarygodnym** względem produkcji.
+**Wniosek historyczny:** Edytor (warstwa danych) i renderer atrybutów były spójne admin↔front
+(78/78 opcji), a rozjazd pojawiał się w warstwie CSS Tailwind. **TASK-343-09 zamyka tę klasę
+defektów** przez jawne literały klas w rendererze, więc publiczny build ma widzieć ten sam zestaw
+responsywnych utility classes co admin.
 
 ---
 
@@ -345,24 +351,18 @@ istnieją nigdzie. To czyni podgląd admina miejscami **niewiarygodnym** względ
 | Tryb | Charakter | Wynik audytu |
 |---|---|---|
 | **Wizard** | Read-only setup + przejście do Visual | ✅ Działa zgodnie z projektem (0 pól edycji — celowo) |
-| **Visual** | Główny edytor (4 sekcje) | ⚠️ **Wszystkie 78 opcji** działają w warstwie danych (zapis, atrybuty, podgląd, trwałość), ale duża część ustawień per-breakpoint **nie ma efektu wizualnego** na tablet/desktop (B1/B2) |
-| **Advanced** | 2 sekcje diagnostyczne read-only | ✅ 0 kontrolek; podsumowania wiernie odzwierciedlają **dane** (ale nie realny render — B1) |
-| **Front** | `/test-stack-0516` (opublikowany, 2 dzieci) | ✅ HTTP 200, 0 błędów konsoli, responsywny kierunek (col↔row) i brak overflow; ⚠️ gap zablokowany na 16px (mobile) na każdym breakpoincie (B1) |
+| **Visual** | Główny edytor (4 sekcje) | ✅ **Wszystkie 78 opcji** działają w warstwie danych; TASK-343-09 usuwa brakujące publiczne utility classes przez literalne mapy responsive |
+| **Advanced** | 2 sekcje diagnostyczne read-only | ✅ 0 kontrolek; podsumowania wiernie odzwierciedlają **dane**; TASK-343-09 usuwa znany brak klas stojący za historycznym B1 |
+| **Front** | `/test-stack-0516` (opublikowany, 2 dzieci) | ✅ HTTP 200, 0 błędów konsoli, responsywny kierunek (col↔row) i brak overflow; TASK-343-09 zapewnia obecność responsive gap/axis/wrap klas w publicznym buildzie |
 
 **Werdykt końcowy:** Logika edytora i normalizacji Stacka jest **sprawna i w pełni spójna** —
 warianty seedują kierunki (i tylko kierunki), **każda dyskretna opcja każdej kontrolki Visual
 (78/78)** poprawnie zapisuje stan i natychmiast aktualizuje podgląd (atrybuty/klasy), zmiany
 przeżywają „Save draft → reload", a Wizard i Advanced realizują deklarowany kontrakt
 (setup-only / read-only). Front renderuje się bez błędów i bez poziomego overflow.
-**Realny, powtarzalny defekt leży w warstwie CSS:** responsywne klasy Tailwind budowane
-dynamicznie (`${prefix}${className}`) w większości nie trafiają do serwowanego arkusza.
-Najdotkliwiej dotyka to **odstępu — żaden `lg:gap-*` ani domyślny `md:gap-6` nie działa
-wizualnie (B1), włącznie z wartościami domyślnymi (16px zamiast 24px na desktop/tablet)** —
-oraz w mniejszym stopniu kierunku/align/justify/wrap na nie-mobilnych breakpointach (B2),
-z dodatkowym **rozjazdem admin↔front** na `md:gap-8`, `lg:flex-col`, `md:items-end` (B3).
-Skutek dla użytkownika: kontrolki sugerują kontrolę, której realnie nie ma na tablet/desktop, a
-podgląd admina bywa myląco optymistyczny. Obszary niezweryfikowane i ich przyczyny wymieniono
-jawnie w sekcji 5.
+**Status naprawy:** TASK-343-09 usuwa realny defekt CSS przez literalne mapy klas i regresję
+pokrywającą wszystkie tokeny direction/gap/align/justify/wrap na mobile/tablet/desktop. Obszary
+niezweryfikowane i ich przyczyny z audytu historycznego pozostają jawnie wymienione w sekcji 5.
 
 ---
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Stack + Runtime + Tailwind Contract + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -23,11 +23,11 @@ admin preview.
 
 ## Sub-Tasks
 
-- [ ] Replace dynamic breakpoint class composition with literal class maps or
+- [x] Replace dynamic breakpoint class composition with literal class maps or
   an equally deterministic build-time-safe contract.
-- [ ] Remove the remaining admin-vs-public class drift caused by missing public
+- [x] Remove the remaining admin-vs-public class drift caused by missing public
   utilities.
-- [ ] Add renderer regression coverage for gap, direction, align, justify, and
+- [x] Add renderer regression coverage for gap, direction, align, justify, and
   wrap across breakpoints.
 
 ## Files To Change
@@ -86,3 +86,24 @@ No API routes are added. This is a deterministic CSS-class generation fix only.
 
 - Tablet/desktop Stack controls render the same on admin and public.
 - No Stack responsive utility depends on runtime-composed Tailwind literals.
+
+## Completion Notes (2026-05-30)
+
+- Stack responsive direction, gap, align, justify, and wrap maps now use
+  explicit mobile/tablet/desktop class literals instead of runtime prefix
+  composition.
+- Renderer coverage now iterates every Stack direction, gap, align, justify,
+  and wrap token and asserts the mobile, `md:`, and `lg:` classes emitted for
+  each token.
+- Default output now includes `gap-4`, `md:gap-6`, and `lg:gap-6`, preventing
+  tablet/desktop spacing from collapsing to the mobile gap because of missing
+  public CSS utilities.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/stack.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-09
+  drift review: no blockers)

@@ -212,21 +212,20 @@ export const stackDefaults: StackData = {
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const prefixClassMap = <T extends string>(
-  classMap: Record<T, string>,
-  prefix: string
-): Record<T, string> =>
-  Object.fromEntries(
-    Object.entries(classMap).map(([token, className]) => [token, `${prefix}${className}`])
-  ) as Record<T, string>;
-
 const directionClassMap: Record<StackDirection, string> = {
   row: "flex-row",
   column: "flex-col",
 };
 
-const tabletDirectionClassMap = prefixClassMap(directionClassMap, "md:");
-const desktopDirectionClassMap = prefixClassMap(directionClassMap, "lg:");
+const tabletDirectionClassMap: Record<StackDirection, string> = {
+  row: "md:flex-row",
+  column: "md:flex-col",
+};
+
+const desktopDirectionClassMap: Record<StackDirection, string> = {
+  row: "lg:flex-row",
+  column: "lg:flex-col",
+};
 
 const gapClassMap: Record<StackGap, string> = {
   none: "gap-0",
@@ -242,8 +241,33 @@ const gapClassMap: Record<StackGap, string> = {
   "12": "gap-12",
 };
 
-const tabletGapClassMap = prefixClassMap(gapClassMap, "md:");
-const desktopGapClassMap = prefixClassMap(gapClassMap, "lg:");
+const tabletGapClassMap: Record<StackGap, string> = {
+  none: "md:gap-0",
+  "0": "md:gap-0",
+  "1": "md:gap-1",
+  "2": "md:gap-2",
+  "3": "md:gap-3",
+  "4": "md:gap-4",
+  "5": "md:gap-5",
+  "6": "md:gap-6",
+  "8": "md:gap-8",
+  "10": "md:gap-10",
+  "12": "md:gap-12",
+};
+
+const desktopGapClassMap: Record<StackGap, string> = {
+  none: "lg:gap-0",
+  "0": "lg:gap-0",
+  "1": "lg:gap-1",
+  "2": "lg:gap-2",
+  "3": "lg:gap-3",
+  "4": "lg:gap-4",
+  "5": "lg:gap-5",
+  "6": "lg:gap-6",
+  "8": "lg:gap-8",
+  "10": "lg:gap-10",
+  "12": "lg:gap-12",
+};
 
 const alignClassMap: Record<StackAlign, string> = {
   start: "items-start",
@@ -253,8 +277,21 @@ const alignClassMap: Record<StackAlign, string> = {
   baseline: "items-baseline",
 };
 
-const tabletAlignClassMap = prefixClassMap(alignClassMap, "md:");
-const desktopAlignClassMap = prefixClassMap(alignClassMap, "lg:");
+const tabletAlignClassMap: Record<StackAlign, string> = {
+  start: "md:items-start",
+  center: "md:items-center",
+  end: "md:items-end",
+  stretch: "md:items-stretch",
+  baseline: "md:items-baseline",
+};
+
+const desktopAlignClassMap: Record<StackAlign, string> = {
+  start: "lg:items-start",
+  center: "lg:items-center",
+  end: "lg:items-end",
+  stretch: "lg:items-stretch",
+  baseline: "lg:items-baseline",
+};
 
 const justifyClassMap: Record<StackJustify, string> = {
   start: "justify-start",
@@ -265,16 +302,38 @@ const justifyClassMap: Record<StackJustify, string> = {
   evenly: "justify-evenly",
 };
 
-const tabletJustifyClassMap = prefixClassMap(justifyClassMap, "md:");
-const desktopJustifyClassMap = prefixClassMap(justifyClassMap, "lg:");
+const tabletJustifyClassMap: Record<StackJustify, string> = {
+  start: "md:justify-start",
+  center: "md:justify-center",
+  end: "md:justify-end",
+  between: "md:justify-between",
+  around: "md:justify-around",
+  evenly: "md:justify-evenly",
+};
+
+const desktopJustifyClassMap: Record<StackJustify, string> = {
+  start: "lg:justify-start",
+  center: "lg:justify-center",
+  end: "lg:justify-end",
+  between: "lg:justify-between",
+  around: "lg:justify-around",
+  evenly: "lg:justify-evenly",
+};
 
 const wrapClassMap = {
   false: "flex-nowrap",
   true: "flex-wrap",
 } as const;
 
-const tabletWrapClassMap = prefixClassMap(wrapClassMap, "md:");
-const desktopWrapClassMap = prefixClassMap(wrapClassMap, "lg:");
+const tabletWrapClassMap: Record<keyof typeof wrapClassMap, string> = {
+  false: "md:flex-nowrap",
+  true: "md:flex-wrap",
+};
+
+const desktopWrapClassMap: Record<keyof typeof wrapClassMap, string> = {
+  false: "lg:flex-nowrap",
+  true: "lg:flex-wrap",
+};
 
 const isStackDirection = (candidate: unknown): candidate is StackDirection =>
   candidate === "row" || candidate === "column";

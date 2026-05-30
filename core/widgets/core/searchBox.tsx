@@ -7,6 +7,7 @@ import {
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type SearchBoxVariantId = "default";
 
@@ -204,6 +205,8 @@ const resolveSearchBoxMode = (value: SearchBoxData["mode"]): SearchBoxMode => {
 const resolveDisplayMode = (value: SearchBoxData["displayMode"]): SearchBoxDisplayMode =>
   value === "compact" ? "compact" : "full";
 
+const ignorePreviewSourceCheckboxChange = () => undefined;
+
 const resolveTargetRoute = (value: string | undefined) => {
   const trimmed = resolveOptionalText(value);
   if (!trimmed) return "/search";
@@ -305,8 +308,17 @@ export function SearchBoxBlock({
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/80" : "";
   const legacyActionClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
   const maxWidthClass = compact ? "max-w-3xl" : "max-w-5xl";
+  const listingMaxWidthClass = compact ? "max-w-3xl" : "max-w-4xl";
   const shellGapClass = compact ? "space-y-2" : "space-y-4";
   const formGapClass = compact ? "flex-nowrap" : "flex-wrap";
+  const rootInstanceId = createWidgetInstanceId(
+    "search-box",
+    blockId,
+    `${mode}-${resolveOptionalText(normalized.listingQueryId) ?? "search"}`
+  );
+  const titleId = scopedId(rootInstanceId, "title");
+  const inputId = scopedId(rootInstanceId, "query");
+  const inputLabel = `${title} query`;
 
   if (mode === "listing") {
     const listingQueryId = resolveOptionalText(normalized.listingQueryId);
@@ -314,11 +326,15 @@ export function SearchBoxBlock({
       return (
         <section
           className="mx-auto w-full max-w-4xl rounded-xl border border-dashed border-[var(--color-border)] px-4 py-6"
+          aria-labelledby={titleId}
           data-listing-widget="search-box"
           data-search-box-display-mode={normalized.displayMode ?? "full"}
           data-listing-block-id={blockId ?? ""}
           data-listing-query-id=""
         >
+          <h3 id={titleId} className="sr-only">
+            {title}
+          </h3>
           <p className="text-sm text-[var(--color-text)]/75">
             Select a listing query in widget settings to enable scoped listing search.
           </p>
@@ -328,7 +344,8 @@ export function SearchBoxBlock({
 
     return (
       <section
-        className={`mx-auto w-full max-w-4xl px-4 py-5`}
+        className={`mx-auto w-full ${listingMaxWidthClass} px-4 py-5`}
+        aria-labelledby={titleId}
         data-listing-widget="search-box"
         data-search-box-display-mode={normalized.displayMode ?? "full"}
         data-listing-block-id={blockId ?? ""}
@@ -338,22 +355,29 @@ export function SearchBoxBlock({
           <form
             method="get"
             action=""
-            className="grid gap-3"
+            className={`grid gap-3 ${shellGapClass}`}
             data-listing-runtime-form
             data-listing-query-id={listingQueryId}
             data-listing-auto-apply={autoApply ? "1" : "0"}
           >
             <div className="space-y-1">
-              <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+              <h3
+                id={titleId}
+                className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75"
+              >
                 {title}
-              </p>
-              {description ? (
+              </h3>
+              {!compact && description ? (
                 <p className="text-sm text-[var(--color-text)]/70">{description}</p>
               ) : null}
             </div>
 
             <div className={`flex items-center gap-2 ${formGapClass}`}>
+              <label className="sr-only" htmlFor={inputId}>
+                {inputLabel}
+              </label>
               <input
+                id={inputId}
                 className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
                 name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
                 data-listing-token={listingRuntimeTokens.search}
@@ -397,6 +421,7 @@ export function SearchBoxBlock({
     return (
       <section
         className={`mx-auto w-full ${maxWidthClass} px-4 py-5`}
+        aria-labelledby={titleId}
         data-listing-widget="search-box"
         data-search-box-display-mode={normalized.displayMode ?? "full"}
         data-search-box-mode="route-submit"
@@ -410,15 +435,22 @@ export function SearchBoxBlock({
             className={`grid gap-3 ${shellGapClass}`}
           >
             <div className="space-y-1">
-              <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+              <h3
+                id={titleId}
+                className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75"
+              >
                 {title}
-              </p>
+              </h3>
               {!compact && description ? (
                 <p className="text-sm text-[var(--color-text)]/70">{description}</p>
               ) : null}
             </div>
             <div className={`flex items-center gap-2 ${formGapClass}`}>
+              <label className="sr-only" htmlFor={inputId}>
+                {inputLabel}
+              </label>
               <input
+                id={inputId}
                 className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
                 name={resolveText(normalized.queryParam, "q")}
                 defaultValue={queryValue}
@@ -448,6 +480,7 @@ export function SearchBoxBlock({
   return (
     <section
       className={`mx-auto w-full ${maxWidthClass} px-4 py-6`}
+      aria-labelledby={titleId}
       data-listing-widget="search-box"
       data-search-box-display-mode={normalized.displayMode ?? "full"}
       data-listing-block-id={blockId ?? ""}
@@ -466,16 +499,23 @@ export function SearchBoxBlock({
           data-search-endpoint={resolveText(normalized.endpoint, "/api/search")}
         >
           <div className="space-y-1">
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+            <h3
+              id={titleId}
+              className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75"
+            >
               {title}
-            </p>
-            {description ? (
+            </h3>
+            {!compact && description ? (
               <p className="text-sm text-[var(--color-text)]/70">{description}</p>
             ) : null}
           </div>
 
           <div className={`flex items-center gap-2 ${formGapClass}`}>
+            <label className="sr-only" htmlFor={inputId}>
+              {inputLabel}
+            </label>
             <input
+              id={inputId}
               className="h-9 min-w-0 flex-1 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
               name="q"
               defaultValue={queryValue}
@@ -497,7 +537,8 @@ export function SearchBoxBlock({
                   type="checkbox"
                   name="sources"
                   value={source.key}
-                  defaultChecked={Boolean(enabledSources[source.key])}
+                  checked={Boolean(enabledSources[source.key])}
+                  onChange={ignorePreviewSourceCheckboxChange}
                 />
                 <span>{source.label}</span>
               </label>

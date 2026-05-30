@@ -14,15 +14,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
 import {
+  describeGalleryMosaicCountReduction,
   galleryMosaicItemMax,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItems,
+  resolveGalleryMosaicItemRemovalLabel,
   resolveGalleryMosaicVariant,
+  summarizeGalleryMosaicCountReduction,
   type GalleryMosaicCaptionPosition,
+  type GalleryMosaicCountReductionSummary,
   type GalleryMosaicData,
   type GalleryMosaicGap,
   type GalleryMosaicInteractionMode,
@@ -151,6 +156,10 @@ type GalleryItemPreviewState = {
   mediaType: GalleryMosaicResolvedMediaType;
   src?: string;
   label: string;
+};
+type PendingGalleryMosaicCountReduction = {
+  nextCount: number;
+  summary: GalleryMosaicCountReductionSummary;
 };
 
 const resolvePickerColor = (value: string | undefined, fallback: string) => {
@@ -496,7 +505,7 @@ function describeGalleryInteractionSummary(value: GalleryMosaicData, items: Gall
   return linkedItems > 0
     ? `Lightbox on unlinked items; ${linkedItems} linked item${
         linkedItems === 1 ? "" : "s"
-      } keep navigation`
+      } ${linkedItems === 1 ? "keeps" : "keep"} navigation`
     : `Lightbox, ${normalized.interaction?.zoom ?? "fit"} zoom`;
 }
 
@@ -548,6 +557,18 @@ function setItemCount(
   }));
 }
 
+function resolvePendingCountReduction(
+  items: GalleryMosaicItem[],
+  nextCount: number
+): PendingGalleryMosaicCountReduction | null {
+  const summary = summarizeGalleryMosaicCountReduction(items, nextCount);
+  if (!summary?.hasAuthoredData) return null;
+  return {
+    nextCount: summary.nextCount,
+    summary,
+  };
+}
+
 function addItem(value: GalleryMosaicData, onChange: (next: GalleryMosaicData) => void) {
   updateValue(value, onChange, (current) => {
     const items = normalizeGalleryMosaicItems(current.items);
@@ -584,7 +605,12 @@ function removeItem(
       ) ||
       typeof window === "undefined" ||
       typeof window.confirm !== "function" ||
-      window.confirm(`Remove item ${index + 1}? This action cannot be undone.`);
+      window.confirm(
+        `Remove ${resolveGalleryMosaicItemRemovalLabel(
+          removedItem,
+          index
+        )}? This removes the saved media, caption, poster, and destination for this item. This cannot be undone.`
+      );
 
     if (!shouldConfirm) {
       return current;
@@ -672,8 +698,22 @@ export function GalleryMosaicWizardEditor({
 }: WidgetEditorProps<GalleryMosaicData>) {
   const normalized = normalizeValue(value);
   const items = normalizeGalleryMosaicItems(normalized.items);
+  const [pendingCountReduction, setPendingCountReduction] =
+    useState<PendingGalleryMosaicCountReduction | null>(null);
   const configuredMediaCount = items.filter((item) => Boolean(item.image || item.video)).length;
   const resolvedVariant = resolveGalleryMosaicVariant(variant);
+  const handleCountChange = (next: string) => {
+    const nextCount = Number(next);
+    if (!Number.isFinite(nextCount)) return;
+
+    const pendingReduction = resolvePendingCountReduction(items, nextCount);
+    if (pendingReduction) {
+      setPendingCountReduction(pendingReduction);
+      return;
+    }
+
+    setItemCount(value, onChange, nextCount);
+  };
 
   return (
     <WidgetEditorSection
@@ -699,10 +739,7 @@ export function GalleryMosaicWizardEditor({
           path="items.count"
         >
           {(fieldProps) => (
-            <Select
-              value={String(items.length)}
-              onValueChange={(next) => setItemCount(value, onChange, Number(next))}
-            >
+            <Select value={String(items.length)} onValueChange={handleCountChange}>
               <SelectTrigger
                 id={fieldProps.id}
                 aria-labelledby={fieldProps["aria-labelledby"]}
@@ -731,6 +768,26 @@ export function GalleryMosaicWizardEditor({
           After Wizard, use Visual for section title, media selection, captions, destinations, alt
           text, posters, lightbox, overlay, density, and motion controls.
         </p>
+        <ConfirmActionDialog
+          open={pendingCountReduction !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingCountReduction(null);
+          }}
+          title="Reduce gallery items"
+          description={
+            pendingCountReduction
+              ? describeGalleryMosaicCountReduction(pendingCountReduction.summary)
+              : "Reducing the gallery removes saved items from the widget data."
+          }
+          confirmLabel="Reduce items"
+          onConfirm={() => {
+            if (!pendingCountReduction) return;
+            setItemCount(value, onChange, pendingCountReduction.nextCount);
+            setPendingCountReduction(null);
+          }}
+        >
+          Cancel keeps the current media, captions, alt text, posters, and destinations intact.
+        </ConfirmActionDialog>
       </div>
     </WidgetEditorSection>
   );
@@ -752,6 +809,8 @@ export function GalleryMosaicVisualEditor({
     Record<string, string>
   >({});
   const [itemMediaPickerErrors, setItemMediaPickerErrors] = useState<Record<string, string>>({});
+  const [pendingCountReduction, setPendingCountReduction] =
+    useState<PendingGalleryMosaicCountReduction | null>(null);
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
@@ -948,26 +1007,9 @@ export function GalleryMosaicVisualEditor({
     const nextCount = Number(next);
     if (!Number.isFinite(nextCount)) return;
 
-    if (nextCount >= items.length) {
-      setItemCount(value, onChange, nextCount);
-      return;
-    }
-
-    const removedItems = items.slice(nextCount);
-    const shouldConfirm =
-      !removedItems.some(
-        (item) =>
-          item.image?.trim() || item.video?.trim() || item.caption?.trim() || item.href?.trim()
-      ) ||
-      typeof window === "undefined" ||
-      typeof window.confirm !== "function" ||
-      window.confirm(
-        `Reducing the item count will remove the last ${removedItems.length} gallery item${
-          removedItems.length === 1 ? "" : "s"
-        }. Continue?`
-      );
-
-    if (!shouldConfirm) {
+    const pendingReduction = resolvePendingCountReduction(items, nextCount);
+    if (pendingReduction) {
+      setPendingCountReduction(pendingReduction);
       return;
     }
 
@@ -1415,11 +1457,39 @@ export function GalleryMosaicVisualEditor({
 
         {linkedLightboxItems > 0 ? (
           <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            {linkedLightboxItems} linked item{linkedLightboxItems === 1 ? "" : "s"} still use
-            navigation. Clear each destination to open that tile in the lightbox instead.
+            {linkedLightboxItems} linked item{linkedLightboxItems === 1 ? "" : "s"} still{" "}
+            {linkedLightboxItems === 1 ? "uses" : "use"} navigation. Clear each destination to open
+            that tile in the lightbox instead.
+          </p>
+        ) : null}
+        {interactionMode === "lightbox" ? (
+          <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+            Admin preview shows lightbox markup as static. Published pages bind the lightbox script;
+            linked tiles keep navigation until their destination is cleared.
           </p>
         ) : null}
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingCountReduction !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingCountReduction(null);
+        }}
+        title="Reduce gallery items"
+        description={
+          pendingCountReduction
+            ? describeGalleryMosaicCountReduction(pendingCountReduction.summary)
+            : "Reducing the gallery removes saved items from the widget data."
+        }
+        confirmLabel="Reduce items"
+        onConfirm={() => {
+          if (!pendingCountReduction) return;
+          setItemCount(value, onChange, pendingCountReduction.nextCount);
+          setPendingCountReduction(null);
+        }}
+      >
+        Cancel keeps the current media, captions, alt text, posters, and destinations intact.
+      </ConfirmActionDialog>
 
       <EditorSection
         id="gallery-mosaic.visual.overlay-caption-controls"

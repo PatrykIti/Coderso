@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 41 tasks
-- **In Progress:** 5 tasks
-- **Done:** 1971 tasks
+- **To Do:** 10 tasks
+- **In Progress:** 4 tasks
+- **Done:** 2003 tasks
 
 ---
 
@@ -38,37 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-343-31 | Shared MediaPicker Dialog Accessibility Audit Remediation Family | Medium | Medium | Fix repeated shared MediaPicker/Radix Dialog description warnings from the 28-05-2026 widget audit reports. |
-| TASK-343-30 | Shared Widget Color State Truthfulness Audit Remediation Family | High | Large | Fix repeated false saved-custom/default/fallback/Clear color-state drift across the 28-05-2026 live audit reports. |
-| TASK-343-29 | Entry Teaser Audit Remediation Family | Medium | Medium | Add section accessible naming, CTA non-link guidance, and contextual Clear labels from the 28-05-2026 live audit. |
-| TASK-343-28 | Split Layout Audit Remediation Family | Medium | Medium | Fix contradictory ratio disclosure and silent device-override reset from the 28-05-2026 live audit. |
-| TASK-343-27 | Tabs Audit Remediation Family | High | Large | Fix dead trigger-overflow, Wizard/slot count drift, and destructive removal inconsistency from the 28-05-2026 live audit. |
-| TASK-343-26 | Stats KPI Audit Remediation Family | Medium | Medium | Fix inert inline card-surface controls, divider toggle truthfulness, and reset/normalize feedback from the 28-05-2026 live audit. |
-| TASK-343-25 | Pricing Plans Audit Remediation Family | Medium | Large | Fix nominal plan-count copy, Wizard-to-Visual pointer drift, destructive confirmations, and static billing-toggle truthfulness. |
-| TASK-343-24 | Logo Cloud Audit Remediation Family | High | Large | Fix silent logo-count truncation and saved-vs-effective Strip/Grid truthfulness from the 28-05-2026 live audit. |
-| TASK-343-23 | Gallery Mosaic Audit Remediation Family | High | Large | Fix admin lightbox preview binding, section naming, and destructive count reduction from the 28-05-2026 live audit. |
-| TASK-343-22 | CTA Banner Audit Remediation Family | Medium | Medium | Fix indistinguishable With Badge variant, missing CTA guidance, and repair-action feedback from the 28-05-2026 live audit. |
-| TASK-343-21 | Shared Block Layout and Device Visibility Audit Remediation Family | High | Large | Fix shared inherited-layout and public visibility truthfulness drift proven by Product Compare and related reports. |
-| TASK-343-20 | Search Box Audit Remediation Family | High | Large | Fix Search Box public a11y, source-toggle state, compact-mode truthfulness, and color-state integration drift. |
-| TASK-343-19 | Posts Feed Audit Remediation Family | High | Large | Fix Posts Feed audit fixture/public route drift plus missing route and View all truthfulness. |
-| TASK-343-18 | Listing Filters Audit Remediation Family | High | Large | Fix missing facet-option authoring, empty-facet guidance, and public a11y gaps from the 28-05-2026 live audit. |
-| TASK-343-17 | Rich Text Section Audit Remediation Family | Medium | Large | Fix Wizard text-preview drift, TOC ownership, and sanitizer-diagnostic truthfulness from the 28-05-2026 live audit. |
-| TASK-343-16 | Product Gallery Audit Remediation Family | High | Large | Fix preview hydration/stale-source truthfulness and clarify missing route ownership in the 28-05-2026 live audit. |
-| TASK-343-15 | Navigation Audit Remediation Family | High | Large | Close runtime-summary, clear/reset, and silent-link-drop truthfulness drift from the 28-05-2026 live audit. |
-| TASK-343-14 | Form Embed Audit Remediation Family | High | Large | Close inert spacing, false color-override state, and public empty-state truthfulness drift from the 28-05-2026 live audit. |
-| TASK-343-13 | Timeline Audit Remediation Family | Medium | Medium | Unify duplicate mode controls so the select and cards no longer save divergent Timeline state. |
-| TASK-343-12 | Template Section Audit Remediation Family | High | Large | Fix placeholder-only preview and false-zero diagnostics in the Template Section editor. |
-| TASK-343-11 | Team Audit Remediation Family | High | Large | Fix social-platform handle corruption and silent Spotlight truncation from the 28-05-2026 live audit. |
-| TASK-343-10 | Toggle Block Audit Remediation Family | High | Medium | Restore active-trigger contrast and make accent contrast color effective again. |
-| TASK-343-09 | Stack Audit Remediation Family | High | Large | Replace dynamic responsive Tailwind classes with deterministic output so Stack renders consistently across breakpoints. |
-| TASK-343-08 | Compare Timeline Audit Remediation Family | High | Medium | Fix dead `Segment label size` renderer output. |
-| TASK-343-07 | Feature Grid Audit Remediation Family | High | Large | Fix blocked emoji hit targets and destructive silent card-count reduction. |
-| TASK-343-06 | Booking Calendar Audit Remediation Family | Medium | Medium | Close partial surface-clear drift and misleading Advanced booking-flow matching. |
-| TASK-343-05 | FAQ Accordion Audit Remediation Family | High | Medium | Add the missing spacing control and close admin-preview truthfulness drift. |
-| TASK-343-04 | Accordion Audit Remediation Family | High | Large | Fix misleading Wizard count ownership and admin-preview single-open drift. |
-| TASK-343-03 | Newsletter Audit Remediation Family | High | Large | Stop disconnected public Newsletter forms from native Enter-submit leakage. |
-| TASK-343-02 | Appointment Form Audit Remediation Family | High | Medium | Fix dead `No extra validation` phone-validation preset. |
-| TASK-343-01 | Hero Audit Remediation Family | High | Large | Fix Hero CTA persistence and background/overlay renderer defects rediscovered in the 28-05-2026 audit. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
@@ -85,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | In progress: all 38 deep-audit reports are classified; the 2026-05-29 reconciliation promotes 31 physical families, including 28 widget-local leaves and 3 shared-owner leaves. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -96,6 +64,38 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-343 | Widget Report-Driven Remediation After the 28-05-2026 Audit Wave | High | Very Large | Done (2026-05-30): all 31 promoted remediation families are closed with report/docs/changelog updates and final Appointment Form strict smoke passing. |
+| TASK-343-02 | Appointment Form Audit Remediation Family | High | Medium | Done (2026-05-30): preserved the `No extra validation` phone preset and omitted runtime phone validation attributes when disabled. |
+| TASK-343-04 | Accordion Audit Remediation Family | High | Large | Done (2026-05-30): retired Wizard count ownership, isolated admin preview single-open groups, and synchronized preview `aria-expanded`. |
+| TASK-343-05 | FAQ Accordion Audit Remediation Family | High | Medium | Done (2026-05-30): added Visual spacing ownership for `style.spacing` and removed stale static `aria-expanded` from admin-preview/SSR summaries. |
+| TASK-343-06 | Booking Calendar Audit Remediation Family | Medium | Medium | Done (2026-05-30): restored per-field Surface fallback for frame background/border and prevented Advanced booking-flow self-match diagnostics. |
+| TASK-343-08 | Compare Timeline Audit Remediation Family | High | Medium | Done (2026-05-30): removed the hard-coded segment badge `text-xs` fallback so `Segment label size` controls `none`, `xs`, `sm`, and `base` truthfully. |
+| TASK-343-11 | Team Audit Remediation Family | High | Large | Done (2026-05-30): preserved LinkedIn handles during platform switches, made Wizard Spotlight transitions non-destructive, corrected append copy, and moved member headings to `h3`. |
+| TASK-343-12 | Template Section Audit Remediation Family | High | Large | Done (2026-05-30): made admin placeholder-only preview explicit, replaced false-zero diagnostics with runtime-aware resolution states, and surfaced category/version ownership. |
+| TASK-343-13 | Timeline Audit Remediation Family | Medium | Medium | Done (2026-05-30): unified mode select/card updates, added explicit icon-marker fallback, inherited description-size, and effective 6XL width diagnostics with renderer/editor coverage. |
+| TASK-343-15 | Navigation Audit Remediation Family | High | Large | Done (2026-05-30): completed runtime diagnostics, preview/runtime boundary guidance, color default/reset truthfulness, cleared-link feedback, and safe image-logo clearing. |
+| TASK-343-16 | Product Gallery Audit Remediation Family | High | Large | Done (2026-05-30): added daily-mode preview hydration/stale refresh ownership, route/view-all truthfulness, public section naming, and legacy media-hint normalization. |
+| TASK-343-17 | Rich Text Section Audit Remediation Family | Medium | Large | Done (2026-05-30): fixed Wizard rich-text previews, explicit body-heading TOC scope, persisted sanitizer diagnostics, source-drift warnings, and inert embed ratio controls. |
+| TASK-343-20 | Search Box Audit Remediation Family | High | Large | Done (2026-05-30): added public section/input accessibility, live preview source checkbox state, compact listing semantics, and Search Box default color-state coverage. |
+| TASK-343-22 | CTA Banner Audit Remediation Family | Medium | Medium | Done (2026-05-30): made With Badge visually distinct, surfaced missing-destination CTA guidance in editor/runtime, and added Advanced repair feedback. |
+| TASK-343-23 | Gallery Mosaic Audit Remediation Family | High | Large | Done (2026-05-30): added admin lightbox preview truthfulness, public/admin section naming, guarded destructive count reductions in Wizard and Visual, link-warning grammar, and feature-left class cleanup. |
+| TASK-343-26 | Stats KPI Audit Remediation Family | Medium | Medium | Done (2026-05-30): inline card surfaces are visibly inactive, divider state distinguishes saved intent from effective output, reset restores the `cards` variant, and repair actions show feedback. |
+| TASK-343-25 | Pricing Plans Audit Remediation Family | Medium | Large | Done (2026-05-30): fixed nominal/rendered plan-count copy, Wizard-to-Visual pointer drift, destructive confirmations, static billing-cycle truthfulness, shared color-state labels, and highlighted badge visibility. |
+| TASK-343-24 | Logo Cloud Audit Remediation Family | High | Large | Done (2026-05-30): destructive logo-count reductions are confirmed, saved Strip controls are separated from effective Grid/Dense behavior, hover-color state is truthful when grayscale is off, and color summaries use shared token labels. |
+| TASK-343-27 | Tabs Audit Remediation Family | High | Large | Done (2026-05-30): legacy scroll overflow is explicitly normalized, Wizard count is read-only against Structure-owned panels, repeatable slot removal is confirmed, and all Tabs colors clear truthfully. |
+| TASK-343-28 | Split Layout Audit Remediation Family | Medium | Medium | Done (2026-05-30): ratio disclosure now separates explicit saved phone ratios from effective starter matches, desktop cards preserve device overrides, and selected cards follow the effective desktop split. |
+| TASK-343-29 | Entry Teaser Audit Remediation Family | Medium | Medium | Done (2026-05-30): added public section accessible naming, CTA non-link runtime/editor guidance, and contextual clear-label coverage. |
+| TASK-343-31 | Shared MediaPicker Dialog Accessibility Audit Remediation Family | Medium | Medium | Done (2026-05-30): shared MediaPicker now provides a Radix dialog description and warning-free regression coverage for widget media picker entry points. |
+| TASK-343-30 | Shared Widget Color State Truthfulness Audit Remediation Family | High | Large | Done (2026-05-30): shared color controls now distinguish theme tokens, default tokens, selected swatches, transparent values, cleared state, and saved custom values without false fallback/custom copy. |
+| TASK-343-21 | Shared Block Layout and Device Visibility Audit Remediation Family | High | Large | Done (2026-05-30): preserved inherited layout tokens through shared block controls, labelled effective page defaults truthfully, and aligned empty-device visibility with public SSR hiding. |
+| TASK-343-19 | Posts Feed Audit Remediation Family | High | Large | Done (2026-05-30): verified the current Posts Feed fixture route, made missing card/detail routes and View all destinations explicit, and added regression coverage for stale audit routing. |
+| TASK-343-18 | Listing Filters Audit Remediation Family | High | Large | Done (2026-05-30): made empty option-backed facets explain runtime/data ownership, added public section/form/search accessibility hooks, and replaced technical support-owned copy. |
+| TASK-343-14 | Form Embed Audit Remediation Family | High | Large | Done (2026-05-30): made spacing visibly control vertical padding, fixed color default/Clear truthfulness, clamped TTL lower bound, and replaced raw public error codes. |
+| TASK-343-10 | Toggle Block Audit Remediation Family | High | Medium | Done (2026-05-30): restored active-trigger contrast ownership, made editor preview static-state copy explicit, and covered contrast plus pane-class dedupe regressions. |
+| TASK-343-09 | Stack Audit Remediation Family | High | Large | Done (2026-05-30): replaced runtime-composed responsive Tailwind utilities with explicit class maps and added all-token renderer coverage for Stack breakpoints. |
+| TASK-343-07 | Feature Grid Audit Remediation Family | High | Large | Done (2026-05-30): fixed emoji preset hit targets, destructive count/variant truncation confirmation, and public section naming with Vitest plus constrained Playwright hit-target evidence. |
+| TASK-343-03 | Newsletter Audit Remediation Family | High | Large | Done (2026-05-30): disconnected Newsletter states now render a non-submitting disabled shell, while safe action-url and Forms runtime submissions remain intact. |
+| TASK-343-01 | Hero Audit Remediation Family | High | Large | Done (2026-05-30): fixed Hero single-CTA persistence, overlay hue preservation, and valid background-image overlay layering with focused Bun/Vitest coverage. |
 | TASK-342 | Widget Playwright Gap Closure After TASK-341 | High | Large | Done (2026-05-28): metadata-gap widgets were fixed in code, commerce public fixtures were repopulated through deterministic bootstrap, and the final 38-widget smoke rerun is fully green with `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`. |
 | TASK-342-04 | Report Docs Changelog and Closure | High | Medium | Done (2026-05-28): final smoke evidence is tracked, 27-05 Playwright reports now carry explicit supersession notes, and board/changelog/task docs are synchronized. |
 | TASK-342-03 | Commerce Populated Fixture Wave | High | Medium | Done (2026-05-28): the commerce trio was classified as fixture-data drift, the smoke harness now bootstraps deterministic products/collections, and public populated proof is restored for Product Gallery, Product Compare, and Product Table. |

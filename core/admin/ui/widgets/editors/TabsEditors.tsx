@@ -12,11 +12,10 @@ import {
 import { cn } from "@/lib/utils";
 
 import {
+  isLegacyTabsScrollOverflow,
   normalizeTabsData,
   normalizeTabsItems,
-  tabsDefaults,
-  tabsItemMax,
-  tabsItemMin,
+  tabsPanelSlot,
   type TabsData,
   type TabsMotion,
   type TabsOrientation,
@@ -103,10 +102,6 @@ function optionLabel(
   return options.find((option) => option.value === value)?.label ?? fallback;
 }
 
-const tabCountOptions = Array.from({ length: tabsItemMax - tabsItemMin + 1 }, (_, index) =>
-  String(tabsItemMin + index)
-);
-
 function resolveVariant(variant: string): TabsVariantId {
   if (variant === "underline" || variant === "minimal") return variant;
   return "pills";
@@ -124,40 +119,6 @@ function updateValue(
   const current = normalizeValue(value);
   const next = updater(current);
   onChange(normalizeValue(next));
-}
-
-function resolveRemovedTabs(value: TabsData, count: number) {
-  const currentItems = normalizeTabsItems(normalizeValue(value).items);
-  if (count >= currentItems.length) return [];
-  return currentItems.slice(count).map((item, index) => ({
-    id: item.id,
-    label: item.label || `Tab ${count + index + 1}`,
-  }));
-}
-
-function setCount(value: TabsData, onChange: (next: TabsData) => void, count: number) {
-  const removed = resolveRemovedTabs(value, count);
-  if (removed.length > 0 && typeof window !== "undefined" && typeof window.confirm === "function") {
-    const confirmed = window.confirm(
-      `Reduce tabs to ${count}? This removes these tab content areas: ${removed
-        .map((item) => item.label)
-        .join(", ")}. This cannot be undone.`
-    );
-    if (!confirmed) {
-      return;
-    }
-  }
-
-  const current = normalizeValue(value, count);
-  onChange(
-    normalizeValue(
-      {
-        ...current,
-        items: normalizeTabsItems(current.items, count),
-      },
-      count
-    )
-  );
 }
 
 function updateItem(
@@ -334,6 +295,13 @@ function TabsStructureSection({
   const defaultItemId =
     normalized.options?.defaultItemId ?? normalized.options?.activeId ?? items[0]?.id ?? "1";
   const isSetupMode = mode === "setup";
+  const structurePanelCount = context?.slotTargets?.filter(
+    (target) => target.definitionId === tabsPanelSlot.id && target.kind === "repeatable"
+  ).length;
+  const panelCountSummary =
+    typeof structurePanelCount === "number"
+      ? `${structurePanelCount} panels from Structure`
+      : "Structure panel slots decide rendered panels";
 
   return (
     <EditorSection
@@ -343,38 +311,28 @@ function TabsStructureSection({
       title={isSetupMode ? "Starter tabs" : "Tab content"}
       description={
         isSetupMode
-          ? "Set the initial tab count before daily visual editing."
+          ? "Review starter labels while Structure owns rendered tab panels."
           : "Edit tab labels, content intro copy, tab notes, icons, and unavailable states."
       }
     >
       {isSetupMode ? (
         <div className="space-y-2">
-          <WidgetControlRow id="tabs.wizard.item-count" label="Number of tabs" path="items.count">
-            {(fieldProps) => (
-              <Select
-                value={String(items.length)}
-                onValueChange={(next) => setCount(value, onChange, Number(next))}
-              >
-                <SelectTrigger
-                  id={fieldProps.id}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                >
-                  <SelectValue placeholder="Select count" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tabCountOptions.map((option) => (
-                    <SelectItem key={`tab-count-${option}`} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </WidgetControlRow>
+          <ReadonlyWidgetSummaryRow
+            id="tabs.wizard.rendered-panel-count"
+            label="Rendered panels"
+            path="slots.panel.count"
+            value={panelCountSummary}
+            help="Use Visual Structure to add, remove, or reorder rendered tab panels."
+          />
+          <ReadonlyWidgetSummaryRow
+            id="tabs.wizard.starter-label-count"
+            label="Starter tab labels"
+            path="items.count"
+            value={`${items.length} saved starter labels`}
+          />
           <p className="text-xs text-muted-foreground">
-            Each tab owns a matching content area. Reducing the count confirms which tab content
-            areas will be removed.
+            Structure owns rendered tab panels. Wizard only summarizes starter labels, so count
+            changes happen in Visual Structure.
           </p>
           <p className="text-xs text-muted-foreground">
             Visual owns the default tab choice together with daily label and content editing.
@@ -905,9 +863,10 @@ function TabsColorsSection({
           {() => (
             <SharedColorControl
               label="Border color"
-              value={normalized.style?.borderColor ?? tabsDefaults.style?.borderColor}
+              value={normalized.style?.borderColor}
               onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
               onSwatchChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+              onClear={() => clearStyleField(value, onChange, "borderColor")}
               pickerFallback="#cbd5e1"
               showValueInput={false}
             />
@@ -942,9 +901,10 @@ function TabsColorsSection({
           {() => (
             <SharedColorControl
               label="Active text color"
-              value={normalized.style?.activeTextColor ?? tabsDefaults.style?.activeTextColor}
+              value={normalized.style?.activeTextColor}
               onChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
               onSwatchChange={(next) => updateStyle(value, onChange, { activeTextColor: next })}
+              onClear={() => clearStyleField(value, onChange, "activeTextColor")}
               pickerFallback="#ffffff"
               showValueInput={false}
             />
@@ -959,9 +919,10 @@ function TabsColorsSection({
           {() => (
             <SharedColorControl
               label="Inactive text color"
-              value={normalized.style?.inactiveTextColor ?? tabsDefaults.style?.inactiveTextColor}
+              value={normalized.style?.inactiveTextColor}
               onChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
               onSwatchChange={(next) => updateStyle(value, onChange, { inactiveTextColor: next })}
+              onClear={() => clearStyleField(value, onChange, "inactiveTextColor")}
               pickerFallback="#0f172a"
               showValueInput={false}
             />
@@ -1043,6 +1004,7 @@ export function TabsVisualEditor({
 export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
   const normalized = normalizeValue(value);
   const items = normalizeTabsItems(normalized.items);
+  const savedScrollOverflowIsLegacy = isLegacyTabsScrollOverflow(value.options?.triggerOverflow);
   const activeId = normalized.options?.activeId ?? items[0]?.id ?? "1";
   const defaultItemId = normalized.options?.defaultItemId ?? activeId;
   const unavailableCount = items.filter((item) => item.disabled === true).length;
@@ -1100,7 +1062,11 @@ export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
           id="tabs.advanced.line-behavior"
           label="Line behavior"
           path="options.triggerOverflow"
-          value="Tabs wrap onto extra lines when space is tight."
+          value={
+            savedScrollOverflowIsLegacy
+              ? "Saved scroll overflow is legacy and renders as wrapping; tabs wrap onto extra lines when space is tight."
+              : "Tabs wrap onto extra lines when space is tight."
+          }
         />
       </EditorSection>
       <EditorSection
@@ -1184,8 +1150,8 @@ export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
         description="Tabs runtime and editor ownership summary."
       >
         <p className="text-xs text-muted-foreground">
-          Visual owns variant, tab content, layout, tab label style, and colors. Advanced only
-          summarizes the saved state.
+          Visual owns variant, tab content, layout, tab label style, colors, and Structure panel
+          changes. Advanced only summarizes the saved state.
         </p>
       </EditorSection>
     </div>

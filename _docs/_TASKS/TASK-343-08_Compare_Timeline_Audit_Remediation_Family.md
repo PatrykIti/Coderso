@@ -6,7 +6,7 @@
 **Category:** Widgets + Compare Timeline + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -22,10 +22,18 @@ visible effect because a hard-coded `text-xs` always wins.
 
 ## Sub-Tasks
 
-- [ ] Remove the hard-coded size class from the segment-label base class or make
+- [x] Remove the hard-coded size class from the segment-label base class or make
   the size map own the entire size output.
-- [ ] Keep `Hidden` semantics truthful for segment labels.
-- [ ] Add runtime regression coverage for all segment-label size tokens.
+- [x] Keep `Hidden` semantics truthful for segment labels.
+- [x] Add runtime regression coverage for all segment-label size tokens.
+
+## Completion Notes
+
+- Segment badge base classes no longer include a hard-coded `text-xs`.
+- `style.segmentLabelSize` now owns the full text-size output for `none`,
+  `xs`, `sm`, and `base`.
+- `segmentLabelSize="none"` emits no segment badge `text-*` size class instead
+  of behaving like `text-xs`.
 
 ## Files To Change
 
@@ -69,3 +77,13 @@ No API routes are added and no schema widening is needed.
 
 - `Segment label size` visibly changes the rendered label size.
 - `Hidden` no longer behaves like `text-xs`.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/compareTimeline.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `git diff --cached --check`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget compare-timeline --session task-343-08-compare-timeline-rerun --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-08-compare-timeline-smoke-rerun.json --output-md .tmp/task-343-08-compare-timeline-smoke-rerun.md`
+- Claude review: no blockers.

@@ -180,6 +180,35 @@ test("hero renders slot content blocks", () => {
   expect(html).toContain("Child");
 });
 
+test("hero preserves saved single-CTA state through widget normalization", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const normalized = normalizeWidgetBlock({
+    id: "hero-single-cta",
+    type: "hero",
+    variant: "centered",
+    data: {
+      headline: "Single action hero",
+      primaryCta: { label: "Only CTA", href: "/start" },
+    },
+  });
+
+  expect(normalized.data.secondaryCta).toBeUndefined();
+
+  const html = renderToString(
+    <HeroBlock data={normalized.data as HeroData} variant={normalized.variant ?? "centered"} />
+  );
+  expect(html).toContain("Only CTA");
+  expect(html).not.toContain("Learn more");
+});
+
 test("hero shows media placeholder when type selected without url", () => {
   const html = renderToString(
     <HeroBlock data={{ ...heroDefaults, media: { type: "image" } }} variant="split" />
@@ -319,6 +348,32 @@ test("hero keeps gradient and overlay layers above centered background media", (
   expect(html).toContain("linear-gradient(135deg, rgba(2, 6, 23, 0.1), rgba(2, 6, 23, 0.65))");
   expect(html).toContain('data-hero-background-overlay="true"');
   expect(html).toContain("rgba(15, 23, 42, 0.35)");
+});
+
+test("hero renders explicit background image overlay as a valid layered background image", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        background: {
+          color: "#020617",
+          gradient: "linear-gradient(135deg, rgba(2, 6, 23, 0.1), rgba(2, 6, 23, 0.65))",
+          media: {
+            type: "image",
+            src: "/hero-bg.jpg",
+            overlay: "rgba(0, 0, 255, 0.25)",
+          },
+        },
+      }}
+      variant="split"
+    />
+  );
+
+  expect(html).toContain(
+    "background-image:linear-gradient(rgba(0, 0, 255, 0.25), rgba(0, 0, 255, 0.25))"
+  );
+  expect(html).toContain("url(/hero-bg.jpg)");
+  expect(html).not.toContain("background-image:rgba(0, 0, 255, 0.25)");
 });
 
 test("hero applies style tokens to runtime output", () => {

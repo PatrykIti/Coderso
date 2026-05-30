@@ -31,6 +31,32 @@ test("feature grid renders defaults", () => {
   expect(html).toContain('data-feature-grid-count="3"');
 });
 
+test("feature grid exposes a section accessible name", () => {
+  const titledHtml = renderToString(
+    <FeatureGridBlock blockId="feature-grid-1" data={featureGridDefaults} variant="cards-3" />
+  );
+  expect(titledHtml).toContain('aria-labelledby="feature-grid-feature-grid-1-title"');
+  expect(titledHtml).toContain('id="feature-grid-feature-grid-1-title"');
+  expect(titledHtml).not.toContain('aria-label="Feature grid"');
+
+  const untitledHtml = renderToString(
+    <FeatureGridBlock
+      blockId="feature-grid-empty"
+      variant="cards-3"
+      data={{
+        ...featureGridDefaults,
+        header: {
+          eyebrow: "",
+          title: "",
+          description: "",
+        },
+      }}
+    />
+  );
+  expect(untitledHtml).toContain('aria-label="Feature grid"');
+  expect(untitledHtml).not.toContain("aria-labelledby=");
+});
+
 test("feature grid renders the author-defined item count instead of clamping to variant baseline", () => {
   const html = renderToString(
     <FeatureGridBlock
@@ -377,6 +403,9 @@ test("feature grid visual renders section-based IA", () => {
   expect(html).toContain('data-widget-control="feature-grid-variant-preview-cards-3"');
   expect(html).toContain('data-widget-control="feature-grid-variant-preview-cards-4"');
   expect(html).toContain('data-widget-control="feature-grid-variant-preview-highlight-first"');
+  expect(html).toContain('data-feature-grid-card-fields="single-column"');
+  expect(html).toContain('data-feature-grid-emoji-preset="🚀"');
+  expect(html).toContain('aria-label="Set card 1 icon to 🚀"');
 });
 
 test("feature grid advanced keeps technical-only scope", () => {

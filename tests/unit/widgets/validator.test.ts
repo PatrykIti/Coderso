@@ -167,6 +167,42 @@ test("normalizeWidgetBlock merges defaults", () => {
   expect(normalized.variant).toBe("centered");
 });
 
+test("normalizeWidgetBlock preserves explicit absence for selected default keys on saved data", () => {
+  registerWidget({
+    ...definition,
+    type: "hero-preserve",
+    preserveAbsentDefaultKeys: ["tone"],
+  });
+
+  const blank = normalizeWidgetBlock({
+    id: "blank",
+    type: "hero-preserve",
+    data: {},
+  });
+  expect(blank.data.tone).toBe("friendly");
+
+  const savedWithoutTone = normalizeWidgetBlock({
+    id: "saved",
+    type: "hero-preserve",
+    data: { headline: "Saved hero" },
+  });
+  expect(savedWithoutTone.data.tone).toBeUndefined();
+
+  const savedWithUndefinedTone = normalizeWidgetBlock({
+    id: "saved-with-undefined",
+    type: "hero-preserve",
+    data: { headline: "Saved hero", tone: undefined },
+  });
+  expect(savedWithUndefinedTone.data.tone).toBeUndefined();
+
+  const savedWithTone = normalizeWidgetBlock({
+    id: "saved-with-tone",
+    type: "hero-preserve",
+    data: { headline: "Saved hero", tone: "direct" },
+  });
+  expect(savedWithTone.data.tone).toBe("direct");
+});
+
 test("normalizeWidgetBlock rejects invalid variant", () => {
   registerWidget(definition);
   const block: WidgetBlock = {

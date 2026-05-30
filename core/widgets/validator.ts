@@ -11,6 +11,7 @@ import {
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 const validators = new Map<string, ValidateFunction>();
+const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
 function getValidator(def: WidgetDefinition<any>) {
   const cached = validators.get(def.type);
@@ -89,9 +90,7 @@ function normalizeSlotsForDefinition(
       (slot.maxItems ?? 0) >= 0 &&
       instanceIds.length > Math.floor(slot.maxItems ?? 0)
     ) {
-      const keep = new Set(
-        instanceIds.slice(0, Math.floor(slot.maxItems ?? 0))
-      );
+      const keep = new Set(instanceIds.slice(0, Math.floor(slot.maxItems ?? 0)));
       for (const key of instanceIds) {
         if (!keep.has(key)) delete normalized[key];
       }
@@ -112,6 +111,14 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
 
   const data = ensureObject(block.data);
   const merged = { ...def.defaults, ...data } as Record<string, unknown>;
+  if (Object.keys(data).length > 0 && Array.isArray(def.preserveAbsentDefaultKeys)) {
+    // Empty data is a new block insert and keeps full defaults; non-empty saved data may omit optional defaults intentionally.
+    for (const key of def.preserveAbsentDefaultKeys) {
+      if (!hasOwn(data, key) || data[key] === undefined) {
+        delete merged[key];
+      }
+    }
+  }
 
   const validate = getValidator(def);
   const valid = validate(merged);
@@ -140,10 +147,7 @@ export function normalizeWidgetBlocks(blocks: WidgetBlock[]): WidgetBlock[] {
     const slots =
       normalized.slots &&
       Object.fromEntries(
-        Object.entries(normalized.slots).map(([key, items]) => [
-          key,
-          normalizeWidgetBlocks(items),
-        ])
+        Object.entries(normalized.slots).map(([key, items]) => [key, normalizeWidgetBlocks(items)])
       );
     const children =
       normalized.slots || !Array.isArray(block.children)

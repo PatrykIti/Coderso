@@ -12,9 +12,12 @@ import {
 } from "@/components/ui/select";
 import {
   normalizeTemplateSectionData,
+  resolveTemplateSectionState,
   templateSectionDefaults,
   type TemplateSectionData,
+  type TemplateSectionResolutionState,
 } from "../../../../widgets/core/templateSection";
+import type { WidgetTemplate } from "@/services/widgetTemplatesClient";
 import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
 import type { WidgetBlock, WidgetEditorProps } from "../../../../widgets/types";
 import {
@@ -132,20 +135,102 @@ function TemplateSelectField({
   );
 }
 
-function humanizeTemplateError(error: string | undefined): string {
-  switch (error) {
+function humanizeTemplateResolutionState(state: TemplateSectionResolutionState): string {
+  switch (state) {
+    case "not_selected":
+      return "No template selected.";
+    case "preview_unresolved":
+      return "admin_preview_unresolved: editor preview is placeholder-only until runtime resolves this template.";
     case "template_missing":
-      return "The selected template could not be found.";
+      return "template_missing: selected template could not be found.";
     case "template_unpublished":
-      return "The selected template is still a draft.";
+      return "template_unpublished: selected template is still a draft for public runtime.";
     case "template_loop":
-      return "This template contains itself and cannot be rendered safely.";
-    case undefined:
-    case "":
-      return "No resolution problem detected.";
-    default:
-      return "The template could not be resolved.";
+      return "template_loop: nested template section would create a loop.";
+    case "template_empty":
+      return "template_empty: selected template resolved with no content blocks.";
+    case "ready":
+      return "Resolved content is ready.";
   }
+}
+
+function resolveTemplateEditorDiagnostics({
+  normalized,
+  selectedTemplate,
+  templateListLoading,
+  templateListError,
+}: {
+  normalized: TemplateSectionData;
+  selectedTemplate: WidgetTemplate | null;
+  templateListLoading: boolean;
+  templateListError: string | null;
+}) {
+  const baseState = resolveTemplateSectionState(normalized);
+  if (!normalized.templateId?.trim()) {
+    return {
+      state: "not_selected" as const,
+      summary: humanizeTemplateResolutionState("not_selected"),
+      sourceBlocks: "No template selected.",
+    };
+  }
+  if (normalized.resolved?.error) {
+    return {
+      state: baseState,
+      summary: humanizeTemplateResolutionState(baseState),
+      sourceBlocks: "Runtime reported a resolver error.",
+    };
+  }
+  if (baseState === "ready" || baseState === "template_empty") {
+    return {
+      state: baseState,
+      summary: humanizeTemplateResolutionState(baseState),
+      sourceBlocks: selectedTemplate
+        ? `${selectedTemplate.blocks.length} source block${
+            selectedTemplate.blocks.length === 1 ? "" : "s"
+          } in the selected template.`
+        : "Source block count unavailable.",
+    };
+  }
+  if (selectedTemplate?.status && selectedTemplate.status !== "published") {
+    return {
+      state: "template_unpublished" as const,
+      summary: humanizeTemplateResolutionState("template_unpublished"),
+      sourceBlocks: `${selectedTemplate.blocks.length} source block${
+        selectedTemplate.blocks.length === 1 ? "" : "s"
+      } in the draft template.`,
+    };
+  }
+  if (!selectedTemplate && !templateListLoading && !templateListError) {
+    return {
+      state: "template_missing" as const,
+      summary: humanizeTemplateResolutionState("template_missing"),
+      sourceBlocks: "Template is absent from the admin template list.",
+    };
+  }
+  if (templateListError) {
+    return {
+      state: baseState,
+      summary: "template_list_unavailable: template status could not be confirmed.",
+      sourceBlocks: templateListError,
+    };
+  }
+  if (templateListLoading) {
+    return {
+      state: baseState,
+      summary: "template_list_loading: template status is still loading.",
+      sourceBlocks: "Template list is loading.",
+    };
+  }
+
+  return {
+    state: "preview_unresolved" as const,
+    summary: humanizeTemplateResolutionState("preview_unresolved"),
+    sourceBlocks: selectedTemplate
+      ? `${selectedTemplate.blocks.length} source block${
+          selectedTemplate.blocks.length === 1 ? "" : "s"
+        } in the selected template; editor preview has not resolved them.`
+      : "Source block count unavailable.",
+  };
 }
 
 function humanizeWidgetType(type: string | undefined): string {
@@ -231,6 +316,12 @@ function TemplatePresentationEditor({
             />
           )}
         </WidgetControlRow>
+        <ReadonlyWidgetSummaryRow
+          id="template-section.visual.version"
+          label="Version"
+          path="metadata.version"
+          value={metadata.version || "Not configured"}
+        />
       </div>
     </WidgetEditorSection>
   );
@@ -301,6 +392,19 @@ export function TemplateSectionVisualEditor({
 export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<TemplateSectionData>) {
   const normalized = normalizeTemplateSectionData(value);
   const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
+  const {
+    items: templates,
+    isLoading: templateListLoading,
+    error: templateListError,
+  } = useWidgetTemplates();
+  const selectedTemplate =
+    templates.find((template) => template.id === normalized.templateId?.trim()) ?? null;
+  const diagnostics = resolveTemplateEditorDiagnostics({
+    normalized,
+    selectedTemplate,
+    templateListLoading,
+    templateListError,
+  });
   const resolvedBlockCount = Array.isArray(normalized.resolved?.blocks)
     ? normalized.resolved.blocks.length
     : 0;
@@ -336,6 +440,12 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           value={metadata.previewLabel || "Not configured"}
         />
         <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.category"
+          label="Category"
+          path="metadata.category"
+          value={metadata.category || "Not configured"}
+        />
+        <ReadonlyWidgetSummaryRow
           id="template-section.advanced.version"
           label="Version"
           path="metadata.version"
@@ -345,13 +455,15 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           id="template-section.advanced.resolved-blocks"
           label="Resolved blocks"
           path="resolved.blocks"
-          value={`${resolvedBlockCount} block${resolvedBlockCount === 1 ? "" : "s"}`}
+          value={`${resolvedBlockCount} editor-resolved block${
+            resolvedBlockCount === 1 ? "" : "s"
+          }; ${diagnostics.sourceBlocks}`}
         />
         <ReadonlyWidgetSummaryRow
-          id="template-section.advanced.resolution-error"
-          label="Resolution error"
+          id="template-section.advanced.resolution-status"
+          label="Resolution status"
           path="resolved.error"
-          value={humanizeTemplateError(normalized.resolved?.error)}
+          value={diagnostics.summary}
         />
       </WidgetEditorSection>
       <WidgetEditorSection
@@ -367,6 +479,12 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           path="resolved.blocks"
           value={summarizeResolvedBlocks(normalized.resolved?.blocks)}
         />
+        <ReadonlyWidgetSummaryRow
+          id="template-section.advanced.preview-state"
+          label="Preview state"
+          path="resolved"
+          value={humanizeTemplateResolutionState(diagnostics.state)}
+        />
       </WidgetEditorSection>
       <WidgetEditorSection
         id="template-section.advanced.runtime-rules"
@@ -377,8 +495,9 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
         <Alert>
           <AlertTitle>Runtime behavior</AlertTitle>
           <AlertDescription>
-            This widget renders the selected template blocks in order. Draft templates will only
-            render in preview mode.
+            Admin preview is placeholder-only until runtime resolution supplies blocks. Public
+            runtime renders published templates, reports draft templates as template_unpublished,
+            and keeps placeholders for missing or looped templates.
           </AlertDescription>
         </Alert>
       </WidgetEditorSection>

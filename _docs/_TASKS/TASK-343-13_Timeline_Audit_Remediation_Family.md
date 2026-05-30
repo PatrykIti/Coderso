@@ -6,7 +6,7 @@
 **Category:** Widgets + Timeline + Admin UI + UX + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -26,16 +26,16 @@ lost behind the main mode-control fix.
 
 ## Sub-Tasks
 
-- [ ] Make the mode select call the same state-updater contract as the visual
+- [x] Make the mode select call the same state-updater contract as the visual
   mode cards.
-- [ ] Remove duplicate semantics if one of the controls cannot be kept truthful.
-- [ ] Decide and implement whether `descriptionSize="none"` hides descriptions
+- [x] Remove duplicate semantics if one of the controls cannot be kept truthful.
+- [x] Decide and implement whether `descriptionSize="none"` hides descriptions
   or only clears the explicit size class; editor copy and tests must match.
-- [ ] Add guidance for `markerDisplay="icon"` when no icon is available instead
+- [x] Add guidance for `markerDisplay="icon"` when no icon is available instead
   of silently reporting `icon` while rendering a dot.
-- [ ] Make the `maxWidth="6xl"` narrowing for timelines with three or fewer
+- [x] Make the `maxWidth="6xl"` narrowing for timelines with three or fewer
   steps explicit in Advanced/render diagnostics or remove the hidden narrowing.
-- [ ] Add regression coverage for mode/variant coupling.
+- [x] Add regression coverage for mode/variant coupling.
 
 ## Files To Change
 
@@ -89,3 +89,12 @@ No API routes are added.
 - Timeline mode controls no longer diverge in saved state.
 - Secondary report findings are either fixed or explicitly documented as
   product decisions in the editor and widget docs.
+
+## Closure Notes
+
+- Completed on 2026-05-30.
+- Focused Vitest, lint, typecheck, diff checks, manual Playwright smoke via
+  `coderso-dev-core-host`, and Claude drift review passed.
+- Existing public audit fixture `/ctr-timeline-2305` currently contains an
+  empty published Timeline payload, so public runtime smoke used a temporary
+  valid Timeline page and deleted it after verification.

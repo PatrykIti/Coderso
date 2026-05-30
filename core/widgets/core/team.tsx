@@ -699,14 +699,14 @@ function MemberCard({
     >
       <Avatar name={name} photo={member.photo} radius={radius} role={roleText} />
       <div className={joinClasses("min-w-0", compact ? "flex-1" : undefined)}>
-        <h4
+        <h3
           className={joinClasses(
             "break-words font-semibold text-[var(--color-text)]",
             spotlightLead ? "text-2xl" : "text-lg"
           )}
         >
           {name}
-        </h4>
+        </h3>
         <p className="break-words text-sm text-[var(--color-text)]/75">{role}</p>
         {trimmedBio ? <p className={bioClassName}>{trimmedBio}</p> : null}
         <SocialLinks links={socialLinks} />

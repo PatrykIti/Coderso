@@ -6,7 +6,7 @@
 **Category:** Widgets + Gallery Mosaic + Admin Preview + A11y + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,16 +24,35 @@ silent non-recoverable media/content loss when the count is restored.
 
 ## Sub-Tasks
 
-- [ ] Provide admin-preview lightbox binding or clear non-interactive preview
+- [x] Provide admin-preview lightbox binding or clear non-interactive preview
   messaging for lightbox-enabled variants.
-- [ ] Add accessible section naming in admin and public output.
-- [ ] Add destructive-state confirmation/recovery for count reductions that
+- [x] Add accessible section naming in admin and public output.
+- [x] Add destructive-state confirmation/recovery for count reductions that
   discard tile media, links, or captions.
-- [ ] Apply the guard to Wizard count changes too; current Visual confirmation
+- [x] Apply the guard to Wizard count changes too; current Visual confirmation
   alone is insufficient if Wizard count can still truncate without recovery.
-- [ ] Fix singular/plural link-warning copy while touching the affected summary.
-- [ ] Explicitly route report notes N3/N6/N8/N9 as deferred/product decisions if
+- [x] Fix singular/plural link-warning copy while touching the affected summary.
+- [x] Explicitly route report notes N3/N6/N8/N9 as deferred/product decisions if
   they are not fixed in this family.
+
+## Implementation Notes
+
+- Added domain-owned count-reduction summary helpers so Wizard and Visual share
+  the same destructive warning and regression contract.
+- Wizard and Visual count controls now open `ConfirmActionDialog` before
+  reducing authored tiles. The dialog names removed tiles, explains that media,
+  captions, alt text, posters, and destinations are removed from saved data, and
+  states that increasing the count again creates placeholders rather than
+  restoring discarded content.
+- Lightbox mode now shows explicit admin-preview messaging: the editor canvas
+  renders static lightbox markup, while published pages bind the runtime script.
+- Gallery Mosaic sections now render `aria-labelledby` when a heading exists and
+  `aria-label="Gallery"` when no visible heading exists.
+- Fixed the singular link/lightbox copy (`uses` / `keeps`) and removed the
+  duplicate `grid grid-cols-1` classes from `feature-left` containers.
+- Routed N3 (overlay alpha discoverability), N8 (Wizard discoverability), and
+  N9 (multi-widget fixture caveat) as explicit deferred/product notes; N6 was
+  fixed in this family.
 
 ## Files To Change
 

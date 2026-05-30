@@ -131,6 +131,9 @@ Rows without stable IDs are not offered in the manual picker.
 - `hrefMode: "custom"` is edited through a page picker; existing relative,
   hash, or `http(s)` hrefs stay compatible as saved custom destinations
 - invalid custom URLs normalize to an empty non-navigating CTA state
+- non-navigating CTA states are explicit: runtime marks them with
+  `data-entry-teaser-cta-unavailable` and Visual explains when auto mode lacks a
+  safe detail route or selected-page mode lacks a safe destination
 - `opensInNewTab` resolves through shared safe-link helpers and adds
   `rel="noopener noreferrer"`
 - `cta.label`, `fallback.title`, and `fallback.description` are length-bounded
@@ -139,6 +142,8 @@ Rows without stable IDs are not offered in the manual picker.
 ## Layout and Accessibility Notes
 
 - optional section heading renders independently from the entry title heading
+- the public `<section>` is named with `aria-labelledby` when a section heading
+  is present, or `aria-label="Entry teaser"` when no section heading is shown
 - section heading levels: `h2`, `h3`, `h4`
 - entry title heading levels: `h2`, `h3`, `h4`
 - max-width uses fixed tokens: `sm`, `md`, `lg`, `xl`, `full`
@@ -154,6 +159,8 @@ Rows without stable IDs are not offered in the manual picker.
 - `style.surface` and `style.border` use the shared swatch-only
   `SharedColorControl` in Visual
 - clear removes the persisted style field instead of writing a sentinel token
+- color and CTA-destination clear actions expose field-scoped accessible names
+  so repeated `Clear` buttons can be targeted unambiguously
 - fresh defaults do not persist CSS variable strings for surface/border
 - saved CSS variables, `rgba(...)`, or other legacy custom strings are shown as
   saved custom color state and can be replaced by a swatch or cleared
@@ -229,6 +236,7 @@ Rows without stable IDs are not offered in the manual picker.
 - `data-entry-teaser-source-mode`
 - `data-entry-teaser-source`
 - `data-entry-teaser-state`
+- `data-entry-teaser-cta-unavailable` for non-navigating CTA output
 - `data-entry-teaser-media-mode`
 - `data-entry-teaser-max-width`
 - `data-entry-teaser-tag-limit`

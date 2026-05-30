@@ -1,32 +1,25 @@
-import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
-import { applyWidgetBlockPatch, sanitizeLayout } from "./blockUtils";
+import type { Block, WidgetDefinition, WidgetEditorContext, WidgetLayoutDefaults } from "./types";
+import {
+  applyWidgetBlockPatch,
+  resolveSharedBlockLayoutState,
+  resolveSharedBlockVisibilityState,
+  type SharedBlockValueState,
+} from "./blockUtils";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetEditorModeRoot,
   WidgetEditorSection,
 } from "../../widgets/editors/WidgetEditorControls";
 
-const deviceLabels: { id: DeviceTarget; label: string }[] = [
-  { id: "desktop", label: "Desktop" },
-  { id: "tablet", label: "Tablet" },
-  { id: "mobile", label: "Mobile" },
-];
-
 const spacingLabel = (value: string) => (value === "none" ? "None" : value.toUpperCase());
 
-function resolveVisibilitySummary(block: Block) {
-  if (block.visibility?.enabled === false) {
-    return "Hidden on all devices";
-  }
-  const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
-  if (devices.length === 0) {
-    return "Hidden on all devices";
-  }
-  const labels = deviceLabels
-    .filter((device) => devices.includes(device.id))
-    .map((device) => device.label);
-  return labels.length > 0 ? labels.join(", ") : "Hidden on all devices";
-}
+const formatSharedValue = <Saved extends string, Effective extends string>(
+  state: SharedBlockValueState<Saved, Effective>,
+  label: (value: Effective | Saved) => string
+) =>
+  state.source === "inherited"
+    ? `Inherit page default (${label(state.effective)})`
+    : label(state.saved);
 
 export type AdvancedPanelProps = {
   block: Block;
@@ -34,6 +27,7 @@ export type AdvancedPanelProps = {
   onChange: (next: Block) => void;
   onBlockPatch?: (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   editorContext?: WidgetEditorContext;
+  pageDefaults?: WidgetLayoutDefaults;
 };
 
 export function AdvancedPanel({
@@ -42,9 +36,11 @@ export function AdvancedPanel({
   onChange,
   onBlockPatch,
   editorContext,
+  pageDefaults,
 }: AdvancedPanelProps) {
   const Editor = widget.editor.advanced;
-  const layoutValue = sanitizeLayout(block.layout);
+  const layoutState = resolveSharedBlockLayoutState(block.layout, pageDefaults);
+  const visibilityState = resolveSharedBlockVisibilityState(block.visibility);
   const patchBlock =
     onBlockPatch ??
     ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
@@ -77,22 +73,24 @@ export function AdvancedPanel({
           id="builder.advanced.layout.container"
           label="Content width"
           path="layout.container"
-          value={layoutValue.container}
+          value={formatSharedValue(layoutState.container, (value) => value)}
         />
         <ReadonlyWidgetSummaryRow
           id="builder.advanced.layout.padding"
           label="Padding"
           path="layout.padding"
-          value={`Top ${spacingLabel(layoutValue.padding.top)}, bottom ${spacingLabel(
-            layoutValue.padding.bottom
+          value={`Top ${formatSharedValue(layoutState.padding.top, spacingLabel)}, bottom ${formatSharedValue(
+            layoutState.padding.bottom,
+            spacingLabel
           )}`}
         />
         <ReadonlyWidgetSummaryRow
           id="builder.advanced.layout.margin"
           label="Margin"
           path="layout.margin"
-          value={`Top ${spacingLabel(layoutValue.margin.top)}, bottom ${spacingLabel(
-            layoutValue.margin.bottom
+          value={`Top ${formatSharedValue(layoutState.margin.top, spacingLabel)}, bottom ${formatSharedValue(
+            layoutState.margin.bottom,
+            spacingLabel
           )}`}
         />
       </WidgetEditorSection>
@@ -107,7 +105,7 @@ export function AdvancedPanel({
           id="builder.advanced.visibility.devices"
           label="Shown on"
           path="visibility.devices"
-          value={resolveVisibilitySummary(block)}
+          value={visibilityState.summary}
         />
       </WidgetEditorSection>
     </WidgetEditorModeRoot>

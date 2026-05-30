@@ -170,6 +170,34 @@ function buildVariantSyncedSplitLayoutData(
   );
 }
 
+function buildVisualVariantSplitLayoutData(
+  value: SplitLayoutData,
+  currentVariant: string,
+  nextVariant: SplitLayoutVariantId
+): SplitLayoutData {
+  const current = normalizeValue(value, currentVariant);
+  const disclosure = getSplitLayoutRatioDisclosure(value, currentVariant);
+  const shouldPreserveDeviceOverrides = disclosure.hasDeviceSpecificChanges;
+
+  return normalizeValue(
+    {
+      ...current,
+      ratio: shouldPreserveDeviceOverrides
+        ? {
+            ...current.ratio,
+            desktop: nextVariant,
+          }
+        : {
+            ...current.ratio,
+            desktop: nextVariant,
+            tablet: nextVariant,
+            mobile: nextVariant,
+          },
+    },
+    nextVariant
+  );
+}
+
 function EditorSection({
   id,
   mode,
@@ -221,12 +249,12 @@ function SplitRatioMiniature({ ratio }: { ratio: SplitLayoutRatio }) {
 }
 
 function VariantCards({
-  value,
+  selectedRatio,
   disclosure,
   fieldProps,
   onChange,
 }: {
-  value: SplitLayoutVariantId;
+  selectedRatio: SplitLayoutRatio;
   disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>;
   fieldProps?: WidgetControlFieldProps;
   onChange?: (next: string) => void;
@@ -245,22 +273,26 @@ function VariantCards({
             key={option.id}
             type="button"
             onClick={() => onChange?.(option.id)}
-            aria-pressed={value === option.id}
+            aria-pressed={selectedRatio === option.id}
             className={cn(
               "w-full rounded-lg border p-3 text-left transition",
-              value === option.id
+              selectedRatio === option.id
                 ? "border-primary bg-primary/5"
                 : "border-border bg-background hover:border-primary/50"
             )}
             data-split-variant-card={option.id}
+            data-split-variant-card-selected={selectedRatio === option.id ? "true" : "false"}
           >
             <div className="flex w-full items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-semibold leading-tight">{option.label}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
               </div>
-              <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
-                {value === option.id ? "Base preset" : "Choose"}
+              <Badge
+                className="shrink-0"
+                variant={selectedRatio === option.id ? "default" : "outline"}
+              >
+                {selectedRatio === option.id ? "Desktop split" : "Choose"}
               </Badge>
             </div>
             <div className="mt-3">
@@ -274,6 +306,8 @@ function VariantCards({
         className="rounded-md border border-dashed border-border/80 bg-muted/20 p-3"
         data-split-ratio-summary
         data-split-ratio-override={disclosure.hasOverride ? "true" : "false"}
+        data-split-ratio-effective-starter={disclosure.effectiveMatchesStarter ? "true" : "false"}
+        data-split-ratio-device-specific={disclosure.hasDeviceSpecificChanges ? "true" : "false"}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium">Current layout on devices</p>
@@ -287,13 +321,30 @@ function VariantCards({
           {formatSplitLayoutRatioLabel(disclosure.mobile)}.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {disclosure.hasExplicitMobile
-            ? "Phone layout has its own saved split."
-            : "Phone layout follows the tablet layout until you choose a phone-specific split."}
+          {getPhoneSplitDisclosureCopy(disclosure)}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Desktop split cards update the desktop layout. Tablet and phone overrides stay intact when
+          they differ from desktop.
         </p>
       </div>
     </div>
   );
+}
+
+function getPhoneSplitDisclosureCopy(
+  disclosure: ReturnType<typeof getSplitLayoutRatioDisclosure>
+): string {
+  if (!disclosure.hasExplicitMobile) {
+    return "Phone layout follows the tablet layout until you choose a phone-specific split.";
+  }
+  if (disclosure.effectiveMatchesStarter) {
+    return "Phone split is saved explicitly, but it currently matches the starter layout.";
+  }
+  if (disclosure.mobile === disclosure.tablet) {
+    return "Phone split is saved explicitly and currently matches the tablet layout.";
+  }
+  return "Phone split has its own saved value for the phone layout.";
 }
 
 function getCollapseModeCopy(
@@ -420,18 +471,22 @@ export function SplitLayoutVisualEditor({
         mode="visual"
         role="layout"
         title="Pane layout"
-        description="Choose the base pane shape and tune the desktop and tablet layout."
+        description="Choose the desktop pane shape and tune device-specific layouts."
       >
         <WidgetControlRow id="split-layout.visual.base-preset" label="Base layout" path="variant">
           {(fieldProps) => (
             <VariantCards
-              value={resolvedVariant}
+              selectedRatio={disclosure.desktop}
               disclosure={disclosure}
               fieldProps={fieldProps}
               onChange={(next) =>
                 applyVariantDataPatch(
                   next as SplitLayoutVariantId,
-                  buildVariantSyncedSplitLayoutData(value, next as SplitLayoutVariantId),
+                  buildVisualVariantSplitLayoutData(
+                    value,
+                    resolvedVariant,
+                    next as SplitLayoutVariantId
+                  ),
                   onChange,
                   onVariantChange,
                   onBlockPatch

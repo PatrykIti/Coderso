@@ -121,6 +121,42 @@ const spacingClassMap: Record<
   xl: { fieldGap: "gap-10", sectionPaddingY: "xl" },
 };
 
+const formEmbedColorStyleKeys = [
+  "background",
+  "surface",
+  "borderColor",
+  "titleColor",
+  "labelColor",
+  "helperColor",
+  "submitBackground",
+  "submitTextColor",
+] as const;
+
+type FormEmbedColorStyleKey = (typeof formEmbedColorStyleKeys)[number];
+
+export const formEmbedThemeDefaultColorValues: Record<FormEmbedColorStyleKey, string> = {
+  background: "transparent",
+  surface: "var(--color-bg)",
+  borderColor: "var(--color-border)",
+  titleColor: "var(--color-text)",
+  labelColor: "var(--color-text)",
+  helperColor: "var(--color-text)",
+  submitBackground: "var(--color-primary)",
+  submitTextColor: "var(--color-bg)",
+};
+
+const formEmbedColorStyleKeySet = new Set<string>(formEmbedColorStyleKeys);
+
+export function isFormEmbedThemeDefaultStyleValue(
+  key: keyof FormEmbedStyle,
+  value: unknown
+): key is FormEmbedColorStyleKey {
+  if (!formEmbedColorStyleKeySet.has(key)) return false;
+  if (typeof value !== "string") return false;
+  const colorKey = key as FormEmbedColorStyleKey;
+  return value.trim() === formEmbedThemeDefaultColorValues[colorKey];
+}
+
 const widthClassMap: Record<NonNullable<FormEmbedLayout["width"]>, string> = {
   none: "",
   sm: "max-w-md",
@@ -209,35 +245,46 @@ const resolveOptionalString = (value: string | undefined) => {
 };
 
 const resolveLayout = (value?: FormEmbedLayout): Required<FormEmbedLayout> => {
-  const rawSpacing = value?.spacing ?? "md";
-  const spacing = isSpacing(rawSpacing) ? rawSpacing : "md";
+  const resolvedSpacing = resolveFormEmbedSpacing(value);
   return {
     alignment: value?.alignment ?? "start",
     width: value?.width ?? "md",
-    spacing,
+    spacing: resolvedSpacing.spacing,
     sectionPaddingX: value?.sectionPaddingX ?? "sm",
-    sectionPaddingY: value?.sectionPaddingY ?? spacingClassMap[spacing].sectionPaddingY,
+    sectionPaddingY: resolvedSpacing.sectionPaddingY,
     fieldGap: value?.fieldGap ?? "md",
     headingLevel: value?.headingLevel ?? "2",
     buttonAlignment: value?.buttonAlignment ?? "start",
   };
 };
 
+export function resolveFormEmbedSpacing(value?: FormEmbedLayout): {
+  spacing: NonNullable<FormEmbedLayout["spacing"]>;
+  sectionPaddingY: NonNullable<FormEmbedLayout["sectionPaddingY"]>;
+} {
+  const rawSpacing = value?.spacing ?? "md";
+  const spacing = isSpacing(rawSpacing) ? rawSpacing : "md";
+  return {
+    spacing,
+    sectionPaddingY: value?.sectionPaddingY ?? spacingClassMap[spacing].sectionPaddingY,
+  };
+}
+
 const resolveStyle = (value?: FormEmbedStyle): Required<FormEmbedStyle> => {
   return {
-    background: value?.background ?? "transparent",
-    surface: value?.surface ?? "var(--color-bg)",
-    borderColor: value?.borderColor ?? "var(--color-border)",
+    background: value?.background ?? formEmbedThemeDefaultColorValues.background,
+    surface: value?.surface ?? formEmbedThemeDefaultColorValues.surface,
+    borderColor: value?.borderColor ?? formEmbedThemeDefaultColorValues.borderColor,
     borderWidth: value?.borderWidth ?? "1",
     radius: value?.radius ?? "md",
     inputSize: value?.inputSize ?? "md",
-    titleColor: value?.titleColor ?? "var(--color-text)",
+    titleColor: value?.titleColor ?? formEmbedThemeDefaultColorValues.titleColor,
     titleSize: value?.titleSize ?? "md",
     titleWeight: value?.titleWeight ?? "semibold",
-    labelColor: value?.labelColor ?? "var(--color-text)",
-    helperColor: value?.helperColor ?? "var(--color-text)",
-    submitBackground: value?.submitBackground ?? "var(--color-primary)",
-    submitTextColor: value?.submitTextColor ?? "var(--color-bg)",
+    labelColor: value?.labelColor ?? formEmbedThemeDefaultColorValues.labelColor,
+    helperColor: value?.helperColor ?? formEmbedThemeDefaultColorValues.helperColor,
+    submitBackground: value?.submitBackground ?? formEmbedThemeDefaultColorValues.submitBackground,
+    submitTextColor: value?.submitTextColor ?? formEmbedThemeDefaultColorValues.submitTextColor,
   };
 };
 
@@ -248,14 +295,18 @@ const resolveFields = (value?: FormEmbedFields): Required<FormEmbedFields> => {
   };
 };
 
+export function clampSavedProgressTtl(raw: string | number | undefined): number {
+  const parsed = typeof raw === "number" ? Math.round(raw) : Number.parseInt(String(raw ?? ""), 10);
+  if (!Number.isFinite(parsed)) return 7;
+  return Math.max(1, Math.min(30, parsed));
+}
+
 const resolveNavigation = (value?: FormEmbedNavigation): Required<FormEmbedNavigation> => {
-  const ttl =
-    typeof value?.savedProgressTtlDays === "number" ? Math.round(value.savedProgressTtlDays) : 7;
   return {
     backLabel: resolveNonEmptyString(value?.backLabel, "Back"),
     nextLabel: resolveNonEmptyString(value?.nextLabel, "Next"),
     showProgress: value?.showProgress ?? true,
-    savedProgressTtlDays: Math.min(30, Math.max(1, Number.isFinite(ttl) ? ttl : 7)),
+    savedProgressTtlDays: clampSavedProgressTtl(value?.savedProgressTtlDays),
   };
 };
 
@@ -433,6 +484,19 @@ export const formEmbedDefaults: FormEmbedData = {
   },
 };
 
+export function resolveFormEmbedRuntimeErrorMessage(error: string | undefined): string {
+  const normalized = error?.trim();
+  const knownMessages: Record<string, string> = {
+    form_missing: "This form is not available right now.",
+    form_not_found: "This form is not available right now.",
+    form_unpublished: "This form is not published yet.",
+    no_fields: "This form is not ready to accept submissions yet.",
+    public_submission_disabled: "This form is not accepting public submissions right now.",
+  };
+  if (!normalized) return "This form is not available right now.";
+  return knownMessages[normalized] ?? "This form is not available right now.";
+}
+
 export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const layout = resolveLayout(data.layout);
   const style = resolveStyle(data.style);
@@ -455,21 +519,33 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const normalizedStyle: FormEmbedStyle = {
     background: hasStyleObject
       ? resolveClearableStyleValue(data.style?.background)
-      : resolveNonEmptyString(style.background, "transparent"),
+      : resolveNonEmptyString(style.background, formEmbedThemeDefaultColorValues.background),
     surface: hasStyleObject
       ? resolveClearableStyleValue(data.style?.surface)
-      : resolveNonEmptyString(style.surface, "var(--color-bg)"),
-    borderColor: resolveNonEmptyString(style.borderColor, "var(--color-border)"),
+      : resolveNonEmptyString(style.surface, formEmbedThemeDefaultColorValues.surface),
+    borderColor: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.borderColor)
+      : resolveNonEmptyString(style.borderColor, formEmbedThemeDefaultColorValues.borderColor),
     borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
     inputSize: isInputSize(style.inputSize) ? style.inputSize : "md",
-    titleColor: resolveOptionalString(style.titleColor),
+    titleColor: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.titleColor)
+      : resolveOptionalString(style.titleColor),
     titleSize: isTitleSize(style.titleSize) ? style.titleSize : "md",
     titleWeight: isTitleWeight(style.titleWeight) ? style.titleWeight : "semibold",
-    labelColor: resolveOptionalString(style.labelColor),
-    helperColor: resolveOptionalString(style.helperColor),
-    submitBackground: resolveOptionalString(style.submitBackground),
-    submitTextColor: resolveOptionalString(style.submitTextColor),
+    labelColor: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.labelColor)
+      : resolveOptionalString(style.labelColor),
+    helperColor: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.helperColor)
+      : resolveOptionalString(style.helperColor),
+    submitBackground: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.submitBackground)
+      : resolveOptionalString(style.submitBackground),
+    submitTextColor: hasStyleObject
+      ? resolveClearableStyleValue(data.style?.submitTextColor)
+      : resolveOptionalString(style.submitTextColor),
   };
 
   const resolvedSuccessMessage =
@@ -993,7 +1069,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
         data-form-embed-width={layout.width}
       >
         <div
-          className={joinClasses("w-full space-y-6 border p-6", borderClassName, radiusClassName)}
+          className={joinClasses("w-full space-y-6 p-6", borderClassName, radiusClassName)}
           style={surfaceStyle}
           data-form-embed-radius={style.radius}
           data-form-embed-input-size={style.inputSize}
@@ -1010,7 +1086,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
           </div>
           {resolved?.error ? (
             <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70">
-              Form unavailable ({resolved.error}).
+              {resolveFormEmbedRuntimeErrorMessage(resolved.error)}
             </div>
           ) : fields.length === 0 ? (
             <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70">

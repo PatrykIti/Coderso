@@ -9,11 +9,13 @@ import {
   FormEmbedWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/FormEmbedEditors";
 import {
+  clampSavedProgressTtl,
   FormEmbedBlock,
   createFormEmbedWidget,
   formEmbedDefaults,
   formEmbedEditorContract,
   normalizeFormEmbedData,
+  resolveFormEmbedRuntimeErrorMessage,
   type FormEmbedData,
 } from "../../../core/widgets/core/formEmbed";
 import { validateWidgetEditorContract } from "../../../core/widgets/editorContract";
@@ -22,6 +24,27 @@ import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<FormEmbedData>> = () => null;
+
+const getOpeningTagByAttribute = (
+  html: string,
+  tagName: string,
+  attribute: string,
+  value: string
+) => {
+  const match = html.match(new RegExp(`<${tagName}\\b(?=[^>]*${attribute}="${value}")[^>]*>`));
+  if (!match) {
+    throw new Error(`Missing <${tagName}> with ${attribute}="${value}"`);
+  }
+  return match[0];
+};
+
+const getAttributeValue = (tag: string, attribute: string) => {
+  const match = tag.match(new RegExp(`${attribute}="([^"]*)"`));
+  return match?.[1];
+};
+
+const countClassToken = (className: string | undefined, token: string) =>
+  (className ?? "").split(/\s+/).filter((entry) => entry === token).length;
 
 test("form embed renders defaults", () => {
   const html = renderToString(<FormEmbedBlock data={formEmbedDefaults} variant="standard" />);
@@ -35,6 +58,22 @@ test("form embed normalization resolves layout defaults", () => {
   expect(normalized.layout?.width).toBe("md");
   expect(normalized.layout?.alignment).toBe("start");
   expect(normalized.fields?.showLabels).toBe(true);
+});
+
+test("form embed spacing derives visible vertical padding when no explicit padding is saved", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        layout: {
+          spacing: "xl",
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('data-form-embed-spacing="xl"');
+  expect(html).toContain("py-12");
 });
 
 test("form embed normalization sanitizes invalid enum values", () => {
@@ -156,6 +195,21 @@ test("form embed renders multi-step runtime structure", () => {
   expect(html).toContain('data-nextless-form-step="1"');
   expect(html).toContain("Contact");
   expect(html).toContain("Details");
+});
+
+test("form embed clamps saved progress ttl consistently", () => {
+  expect(clampSavedProgressTtl("0")).toBe(1);
+  expect(clampSavedProgressTtl(0)).toBe(1);
+  expect(clampSavedProgressTtl("-5")).toBe(1);
+  expect(clampSavedProgressTtl("99")).toBe(30);
+  expect(clampSavedProgressTtl(undefined)).toBe(7);
+  expect(
+    normalizeFormEmbedData({
+      navigation: {
+        savedProgressTtlDays: 0,
+      },
+    }).navigation?.savedProgressTtlDays
+  ).toBe(1);
 });
 
 test("form embed renders accessible field wiring and unsupported-field diagnostics", () => {
@@ -455,6 +509,41 @@ test("form embed shows runtime-preview hint when runtime data is not hydrated", 
   expect(html).toContain("Form fields load in runtime preview.");
 });
 
+test("form embed renders user-facing runtime error messages without raw codes", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        resolved: {
+          error: "form_missing",
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(resolveFormEmbedRuntimeErrorMessage("form_missing")).toBe(
+    "This form is not available right now."
+  );
+  expect(html).toContain("This form is not available right now.");
+  expect(html).not.toContain("form_missing");
+});
+
+test("form embed surface does not duplicate the thin border class", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        style: {
+          borderWidth: "1",
+        },
+      }}
+      variant="standard"
+    />
+  );
+  const surface = getOpeningTagByAttribute(html, "div", "data-form-embed-radius", "md");
+
+  expect(countClassToken(getAttributeValue(surface, "class"), "border")).toBe(1);
+});
+
 test("form embed validator accepts schema", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({
@@ -481,7 +570,7 @@ test("form embed validator accepts schema", () => {
   ).not.toThrow();
 });
 
-test("form embed cleared background and surface omit frame background styles", () => {
+test("form embed cleared style colors omit authored color values", () => {
   const normalized = normalizeFormEmbedData({
     ...formEmbedDefaults,
     style: {},
@@ -490,6 +579,12 @@ test("form embed cleared background and surface omit frame background styles", (
 
   expect(normalized.style?.background).toBeUndefined();
   expect(normalized.style?.surface).toBeUndefined();
+  expect(normalized.style?.borderColor).toBeUndefined();
+  expect(normalized.style?.titleColor).toBeUndefined();
+  expect(normalized.style?.labelColor).toBeUndefined();
+  expect(normalized.style?.helperColor).toBeUndefined();
+  expect(normalized.style?.submitBackground).toBeUndefined();
+  expect(normalized.style?.submitTextColor).toBeUndefined();
   expect(html).toContain('data-form-embed-variant="standard"');
   expect(html).not.toContain("background-color:transparent");
 });

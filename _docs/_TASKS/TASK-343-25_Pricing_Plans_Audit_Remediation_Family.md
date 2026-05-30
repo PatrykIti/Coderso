@@ -6,7 +6,7 @@
 **Category:** Widgets + Pricing Plans + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, TASK-343-30
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,17 +25,33 @@ destructive actions use inconsistent confirmation patterns, and the public
 
 ## Sub-Tasks
 
-- [ ] Make fixed plan-count notices distinguish nominal capacity from actual
+- [x] Make fixed plan-count notices distinguish nominal capacity from actual
   rendered plan count.
-- [ ] Remove or rewrite Wizard copy that points to controls not present in
+- [x] Remove or rewrite Wizard copy that points to controls not present in
   Wizard.
-- [ ] Normalize destructive confirmation patterns for plan/feature removal and
+- [x] Normalize destructive confirmation patterns for plan/feature removal and
   Advanced repair actions.
-- [ ] Make the static billing cycle display look non-interactive, or add a
+- [x] Make the static billing cycle display look non-interactive, or add a
   runtime-safe interactive contract if product scope requires it.
-- [ ] Coordinate color-clear/default state copy with `TASK-343-30`.
-- [ ] Record report N0 fixture drift as a fixture caveat and explicitly defer or
+- [x] Coordinate color-clear/default state copy with `TASK-343-30`.
+- [x] Record report N0 fixture drift as a fixture caveat and explicitly defer or
   fix the hidden-badge renderer note (N9) so it is not lost.
+
+## Implementation Notes
+
+- Added a shared Pricing Plans capacity summary so Wizard, Visual, Advanced,
+  and renderer tests distinguish variant capacity from actual rendered saved
+  plan count.
+- Replaced Visual plan/feature deletion with `ConfirmActionDialog`, matching
+  the Advanced repair confirmation pattern and removing native `window.confirm`
+  usage from this editor.
+- Kept billing as a static public contract, but rendered it as a single status
+  label rather than two non-clickable toggle pills.
+- Switched Pricing Plans color controls to shared color-state labels and
+  documented the distinct clear semantics for inherited surfaces versus the
+  default highlight ring.
+- Fixed the highlighted-plan badge renderer so badge tone remains visible even
+  when badge text matches the highlight banner label.
 
 ## Files To Change
 
@@ -96,3 +112,14 @@ No API routes are added. CTA safe-link handling remains unchanged.
 - Pricing Plans no longer presents nominal or static states as active rendered
   controls.
 - Destructive authoring paths are consistently guarded.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/pricingPlans.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/pricing-plans-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-25
+  drift review: no blockers)

@@ -24,6 +24,7 @@ import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 export type TabsVariantId = "pills" | "underline" | "minimal";
 export type TabsOrientation = "horizontal" | "vertical";
 export type TabsTriggerOverflow = "wrap" | "scroll";
+export type NormalizedTabsTriggerOverflow = "wrap";
 export type TabsSpacing = "sm" | "md" | "lg";
 export type TabsTriggerTextSize = "xs" | "sm" | "base";
 export type TabsTriggerFontWeight = "normal" | "medium" | "semibold";
@@ -175,7 +176,8 @@ export const tabsEditorContract: WidgetEditorContract = {
       id: "tabs.wizard.structure-setup",
       title: "Starter tabs",
       role: "setup",
-      writablePaths: ["items.count"],
+      writablePaths: [],
+      readOnlyPaths: ["slots.panel.count", "items.count"],
     },
     {
       mode: "visual",
@@ -387,7 +389,15 @@ const resolveOrientation = (value: string | undefined): TabsOrientation => {
   return "horizontal";
 };
 
-const resolveTriggerOverflow = (_value: string | undefined): TabsTriggerOverflow => "wrap";
+export function normalizeTabsTriggerOverflow(
+  _value: string | undefined
+): NormalizedTabsTriggerOverflow {
+  return "wrap";
+}
+
+export function isLegacyTabsScrollOverflow(value: string | undefined): boolean {
+  return value === "scroll";
+}
 
 const resolveSpacing = (value: string | undefined): TabsSpacing =>
   isEnumValue(value, spacingOptions) ? value : "md";
@@ -507,7 +517,7 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
       activeId: resolvedActiveId,
       alignment: resolveAlignment(data.options?.alignment),
       orientation: resolveOrientation(data.options?.orientation),
-      triggerOverflow: resolveTriggerOverflow(data.options?.triggerOverflow),
+      triggerOverflow: normalizeTabsTriggerOverflow(data.options?.triggerOverflow),
       containerPadding: resolveSpacing(data.options?.containerPadding),
       triggerGap: resolveSpacing(data.options?.triggerGap),
       panelGap: resolveSpacing(data.options?.panelGap),
@@ -519,21 +529,18 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
       surfaceColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.surfaceColor)
         : (tabsDefaults.style?.surfaceColor ?? "var(--color-surface)"),
-      borderColor:
-        toTrimmedString(data.style?.borderColor) ??
-        tabsDefaults.style?.borderColor ??
-        "var(--color-border)",
+      borderColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.borderColor)
+        : (tabsDefaults.style?.borderColor ?? "var(--color-border)"),
       activeBackgroundColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.activeBackgroundColor)
         : (tabsDefaults.style?.activeBackgroundColor ?? "var(--color-text)"),
-      activeTextColor:
-        toTrimmedString(data.style?.activeTextColor) ??
-        tabsDefaults.style?.activeTextColor ??
-        "var(--color-background)",
-      inactiveTextColor:
-        toTrimmedString(data.style?.inactiveTextColor) ??
-        tabsDefaults.style?.inactiveTextColor ??
-        "var(--color-text)",
+      activeTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.activeTextColor)
+        : (tabsDefaults.style?.activeTextColor ?? "var(--color-background)"),
+      inactiveTextColor: hasStyleObject
+        ? resolveClearableStyleValue(data.style?.inactiveTextColor)
+        : (tabsDefaults.style?.inactiveTextColor ?? "var(--color-text)"),
       panelBackgroundColor: hasStyleObject
         ? resolveClearableStyleValue(data.style?.panelBackgroundColor)
         : (tabsDefaults.style?.panelBackgroundColor ?? "var(--color-surface)"),
@@ -808,7 +815,7 @@ export function TabsBlock({
     compactStyle({
       backgroundColor: resolveClearableStyleValue(style.activeBackgroundColor),
       color: style.activeTextColor,
-      borderColor: resolveClearableStyleValue(style.activeBackgroundColor),
+      borderColor: resolveClearableStyleValue(style.activeBackgroundColor) ?? style.borderColor,
     }) ?? {};
 
   const panelStyle: CSSProperties =

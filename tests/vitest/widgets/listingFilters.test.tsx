@@ -29,6 +29,7 @@ test("listing filters renders placeholder when listing query is missing", () => 
 
   expect(html).toContain("Select a listing query");
   expect(html).toContain('data-listing-widget="listing-filters"');
+  expect(html).toContain('aria-label="Listing filters configuration"');
 });
 
 test("listing filters renders resolved facets and runtime markers", () => {
@@ -77,6 +78,111 @@ test("listing filters renders resolved facets and runtime markers", () => {
   expect(html).toContain("Published");
   expect(html).toContain('data-listing-block-id="listing-filters-1"');
   expect(html).toContain('data-listing-query-id="listing-query-1"');
+});
+
+test("listing filters exposes accessible section, form, and search semantics", () => {
+  const html = renderToString(
+    <ListingFiltersBlock
+      variant="default"
+      blockId="filters-a11y"
+      data={normalizeListingFiltersData({
+        ...listingFiltersDefaults,
+        listingQueryId: "listing-query-a11y",
+        title: "Property filters",
+        searchLabel: "Find listings",
+        searchPlaceholder: "Search properties",
+        facets: [
+          {
+            id: "sort",
+            kind: "sort",
+            label: "Sort",
+            sortOptions: [
+              {
+                value: "updatedAt:desc",
+                label: "Newest first",
+                field: "updatedAt",
+                dir: "desc",
+              },
+            ],
+          },
+        ],
+      })}
+    />
+  );
+
+  const titleId = "listing-filters-filters-a11y-title";
+  const searchId = "listing-filters-filters-a11y-search";
+  expect(html).toMatch(
+    new RegExp(
+      `<section(?=[^>]*data-listing-widget="listing-filters")(?=[^>]*aria-labelledby="${titleId}")`
+    )
+  );
+  expect(html).toMatch(
+    new RegExp(
+      `<form(?=[^>]*data-listing-runtime-form="true")(?=[^>]*aria-labelledby="${titleId}")`
+    )
+  );
+  expect(html).toContain(`id="${titleId}"`);
+  expect(html).toContain(`for="${searchId}"`);
+  expect(html).toContain(`id="${searchId}"`);
+  expect(html).toContain('type="search"');
+  expect(html).toMatch(/auto[Cc]omplete="off"/);
+});
+
+test("listing filters explains empty option-backed facets in the main canvas", () => {
+  const html = renderToString(
+    <ListingFiltersBlock
+      variant="default"
+      blockId="filters-empty-options"
+      data={normalizeListingFiltersData({
+        ...listingFiltersDefaults,
+        listingQueryId: "listing-query-empty-options",
+        facets: [
+          {
+            id: "status",
+            kind: "checkbox",
+            label: "Status",
+            field: "status",
+            op: "in",
+          },
+          {
+            id: "type",
+            kind: "radio",
+            label: "Type",
+            field: "type",
+            op: "eq",
+          },
+          {
+            id: "category",
+            kind: "taxonomy",
+            label: "Category",
+            field: "category",
+            op: "in",
+          },
+        ],
+        resolved: {
+          listingQueryId: "listing-query-empty-options",
+          metrics: [
+            {
+              id: "status",
+              kind: "checkbox",
+              label: "Status",
+              token: "status.in",
+              options: [],
+              range: null,
+            },
+          ],
+        },
+      })}
+    />
+  );
+
+  expect(html.match(/data-listing-empty-options="1"/g)).toHaveLength(3);
+  expect(html).toContain("No matching options are available from the selected listing data yet.");
+  expect(html).toContain(
+    "Options will appear when listing data resolves or a safe option list is configured."
+  );
+  expect(html).not.toContain('type="radio"');
 });
 
 test("listing filters renders range, date, searchable taxonomy, active summary, and runtime status anchors", () => {

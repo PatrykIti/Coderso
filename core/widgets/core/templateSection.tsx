@@ -26,6 +26,15 @@ export type TemplateSectionData = {
   };
 };
 
+export type TemplateSectionResolutionState =
+  | "not_selected"
+  | "preview_unresolved"
+  | "template_missing"
+  | "template_unpublished"
+  | "template_loop"
+  | "template_empty"
+  | "ready";
+
 export const templateSectionSchema = {
   type: "object",
   additionalProperties: false,
@@ -103,6 +112,7 @@ const templateSectionEditorContract = {
         "templateId",
         "templateName",
         "metadata.previewLabel",
+        "metadata.category",
         "metadata.version",
         "resolved.blocks",
         "resolved.error",
@@ -168,6 +178,9 @@ const resolveTemplateLabel = (data: TemplateSectionData) => {
 const resolvePlaceholderMessage = (data: TemplateSectionData) => {
   const templateId = data.templateId?.trim();
   if (!templateId) return "Select a widget template to render here.";
+  if (!data.resolved) {
+    return "Admin preview is placeholder-only until runtime resolves this template.";
+  }
 
   switch (data.resolved?.error) {
     case "template_missing":
@@ -181,24 +194,51 @@ const resolvePlaceholderMessage = (data: TemplateSectionData) => {
   }
 };
 
+export const resolveTemplateSectionState = (
+  data: TemplateSectionData
+): TemplateSectionResolutionState => {
+  const templateId = data.templateId?.trim();
+  if (!templateId) return "not_selected";
+  if (!data.resolved) return "preview_unresolved";
+  if (data.resolved.error === "template_missing") return "template_missing";
+  if (data.resolved.error === "template_unpublished") return "template_unpublished";
+  if (data.resolved.error === "template_loop") return "template_loop";
+  const blocks = Array.isArray(data.resolved.blocks) ? data.resolved.blocks : [];
+  return blocks.length > 0 ? "ready" : "template_empty";
+};
+
 const TemplateSectionPlaceholder = ({
   label,
   message,
   templateId,
+  resolutionState,
+  category,
+  version,
 }: {
   label: string;
   message: string;
   templateId?: string;
+  resolutionState: TemplateSectionResolutionState;
+  category?: string;
+  version?: string;
 }) => (
   <div
     className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm"
     data-template-section={templateId ?? ""}
     data-template-section-state="empty"
+    data-template-section-resolution={resolutionState}
+    data-template-section-category={category ?? ""}
+    data-template-section-version={version ?? ""}
   >
     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
       Template section
     </p>
     <p className="mt-1 text-sm font-semibold text-foreground">{label}</p>
+    {category || version ? (
+      <p className="mt-1 text-xs text-muted-foreground">
+        {[category, version].filter(Boolean).join(" / ")}
+      </p>
+    ) : null}
     <p className="mt-1 text-xs text-muted-foreground">{message}</p>
   </div>
 );
@@ -221,6 +261,7 @@ export function TemplateSectionBlock({
   const category = metadata.category?.trim();
   const previewLabel = metadata.previewLabel?.trim();
   const version = metadata.version?.trim();
+  const resolutionState = resolveTemplateSectionState(normalized);
 
   if (normalized.resolved?.error || !blocks.length) {
     return (
@@ -228,6 +269,9 @@ export function TemplateSectionBlock({
         label={label}
         message={resolvePlaceholderMessage(normalized)}
         templateId={templateId}
+        resolutionState={resolutionState}
+        category={category}
+        version={version}
       />
     );
   }
@@ -237,6 +281,7 @@ export function TemplateSectionBlock({
       className="flex flex-col gap-6"
       data-template-section={templateId ?? ""}
       data-template-section-state="ready"
+      data-template-section-resolution="ready"
       data-template-section-category={category ?? ""}
       data-template-section-version={version ?? ""}
     >

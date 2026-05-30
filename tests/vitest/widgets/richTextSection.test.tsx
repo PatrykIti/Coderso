@@ -13,10 +13,13 @@ import {
   normalizeRichTextSectionData,
   renderRichTextSectionHtmlPreview,
   resolveRichTextRenderedSource,
+  resolveRichTextSanitizerReport,
   richTextSectionDefaults,
+  resolveRichTextSourceDrift,
   RichTextSectionBlock,
   sanitizeRichTextHtml,
   sanitizeRichTextHtmlWithDiagnostics,
+  summarizeRichTextBlockPreview,
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -79,6 +82,25 @@ test("rich text section preview renderer reuses the widget sanitizer without raw
   expect(html).toContain('<a href="#">Unsafe</a>');
   expect(html).not.toContain("<img");
   expect(html).not.toContain("javascript:alert(1)");
+});
+
+test("rich text section block summaries strip contentHtml for Wizard previews", () => {
+  expect(
+    summarizeRichTextBlockPreview({
+      id: "block-1",
+      kind: "text",
+      contentHtml: "<p>Alpha <strong>rich</strong> copy</p>",
+      content: "Legacy fallback",
+    })
+  ).toBe("Alpha rich copy");
+
+  expect(
+    summarizeRichTextBlockPreview({
+      id: "block-2",
+      kind: "text",
+      content: "Legacy fallback",
+    })
+  ).toBe("Legacy fallback");
 });
 
 test("resolveRichTextRenderedSource matches the runtime fallback contract", () => {
@@ -297,12 +319,45 @@ test("article variant respects max width, labels the section, and scopes toc ids
   );
 
   expect(articleHtml).toContain('data-rich-text-title-level="1"');
+  expect(articleHtml).toContain('data-rich-text-toc-scope="body-headings"');
+  expect(articleHtml).toContain('data-rich-text-toc-count="1"');
   expect(articleHtml).toContain('aria-labelledby="rich-text-section-article-a-title"');
   expect(articleHtml).toContain('id="rich-text-section-article-a-title"');
   expect(articleHtml).toContain('id="rich-text-section-article-b-title"');
   expect(articleHtml).toContain('href="#rich-text-section-article-a-heading-intro"');
+  expect(articleHtml).not.toContain('href="#rich-text-section-article-a-title"');
   expect(articleHtml).toContain("focus-visible:ring-2");
   expect(articleHtml).toContain('class="mx-auto w-full space-y-6 max-w-none"');
+});
+
+test("rich text section reports body/block drift and carries latest sanitizer events", () => {
+  expect(
+    resolveRichTextSourceDrift({
+      body: {
+        html: "<p>Primary body only</p>",
+        blocks: [
+          { id: "block-1", kind: "text", heading: "Structured", contentHtml: "<p>Copy</p>" },
+        ],
+      },
+    })
+  ).toMatchObject({ hasDrift: true });
+
+  const report = resolveRichTextSanitizerReport({
+    body: {
+      html: "<p>Clean stored body</p>",
+      blocks: [],
+      sanitizerDiagnostics: [
+        { code: "href_rewritten", tagName: "A", attributeName: "HREF" },
+        { code: "href_rewritten", tagName: "a", attributeName: "href" },
+      ],
+    },
+  });
+
+  expect(report.diagnostics).toEqual([
+    { code: "href_rewritten", tagName: "a", attributeName: "href" },
+  ]);
+  expect(report.storedDiagnostics).toHaveLength(1);
+  expect(report.htmlDiagnostics).toHaveLength(0);
 });
 
 test("rich text section validator accepts the expanded rich block model", () => {
@@ -424,6 +479,8 @@ test("rich text editors expose the updated wizard, visual, and advanced IA", () 
     'data-widget-editor-section="rich-text-section.wizard.starter-copy"'
   );
   expect(wizardHtml).toContain("Use Visual to edit the eyebrow, title, heading level");
+  expect(wizardHtml).toContain("Use this section for longer explanations");
+  expect(wizardHtml).not.toContain("No paragraph text yet");
   expect(visualHtml).toContain("Variant and layout structure");
   expect(visualHtml).toContain("Title block copy");
   expect(visualHtml).toContain("Body content");

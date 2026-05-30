@@ -172,7 +172,7 @@ const titleSizeClassMap = {
 } as const;
 
 const descriptionSizeClassMap = {
-  none: "",
+  none: undefined,
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
@@ -710,6 +710,24 @@ export const resolveTimelineLayout = (
   maxWidth: isEnumValue(layout?.maxWidth, timelineMaxWidthOptions) ? layout.maxWidth : "6xl",
 });
 
+export function resolveTimelineMaxWidthDiagnostics(
+  layout: TimelineData["layout"],
+  stepCount: number
+): {
+  requested: TimelineMaxWidth;
+  effective: TimelineMaxWidth;
+  narrowed: boolean;
+} {
+  const requested = resolveTimelineLayout(layout).maxWidth;
+  const effective = stepCount <= 3 && requested === "6xl" ? "5xl" : requested;
+
+  return {
+    requested,
+    effective,
+    narrowed: requested !== effective,
+  };
+}
+
 export const resolveTimelineGuides = (
   guides: TimelineData["guides"]
 ): Required<NonNullable<TimelineData["guides"]>> => ({
@@ -753,6 +771,26 @@ export const resolveTimelineStyle = (
     : "semibold",
 });
 
+export function resolveTimelineStepMarkerDisplay(
+  step: Pick<TimelineStep, "markerIcon" | "icon">,
+  markerDisplay: TimelineMarkerDisplay
+): TimelineMarkerDisplay {
+  if (markerDisplay === "icon" && !resolveTimelineIcon(step.markerIcon ?? step.icon)) {
+    return "dot";
+  }
+
+  return markerDisplay;
+}
+
+export function countTimelineIconMarkerFallbacks(
+  steps: Array<Pick<TimelineStep, "markerIcon" | "icon">>,
+  markerDisplay: TimelineMarkerDisplay
+) {
+  if (markerDisplay !== "icon") return 0;
+  return steps.filter((step) => resolveTimelineStepMarkerDisplay(step, markerDisplay) === "dot")
+    .length;
+}
+
 type ResolvedTimelineLink = {
   href: string;
   rel?: string;
@@ -789,12 +827,13 @@ function renderMarker(
 ) {
   const markerAccent =
     step.markerBackgroundColor ?? step.accent ?? style.markerColor ?? "var(--color-primary)";
-  const markerDisplay =
-    style.markerDisplay === "icon" && !(step.markerIcon ?? step.icon) ? "dot" : style.markerDisplay;
+  const markerDisplay = resolveTimelineStepMarkerDisplay(step, style.markerDisplay);
 
   if (markerDisplay === "dot") {
     return (
       <span
+        data-timeline-marker-effective-display="dot"
+        data-timeline-marker-requested-display={style.markerDisplay}
         className={joinClasses(
           "inline-flex shrink-0 rounded-full border",
           markerDotSizeClassMap[style.markerSize]
@@ -815,6 +854,8 @@ function renderMarker(
 
   return (
     <span
+      data-timeline-marker-effective-display={markerDisplay}
+      data-timeline-marker-requested-display={style.markerDisplay}
       className={joinClasses(
         "inline-flex shrink-0 items-center justify-center rounded-full border font-semibold leading-none",
         markerFilledSizeClassMap[style.markerSize],
@@ -861,6 +902,10 @@ function renderStepText({
         ? "text-sm"
         : (titleSizeClassMap[titleSize] ?? "text-base");
   const titleWeightClass = titleWeightClassMap[titleWeight] ?? "font-semibold";
+  const descriptionSizeClass =
+    descriptionSize === "none"
+      ? undefined
+      : (descriptionSizeClassMap[descriptionSize] ?? "text-xs");
 
   return (
     <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
@@ -898,10 +943,7 @@ function renderStepText({
         </div>
       ) : null}
       {!compact && step.description ? (
-        <p
-          className={descriptionSizeClassMap[descriptionSize] ?? "text-xs"}
-          style={compactStyle({ color: descriptionColor })}
-        >
+        <p className={descriptionSizeClass} style={compactStyle({ color: descriptionColor })}>
           {step.description}
         </p>
       ) : null}
@@ -1401,7 +1443,11 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
   const sectionDescription = normalizedData.header?.description?.trim();
   const sectionHeadingId = resolveHeadingId(sectionTitle);
   const listLabel = sectionTitle ? `${sectionTitle} steps` : "Timeline steps";
-  const resolvedMaxWidth = steps.length <= 3 && layout.maxWidth === "6xl" ? "5xl" : layout.maxWidth;
+  const maxWidthDiagnostics = resolveTimelineMaxWidthDiagnostics(
+    normalizedData.layout,
+    steps.length
+  );
+  const markerIconFallbackCount = countTimelineIconMarkerFallbacks(steps, style.markerDisplay);
 
   return (
     <section
@@ -1416,7 +1462,7 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
       <div
         className={joinClasses(
           "mx-auto w-full space-y-4",
-          maxWidthClassMap[resolvedMaxWidth] ?? "max-w-6xl"
+          maxWidthClassMap[maxWidthDiagnostics.effective] ?? "max-w-6xl"
         )}
       >
         <div
@@ -1427,7 +1473,11 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
           data-timeline-padding={layout.padding}
           data-timeline-section-spacing={layout.sectionSpacing}
           data-timeline-max-width={layout.maxWidth}
+          data-timeline-effective-max-width={maxWidthDiagnostics.effective}
+          data-timeline-max-width-narrowed={maxWidthDiagnostics.narrowed ? "true" : "false"}
           data-timeline-marker-display={style.markerDisplay}
+          data-timeline-marker-icon-fallback-count={markerIconFallbackCount}
+          data-timeline-description-size={style.descriptionSize ?? "xs"}
           data-timeline-title-weight={style.titleWeight}
         >
           {sectionTitle || sectionDescription ? (

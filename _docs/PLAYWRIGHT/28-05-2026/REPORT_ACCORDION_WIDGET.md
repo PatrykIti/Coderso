@@ -20,6 +20,11 @@
 > **Screenshoty:** w tej sesji **nie przechwycono żadnych plików PNG**. Cała weryfikacja
 > opiera się o inspekcję DOM / drzewa dostępności (pliki `.yml` w `.playwright-cli/`,
 > katalog ignorowany przez Git — są to migawki accessibility tree, nie zrzuty obrazu).
+>
+> **Remediacja TASK-343-04 (2026-05-30):** N1, N2 i N3 są zamknięte. Wizard
+> pokazuje panel count jako read-only stan slotów zamiast mutującego selecta,
+> single-open `name` jest scope'owany per admin render instance, a Reactowy
+> admin preview synchronizuje `aria-expanded` po natywnym `toggle`.
 
 ---
 
@@ -141,7 +146,7 @@ Strona zwraca `200` i renderuje **zapisany** stan fixture (NIE moje niezapisane 
 - variant `soft`, openMode `single`, collapsible `true`, motion `none`, `max-w-none`, 2 itemy; domyślnie otwarty **Section 2**.
 - **Skrypt runtime zadziałał** — root ma `data-coderso-accordion-bound="true"`. ✓
 - **Single-open:** klik „Section 1" → item 1 `open=true`/`aria-expanded=true`, item 2 automatycznie `open=false`/`aria-expanded=false` (natywna grupa `name`, oparta o UUID bloku `accordion-b25f9093-…-group`). ✓
-- **`aria-expanded` synchronizuje się** na froncie po każdym toggle (skrypt runtime), w przeciwieństwie do admina (N3). ✓
+- **`aria-expanded` synchronizuje się** na froncie po każdym toggle (skrypt runtime); po TASK-343-04 admin preview synchronizuje ten stan przez Reactowy `onToggle`. ✓
 - **collapsible=true:** drugi klik „Section 1" → wszystko zamknięte (`anyOpen=false`). ✓
 - **Klawiatura:** focus summary + `Enter` → `open=true`/`aria-expanded=true`. ✓
 - **ARIA:** root `role=group`+`aria-label="Accordion"`; każde summary ma `id`+`aria-controls`; panel `role=region`+`aria-labelledby`; ikona `aria-hidden`. ✓
@@ -151,19 +156,19 @@ Strona zwraca `200` i renderuje **zapisany** stan fixture (NIE moje niezapisane 
 
 ---
 
-## 5. CO NIE DZIAŁA / JEST MYLĄCE (bugi i niuanse UX/UI)
+## 5. Znaleziska i status po remediacji
 
-| # | Obszar | Obserwacja |
-|---|--------|-----------|
-| **N1 — Wizard „Number of items" ≠ realny render** | Wizard / sloty | Zmiana „Number of items" 2→4 zaktualizowała tablicę `items` i read-only podsumowania (pojawiły się „Item 3"/„Item 4") **oraz** podsumowanie w Advanced, ale **liczba realnie renderowanych itemów pozostała 2** w canvas i w „Live preview" (`data-coderso-accordion-count="2"` w obu). Faktyczną liczbę tworzy slot system (`Add Item` w sekcji Structure), nie kontrolka Wizarda. **Potwierdzone w tej iteracji od dwóch stron:** (a) Wizard count→4 nie zmienia renderu; (b) `Add Item` realnie zwiększa render 2→3…→8. To realna pułapka UX (dwa nieZSYNCHRONIZOWANE mechanizmy). Identyczne z N1 z `tabs`. |
-| **N2 — Wspólna grupa `name` canvas ↔ Live preview (bug, admin-only)** | Wizard / renderer | W trybie Wizard w DOM są **dwa** rendery tego samego bloku (canvas + „Live preview"); oba używają **identycznego** `name="accordion-blk-1-group"` (z `blockId`). Ponieważ natywne grupowanie `<details name>` jest globalne w dokumencie, w single oba rendery dzielą jedną wykluczającą grupę. **Zademonstrowane behawioralnie:** otwarcie itemu 1 w Live preview **zamknęło item 1 w canvas** (canvas `open=true` → `false` po kliknięciu w preview). Dotyczy tylko admina i tylko single (w multiple `name` znika). Front bezpieczny (jeden render, `name` oparty na UUID). Naprawa: różnicować nazwę grupy per kontekst renderowania. |
-| **N3 — `aria-expanded` nie synchronizuje się w canvas admina** | Renderer / a11y (admin-only) | Skrypt runtime wstrzykiwany przez `dangerouslySetInnerHTML` **nie jest wykonywany przez React** w edytorze (`data-coderso-accordion-bound` = undefined w canvas). **Zademonstrowane:** item 2 (domyślnie zamknięty) po ręcznym toggle ma `open=true`, ale `aria-expanded` zostaje `"false"`. Stan początkowy jest poprawny; rozjazd pojawia się po interakcji. Na froncie problem NIE występuje (skrypt działa, `bound=true`, aria się synchronizuje). Niski priorytet (preview admina). |
-| **N4 — Mylące etykiety „Max width"** | Visual / layout | Tokeny przemapowane: `sm`→„Medium" (`max-w-2xl`), `md`→„Wide", `lg`→„Extra wide", `full`→„Full width". Najwęższa opcja nazywa się **„Medium"** — brak „Small"/„Narrow". Użytkownik może oczekiwać, że „Medium" to środek skali. Czysto nazewnicze. |
-| **N5 — Advanced pokazuje „Preset" zamiast wartości efektywnej** | Advanced | „Spacing: Heading **Preset**; content **Preset**" i „Title style: **Preset** size; **Preset** weight" dla tokenów nieustawionych jawnie (renderer dziedziczy z fallbacku wariantu). Nie błąd, ale „Preset" jest mniej informacyjne niż realnie zastosowana wartość. |
-| **N6 — „Saved …summary" pokazuje stan NIEzapisany** | Advanced | Sekcje „Saved items summary" / „Saved display summary" odzwierciedlają **bieżący stan edytora**, a nie stan zapisany w bazie. Po dodaniu 8 itemów (bez zapisu) Advanced pokazał Item 1–8. Słowo „Saved" jest więc mylące — to live mirror sesji Visual, nie persisted state. |
-| **N7 — Niespójna semantyka „Clear" w kolorach** | Visual / colors | Po „Clear": **Surface** → tło staje się **transparent** (znika inline `background-color`); **Border** i **Summary text** → wracają do **koloru motywu** (`var(--color-border)`/`var(--color-text)`); **Body text** → brak inline (nie ma domyślnej wartości motywu). Cztery pola, trzy różne zachowania po „Clear". Badge zawsze pokazuje „Theme default", co dla Surface jest subtelnie mylące (transparent ≠ kolor powierzchni z motywu). |
-| **N8 — Style select bez „reset do presetu" → pierwszy klik odcina od wariantu** | Visual / style | Selecty stylu (padding/radius/size/weight) **nie mają opcji „wróć do presetu wariantu"** — mają zawsze konkretną wartość (start = fallback wariantu). Po jakimkolwiek wyborze (nawet „Default") token staje się **jawnym overrideem**, który od tej pory **ignoruje preset wariantu**. **Zademonstrowane:** po ustawieniu radius=Extra large + padding/size/weight, przełączanie wariantu soft/bordered/compact zmieniało już tylko `data-…-variant`, ale klasy stylu pozostawały na wartościach jawnych (`rounded-2xl`, `px-4 py-3`, `text-base`, `p-4`). Jedyny sposób „odpięcia" to przeładowanie/odrzucenie edycji — brak per-kontrolkowego resetu. |
-| **N9 — Brak dialogu potwierdzenia przy redukcji liczby itemów** | Wizard / Structure | Zmniejszenie „Number of items" w Wizardzie ani „Remove" w Structure **nie pokazują `window.confirm`** (w przeciwieństwie do `tabs`). Akceptowalne, bo sloty są puste (brak destrukcyjnej utraty zagnieżdżonej treści w tym fixture), ale to niespójność UX między widgetami. |
+| # | Obszar | Obserwacja | Status |
+|---|--------|-----------|--------|
+| **N1 — Wizard „Number of items" ≠ realny render** | Wizard / sloty | Historycznie zmiana „Number of items" 2→4 aktualizowała tablicę `items` i read-only podsumowania, ale liczba realnie renderowanych itemów pozostawała slot-owned. | Zamknięte w TASK-343-04: Wizard nie ma mutującego selecta count; pokazuje read-only `Panel count` oparty o sloty, a struktura pozostaje własnością Structure. |
+| **N2 — Wspólna grupa `name` canvas ↔ Live preview (bug, admin-only)** | Wizard / renderer | Historycznie canvas i „Live preview" używały identycznego `name="accordion-blk-1-group"`, więc natywne single-open grupowanie działało globalnie między dwoma renderami. | Zamknięte w TASK-343-04: admin preview dokleja per-render instance id do grupy `<details name>`, więc canvas i live preview są izolowane. |
+| **N3 — `aria-expanded` nie synchronizuje się w canvas admina** | Renderer / a11y (admin-only) | Historycznie skrypt runtime nie wykonywał się w Reactowym edytorze, więc ręczny toggle mógł zmienić `open` bez aktualizacji `aria-expanded`. | Zamknięte w TASK-343-04: `<details>` ma Reactowy `onToggle`, który synchronizuje summary `aria-expanded` w admin preview bez runtime scriptu. |
+| **N4 — Mylące etykiety „Max width"** | Visual / layout | Tokeny przemapowane: `sm`→„Medium" (`max-w-2xl`), `md`→„Wide", `lg`→„Extra wide", `full`→„Full width". Najwęższa opcja nazywa się **„Medium"** — brak „Small"/„Narrow". Użytkownik może oczekiwać, że „Medium" to środek skali. Czysto nazewnicze. | Pozostaje poza zakresem TASK-343-04. |
+| **N5 — Advanced pokazuje „Preset" zamiast wartości efektywnej** | Advanced | „Spacing: Heading **Preset**; content **Preset**" i „Title style: **Preset** size; **Preset** weight" dla tokenów nieustawionych jawnie (renderer dziedziczy z fallbacku wariantu). Nie błąd, ale „Preset" jest mniej informacyjne niż realnie zastosowana wartość. | Pozostaje poza zakresem TASK-343-04. |
+| **N6 — „Saved …summary" pokazuje stan NIEzapisany** | Advanced | Sekcje „Saved items summary" / „Saved display summary" odzwierciedlają **bieżący stan edytora**, a nie stan zapisany w bazie. Po dodaniu 8 itemów (bez zapisu) Advanced pokazał Item 1–8. Słowo „Saved" jest więc mylące — to live mirror sesji Visual, nie persisted state. | Pozostaje poza zakresem TASK-343-04. |
+| **N7 — Niespójna semantyka „Clear" w kolorach** | Visual / colors | Po „Clear": **Surface** → tło staje się **transparent** (znika inline `background-color`); **Border** i **Summary text** → wracają do **koloru motywu** (`var(--color-border)`/`var(--color-text)`); **Body text** → brak inline (nie ma domyślnej wartości motywu). Cztery pola, trzy różne zachowania po „Clear". Badge zawsze pokazuje „Theme default", co dla Surface jest subtelnie mylące (transparent ≠ kolor powierzchni z motywu). | Pozostaje poza zakresem TASK-343-04. |
+| **N8 — Style select bez „reset do presetu" → pierwszy klik odcina od wariantu** | Visual / style | Selecty stylu (padding/radius/size/weight) **nie mają opcji „wróć do presetu wariantu"** — mają zawsze konkretną wartość (start = fallback wariantu). Po jakimkolwiek wyborze (nawet „Default") token staje się **jawnym overrideem**, który od tej pory **ignoruje preset wariantu**. **Zademonstrowane:** po ustawieniu radius=Extra large + padding/size/weight, przełączanie wariantu soft/bordered/compact zmieniało już tylko `data-…-variant`, ale klasy stylu pozostawały na wartościach jawnych (`rounded-2xl`, `px-4 py-3`, `text-base`, `p-4`). Jedyny sposób „odpięcia" to przeładowanie/odrzucenie edycji — brak per-kontrolkowego resetu. | Pozostaje poza zakresem TASK-343-04. |
+| **N9 — Brak dialogu potwierdzenia przy redukcji liczby itemów** | Wizard / Structure | Historycznie Wizard count mógł redukować `items`; po TASK-343-04 Wizard count nie istnieje. `Remove` w Structure nadal nie pokazuje `window.confirm`, co jest akceptowalne dla pustych slotów w tym fixture, ale pozostaje niespójnością UX między widgetami. | Częściowo zamknięte: Wizard path usunięty; Structure confirm pozostaje poza zakresem. |
 
 **Nie wykryto** żadnych błędów konsoli (admin i front: 0/0), żadnego twardego buga renderowania ani rozjazdu render między wspólnie testowanymi opcjami admin↔front. Wszystkie kontrolki Visual/Wizard, które kliknięto, działają i aktualizują podgląd na żywo.
 
@@ -176,10 +181,10 @@ Strona zwraca `200` i renderuje **zapisany** stan fixture (NIE moje niezapisane 
 | Atrybuty `data-coderso-accordion-*` | ✓ żywy `AccordionBlock` | ✓ identyczne | ✓ |
 | Otwieranie/zamykanie | ✓ natywny `<details>` (bez skryptu) | ✓ natywny `<details>` + skrypt | ✓ |
 | Single-open (`name`) | ✓ działa (`accordion-blk-1-group`) | ✓ działa (`accordion-<UUID>-group`) | ✓ |
-| `aria-expanded` po ręcznym toggle | ✗ stałe (N3) | ✓ synchronizuje (skrypt) | ⚠ tylko front |
-| Grupa `name` przy 2 renderach (Wizard) | ✗ kolizja canvas↔preview (N2) | ✓ jeden render | ⚠ tylko admin |
+| `aria-expanded` po ręcznym toggle | ✓ Reactowy `onToggle` sync | ✓ synchronizuje (skrypt) | ✓ po TASK-343-04 |
+| Grupa `name` przy 2 renderach (Wizard) | ✓ per-render instance scope | ✓ jeden render | ✓ po TASK-343-04 |
 | `collapsible=false` (wymuszenie ≥1 otwarty) | brak skryptu → tylko atrybut | egzekwowane przez skrypt | ⚠ na froncie NIEtestowane (fixture ma `true`) |
-| Liczba itemów: slot (`Add Item`) vs Wizard count | slot=render, Wizard count=tylko dane (N1) | render zgodny z zapisanymi slotami | ✓ mechanizm spójny |
+| Liczba itemów: slot (`Add Item`) vs Wizard count | slot=render, Wizard count read-only | render zgodny z zapisanymi slotami | ✓ po TASK-343-04 |
 | Placeholder pustego panelu | „Add widgets to this accordion item." | brak (nie wyciekł) | ✓ poprawne |
 | Niezapisane edycje z Visual | widoczne (także w Advanced, N6) | **nieobecne** (front = stan zapisany) | ✓ poprawna izolacja |
 
@@ -203,8 +208,9 @@ Każda pozycja podaje **dokładną kontrolkę** i **powód** blokady:
 - Widget **accordion jest w bardzo dobrym stanie funkcjonalnym**. W tej iteracji **kliknięto każdą opcję każdego selectu stylu** (motion, max width, oba paddingi, radius, title size/weight) i **każda** poprawnie zmienia klasę w DOM canvas; wszystkie 3 karty wariantu, open mode (z realnym dwu-otwarciem), collapsible oraz **wszystkie 4 kolory (ustawienie + Clear)** działają.
 - **Item controls w pełni wykonane:** `Add Item` realnie zwiększa render (2→8, blokada na 8), `Remove` zmniejsza (8→2, znika na min 2), `Move up/down` reorderuje sloty; edycja treści itemów aktualizuje canvas, a **ikona ucina się do 24 znaków** (luka zamknięta).
 - **Frontend** w pełni interaktywny i dostępny (natywne `<details>`, klawiatura, kompletne ARIA, synchronizacja `aria-expanded`, single-open, collapse-all), bez błędów konsoli i bez overflow @375 px.
-- **Kluczowy niuans (N1):** rozjazd „Number of items" (Wizard) vs realny render — render steruje slot system (`Add Item`). Potwierdzone obustronnie.
-- **Realne bugi admin-only:** N2 (kolizja `name` canvas↔Live preview, zademonstrowana behawioralnie) i N3 (brak sync `aria-expanded` w canvas). Front nieobjęty oboma.
+- **TASK-343-04 zamknął kluczowe znaleziska N1/N2/N3:** Wizard count jest
+  read-only i slot-owned, grupy single-open są izolowane per admin render, a
+  `aria-expanded` synchronizuje się w admin preview.
 - **Nowe niuanse tej iteracji:** N6 („Saved …summary" pokazuje stan niezapisany), N8 (style select bez resetu do presetu → pierwszy klik odcina od wariantu), N9 (brak confirm przy redukcji liczby itemów). Plus dotychczasowe N4 (etykiety max width), N5 („Preset" w Advanced), N7 (niespójny „Clear" kolorów).
 - **Plus względem innych widgetów:** spójne przyciski „Clear" dla wszystkich 4 kolorów + czytelne badge „Theme default" / „Selected color".
 - **Nie znaleziono** błędu renderowania ani rozbieżności admin↔front w zakresie wspólnie testowanych opcji. Wszystkie rozbieżności są celowe (placeholder, izolacja niezapisanych edycji) lub admin-only (N2, N3).

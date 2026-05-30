@@ -37,8 +37,9 @@ media-first cards, CTA actions, and bounded layout/style controls.
 - card layout, text alignment, padding, media sizing, and horizontal layout
 - surface/border colors
 - section background, width, header size, card title size, and hover behavior
-- color controls are swatch-only with saved-custom replace/clear state; authors
-  are not asked to type CSS variables or token strings
+- color controls are swatch-only with separate theme-token, selected-swatch,
+  saved-custom, and fallback-preview labels; authors are not asked to type CSS
+  variables or token strings
 
 ### Advanced
 
@@ -97,6 +98,13 @@ media-first cards, CTA actions, and bounded layout/style controls.
 
 ## Shared Safety Baseline
 
+- card editor fields stack in one column inside each card so emoji preset
+  buttons remain directly clickable and are not covered by neighboring media
+  controls
+- card-count or variant changes that would remove saved cards require
+  destructive confirmation before truncating `items`
+- public sections use `aria-labelledby` when a header title is present and
+  `aria-label="Feature grid"` as the no-title fallback
 - legacy invalid `items[].image` values stay visible in admin as read-only
   replace/clear state, but runtime output skips unsafe image URLs
 - invalid `items[].ctaHref` values stay visible in admin with inline feedback,

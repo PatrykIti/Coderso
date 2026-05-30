@@ -6,7 +6,7 @@
 **Category:** Widgets + Toggle Block + Runtime + Theme + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,18 +24,18 @@ color pair and document the admin preview's non-interactive runtime boundary.
 
 ## Sub-Tasks
 
-- [ ] Stop applying the accent text color inline to the active trigger.
-- [ ] Restore real ownership of `accentContrastColor` for active-trigger text.
-- [ ] Make the contrast advisory evaluate the real rendered foreground/background
+- [x] Stop applying the accent text color inline to the active trigger.
+- [x] Restore real ownership of `accentContrastColor` for active-trigger text.
+- [x] Make the contrast advisory evaluate the real rendered foreground/background
   pair, not only the intended token pair.
-- [ ] Make the non-interactive admin/Wizard preview state explicit or add a
+- [x] Make the non-interactive admin/Wizard preview state explicit or add a
   React-local preview switcher if product scope requires interaction there.
-- [ ] Clean up duplicated `shadow-sm` when pane surface and border emphasis both
+- [x] Clean up duplicated `shadow-sm` when pane surface and border emphasis both
   contribute the same class.
-- [ ] Route any remaining shared color/default wording from the report to
+- [x] Route any remaining shared color/default wording from the report to
   `TASK-343-30` and any shared wrapper/visibility wording to `TASK-343-21` so
   Toggle-local scope does not hide shared follow-ups.
-- [ ] Add renderer regression coverage for contrast and class composition.
+- [x] Add renderer regression coverage for contrast and class composition.
 
 ## Files To Change
 
@@ -95,3 +95,27 @@ No API routes are added.
 - Active Toggle Block labels remain readable when accent is configured.
 - `Accent contrast color` has a real visible effect.
 - The contrast advisory and admin preview copy describe the real rendered state.
+
+## Completion Notes (2026-05-30)
+
+- Active triggers no longer receive inline `color: accentColor`; the active text
+  now resolves through `--nextless-toggle-accent-contrast`, while inactive
+  triggers may still use the configured accent text color.
+- Toggle pane class composition now dedupes repeated utility tokens so
+  Contrast surface plus Strong border emits a single `shadow-sm`.
+- Visual and Wizard copy now state that editor previews are static and that
+  public pages mount click/keyboard switching. The Theme advisory label now
+  describes the rendered active-trigger color pair.
+- Shared wrapper visibility wording remains routed to `TASK-343-21`; shared
+  color/default vocabulary remains routed to `TASK-343-30`.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/toggleBlock.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/toggle-block-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-10
+  drift review: no blockers; verified minor fallback note as non-issue because
+  unknown contrast states still render the shared notice)

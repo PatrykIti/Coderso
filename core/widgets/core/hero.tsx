@@ -575,6 +575,9 @@ const normalizeHeroMediaSource = (value: string | undefined): HeroMediaSource =>
 const trimOptionalString = (value: string | undefined) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
+const toBackgroundImageOverlayLayer = (value: string | undefined) =>
+  value ? `linear-gradient(${value}, ${value})` : undefined;
+
 function normalizeHeroMedia(value: HeroMedia | undefined): HeroMedia {
   const type = value?.type === "image" || value?.type === "video" ? value.type : "none";
   return {
@@ -859,7 +862,11 @@ export function HeroBlock({
     centeredBackgroundImage && !resolvedBackgroundVideo ? resolvedBackgroundGradient : undefined;
   const layeredBackground =
     !resolvedBackgroundVideo && resolvedBackgroundImage
-      ? [resolvedBackgroundOverlay, resolvedBackgroundGradient, `url(${resolvedBackgroundImage})`]
+      ? [
+          toBackgroundImageOverlayLayer(resolvedBackgroundOverlay),
+          resolvedBackgroundGradient,
+          `url(${resolvedBackgroundImage})`,
+        ]
           .filter(Boolean)
           .join(", ")
       : !resolvedBackgroundVideo && !centeredBackgroundImage
@@ -1568,6 +1575,7 @@ export function createHeroWidget(editors: {
     ],
     schema: heroSchema,
     defaults: heroDefaults,
+    preserveAbsentDefaultKeys: ["secondaryCta"],
     editor: editors,
     editorCapabilities: { visualOwnsVariantSelection: true },
     editorContract: heroEditorContract,

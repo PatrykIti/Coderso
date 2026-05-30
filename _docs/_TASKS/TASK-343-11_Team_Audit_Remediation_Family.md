@@ -6,7 +6,7 @@
 **Category:** Widgets + Team + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -23,17 +23,31 @@ handles and the Wizard silently truncates members when switching to Spotlight.
 
 ## Sub-Tasks
 
-- [ ] Preserve the intended handle when changing platform from LinkedIn to a
+- [x] Preserve the intended handle when changing platform from LinkedIn to a
   non-LinkedIn platform.
-- [ ] Add explicit confirmation or non-destructive behavior when Spotlight would
+- [x] Add explicit confirmation or non-destructive behavior when Spotlight would
   reduce the member set.
-- [ ] Clean up misleading member-insert copy and, if retained, document the real
+- [x] Clean up misleading member-insert copy and, if retained, document the real
   append behavior.
-- [ ] Review the report's heading-hierarchy note (`H2 -> H4`) and either fix
+- [x] Review the report's heading-hierarchy note (`H2 -> H4`) and either fix
   the member heading level or document the product decision.
-- [ ] Route shared color-clear/default wording to `TASK-343-30` and placeholder
+- [x] Route shared color-clear/default wording to `TASK-343-30` and placeholder
   link polish outside this high-risk handle/truncation fix if not addressed here.
-- [ ] Add regression coverage for platform switching and Spotlight transitions.
+- [x] Add regression coverage for platform switching and Spotlight transitions.
+
+## Completion Notes
+
+- LinkedIn platform switching now strips LinkedIn-only `in/` and `company/`
+  path prefixes before building non-LinkedIn URLs, preserving the real profile
+  handle.
+- Wizard Spotlight transitions are non-destructive and only change the variant.
+  Intentional member-count reduction remains in Visual where the existing
+  destructive count guard is explicit.
+- Member insertion copy now states that new members are appended after the
+  current list.
+- Team member names render as `h3` headings under the section heading.
+- Shared clear/default color wording remains owned by completed `TASK-343-30`;
+  placeholder public social links remain fixture data.
 
 ## Files To Change
 
@@ -106,3 +120,14 @@ No API routes are added. Existing safe-link and media rules remain unchanged.
 
 - Platform switching preserves the intended profile handle.
 - Spotlight no longer truncates members silently.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/team.test.tsx tests/vitest/ui/team-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget team --session task-343-11-team-auth-rerun --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-11-team-widget-smoke-auth-rerun.json --output-md .tmp/task-343-11-team-widget-smoke-auth-rerun.md`
+- `playwright-cli -s=task-343-11-team-public-heading run-code --filename .tmp/task-343-11-team-public-heading-smoke.js`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-11
+  diff review; no blockers)

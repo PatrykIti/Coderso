@@ -147,6 +147,16 @@ const ensureMinimumItems = (
   minimumItems = 2
 ) => (items.length >= minimumItems ? items : fallback);
 
+const resolveManualItems = (
+  inputItems: unknown,
+  normalizedItems: NavigationItem[],
+  fallbackItems: NavigationItem[]
+) => {
+  if (normalizedItems.length > 0) return normalizedItems;
+  if (Array.isArray(inputItems) && inputItems.length > 0) return [];
+  return fallbackItems;
+};
+
 export async function resolveNavigationRuntimeData(
   input: unknown,
   options?: { menuLocationFallback?: string },
@@ -158,7 +168,7 @@ export async function resolveNavigationRuntimeData(
   const requestedSource = normalizeLinksSource(data.linksSource);
   const defaultManualItems = normalizeNavigationItems(navigationDefaults.items);
   const manualItemsCandidate = normalizeNavigationItems(data.items);
-  const manualItems = ensureMinimumItems(manualItemsCandidate, defaultManualItems, 1);
+  const manualItems = resolveManualItems(data.items, manualItemsCandidate, defaultManualItems);
 
   if (requestedSource === "manual") {
     return { items: manualItems, linksSource: "manual" };

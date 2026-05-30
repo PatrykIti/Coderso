@@ -23,13 +23,14 @@ state behavior, and Accordion-local layout/styling controls.
 ## Editor Modes
 
 ### Wizard
-- starter item count
+- read-only slot-owned panel count
 - initial open state, including `None - start collapsed` when all-closed is
   allowed
 - read-only starter title and summary text
 
 Wizard is setup-only in the v2 editor contract. It does not own variant, item
-copy, layout, motion, typography, or colors.
+count, item copy, layout, motion, typography, or colors. Repeatable panel count
+is owned by the page-builder Structure controls.
 
 After the one-time Wizard lifecycle, completed widgets show `Setup complete`
 with an explicit `Run setup again` action. Wizard is not a permanent daily
@@ -79,7 +80,11 @@ controls, raw JSON payloads, DOM id suffixes, CSS variables, or token text.
 - Stale saved `defaultOpenIds` fall back to the first resolved item instead of
   becoming an accidental all-collapsed state.
 - `openMode=single` uses a shared details-group name so only one item stays
-  open at a time; `openMode=multiple` allows multiple open items.
+  open at a time; admin preview scopes this name per render instance so the
+  canvas and setup/live preview do not close each other.
+- React admin preview syncs `aria-expanded` from native `<details>` toggle
+  events even when injected runtime scripts are not executed. Public runtime
+  keeps the same attribute synchronized after binding.
 - Item icons are plain text only and render as decorative summary adornments.
 - Layout/styling fields fall back to the selected variant defaults when the
   widget does not persist an explicit token.

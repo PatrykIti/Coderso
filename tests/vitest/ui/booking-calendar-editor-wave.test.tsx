@@ -448,6 +448,34 @@ test("BookingCalendar advanced editor prefers preview catalog counts from editor
   }
 });
 
+test("BookingCalendar advanced editor excludes current calendar from flow diagnostics", async () => {
+  const view = await renderEditor({
+    editor: "advanced",
+    initialValue: {
+      flowId: "self-flow",
+    },
+    context: {
+      surface: "page-builder",
+      blockId: "calendar-1",
+      bookingFlows: {
+        calendars: [
+          { blockId: "calendar-1", flowId: "self-flow", label: "Choose appointment slot" },
+          { blockId: "calendar-2", flowId: "peer-flow", label: "Concierge calendar" },
+        ],
+      },
+    },
+  });
+
+  try {
+    const text = normalizeText(view.container.textContent);
+
+    expect(text).toContain("booking flowsaved custom booking flow");
+    expect(text).not.toContain("matches choose appointment slot");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("BookingCalendar visual editor updates context and date-picker controls", async () => {
   const view = await renderEditor({
     editor: "visual",

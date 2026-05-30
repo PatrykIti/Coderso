@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { FormRecord } from "../../../core/admin/services/formsClient";
-import type { FormEmbedData } from "../../../core/widgets/core/formEmbed";
+import { formEmbedDefaults, type FormEmbedData } from "../../../core/widgets/core/formEmbed";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -258,6 +258,13 @@ const setCheckboxValue = (element: Element | null | undefined, checked: boolean)
   });
 };
 
+const clickButton = (element: Element | null | undefined) => {
+  if (!(element instanceof HTMLButtonElement)) return;
+  React.act(() => {
+    element.click();
+  });
+};
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -300,6 +307,14 @@ const getColorInputs = (container: ParentNode) =>
     (element): element is HTMLInputElement =>
       element instanceof HTMLInputElement && element.type === "color"
   );
+
+const getWidgetControl = (container: ParentNode, id: string) => {
+  const control = container.querySelector(`[data-widget-control="${id}"]`);
+  if (!(control instanceof HTMLElement)) {
+    throw new Error(`Missing widget control "${id}"`);
+  }
+  return control;
+};
 
 const makeForm = (overrides: Partial<FormRecord> = {}): FormRecord => ({
   id: "form-1",
@@ -601,6 +616,7 @@ test("FormEmbed visual owns public copy and presentation without changing select
         alignment: "center",
         width: "xl",
         spacing: "lg",
+        sectionPaddingY: "lg",
         buttonAlignment: "end",
       },
       fields: {
@@ -625,6 +641,59 @@ test("FormEmbed visual owns public copy and presentation without changing select
         successBehavior: "show-message-keep-form",
       },
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormEmbed visual reports theme-default colors truthfully and clears authored color state", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: formEmbedDefaults,
+  });
+
+  try {
+    const styleSection = getSectionByTitle(view.container, "Style");
+    expect(styleSection.textContent).toContain("Transparent");
+    expect(styleSection.textContent).toContain("Theme default");
+    expect(styleSection.textContent).not.toContain("Saved custom color");
+
+    const borderControl = getWidgetControl(styleSection, "form-embed.style-border-color");
+    const borderSwatch = borderControl.querySelector('input[type="color"]');
+    setInputValue(borderSwatch, "#445566");
+
+    expect(view.getLatestValue().style?.borderColor).toBe("#445566");
+    expect(borderControl.textContent).toContain("Selected color");
+
+    const clearButton = Array.from(borderControl.querySelectorAll("button")).find(
+      (button) => button.textContent === "Clear"
+    );
+    clickButton(clearButton);
+
+    expect(view.getLatestValue().style?.borderColor).toBeUndefined();
+    expect(borderControl.textContent).toContain("Theme default");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormEmbed visual clamps saved-progress TTL zero to one", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {},
+  });
+
+  try {
+    const navigationInputs = Array.from(
+      getSectionByTitle(view.container, "Multi-step navigation").querySelectorAll("input")
+    ).filter(
+      (element): element is HTMLInputElement =>
+        element instanceof HTMLInputElement && element.type !== "checkbox"
+    );
+
+    setInputValue(navigationInputs[2], "0");
+
+    expect(view.getLatestValue().navigation?.savedProgressTtlDays).toBe(1);
   } finally {
     view.cleanup();
   }
@@ -684,6 +753,22 @@ test("FormEmbed advanced is read-only and redacts runtime security values", asyn
     expect(view.container.textContent).not.toContain("raw-nonce-secret");
     expect(view.container.textContent).not.toContain("site-key-1");
     expect(view.onChangeSpy).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormEmbed advanced does not count pristine defaults as authored overrides", async () => {
+  const view = await renderEditor({
+    editor: "advanced",
+    initialValue: formEmbedDefaults,
+  });
+
+  try {
+    expect(view.container.textContent).toContain("Theme defaults");
+    expect(view.container.textContent).toContain("default success message");
+    expect(view.container.textContent).not.toContain("success message configured");
+    expect(view.container.textContent).not.toContain("saved color override");
   } finally {
     view.cleanup();
   }

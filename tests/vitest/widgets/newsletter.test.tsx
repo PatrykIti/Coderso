@@ -23,7 +23,7 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 
-test("newsletter renders semantic fields and avoids current-page submit when no target is configured", () => {
+test("newsletter renders disconnected semantics without a native form submit target", () => {
   const html = renderToString(
     <NewsletterBlock
       blockId="newsletter-hero"
@@ -45,15 +45,18 @@ test("newsletter renders semantic fields and avoids current-page submit when no 
   );
 
   expect(html).toContain('data-newsletter-submit-ready="false"');
+  expect(html).toContain('data-newsletter-submit-interactive="false"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
   expect(html).toContain('data-newsletter-action-status="empty"');
+  expect(html).not.toContain("<form");
+  expect(html).toContain('role="form"');
+  expect(html).toContain('aria-disabled="true"');
   expect(html).toContain('type="button"');
   expect(html).toContain('name="email"');
   expect(html).toContain('id="newsletter-newsletter-hero-email"');
   expect(html).toContain('for="newsletter-newsletter-hero-email"');
   expect(html).toContain('autoComplete="email"');
   expect(html).toContain('name="consent"');
-  expect(html.indexOf('name="consent"')).toBeGreaterThan(-1);
-  expect(html.indexOf('name="consent"')).toBeLessThan(html.indexOf("</form>"));
   expect(html).toContain(
     "Connect a Forms runtime binding or a safe external action URL to enable submissions."
   );
@@ -70,7 +73,42 @@ test("newsletter shows a public fallback message when no submit target is connec
 
   expect(html).toContain('data-newsletter-submit-ready="false"');
   expect(html).toContain("This signup form is not connected yet.");
+  expect(html).not.toContain("<form");
+  expect(html).toContain('role="form"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
   expect(html).toContain('type="button"');
+});
+
+test("newsletter keeps safe static action-url as a native submit path", () => {
+  const html = renderToString(
+    <NewsletterBlock
+      renderContext={{ mode: "public" }}
+      data={{
+        ...newsletterDefaults,
+        integration: {
+          mode: "action-url",
+          method: "get",
+          actionUrl: "https://example.com/subscribe",
+          webhookId: "",
+        },
+        submission: {
+          ...newsletterDefaults.submission,
+          mode: "static",
+        },
+      }}
+      variant="inline"
+    />
+  );
+
+  expect(html).toContain("<form");
+  expect(html).toContain('action="https://example.com/subscribe"');
+  expect(html).toContain('method="get"');
+  expect(html).toContain('type="submit"');
+  expect(html).toContain('data-newsletter-submit-ready="true"');
+  expect(html).toContain('data-newsletter-submit-interactive="true"');
+  expect(html).toContain('data-newsletter-native-submit="enabled"');
+  expect(html).not.toContain('role="form"');
+  expect(html).not.toContain('aria-disabled="true"');
 });
 
 test("newsletter reuses shared Forms runtime markup when the resolved form is compatible", () => {
@@ -217,6 +255,8 @@ test("newsletter keeps forms-runtime bindings static when consent or required fi
   );
 
   expect(html).toContain('data-newsletter-submit-ready="false"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
+  expect(html).not.toContain("<form");
   expect(html).not.toContain('data-nextless-form-runtime="1"');
   expect(html).not.toContain('name="__nl_form_nonce"');
   expect(html).toContain(
@@ -260,6 +300,8 @@ test("newsletter keeps forms-runtime bindings static when the resolved form is i
   );
 
   expect(html).toContain('data-newsletter-submit-ready="false"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
+  expect(html).not.toContain("<form");
   expect(html).not.toContain('data-nextless-form-runtime="1"');
   expect(html).toContain('type="button"');
   expect(html).not.toContain('name="__nl_form_nonce"');
@@ -291,6 +333,8 @@ test("newsletter does not treat shared forms routes as a native static submit ta
 
   expect(html).toContain('data-newsletter-submit-ready="false"');
   expect(html).not.toContain('action="/forms/form-public/submissions"');
+  expect(html).not.toContain("<form");
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
   expect(html).toContain(
     "Switch Newsletter submission mode to Forms runtime when you target a Coderso Forms route."
   );
@@ -398,7 +442,10 @@ test("newsletter editor preview shows a bound Forms contract without enabling ru
 
   expect(html).toContain('data-newsletter-submit-ready="true"');
   expect(html).toContain('data-newsletter-submit-interactive="false"');
-  expect(html).toContain('action="/forms/form-preview/submissions"');
+  expect(html).not.toContain("<form");
+  expect(html).not.toContain('action="/forms/form-preview/submissions"');
+  expect(html).toContain('role="form"');
+  expect(html).toContain('data-newsletter-native-submit="blocked"');
   expect(html).not.toContain('data-nextless-form-runtime="1"');
   expect(html).toContain(
     "Editor preview shows the bound Forms contract. Public runtime injects nonce and bot protection at render time."

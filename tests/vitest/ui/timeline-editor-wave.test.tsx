@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { TimelineData } from "../../../core/widgets/core/timeline";
+import type { WidgetBlock } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -511,6 +512,13 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
     expect(latestValue.mode).toBe("alternating");
     expect(currentVariant).toBe("cards");
     expect(view.container.textContent).toContain("prefers the cards visual variant");
+    setSelectValue(
+      findSelectByOptions(view.container, ["process", "axis", "chronology", "alternating"]),
+      "process"
+    );
+    expect(latestValue.mode).toBe("process");
+    expect(currentVariant).toBe("compact");
+    expect(view.container.textContent).toContain("prefers the compact visual variant");
 
     const contentSection = findSectionByTitle(view.container, "Steps content and order");
     const markersSection = findSectionByTitle(view.container, "Markers and accents");
@@ -566,9 +574,15 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
       findSelectByOptions(markersSection as ParentNode, ["dot", "number", "icon"]),
       "icon"
     );
+    expect(markersSection?.textContent).toContain(
+      "3 steps without a marker icon or decorative step icon will render dot markers"
+    );
     setInputValue(
       findInputByPlaceholder(markersSection as ParentNode, "Marker icon or emoji"),
       "rocket"
+    );
+    expect(markersSection?.textContent).toContain(
+      "2 steps without a marker icon or decorative step icon will render dot markers"
     );
     expect(markersSection?.textContent).toContain("Accent fallback");
 
@@ -581,6 +595,13 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
       "none"
     );
     expect(typographySection?.textContent).toContain("Step titles are currently hidden");
+    setSelectValue(
+      findSelectByOptions(typographySection as ParentNode, ["none", "xs", "sm", "base", "lg"]),
+      "none"
+    );
+    expect(typographySection?.textContent).toContain(
+      "None keeps descriptions visible and clears the explicit size class"
+    );
     setSelectValue(
       findSelectByOptions(typographySection as ParentNode, [
         "normal",
@@ -622,6 +643,65 @@ test("Timeline visual editor covers mode previews, drag reorder, no-status, grou
     expect(latestValue.steps.find((step) => step.id === "alpha")?.link).toEqual(
       expect.objectContaining({ href: "/timeline-link", label: "Open discovery" })
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Timeline visual mode select uses the same block patch contract as mode cards", async () => {
+  const { TimelineVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
+
+  const onChangeSpy = vi.fn();
+  const onBlockPatchSpy = vi.fn();
+  let latestBlock: WidgetBlock = {
+    id: "timeline-mode",
+    type: "timeline",
+    variant: "milestones",
+    data: {
+      steps: [
+        { id: "alpha", title: "Discover" },
+        { id: "beta", title: "Plan" },
+        { id: "gamma", title: "Ship" },
+      ],
+    } as unknown as Record<string, unknown>,
+  };
+
+  const Harness = () => {
+    const [block, setBlock] = useState<WidgetBlock>(latestBlock);
+
+    return (
+      <TimelineVisualEditor
+        value={block.data as unknown as TimelineData}
+        onChange={(next) => {
+          onChangeSpy(next);
+        }}
+        variant={block.variant ?? "milestones"}
+        onBlockPatch={(patch) => {
+          onBlockPatchSpy(patch);
+          setBlock((current) => {
+            const next = typeof patch === "function" ? patch(current) : { ...current, ...patch };
+            latestBlock = next;
+            return next;
+          });
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+  await flushAsyncEffects();
+
+  try {
+    setSelectValue(
+      findSelectByOptions(view.container, ["process", "axis", "chronology", "alternating"]),
+      "chronology"
+    );
+
+    expect(onBlockPatchSpy).toHaveBeenCalledOnce();
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestBlock.variant).toBe("cards");
+    expect((latestBlock.data as unknown as TimelineData).mode).toBe("chronology");
   } finally {
     view.cleanup();
   }
@@ -753,6 +833,45 @@ test("Timeline advanced editor keeps diagnostics read-only with truthful normali
     expect(view.container.querySelectorAll("button")).toHaveLength(1);
     clickButtonByText(view.container, "External update");
     expect(onChangeSpy).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Timeline advanced diagnostics disclose icon fallback, inherited description size, and narrowed width", async () => {
+  const { TimelineAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TimelineEditors");
+
+  const view = mount(
+    <TimelineAdvancedEditor
+      value={{
+        steps: [
+          { id: "alpha", title: "Discover" },
+          { id: "beta", title: "Plan" },
+          { id: "gamma", title: "Ship" },
+        ],
+        layout: {
+          maxWidth: "6xl",
+        },
+        style: {
+          markerDisplay: "icon",
+          descriptionSize: "none",
+        },
+      }}
+      onChange={() => undefined}
+      variant="milestones"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain(
+      "Width: 6XL (renders as 5XL for 3 or fewer steps)"
+    );
+    expect(view.container.textContent).toContain(
+      "Marker: Icon / Medium (3 steps fall back to dots without marker icons)"
+    );
+    expect(view.container.textContent).toContain("Description: None (inherit)");
   } finally {
     view.cleanup();
   }

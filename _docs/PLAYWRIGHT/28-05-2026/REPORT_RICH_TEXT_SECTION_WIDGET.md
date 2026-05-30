@@ -146,6 +146,20 @@ Render w trybie `blocks`, link-card (`renderRichTextEmbedBlockAsHtml` + `normali
 
 **Nie wykryto** żadnego twardego buga renderowania, błędu konsoli na froncie (0/0), ani wycieku niezapisanych edycji na public. Wszystkie wyklikane kontrolki działają i aktualizują podgląd na żywo; Advanced wiernie podsumowuje stan; embed jest bezpiecznie normalizowany; niebezpieczny `href` i `h1` są neutralizowane w renderze.
 
+> **Status TASK-343-17 (2026-05-30):** N1 jest zamknięte — Wizard pokazuje
+> tekst wyprowadzony z `contentHtml`. N3 ma świadomą decyzję produktową:
+> `data-rich-text-toc-scope="body-headings"` i copy edytora dokumentują, że TOC
+> obejmuje tylko renderowane H2/H3/H4 z body, a tytuł sekcji pozostaje etykietą
+> sekcji. N5 jest zamknięte przez widoczny sygnał driftu HTML-vs-blocks w
+> Visual i Advanced. N7 jest zamknięte przez disabled selector proporcji z
+> opisem, że link-card nie używa ratio. N8/N9 są zamknięte przez zapisywanie
+> ostatnich bounded zdarzeń sanitizera i łączenie ich w Advanced z aktualnym
+> skanem HTML. N10 jest domknięte dla ścieżki link-toolbar przez opcjonalny
+> sygnał `onUnsafeLinkAttempt` z `PostRichTextAdapter`; sam command edytora
+> dostaje bezpieczny placeholder `#`. N2 pozostaje poprawną izolacją draft-vs-published fixture,
+> N4 jest decyzją autorskiej hierarchii nagłówków możliwą do zmiany w Visual,
+> a N6 jest artefaktem niebędącym kontrolką widgetu.
+
 ---
 
 ## 6. Czego NIE DA SIĘ przetestować w tym fixture/środowisku (dokładna nazwa + powód)

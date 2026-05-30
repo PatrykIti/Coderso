@@ -48,15 +48,23 @@ Notes:
 - Visual repeated-logo cards now support drag-handle reorder plus inline Undo
   after removal, while retaining Move up / Move down as deterministic fallback
   controls.
+- Reducing `Logo count` confirms before truncating saved logo rows. The prompt
+  names the first removed logos and blocks the reduction when cancelled.
 - `Display style` now also exposes Strip-only `Row behavior` and `Motion`
   controls for wrapped rows, single-row overflow, and marquee gating.
+  Grid/Dense show saved Strip values as inactive; Visual and Advanced report
+  the effective state separately from saved Strip settings.
 - `Section CTA` now owns one optional CTA below the logo list with enable
   toggle, label, published-page destination, and target controls.
 - `Display style` now also owns bounded `Tile radius`, `Tile border width`, and
   one global `Open logo links in new tab` toggle for logo tiles.
 - Section, tile, and tile-border colors use swatch-only controls in Visual.
-  Saved legacy custom colors are summarized as replace/clear state instead of
-  asking authors to type raw CSS variables or color tokens.
+  Theme tokens, saved legacy custom colors, and fallback previews are labelled
+  separately instead of asking authors to type raw CSS variables or color
+  tokens.
+- `Colorize on hover` is effective only when grayscale is enabled. Turning
+  grayscale off clears the saved hover-color flag and renders the disabled
+  hover switch unchecked.
 
 ### Advanced (read-only diagnostics)
 - Layout summary
@@ -94,6 +102,9 @@ JSON payloads and it does not expose normalize/reset mutations.
 - Strip can stay wrapped, switch to `overflow-x-auto` single-row scroll, or use
   a marquee track that pauses on hover/focus and disables animation under
   reduced motion.
+- Saved Strip row/motion values are preserved for later Strip use, but runtime
+  `data-logo-cloud-row-mode` and `data-logo-cloud-motion` always expose the
+  effective behavior for the active variant.
 - Tile links can opt into shared safe new-tab behavior through one global
   `openLinksInNewTab` control.
 - CTA renders below the logo list only when enabled, labeled, and resolved to a
@@ -169,3 +180,9 @@ JSON payloads and it does not expose normalize/reset mutations.
 - Wizard/Visual duplicate ownership has been removed for the normal editor
   flow; saved legacy state remains backward-compatible without reopening raw
   `TASK-336-19`.
+
+## Validation Surface
+
+- `tests/vitest/widgets/logoCloud.test.tsx`
+- `tests/vitest/ui/logo-cloud-editor-wave.test.tsx`
+- `tests/vitest/widgets/logoCloudStyles.test.ts`

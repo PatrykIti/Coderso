@@ -28,6 +28,12 @@
 >    renderowany jako element `sr-only` (tylko dla czytników ekranu) + tooltip InfoTip
 >    (hover/focus). Info-button jest jedyną wizualną drogą do tej treści. Sekcja 4.2 i U2 zostały
 >    poprawione.
+>
+> **Aktualizacja TASK-343-02 (2026-05-30):** jedyny funkcjonalny błąd z tego
+> raportu, preset Phone validation „No extra validation", został zamknięty.
+> Jawne `phonePattern: ""` i `phonePatternMessage: ""` przeżywają
+> normalizację, edytor utrzymuje preset `not-required`, a runtime pomija
+> `pattern`, `title` i help text dla telefonu.
 
 ---
 
@@ -89,7 +95,7 @@ Pełna lista dyskretnych kontrolek edytora Visual (zgodna z `appointmentFormEdit
 | Require phone field | `required=true` na `customerPhone` | ✓ |
 | Phone label + placeholder | aktualizują pole telefonu | ✓ |
 | Phone validation → „Digits and spaces" | `pattern="^[0-9\s]{7,20}$"`, `title`/help = „Use 7-20 digits and spaces." | ✓ |
-| Phone validation → „No extra validation" | **NIE działa** — pattern nie czyści się, select wraca do „default" | ✗ (sekcja 4.1) |
+| Phone validation → „No extra validation" | czyści pattern/title/help, a select pozostaje na `not-required` | ✓ po TASK-343-02 |
 | Phone help text | aktualizuje `title` inputu telefonu **oraz** help `<p>` pod nim | ✓ |
 | Show notes field (toggle) | off → `notes` znika; on → wraca | ✓ |
 | Notes label + placeholder | aktualizują textarea | ✓ |
@@ -133,7 +139,7 @@ Pełna lista dyskretnych kontrolek edytora Visual (zgodna z `appointmentFormEdit
 | Etykieta stanu | po ustawieniu | „Selected color" + **aktywny** „Clear"; nieruszone → „Theme default" + **disabled** „Clear" | ✓ |
 | Clear (Summary background) | kliknięto | inline-style czyszczony do pustego (theme default) | ✓ |
 
-**Wniosek z macierzy:** **wszystkie dyskretne kontrolki edytora Visual zostały przećwiczone.** Pozostała jedna trwała usterka funkcjonalna (Phone validation „No extra validation", sekcja 4.1) — reszta aktualizuje podgląd na żywo i utrzymuje stan w sesji UI.
+**Wniosek z macierzy:** **wszystkie dyskretne kontrolki edytora Visual zostały przećwiczone.** Po TASK-343-02 nie zostaje trwała usterka funkcjonalna w tej macierzy; kontrolki aktualizują podgląd na żywo i utrzymują stan w sesji UI.
 
 ---
 
@@ -169,13 +175,13 @@ Pełna lista dyskretnych kontrolek edytora Visual (zgodna z `appointmentFormEdit
 
 ---
 
-## 4. Co nie działa / błędy
+## 4. Znaleziska i status po remediacji
 
-### 4.1 BŁĄD — preset „No extra validation" (Phone validation) nie działa
-- **Objaw:** wybór opcji „No extra validation" nie czyści walidacji telefonu. Select natychmiast wraca do „Default international" (zweryfikowano: `el.value === "default"` po wyborze), a podgląd zachowuje `pattern="^\+?[0-9()\-.\s]{7,20}$"`.
-- **Przyczyna (analiza kodu):** preset `not-required` ustawia `phonePattern: ""` i `phonePatternMessage: ""`. W `normalizeAppointmentFormData` pole przechodzi przez helper `text(value, fallback)`, który dla pustego stringa **zwraca fallback** (domyślny pattern). Pusty pattern jest natychmiast nadpisywany wartością domyślną, a `resolvePhoneValidationPreset` ponownie mapuje to na „default".
-- **Zakres:** dotyczy wzorca i komunikatu — żadnego nie da się wyczyścić do pustego. Pozostałe dwa presety (`default`, `digits-spaces`) z niepustym patternem działają poprawnie.
-- **Skutek dla użytkownika:** opcja „No extra validation" jest **mylna** — sugeruje wyłączenie walidacji, którego nie da się osiągnąć z poziomu edytora.
+### 4.1 ZAMKNIĘTE — preset „No extra validation" (Phone validation)
+- **Stan historyczny:** wybór opcji „No extra validation" nie czyścił walidacji telefonu. Select natychmiast wracał do „Default international", a podgląd zachowywał `pattern="^\+?[0-9()\-.\s]{7,20}$"`.
+- **Przyczyna:** preset `not-required` ustawiał `phonePattern: ""` i `phonePatternMessage: ""`, ale `normalizeAppointmentFormData` przepuszczał je przez `text(value, fallback)`, który dla pustego stringa zwracał fallback.
+- **Remediacja TASK-343-02:** jawny pusty pattern/message przeżywa normalizację. Edytor utrzymuje preset `not-required`, a runtime dla telefonu nie renderuje `pattern`, pustego `title` ani validation help textu.
+- **Regresje:** pokryte w `tests/vitest/widgets/appointmentForm.test.tsx` i `tests/vitest/ui/appointment-form-editor-wave.test.tsx`; strict smoke `task-343-02-appointment-form-final` przeszedł z `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`.
 
 ### 4.2 (Skreślone — była to błędna obserwacja w poprzedniej wersji)
 - Poprzedni raport zgłaszał, że info-buttony w Advanced są nadmiarowe, bo help-text jest „widoczny na stałe". **To było nieprawdą** — help jest `sr-only` + tooltip InfoTip (zob. 3.3). Nie ma tu defektu funkcjonalnego; jest co najwyżej niuans UX (zob. U2).
@@ -228,11 +234,11 @@ Pełna lista dyskretnych kontrolek edytora Visual (zgodna z `appointmentFormEdit
 ## 8. Podsumowanie
 
 - **Wizard:** działa, ale minimalny; na fixture bez Booking Calendar nie ma czego konfigurować (poprawny feedback „missing", działający powrót do Visual).
-- **Visual:** w pełni funkcjonalny — **każda dyskretna kontrolka (macierz w sekcji 2) aktualizuje podgląd na żywo i utrzymuje się w sesji UI.** Jedyny wyjątek to preset telefonu „No extra validation".
+- **Visual:** w pełni funkcjonalny — **każda dyskretna kontrolka (macierz w sekcji 2) aktualizuje podgląd na żywo i utrzymuje się w sesji UI.** Preset telefonu „No extra validation" jest zamknięty w TASK-343-02.
 - **Advanced:** poprawnie read-only (0 pól edytowalnych), diagnostyka zgodna z kontraktem; help dostarczany przez `sr-only` + tooltip InfoTip (nie statycznie — korekta wobec poprzedniej wersji).
 - **Front:** poprawny kontrakt, server-injected nonce (2× 78 znaków, identyczne), działający runtime (licznik notatek), submit świadomie zablokowany do czasu wyboru slotu, brak overflow na 375px, czysta konsola, HTTP 200.
 
-**Jedyny funkcjonalny błąd:** preset „No extra validation" dla walidacji telefonu (sekcja 4.1) — pusty pattern jest nadpisywany domyślnym przez `text()` w normalizacji.
+**Dawny jedyny funkcjonalny błąd:** preset „No extra validation" dla walidacji telefonu (sekcja 4.1) — zamknięty w TASK-343-02 przez zachowanie jawnego pustego patternu i pominięcie walidacyjnych atrybutów runtime.
 
 **Reszta przećwiczonego zakresu (a przećwiczono pełną macierz kontrolek) działa zgodnie z oczekiwaniami.** Nie zaobserwowano błędów konsoli ani rozbieżności Admin/Front w zapisanym stanie.
 

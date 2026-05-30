@@ -579,6 +579,9 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     expect(findInputsByPlaceholder(backgroundSection, "var(--color-surface)")).toHaveLength(0);
     clickButton(getButtonsByText(layoutSection, "With Badge")[0]);
     expect(getLatestVariant()).toBe("with-badge");
+    expect(layoutSection.textContent).toContain(
+      "With Badge uses a framed badge treatment distinct from Centered."
+    );
 
     const primaryCard = getActionCard(actionsSection, "primary");
     expect(primaryCard.textContent).toContain("Saved custom destination");
@@ -612,6 +615,9 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
     clickButton(getSwitchByLabel(tertiaryCard, "Enabled"));
     setInputValue(getInputByPlaceholder(tertiaryCard, "No thanks"), "Maybe later");
     await flush();
+    expect(getActionCard(actionsSection, "tertiary").textContent).toContain(
+      "This CTA has a label but no destination, so it renders as disabled until you choose a page or clear the label."
+    );
     setSelectValue(
       getDestinationSelect(tertiaryCard, "cta-banner-tertiary-destination"),
       "page-later"
@@ -735,6 +741,7 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
     clickButton(getButtonsByText(container, "Normalize now")[0]);
     expect(container.textContent).toContain("Normalize CTA banner data?");
     clickButton(getButtonsByText(container, "Normalize now").at(-1));
+    expect(container.textContent).toContain("CTA banner data normalized.");
 
     expect(getLatestValue()).toMatchObject({
       content: {
@@ -778,6 +785,7 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
     clickButton(getButtonsByText(container, "Reset to defaults")[0]);
     expect(container.textContent).toContain("Reset CTA banner to defaults?");
     clickButton(getButtonsByText(container, "Reset to defaults").at(-1));
+    expect(container.textContent).toContain("CTA banner reset to defaults.");
 
     expect(getLatestValue()).toEqual(ctaBannerDefaults);
     expect(container.querySelector("pre")).toBeNull();

@@ -1188,8 +1188,22 @@ const parseOverlayOpacity = (value: string | undefined, fallback: number) => {
   return clampOverlayOpacity(Number.parseFloat(alpha), fallback);
 };
 
+const clampRgbChannel = (value: number) => Math.min(255, Math.max(0, value));
+
+const resolveOverlayPickerColor = (value: string | undefined) => {
+  const normalized = value?.trim();
+  const match = normalized?.match(rgbaPattern);
+  if (!match) return resolveColorPickerValue(value, defaultInlineOverlayColor);
+  const [, red, green, blue] = match;
+  const toHex = (channel: string | undefined) =>
+    clampRgbChannel(Number.parseInt(channel ?? "0", 10))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+};
+
 const formatOverlayColor = (color: string, opacity: number) => {
-  const hex = resolveColorPickerValue(color, defaultInlineOverlayColor).replace("#", "");
+  const hex = resolveOverlayPickerColor(color).replace("#", "");
   const expanded =
     hex.length === 3
       ? hex
@@ -1219,7 +1233,7 @@ function HeroOverlayField({
   onClear: () => void;
   defaultOpacity: number;
 }) {
-  const color = resolveColorPickerValue(value, defaultInlineOverlayColor);
+  const color = resolveOverlayPickerColor(value);
   const opacity = parseOverlayOpacity(value, defaultOpacity);
   const strength = Math.round(opacity * 100);
   const updateColor = (nextColor: string) => onChange(formatOverlayColor(nextColor, opacity));

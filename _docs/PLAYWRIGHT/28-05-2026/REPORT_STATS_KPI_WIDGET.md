@@ -223,19 +223,20 @@ Dynamiczny tekst pomocniczy odstępu potwierdzony dla wszystkich 4 wartości (np
 
 | # | Obszar | Obserwacja (potwierdzona w DOM) |
 |---|--------|----------------------------------|
-| **N1** | Card surfaces ciche w `inline` | W wariancie `inline` karta dostaje **pusty `style`** — `Card background` i `Card border` **nie mają żadnego efektu** (renderer: `style: variant === "inline" ? undefined : cardStyle`). Jednocześnie `Icon surface`/`Icon border` z **tej samej sekcji DZIAŁAJĄ** w inline (ikona ma inline style). Potwierdzone: po ustawieniu wszystkich 4 kolorów i przełączeniu na inline — `cardBg/cardBorder = (none)`, `iconBg=rgb(112,128,144)`, `iconBorder=rgb(160,176,192)`. Część sekcji działa, część nie, **bez żadnego sygnału w UI**. Mylące. |
-| **N2** | Toggle „Show dividers" w wariantach bez dzielników | Atrybut `data-stats-kpi-divider` jest emitowany **zawsze** (także dla `cards`/`split-highlight`, gdzie dzielniki nigdy się nie renderują), domyślnie `"true"`. Przełącznik w tych wariantach jest **checked + disabled (locked)** — wygląda na „włączony", ale nic nie robi. Tekst pomocniczy łagodzi to („Inline-only. Other variants ignore divider output, so this toggle stays locked."), lecz wizualny stan „checked + disabled" nadal może mylić. |
+| **N1** | Card surfaces ciche w `inline` | **Zamknięte przez TASK-343-26.** W `inline` kontrolki `Card background` i `Card border` są read-only/disabled i pokazują widoczny komunikat, że Inline nie renderuje kart. `Icon surface`/`Icon border` pozostają aktywne, bo mają realny efekt także w `inline`. |
+| **N2** | Toggle „Show dividers" w wariantach bez dzielników | **Zamknięte przez TASK-343-26.** Renderer emituje `data-stats-kpi-divider` jako stan efektywny renderowania, a zapisany stan zachowuje osobny marker `data-stats-kpi-divider-saved`. Warianty bez dzielników pokazują nieaktywny, odznaczony toggle oraz widoczny komunikat o tym, że dividers renderują tylko w `inline`. |
 | **N3** | Drag & drop nieweryfikowalny automatycznie | Patrz sekcja 6. Mechanizm `draggable` + `onDragStart/onDrop` jest obecny, ale ani realny drag myszą (`drag`), ani dispatch natywnych `DragEvent` nie zmieniły kolejności. To **ograniczenie symulacji**, nie potwierdzony bug — przyciski Move up/down (ta sama funkcja `moveItem`) działają. |
-| **N4** | „Normalize now" bez widocznego feedbacku | Po akceptacji nie pojawia się żaden toast ani inline-komunikat o tym, czy payload się zmienił. Akcja działa (brak crasha), ale brak potwierdzenia wizualnego. „Reset to defaults" daje wyraźny efekt, więc tam brak feedbacku mniej dotkliwy. |
+| **N4** | „Normalize now" bez widocznego feedbacku | **Zamknięte przez TASK-343-26.** Po akceptacji Advanced pokazuje inline status `Stats KPI payload normalized.`. Reset również pokazuje status po przywróceniu defaultów. |
 | **N5** | Wizard w 100% read-only | Wizard nie ma **żadnej** edytowalnej kontrolki (tylko summary + Live preview). To zgodne z kontraktem („seed → Visual"), ale oznacza, że jakiekolwiek „przejście przez opcje konfiguracji w Wizardzie" jest z definicji niewykonalne. Odnotowuję jako fakt, nie błąd. |
-| **N6** | „Reset to defaults" **nie** resetuje wariantu | Potwierdzone: po Reset z wariantem ustawionym na `inline`, **dane** wróciły do defaultów (etykiety/ikony/nagłówek/count=4), ale **wariant pozostał `inline`** — nie wrócił do `cards`. Wynika to z architektury: wariant jest przechowywany **poza payloadem danych** (sterowany `onVariantChange`/`onBlockPatch`), a przycisk wykonuje tylko `onChange(statsKpiDefaults)`. Użytkownik klikający „Reset to defaults" w celu pełnego powrotu do stanu wyjściowego może być zaskoczony, że układ się nie zmienił. To subtelny, ale realny niuans (nie był opisany w poprzednim raporcie). |
+| **N6** | „Reset to defaults" **nie** resetuje wariantu | **Zamknięte przez TASK-343-26.** Reset korzysta teraz z `onBlockPatch`/`onVariantChange`, więc przywraca dane defaultowe i wariant `cards`. Gdy edytor działa poza pełnym kontekstem bloku, nadal resetuje dane i używa dostępnej ścieżki `onVariantChange`. |
 
-> **„120++" na froncie (NIE jest to bug renderera).** Karta wiodąca pokazuje
+> **„120++" na froncie (NIE jest to bug renderera; odroczone jako seed cleanup).** Karta wiodąca pokazuje
 > „120++", ponieważ zapisane dane fixture mają **jednocześnie `value="120+"` ORAZ
 > `suffix="+"`**. Renderer poprawnie wypisuje dwa osobne spany
 > (`<span>120+</span><span data-stats-kpi-suffix>+</span>`), a `aria-label` używa
 > samej wartości („120+ Projects launched"). To **redundancja w danych seed**, nie
-> błąd widgetu — ale warto poprawić fixture, bo wizualnie wygląda na literówkę.
+> błąd widgetu. TASK-343-26 klasyfikuje to jako odroczone czyszczenie danych
+> seed/fixture, poza zakresem lokalnej logiki widgetu.
 
 **Nie wykryto** żadnego twardego buga renderowania, błędu konsoli (admin i front: 0/0) ani rozbieżności admin↔front w zakresie wspólnie testowanych opcji.
 
@@ -278,14 +279,14 @@ Dynamiczny tekst pomocniczy odstępu potwierdzony dla wszystkich 4 wartości (np
 
 - **Widget stats-kpi jest w bardzo dobrym stanie funkcjonalnym.** Tym razem **każda dyskretna opcja każdej rodziny kontrolek została przeklikana po kolei** (3 warianty, 12/12 liczników, 3/3 trendy, 4/4 rozmiary wartości, 3/3 rozmiary ikon, 5/5 szerokości, 4/4 paddingi, 3/3 wysokości, 3/3 wyrównania, 4/4 odstępy, 3/3 intensywności dzielnika, set+Clear dla 9 pól koloru) — i **wszystkie aktualizują podgląd na żywo** zgodnie z mapami klas w kodzie. Granice (min 1 / max 12) i blokady (Remove/Add disabled, divider locked) działają. Advanced wiernie podsumowuje stan i daje dwie akcje repair z potwierdzeniem; frontend jest statyczny, dostępny, bez błędów konsoli i bez overflow na mobile.
 - **Najważniejsze niuanse:**
-  - **N1** — `Card background`/`Card border` są ciche w `inline` (gdy ikona z tej samej sekcji działa), bez sygnału w UI.
-  - **N2** — `data-stats-kpi-divider` i toggle „Show dividers" pokazują stan „on" (locked, checked) także w wariantach, które dzielników nie renderują.
-  - **N6** — „Reset to defaults" resetuje **dane**, ale **nie wariant** (wariant żyje poza payloadem) — może zaskoczyć.
-  - **N4** — „Normalize now" bez widocznego feedbacku.
+  - **N1** — zamknięte przez TASK-343-26: `Card background`/`Card border` są read-only/disabled w `inline` z widocznym wyjaśnieniem.
+  - **N2** — zamknięte przez TASK-343-26: divider ma osobny zapisany i efektywny stan, a warianty bez dzielników nie pokazują locked-checked toggle.
+  - **N6** — zamknięte przez TASK-343-26: „Reset to defaults" resetuje dane oraz wariant do `cards`.
+  - **N4** — zamknięte przez TASK-343-26: „Normalize now" i reset pokazują inline feedback.
   - **N5** — Wizard jest w 100% read-only (brak opcji do interakcji — z definicji).
   - **N3** — drag&drop nieweryfikowalny automatycznie (Move up/down działa).
 - **Plusy:** licznik metryk **data-driven**; widget **statyczny** (brak desyncu admin↔front); **bezpieczne linki** (odrzucenie `javascript:`/`data:`/`vbscript:`/`//`, `rel="noopener noreferrer"` dla każdego zewnętrznego linku, `target=_blank` tylko przy opcji); spójny **Clear** dla wszystkich 9 pól koloru; Wizard ma osobny **Live preview**.
-- **Drobiazg w danych fixture (nie bug):** publiczny fixture pokazuje „120++" przez redundantny `value="120+"` + `suffix="+"`; warto poprawić seed.
+- **Drobiazg w danych fixture (nie bug):** publiczny fixture pokazuje „120++" przez redundantny `value="120+"` + `suffix="+"`; TASK-343-26 odracza to do seed cleanup.
 - Nie znaleziono żadnego błędu renderowania, błędu konsoli ani rozbieżności admin↔front w zakresie wspólnie testowanych opcji.
 
 ---

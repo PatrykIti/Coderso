@@ -241,6 +241,7 @@ function ColorField({
   placeholder,
   pickerFallback = "#111827",
   onClear,
+  themeDefault,
 }: {
   label: string;
   value: string | undefined;
@@ -248,6 +249,7 @@ function ColorField({
   placeholder: string;
   pickerFallback?: string;
   onClear?: () => void;
+  themeDefault?: string;
 }) {
   return (
     <SharedColorControl
@@ -258,7 +260,25 @@ function ColorField({
       placeholder={placeholder}
       pickerFallback={pickerFallback}
       showValueInput={false}
+      treatAsThemeDefaultValues={themeDefault ? [themeDefault] : undefined}
     />
+  );
+}
+
+function NavigationDestinationFeedback({
+  href,
+  subject = "link",
+}: {
+  href: string | undefined;
+  subject?: string;
+}) {
+  if ((href ?? "").trim().length > 0) return null;
+
+  return (
+    <p className="text-xs text-amber-700">
+      This {subject} is saved in the editor but hidden from runtime until a public-safe destination
+      is selected.
+    </p>
   );
 }
 
@@ -605,7 +625,8 @@ function NavigationLogoSourceFields({
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Pick a logo image from the Media Library. Existing external images stay read-only.
+            No image is saved. Runtime uses the logo alt text as a safe text fallback until a Media
+            Library image is selected.
           </p>
         )}
         {hasUnsafeSavedImage ? (
@@ -765,6 +786,12 @@ export function NavigationVisualEditor({
   };
   const style: NavigationStyle = { ...value.style };
   const ctaEnabled = variantSupportsCta(variant);
+  const navigationLinksDescription =
+    linksSource === "menu"
+      ? "Review synced menu links. Menu owns labels, URLs, and dropdown structure."
+      : linksSource === "pages"
+        ? "Review fallback links for the Pages source."
+        : "Edit manual labels, URLs, and first-level dropdown links.";
 
   const updateLogo = (patch: Partial<NavigationLogo>) =>
     update({
@@ -1001,7 +1028,7 @@ export function NavigationVisualEditor({
         mode="visual"
         role="content"
         title="Navigation Links"
-        description="Edit labels, URLs, and first-level dropdown links."
+        description={navigationLinksDescription}
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Active link state</p>
@@ -1026,6 +1053,13 @@ export function NavigationVisualEditor({
             Active links are detected in runtime from the current browser pathname. Menu and Pages
             sources stay on same-tab targets until their upstream owners define target metadata.
           </p>
+          <div
+            className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground"
+            data-navigation-preview-boundary="runtime-script"
+          >
+            Admin preview renders static navigation markup. Drawer, submenu, collapse-on-scroll, and
+            active-link updates are activated by the public runtime script.
+          </div>
         </div>
         {linksSource === "menu" ? (
           <div className="space-y-3">
@@ -1116,6 +1150,7 @@ export function NavigationVisualEditor({
                       feedbackTone="destructive"
                     />
                   </div>
+                  <NavigationDestinationFeedback href={item.href} subject="link" />
                   <NavigationMetadataFields
                     item={item}
                     onChange={(patch) => updateItem(index, patch)}
@@ -1214,6 +1249,7 @@ export function NavigationVisualEditor({
                                 feedbackTone="destructive"
                               />
                             </div>
+                            <NavigationDestinationFeedback href={child.href} subject="sub-link" />
                             <NavigationMetadataFields
                               item={child}
                               onChange={(patch) => updateChild(index, childIndex, patch)}
@@ -1283,6 +1319,7 @@ export function NavigationVisualEditor({
               }
               feedbackTone="destructive"
             />
+            <NavigationDestinationFeedback href={value.cta?.href} subject="CTA" />
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">CTA is disabled for the Simple variant.</p>
@@ -1360,34 +1397,47 @@ export function NavigationVisualEditor({
           onClear={() => clearStyleField("surfaceColor")}
           placeholder="#ffffff"
           pickerFallback="#ffffff"
+          themeDefault={navigationDefaults.style?.surfaceColor}
         />
+        <p className="text-xs text-muted-foreground">
+          The default surface uses the active theme token. The admin swatch is a fallback preview;
+          public pages resolve `var(--color-bg)` from the active theme.
+        </p>
         <ColorField
           label="Border color"
           value={style.borderColor}
           onChange={(next) => updateStyle({ borderColor: next })}
+          onClear={() => clearStyleField("borderColor")}
           placeholder="#e2e8f0"
           pickerFallback="#e2e8f0"
+          themeDefault={navigationDefaults.style?.borderColor}
         />
         <ColorField
           label="Text color"
           value={style.textColor}
           onChange={(next) => updateStyle({ textColor: next })}
+          onClear={() => clearStyleField("textColor")}
           placeholder="#0f172a"
           pickerFallback="#0f172a"
+          themeDefault={navigationDefaults.style?.textColor}
         />
         <ColorField
           label="Logo color"
           value={style.logoColor}
           onChange={(next) => updateStyle({ logoColor: next })}
+          onClear={() => clearStyleField("logoColor")}
           placeholder="#0f172a"
           pickerFallback="#0f172a"
+          themeDefault={navigationDefaults.style?.logoColor}
         />
         <ColorField
           label="Link color"
           value={style.linkColor}
           onChange={(next) => updateStyle({ linkColor: next })}
+          onClear={() => clearStyleField("linkColor")}
           placeholder="#334155"
           pickerFallback="#334155"
+          themeDefault={navigationDefaults.style?.linkColor}
         />
         {!isHexColorValue(style.linkColor) ? (
           <p className="text-xs text-destructive">
@@ -1398,8 +1448,10 @@ export function NavigationVisualEditor({
           label="Link hover color"
           value={style.linkHoverColor}
           onChange={(next) => updateStyle({ linkHoverColor: next })}
+          onClear={() => clearStyleField("linkHoverColor")}
           placeholder="#0f172a"
           pickerFallback="#0f172a"
+          themeDefault={navigationDefaults.style?.linkHoverColor}
         />
         {!isHexColorValue(style.linkHoverColor) ? (
           <p className="text-xs text-destructive">
@@ -1410,8 +1462,10 @@ export function NavigationVisualEditor({
           label="Link active color"
           value={style.linkActiveColor}
           onChange={(next) => updateStyle({ linkActiveColor: next })}
+          onClear={() => clearStyleField("linkActiveColor")}
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
+          themeDefault={navigationDefaults.style?.linkActiveColor}
         />
         {!isHexColorValue(style.linkActiveColor) ? (
           <p className="text-xs text-destructive">
@@ -1425,20 +1479,25 @@ export function NavigationVisualEditor({
           onClear={() => clearStyleField("ctaBackgroundColor")}
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
+          themeDefault={navigationDefaults.style?.ctaBackgroundColor}
         />
         <ColorField
           label="CTA text color"
           value={style.ctaTextColor}
           onChange={(next) => updateStyle({ ctaTextColor: next })}
+          onClear={() => clearStyleField("ctaTextColor")}
           placeholder="#ffffff"
           pickerFallback="#ffffff"
+          themeDefault={navigationDefaults.style?.ctaTextColor}
         />
         <ColorField
           label="CTA border color"
           value={style.ctaBorderColor}
           onChange={(next) => updateStyle({ ctaBorderColor: next })}
+          onClear={() => clearStyleField("ctaBorderColor")}
           placeholder="#1d4ed8"
           pickerFallback="#1d4ed8"
+          themeDefault={navigationDefaults.style?.ctaBorderColor}
         />
 
         <div className="grid gap-2 md:grid-cols-2">
@@ -1827,7 +1886,23 @@ export function NavigationVisualEditor({
   );
 }
 
-export function NavigationAdvancedEditor({ value }: WidgetEditorProps<NavigationData>) {
+export function NavigationAdvancedEditor({ value, variant }: WidgetEditorProps<NavigationData>) {
+  const behavior: NavigationBehavior = {
+    ...navigationDefaults.behavior,
+    ...value.behavior,
+  };
+  const ctaConfigured = Boolean(value.cta?.label || value.cta?.href);
+  const ctaVariantSupports = variant ? variantSupportsCta(variant) : true;
+  const ctaSummary = ctaVariantSupports
+    ? ctaConfigured
+      ? "Configured"
+      : "Not configured"
+    : ctaConfigured
+      ? "Configured, hidden by Simple variant"
+      : "Hidden by Simple variant";
+  const mobileMode = behavior.mobileMode ?? "expanded";
+  const activeLinkMode = behavior.activeLinkMode ?? "none";
+
   return (
     <div className="space-y-4">
       <EditorSection
@@ -1852,7 +1927,7 @@ export function NavigationAdvancedEditor({ value }: WidgetEditorProps<Navigation
           </div>
           <div>
             <dt className="font-medium text-foreground">CTA</dt>
-            <dd>{value.cta?.label || value.cta?.href ? "Configured" : "Not configured"}</dd>
+            <dd>{ctaSummary}</dd>
           </div>
         </dl>
       </EditorSection>
@@ -1903,13 +1978,46 @@ export function NavigationAdvancedEditor({ value }: WidgetEditorProps<Navigation
           id="navigation-advanced-behavior-sticky"
           label="Sticky navigation"
           path="behavior.sticky"
-          value={value.behavior?.sticky ? "Enabled" : "Disabled"}
+          value={behavior.sticky ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-transparent"
+          label="Transparent surface"
+          path="behavior.transparent"
+          value={behavior.transparent ? "Enabled" : "Disabled"}
         />
         <ReadonlyWidgetSummaryRow
           id="navigation-advanced-behavior-collapse"
           label="Collapse on scroll"
           path="behavior.collapseOnScroll"
-          value={value.behavior?.collapseOnScroll ? "Enabled" : "Disabled"}
+          value={behavior.collapseOnScroll ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-mobile-mode"
+          label="Mobile mode"
+          path="behavior.mobileMode"
+          value={mobileModeDetails[mobileMode].summary}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-hide-cta-mobile"
+          label="Hide CTA on mobile"
+          path="behavior.hideCtaOnMobile"
+          value={behavior.hideCtaOnMobile ? "Enabled" : "Disabled"}
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-active-link-mode"
+          label="Active link mode"
+          path="behavior.activeLinkMode"
+          value={
+            activeLinkModeOptions.find((option) => option.id === activeLinkMode)?.label ??
+            "No active state"
+          }
+        />
+        <ReadonlyWidgetSummaryRow
+          id="navigation-advanced-behavior-preview-boundary"
+          label="Admin preview runtime"
+          path="behavior.activeLinkMode"
+          value="Static markup only; drawer, submenu, collapse, and active-link updates run in public runtime."
         />
       </EditorSection>
     </div>

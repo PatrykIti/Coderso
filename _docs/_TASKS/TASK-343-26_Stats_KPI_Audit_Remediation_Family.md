@@ -6,7 +6,7 @@
 **Category:** Widgets + Stats KPI + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,15 +25,29 @@ actions have no visible feedback.
 
 ## Sub-Tasks
 
-- [ ] Disable, hide, or explain Card background/border controls when `inline`
+- [x] Disable, hide, or explain Card background/border controls when `inline`
   ignores card styles.
-- [ ] Make the divider toggle state truthful in variants where divider output is
+- [x] Make the divider toggle state truthful in variants where divider output is
   impossible.
-- [ ] Decide whether `Reset to defaults` should also reset the block variant and
+- [x] Decide whether `Reset to defaults` should also reset the block variant and
   implement/copy-test that decision.
-- [ ] Add visible feedback for `Normalize now`.
-- [ ] Record the report's `120++` fixture seed issue as deferred seed cleanup
+- [x] Add visible feedback for `Normalize now`.
+- [x] Record the report's `120++` fixture seed issue as deferred seed cleanup
   unless this family also owns fixture data changes.
+
+## Implementation Notes
+
+- Added domain-owned effective state helpers for card surfaces and dividers.
+- In `inline`, Card background/Card border controls now render as read-only
+  disabled controls with visible explanatory copy; icon surface controls remain
+  active because they still affect Inline output.
+- Divider output now reports effective render state through
+  `data-stats-kpi-divider`, while saved intent is exposed separately via
+  `data-stats-kpi-divider-saved`.
+- `Reset to defaults` restores default data and resets the variant to `cards`
+  through `onBlockPatch`/`onVariantChange`.
+- Advanced repair actions now show inline `role="status"` feedback after
+  Normalize and Reset.
 
 ## Files To Change
 

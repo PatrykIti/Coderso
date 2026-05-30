@@ -74,6 +74,7 @@ type PostRichTextAdapterProps = {
   onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
   onEditorBlur?: (finalHtml: string) => void;
+  onUnsafeLinkAttempt?: (href: string) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   toolbarProfile?: PostRichTextToolbarProfile;
   fontFamily?: "sans" | "serif" | "mono";
@@ -701,6 +702,7 @@ export function PostRichTextAdapter({
   onPasteDirectives,
   onFocus,
   onEditorBlur,
+  onUnsafeLinkAttempt,
   onUploadClipboardImage,
   toolbarProfile = "writing-canvas",
   fontFamily = "sans",
@@ -874,16 +876,21 @@ export function PostRichTextAdapter({
             if (!nextHref) {
               runCommand("unlink");
             } else {
+              const hrefIsSafe = /^(https?:|mailto:|tel:|\/|#)/i.test(nextHref);
+              const commandHref = hrefIsSafe ? nextHref : "#";
+              if (!hrefIsSafe) {
+                onUnsafeLinkAttempt?.(nextHref);
+              }
               const selection = window.getSelection();
               if (selection && selection.rangeCount > 0) {
                 if (selection.isCollapsed) {
                   const label = window.prompt("Link text", nextHref) ?? nextHref;
                   runCommand(
                     "insertHTML",
-                    `<a href="${escapeHtml(nextHref)}">${escapeHtml(label)}</a>`
+                    `<a href="${escapeHtml(commandHref)}">${escapeHtml(label)}</a>`
                   );
                 } else {
-                  runCommand("createLink", nextHref);
+                  runCommand("createLink", commandHref);
                 }
               }
             }
@@ -937,6 +944,7 @@ export function PostRichTextAdapter({
       disabled,
       emitChange,
       onBlockTypeChange,
+      onUnsafeLinkAttempt,
       restoreSelectionRange,
       saveSelectionRange,
     ]

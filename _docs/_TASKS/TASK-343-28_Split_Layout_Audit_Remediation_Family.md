@@ -6,7 +6,7 @@
 **Category:** Widgets + Split Layout + Admin UI + UX + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,13 +25,13 @@ the effective desktop ratio.
 
 ## Sub-Tasks
 
-- [ ] Make ratio disclosure distinguish explicit saved overrides from effective
+- [x] Make ratio disclosure distinguish explicit saved overrides from effective
   equality with the starter.
-- [ ] Confirm or preserve device-specific overrides when a preset card would
+- [x] Confirm or preserve device-specific overrides when a preset card would
   reset them.
-- [ ] Make variant-card selected state derive from effective desktop ratio or
+- [x] Make variant-card selected state derive from effective desktop ratio or
   clearly state that it is the saved seed variant only.
-- [ ] Add regression coverage for starter/preset/ratio disclosure.
+- [x] Add regression coverage for starter/preset/ratio disclosure.
 
 ## Files To Change
 
@@ -121,3 +121,25 @@ remain unchanged.
 
 - Split Layout disclosure and preset actions match the effective saved layout.
 - Device overrides are not silently lost.
+
+## Completion Notes (2026-05-30)
+
+- Extended Split Layout ratio disclosure with explicit
+  `effectiveMatchesStarter` and `hasDeviceSpecificChanges` state so saved phone
+  ratios that match the starter are not described as independent device splits.
+- Changed Visual base cards to select/highlight the effective desktop split
+  rather than the saved seed variant.
+- Preserved tablet and phone overrides when a Visual base card changes the
+  desktop split and those device ratios already differ from desktop; Wizard
+  starter selection still seeds all ratios.
+- Updated authoring copy to explain that desktop split cards preserve
+  responsive overrides when they differ from desktop.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/splitLayout.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-28
+  drift review: no blockers)

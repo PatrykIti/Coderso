@@ -104,6 +104,44 @@ test("split layout preserves legacy zero gap while exposing none in controls", (
   expect(diagnostics.gap.description).toContain("Older saved zero-gap layouts are shown here.");
 });
 
+test("split layout disclosure separates starter matches from device-specific changes", () => {
+  const explicitStarterMatch = getSplitLayoutRatioDisclosure(
+    {
+      ratio: {
+        desktop: "60-40",
+        tablet: "60-40",
+        mobile: "60-40",
+      },
+    },
+    "60-40"
+  );
+  expect(explicitStarterMatch).toMatchObject({
+    hasExplicitMobile: true,
+    hasOverride: false,
+    hasDeviceSpecificChanges: false,
+    effectiveMatchesStarter: true,
+  });
+
+  const responsiveOverride = getSplitLayoutRatioDisclosure(
+    {
+      ratio: {
+        desktop: "50-50",
+        tablet: "40-60",
+        mobile: "60-40",
+      },
+    },
+    "60-40"
+  );
+  expect(responsiveOverride).toMatchObject({
+    desktop: "50-50",
+    tablet: "40-60",
+    mobile: "60-40",
+    hasOverride: true,
+    hasDeviceSpecificChanges: true,
+    effectiveMatchesStarter: false,
+  });
+});
+
 test("split layout validator accepts expanded model with mobile ratio", () => {
   clearWidgets();
   const widget = createSplitLayoutWidget({

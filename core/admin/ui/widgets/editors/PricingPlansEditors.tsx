@@ -25,11 +25,11 @@ import {
   type PricingPlanPriceMode,
   type PricingPlansFeatureMarker,
   type PricingPlansMaxWidth,
+  describePricingPlanCapacity,
   normalizePricingPlans,
   normalizePricingPlansData,
   pricingPlanMax,
   pricingPlansDefaults,
-  resolvePricingPlanCountForVariant,
   resolvePricingPlansVariant,
   type PricingPlanItem,
   type PricingPlansData,
@@ -40,11 +40,7 @@ import {
 } from "../../../../widgets/core/pricingPlans";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
-import {
-  hasClearableFieldValue,
-  isPickerRepresentableColorValue,
-  resolveColorPickerValue,
-} from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -166,24 +162,49 @@ function getVariantLabel(variant: PricingPlansVariantId) {
   return variantOptions.find((option) => option.id === variant)?.label ?? variant;
 }
 
+function formatPlanCount(count: number) {
+  return `${count} plan${count === 1 ? "" : "s"}`;
+}
+
+function formatFeatureCount(count: number) {
+  return `${count} feature${count === 1 ? "" : "s"}`;
+}
+
 function FixedPlanCountNotice({
   variant,
-  visibleCount,
+  capacity,
+  renderedCount,
+  missingCount,
   hiddenCount,
+  mode,
 }: {
   variant: PricingPlansVariantId;
-  visibleCount: number;
+  capacity: number;
+  renderedCount: number;
+  missingCount: number;
   hiddenCount: number;
+  mode: "wizard" | "visual";
 }) {
+  const fillMissingCopy =
+    mode === "visual"
+      ? `Add ${formatPlanCount(missingCount)} below to fill the remaining layout slot${
+          missingCount === 1 ? "" : "s"
+        }.`
+      : `Use Visual to add ${formatPlanCount(missingCount)} and fill the remaining layout slot${
+          missingCount === 1 ? "" : "s"
+        }.`;
+
   return (
     <div className="rounded-lg border p-3">
       <p className="text-sm font-medium">
-        {getVariantLabel(variant)} shows {visibleCount} plan{visibleCount === 1 ? "" : "s"}.
+        {getVariantLabel(variant)} supports up to {formatPlanCount(capacity)}.
       </p>
       <p className="text-xs text-muted-foreground">
-        This layout has a fixed visible plan count. Use the variant switch to change how many plans
-        appear in preview.
+        Saved content currently renders {formatPlanCount(renderedCount)} in preview.
       </p>
+      {missingCount > 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">{fillMissingCopy}</p>
+      ) : null}
       {hiddenCount > 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">
           {hiddenCount} preserved plan{hiddenCount === 1 ? "" : "s"}{" "}
@@ -255,82 +276,6 @@ function VariantCards({
         </button>
       ))}
     </div>
-  );
-}
-
-function ColorField({
-  id,
-  path,
-  label,
-  value,
-  onChange,
-  pickerFallback,
-  onClear,
-  treatAsThemeDefaultValues,
-}: {
-  id: string;
-  path: string;
-  label: string;
-  value: string | undefined;
-  onChange: (next: string) => void;
-  pickerFallback: string;
-  onClear?: () => void;
-  treatAsThemeDefaultValues?: string[];
-}) {
-  const normalizedValue = value?.trim();
-  const themeDefaultValues = new Set(
-    (treatAsThemeDefaultValues ?? [])
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  );
-  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
-  const hasValue = hasClearableFieldValue(value);
-  const hasCustomValue =
-    hasValue && !isThemeDefaultValue && !isPickerRepresentableColorValue(value);
-  const pickerValue = resolveColorPickerValue(value, pickerFallback);
-
-  return (
-    <WidgetControlRow
-      id={id}
-      path={path}
-      label={label}
-      actions={
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          disabled={!hasValue || isThemeDefaultValue}
-        >
-          Clear
-        </Button>
-      }
-    >
-      {(fieldProps) => (
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
-            <Input
-              id={fieldProps.id}
-              type="color"
-              value={pickerValue}
-              onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-11 p-1"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-            <div className="flex min-h-10 flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-                {hasCustomValue
-                  ? "Saved custom color"
-                  : hasValue && !isThemeDefaultValue
-                    ? "Selected color"
-                    : "Theme default"}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </WidgetControlRow>
   );
 }
 
@@ -575,7 +520,7 @@ function addPlan(value: PricingPlansData, onChange: (next: PricingPlansData) => 
   });
 }
 
-function removePlan(
+function removePlanAtIndex(
   value: PricingPlansData,
   onChange: (next: PricingPlansData) => void,
   index: number
@@ -583,18 +528,7 @@ function removePlan(
   updateValue(value, onChange, (current) => {
     const plans = normalizePlansForMutation(current, index + 1);
     if (plans.length <= 2) return current;
-    const plan = plans[index];
-    if (!plan) return current;
-
-    const shouldConfirm =
-      !hasConfiguredPricingPlan(plan) ||
-      typeof window === "undefined" ||
-      typeof window.confirm !== "function" ||
-      window.confirm(`Remove plan ${index + 1}? This action cannot be undone.`);
-
-    if (!shouldConfirm) {
-      return current;
-    }
+    if (!plans[index]) return current;
 
     const nextPlans = plans.filter((_, currentIndex) => currentIndex !== index);
 
@@ -709,7 +643,7 @@ function updateFeature(
   });
 }
 
-function removeFeature(
+function removeFeatureAtIndex(
   value: PricingPlansData,
   onChange: (next: PricingPlansData) => void,
   planIndex: number,
@@ -735,6 +669,26 @@ function removeFeature(
       plans: nextPlans,
     };
   });
+}
+
+type PendingPricingRemoval =
+  | {
+      type: "plan";
+      planIndex: number;
+      planName: string;
+      featureCount: number;
+    }
+  | {
+      type: "feature";
+      planIndex: number;
+      featureIndex: number;
+      planName: string;
+      featureText: string;
+    };
+
+function getPricingFeatureEditorText(feature: string | PricingPlanFeatureItem | undefined) {
+  if (typeof feature === "string") return feature.trim();
+  return feature?.text?.trim() ?? "";
 }
 
 function moveFeature(
@@ -772,12 +726,9 @@ function moveFeature(
 export function PricingPlansWizardEditor({ value, variant }: WidgetEditorProps<PricingPlansData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
-  const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
-  const plans = normalizePricingPlans(
-    normalized.plans,
-    Math.max(normalized.plans.length, visibleCount)
-  );
-  const hiddenCount = Math.max(0, plans.length - visibleCount);
+  const capacitySummary = describePricingPlanCapacity(resolvedVariant, normalized.plans);
+  const visibleCount = capacitySummary.capacity;
+  const plans = normalized.plans;
 
   return (
     <WidgetEditorSection
@@ -801,8 +752,11 @@ export function PricingPlansWizardEditor({ value, variant }: WidgetEditorProps<P
           <p className="text-sm font-medium">Layout plan count</p>
           <FixedPlanCountNotice
             variant={resolvedVariant}
-            visibleCount={visibleCount}
-            hiddenCount={hiddenCount}
+            capacity={capacitySummary.capacity}
+            renderedCount={capacitySummary.rendered}
+            missingCount={capacitySummary.missing}
+            hiddenCount={capacitySummary.hidden}
+            mode="wizard"
           />
         </div>
 
@@ -836,14 +790,12 @@ export function PricingPlansVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<PricingPlansData>) {
   const pendingFeatureFocusRef = useRef<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingPricingRemoval | null>(null);
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
-  const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
-  const plans = normalizePricingPlans(
-    normalized.plans,
-    Math.max(normalized.plans.length, visibleCount)
-  );
-  const hiddenCount = Math.max(0, plans.length - visibleCount);
+  const capacitySummary = describePricingPlanCapacity(resolvedVariant, normalized.plans);
+  const visibleCount = capacitySummary.capacity;
+  const plans = normalized.plans;
   const billingToggle = normalized.billingToggle ?? pricingPlansDefaults.billingToggle!;
   const comparison = normalized.comparison ?? pricingPlansDefaults.comparison!;
   const layout = normalized.layout ?? pricingPlansDefaults.layout!;
@@ -872,8 +824,11 @@ export function PricingPlansVisualEditor({
           <p className="text-sm font-medium">Layout plan count</p>
           <FixedPlanCountNotice
             variant={resolvedVariant}
-            visibleCount={visibleCount}
-            hiddenCount={hiddenCount}
+            capacity={capacitySummary.capacity}
+            renderedCount={capacitySummary.rendered}
+            missingCount={capacitySummary.missing}
+            hiddenCount={capacitySummary.hidden}
+            mode="visual"
           />
         </div>
       </EditorSection>
@@ -1017,7 +972,14 @@ export function PricingPlansVisualEditor({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => removePlan(value, onChange, planIndex)}
+                  onClick={() =>
+                    setPendingRemoval({
+                      type: "plan",
+                      planIndex,
+                      planName: plan.name?.trim() || `Plan ${planIndex + 1}`,
+                      featureCount: plan.features?.length ?? 0,
+                    })
+                  }
                   disabled={plans.length <= 2}
                 >
                   Remove
@@ -1326,15 +1288,20 @@ export function PricingPlansVisualEditor({
               </div>
             </div>
 
-            <ColorField
-              id={`pricing-plans.plan.${planIndex + 1}.surface`}
-              path={`plans.${planIndex}.surface`}
+            <SharedColorControl
+              controlId={`pricing-plans.plan.${planIndex + 1}.surface`}
+              controlPath={`plans.${planIndex}.surface`}
               label="Plan surface"
               value={plan.surface}
               onChange={(next) => updatePlan(value, onChange, planIndex, { surface: next })}
               onClear={() => updatePlan(value, onChange, planIndex, { surface: undefined })}
+              placeholder="var(--color-bg)"
               pickerFallback="#ffffff"
+              showValueInput={false}
               treatAsThemeDefaultValues={["var(--color-bg)"]}
+              clearedLabel="Inherits card surface"
+              clearedDescription="No per-plan surface override is saved. This plan inherits the widget card surface."
+              clearResultLabel="removes the saved plan surface override"
             />
 
             <div className="space-y-2">
@@ -1475,7 +1442,17 @@ export function PricingPlansVisualEditor({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => removeFeature(value, onChange, planIndex, featureIndex)}
+                            onClick={() =>
+                              setPendingRemoval({
+                                type: "feature",
+                                planIndex,
+                                featureIndex,
+                                planName: plan.name?.trim() || `Plan ${planIndex + 1}`,
+                                featureText:
+                                  getPricingFeatureEditorText(feature) ||
+                                  `Feature ${featureIndex + 1}`,
+                              })
+                            }
                           >
                             Remove
                           </Button>
@@ -1622,37 +1599,52 @@ export function PricingPlansVisualEditor({
         title="Colors and emphasis"
         description="Configure card surface, border, highlight ring, spacing, radius, and marker style."
       >
-        <ColorField
-          id="pricing-plans.style.cardSurface"
-          path="style.cardSurface"
+        <SharedColorControl
+          controlId="pricing-plans.style.cardSurface"
+          controlPath="style.cardSurface"
           label="Card surface"
           value={normalized.style?.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
           onClear={() => clearStyleField(value, onChange, "cardSurface")}
+          placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
+          showValueInput={false}
           treatAsThemeDefaultValues={["var(--color-bg)"]}
+          clearedLabel="Inherited surface"
+          clearedDescription="No card or table surface override is saved. Pricing cards inherit the surrounding background."
+          clearResultLabel="removes the saved card surface override"
         />
 
-        <ColorField
-          id="pricing-plans.style.cardBorder"
-          path="style.cardBorder"
+        <SharedColorControl
+          controlId="pricing-plans.style.cardBorder"
+          controlPath="style.cardBorder"
           label="Card border"
           value={normalized.style?.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
           onClear={() => clearStyleField(value, onChange, "cardBorder")}
+          placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
+          showValueInput={false}
           treatAsThemeDefaultValues={["var(--color-border)"]}
+          clearedLabel="Inherited border"
+          clearedDescription="No card or table border color override is saved. The renderer omits the inline border color."
+          clearResultLabel="removes the saved card border override"
         />
 
-        <ColorField
-          id="pricing-plans.style.highlightRing"
-          path="style.highlightRing"
+        <SharedColorControl
+          controlId="pricing-plans.style.highlightRing"
+          controlPath="style.highlightRing"
           label="Highlight ring"
           value={normalized.style?.highlightRing}
           onChange={(next) => updateStyle(value, onChange, { highlightRing: next })}
           onClear={() => clearStyleField(value, onChange, "highlightRing")}
+          placeholder="var(--color-primary)"
           pickerFallback="#1d4ed8"
+          showValueInput={false}
           treatAsThemeDefaultValues={["var(--color-primary)"]}
+          clearedLabel="Theme default"
+          clearedDescription="No highlight-ring override is saved. The widget uses the theme primary color."
+          clearResultLabel="restores the widget default highlight ring"
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -1747,6 +1739,43 @@ export function PricingPlansVisualEditor({
           </WidgetControlRow>
         </div>
       </EditorSection>
+
+      <ConfirmActionDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemoval(null);
+        }}
+        title={
+          pendingRemoval?.type === "feature"
+            ? "Remove feature?"
+            : pendingRemoval?.type === "plan"
+              ? "Remove pricing plan?"
+              : "Confirm removal"
+        }
+        description={
+          pendingRemoval?.type === "feature"
+            ? `Remove "${pendingRemoval.featureText}" from ${pendingRemoval.planName}? This action cannot be undone.`
+            : pendingRemoval?.type === "plan"
+              ? `Remove ${pendingRemoval.planName}? This also removes ${formatFeatureCount(
+                  pendingRemoval.featureCount
+                )} saved on that plan.`
+              : "Confirm this destructive pricing change."
+        }
+        confirmLabel={pendingRemoval?.type === "feature" ? "Remove feature" : "Remove plan"}
+        onConfirm={() => {
+          if (pendingRemoval?.type === "plan") {
+            removePlanAtIndex(value, onChange, pendingRemoval.planIndex);
+          } else if (pendingRemoval?.type === "feature") {
+            removeFeatureAtIndex(
+              value,
+              onChange,
+              pendingRemoval.planIndex,
+              pendingRemoval.featureIndex
+            );
+          }
+          setPendingRemoval(null);
+        }}
+      />
     </div>
   );
 }
@@ -1758,13 +1787,14 @@ export function PricingPlansAdvancedEditor({
 }: WidgetEditorProps<PricingPlansData>) {
   const normalized = normalizeValue(value);
   const resolvedVariant = resolvePricingPlansVariant(variant);
-  const visibleCount = resolvePricingPlanCountForVariant(resolvedVariant);
+  const capacitySummary = describePricingPlanCapacity(resolvedVariant, normalized.plans);
+  const visibleCount = capacitySummary.capacity;
   const [pendingSupportAction, setPendingSupportAction] = useState<
     "align-plans" | "normalize" | null
   >(null);
   const planCount = normalized.plans?.length ?? 0;
   const configuredPlanCount = normalized.plans?.filter(hasConfiguredPricingPlan).length ?? 0;
-  const hiddenPlanCount = Math.max(0, planCount - visibleCount);
+  const hiddenPlanCount = capacitySummary.hidden;
 
   return (
     <div className="space-y-4">
@@ -1826,8 +1856,10 @@ export function PricingPlansAdvancedEditor({
       >
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-2">
-            <p className="text-sm font-medium">Visible plans in this layout</p>
-            <div className="rounded-md border px-3 py-2 text-sm">{visibleCount}</div>
+            <p className="text-sm font-medium">Rendered plans in this layout</p>
+            <div className="rounded-md border px-3 py-2 text-sm">
+              {capacitySummary.rendered} of {capacitySummary.capacity}
+            </div>
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium">Configured plans</p>

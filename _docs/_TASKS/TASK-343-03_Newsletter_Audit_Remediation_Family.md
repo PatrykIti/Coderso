@@ -6,7 +6,7 @@
 **Category:** Widgets + Newsletter + Public Write UX + Admin UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,12 +25,12 @@ though the widget is visually presented as not connected.
 
 ## Sub-Tasks
 
-- [ ] Block native form submission whenever the widget is not actually
+- [x] Block native form submission whenever the widget is not actually
   connected and ready for runtime submit.
-- [ ] Make disconnected/public-disabled state truthful in both semantics and
+- [x] Make disconnected/public-disabled state truthful in both semantics and
   copy.
-- [ ] Keep the current `forms-runtime` path intact once a valid form is bound.
-- [ ] Add regression coverage for Enter-key submit and disconnected-state DOM.
+- [x] Keep the current `forms-runtime` path intact once a valid form is bound.
+- [x] Add regression coverage for Enter-key submit and disconnected-state DOM.
 
 ## Files To Change
 
@@ -106,3 +106,35 @@ No new API route. Public write security posture must not weaken.
 - The widget no longer leaks email values into the public query string when it
   is not connected.
 - Connected forms-runtime and native action-url behavior remains intact.
+
+## Completion Notes (2026-05-30)
+
+- Disconnected and non-interactive Newsletter states now render a non-submitting
+  `div role="form"` shell with disabled semantics instead of an actual `<form>`,
+  so browser implicit Enter submission cannot leak email values into the current
+  URL.
+- This shell-level guard intentionally replaces the pseudocode `onSubmit`
+  fallback: when a render cannot submit interactively, there is no native form
+  for the browser to submit.
+- Interactive states still render a native `<form>` for valid external
+  `action-url` submissions and the existing Forms runtime path.
+- Editor preview for a bound Forms runtime contract can still report
+  `data-newsletter-submit-ready="true"` while rendering the blocked shell with
+  `data-newsletter-submit-interactive="false"` until public runtime injects
+  nonce and bot-protection data.
+- Visual copy now states that disconnected public render stays disabled until a
+  destination is selected, and the Connection status summary names the disabled
+  visitor-submit state.
+- Regression coverage asserts the disconnected shell has no native `<form>`,
+  safe native `action-url` still submits, valid Forms runtime still renders the
+  shared runtime form, and editor guidance is visible.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-03
+  drift review: no blockers)

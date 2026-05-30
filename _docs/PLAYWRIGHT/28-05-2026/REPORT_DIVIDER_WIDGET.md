@@ -197,6 +197,11 @@ _Zrzuty (lokalne): `divexh-front-desktop-1280-29-05.png`, `divexh-front-mobile-3
 7. **Wizard jest de facto pusty** — poza read-only podsumowaniem wariantu i podglądem nie ma tu nic do konfiguracji (celowe; ten sam wzorzec co Section/Spacer).
 8. **Comboboxy to Radix (nie natywny `<select>`).** Wymagają kliknięcia triggera i opcji; natywna komenda `select` na nich nie działa — niuans harnessu, nie błąd widgetu.
 
+> **Status TASK-343-30 (2026-05-30):** Punkt 5 jest zamknięty w shared
+> komponencie: tokeny nie są już klasyfikowane jako `Saved custom color`, a
+> fallback swatch jest opisany jako preview. Brak przycisku `Clear` dla Dividera
+> pozostaje widget-local decyzją, nie shared color-state drift.
+
 ---
 
 ## 7. Podsumowanie

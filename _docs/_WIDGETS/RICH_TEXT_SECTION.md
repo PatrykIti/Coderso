@@ -21,6 +21,8 @@ blocks, and bounded inline media/attachment/embed support.
 
 - One-time current layout seed
 - Read-only preview of the first two structured text blocks
+- Preview text strips safe `contentHtml` to readable plain text before falling
+  back to legacy `content`
 - Does not change `options.outputMode`; Wizard now leaves output ownership to
   Visual
 
@@ -44,6 +46,8 @@ Visual is the primary authoring surface. It now owns:
 - source preference / output-mode selection
 - output-source changes through daily body and structured block authoring
 - rendered-source status and sanitizer guidance
+- visible body-vs-structured-block drift guidance before authors switch output
+  modes
 - structured text/image/attachment/embed block authoring
 - confirm + undo flows for destructive block-count and remove actions
 - block navigation/paging for large block sets
@@ -60,6 +64,9 @@ Visual is the primary authoring surface. It now owns:
 - Read-only sanitizer diagnostics and sanitized preview
 - Read-only contract summary
 - Saved content summary for structured blocks, media/embed counts, and sanitized HTML source length.
+- Sanitizer diagnostics combine the latest editor sanitizer events with the
+  current stored HTML scan so warnings do not disappear after the editor saves
+  cleaned HTML.
 - Advanced does not expose raw JSON snapshots or raw HTML authoring.
 
 Advanced intentionally stays diagnostic. Variant selection, output-mode changes,
@@ -147,14 +154,21 @@ live here anymore.
   - `data-rich-text-title-level`
   - `data-rich-text-max-width`
   - `data-rich-text-toc-count`
+  - `data-rich-text-toc-scope="body-headings"`
 - Sections are labelled through a deterministic title id when a title exists, or
   a fallback `aria-label` when the title is empty.
 - TOC anchors are scoped by widget instance / `blockId`, and TOC links expose a
   visible `focus-visible` ring.
+- TOC scope is intentionally limited to rendered body H2/H3/H4 headings. The
+  section title is the section label/page heading and is not repeated in the
+  TOC.
 - Title headings support `h1`, `h2`, or `h3`; structured text headings support
   `h2`, `h3`, or `h4`.
 - The `article` variant now applies the selected `maxWidth` instead of forcing a
   hardcoded article width.
+- Structured embeds currently render as provider-validated link cards. The
+  legacy `aspectRatio` value is retained in data for compatibility, but the
+  Visual selector is disabled because link-card rendering cannot express it.
 
 ## Sanitizer and Security
 
@@ -168,6 +182,10 @@ live here anymore.
   blocks instead.
 - Structured blocks are capped at `20` items and all text/link/media fields stay
   length-bounded in the normalizer.
+- The editor stores bounded sanitizer diagnostics from the most recent body or
+  structured-block rich-text edit, including unsafe link attempts surfaced by
+  the shared rich-text adapter before upstream serialization, while the live
+  editor command receives a safe placeholder href.
 
 ## Clear Controls
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Template Section + Admin Preview + Diagnostics + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,14 +25,14 @@ preview with useful diagnostics.
 
 ## Sub-Tasks
 
-- [ ] Make admin preview truthful: either resolve real template blocks or
+- [x] Make admin preview truthful: either resolve real template blocks or
   explicitly present placeholder-only preview semantics.
-- [ ] Make Advanced diagnostics report the real runtime problem class
+- [x] Make Advanced diagnostics report the real runtime problem class
   (`template_unpublished`, unresolved blocks, etc.) instead of false-zero
   success.
-- [ ] Surface `metadata.category` and `metadata.version` truthfully instead of
+- [x] Surface `metadata.category` and `metadata.version` truthfully instead of
   half-owning them across Visual and Advanced.
-- [ ] Route shared `visibility.devices` wording separately if that remains the
+- [x] Route shared `visibility.devices` wording separately if that remains the
   real owner; do not fix shared renderer visibility semantics in this
   widget-local family.
 
@@ -90,3 +90,12 @@ Contract.
 - Template Section preview and diagnostics stop implying resolved content when
   none exists.
 - Category/version ownership is explicit and visible.
+
+## Closure Notes
+
+- Completed on 2026-05-30.
+- Focused Vitest, lint, typecheck, diff checks, manual Playwright smoke via
+  `coderso-dev-core-host`, and Claude drift review passed.
+- The public audit fixture is hidden by shared `visibility.devices: []`, so
+  public runtime smoke used a temporary visible Template Section page and
+  deleted it after verification.

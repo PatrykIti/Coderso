@@ -46,6 +46,10 @@ Primary day-to-day editing mode with section-based IA:
 
 Timeline owns variant selection in Visual via
 `editorCapabilities.visualOwnsVariantSelection = true`.
+Mode preview cards and the `Timeline mode` select both use the same mode update
+contract: selecting a mode updates `data.mode` and applies that mode's preferred
+legacy variant (`process -> compact`, `axis -> milestones`, `chronology` and
+`alternating -> cards`).
 
 Each step can now own:
 - optional `date` and `dateLabel`
@@ -92,6 +96,17 @@ and no longer exposes mutating support actions in the daily tab flow.
   metadata can now stay visible in horizontal axis/milestone layouts instead of
   forcing `chronology` mode.
 - `style.markerDisplay` supports `dot`, `number`, and `icon`.
+- `style.markerDisplay = "icon"` is a requested display mode. A step without
+  `markerIcon` or title-side `icon` renders a dot marker and exposes per-marker
+  `data-timeline-marker-effective-display="dot"` plus a root
+  `data-timeline-marker-icon-fallback-count` diagnostic.
+- `style.descriptionSize = "none"` does not hide descriptions. It keeps the
+  description text visible and clears the explicit size class so surrounding
+  typography can inherit.
+- `layout.maxWidth = "6xl"` intentionally narrows to an effective `5xl` class
+  when the timeline has three or fewer steps. Runtime keeps the saved
+  `data-timeline-max-width="6xl"` and also exposes
+  `data-timeline-effective-max-width` and `data-timeline-max-width-narrowed`.
 - Whole-step links are sanitized through the shared safe-href contract and are
   suppressed whenever a step CTA is present, so nested anchors are never
   rendered.

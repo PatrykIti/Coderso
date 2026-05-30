@@ -4,12 +4,8 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import {
-  tabsDefaults,
-  tabsItemMax,
-  tabsItemMin,
-  type TabsData,
-} from "../../../core/widgets/core/tabs";
+import { tabsDefaults, type TabsData } from "../../../core/widgets/core/tabs";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -250,10 +246,12 @@ const renderEditor = async ({
   editor,
   initialValue,
   initialVariant = "pills",
+  context,
 }: {
   editor: EditorKind;
   initialValue: TabsData;
   initialVariant?: string;
+  context?: WidgetEditorProps<TabsData>["context"];
 }) => {
   const { TabsAdvancedEditor, TabsVisualEditor, TabsWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/TabsEditors");
@@ -289,6 +287,7 @@ const renderEditor = async ({
           onVariantChangeSpy(next);
           setVariant(next);
         }}
+        context={context}
       />
     );
   };
@@ -339,7 +338,7 @@ test("Tabs editors expose non-overlapping writable ownership metadata", async ()
       (path, index, paths) => paths.indexOf(path) !== index
     );
 
-    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count"]));
+    expect(wizardPaths).toEqual([]);
     expect(visualPaths).toEqual(
       expect.arrayContaining([
         "variant",
@@ -357,6 +356,7 @@ test("Tabs editors expose non-overlapping writable ownership metadata", async ()
       ])
     );
     expect(wizardPaths).not.toContain("variant");
+    expect(wizardPaths).not.toContain("items.count");
     expect(wizardPaths).not.toContain("options.orientation");
     expect(visualPaths).not.toContain("items.count");
     expect(advancedPaths).toEqual([]);
@@ -368,7 +368,7 @@ test("Tabs editors expose non-overlapping writable ownership metadata", async ()
   }
 });
 
-test("Tabs wizard editor covers starter item-count growth and default-tab selection", async () => {
+test("Tabs wizard editor summarizes slot-owned panel count without mutating starter labels", async () => {
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy-tabs",
@@ -381,6 +381,15 @@ test("Tabs wizard editor covers starter item-count growth and default-tab select
         activeId: "missing",
       },
     },
+    context: {
+      surface: "page-builder",
+      slotTargets: [
+        { definitionId: "panel", slotId: "panel:1", label: "Panel 1", kind: "repeatable" },
+        { definitionId: "panel", slotId: "panel:2", label: "Panel 2", kind: "repeatable" },
+        { definitionId: "panel", slotId: "panel:3", label: "Panel 3", kind: "repeatable" },
+        { definitionId: "panel", slotId: "panel:4", label: "Panel 4", kind: "repeatable" },
+      ],
+    },
   });
 
   try {
@@ -388,37 +397,19 @@ test("Tabs wizard editor covers starter item-count growth and default-tab select
     expect(() => getSectionByTitle(view.container, "Layout")).toThrow();
 
     const structureSection = getSectionByTitle(view.container, "Starter tabs");
-    const countSelect = findSelectByOptions(structureSection, [
-      String(tabsItemMin),
-      "3",
-      "4",
-      "5",
-      String(tabsItemMax),
-    ]);
-    expect(structureSection.textContent).toContain("matching content area");
+    expect(structureSection.querySelectorAll("select")).toHaveLength(0);
+    expect(structureSection.textContent).toContain("4 panels from Structure");
+    expect(structureSection.textContent).toContain("2 saved starter labels");
+    expect(structureSection.textContent).toContain("Structure owns rendered tab panels");
+    expect(structureSection.textContent).toContain("Visual Structure");
     expect(structureSection.textContent).not.toContain("Tab subtitle");
     expect(structureSection.textContent).toContain("Visual owns the default tab choice");
 
-    setSelectValue(countSelect, "3");
-    expect(view.getValue().items).toHaveLength(3);
-    expect(view.getValue().items?.[2]).toEqual(
-      expect.objectContaining({
-        id: "3",
-        label: "Tab 3",
-        disabled: false,
-      })
-    );
-    expect(view.getValue().options).toEqual(
-      expect.objectContaining({
-        defaultItemId: "overview",
-        activeId: "overview",
-      })
-    );
-
     expect(structureSection.querySelectorAll("input")).toHaveLength(0);
     expect(view.getValue().items?.[0]?.label).toBe("Overview");
-    expect(view.getValue().items?.[0]?.panelIntro).toBe("Primary overview.");
-    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.getValue().items?.[0]?.description).toBe("Primary overview.");
+    expect(structureSection.textContent).toContain("Primary overview.");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -529,13 +520,15 @@ test("Tabs visual editor covers metadata, disabled-tab fallback, layout controls
     const activeTextColorInput = findColorInputByLabel(colorsSection, "Active text color swatch");
 
     expect(colorsSection.textContent).not.toContain("var(--color");
-    expect(colorsSection.textContent).not.toContain("token");
+    expect(colorsSection.textContent).toContain("Theme default");
+    expect(colorsSection.textContent).toContain("fallback preview");
+    expect(colorsSection.textContent).not.toContain("Saved custom color");
     expect(findInputsByPlaceholder(colorsSection, "var(--color-surface)")).toHaveLength(0);
     expect(
       Array.from(colorsSection.querySelectorAll("button")).filter(
         (button) => button.textContent === "Clear"
       )
-    ).toHaveLength(3);
+    ).toHaveLength(6);
     expect(surfaceColorInput.value).toBe("#f8fafc");
     expect(panelBackgroundInput.value).toBe("#f8fafc");
     expect(borderColorInput.value).toBe("#cbd5e1");
@@ -656,12 +649,14 @@ test("Tabs advanced editor exposes read-only human summaries without raw diagnos
     expect(diagnosticsSection.textContent).toContain("Opens on");
     expect(diagnosticsSection.textContent).toContain("Default tab");
     expect(diagnosticsSection.textContent).toContain("Unavailable tabs");
-    expect(diagnosticsSection.textContent).toContain("Tabs wrap onto extra lines");
+    expect(diagnosticsSection.textContent).toContain("Saved scroll overflow is legacy");
+    expect(diagnosticsSection.textContent).toContain("tabs wrap onto extra lines");
     expect(itemsSection.textContent).toContain("Tab 1; intro text saved; no subtitle; no icon");
     expect(itemsSection.textContent).toContain("Specs; intro text saved");
     expect(displaySection.textContent).toContain("Vertical; End aligned");
     expect(displaySection.textContent).toContain("Fade motion");
     expect(displaySection.textContent).toContain("saved color choices");
+    expect(summarySection.textContent).toContain("Structure panel changes");
     expect(summarySection.textContent).toContain("Advanced only summarizes the saved state");
     expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.textContent).not.toContain('"id"');

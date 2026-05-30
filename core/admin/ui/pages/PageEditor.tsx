@@ -1350,6 +1350,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
           }
           editorContext={pageEditorWidgetContext}
+          pageDefaults={pageLayout.sections.defaults}
         />
       }
       rightPanelClassName="p-6"
@@ -1594,6 +1595,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
                 selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
               }
               editorContext={pageEditorWidgetContext}
+              pageDefaults={pageLayout.sections.defaults}
             />
           </div>
         </SheetContent>

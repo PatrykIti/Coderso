@@ -1053,6 +1053,10 @@ export function NewsletterBlock({
     : renderContext?.mode === "editor-preview" && formsRuntimeReady && !canUseFormsRuntime
       ? "Editor preview shows the bound Forms contract. Public runtime injects nonce and bot protection at render time."
       : "";
+  const NewsletterFormShell = submitReady ? "form" : "div";
+  const formShellSubmitProps = submitReady
+    ? { method: formMethod, action: formAction }
+    : { role: "form", "aria-disabled": true };
 
   return (
     <section
@@ -1095,10 +1099,9 @@ export function NewsletterBlock({
         </p>
       ) : null}
 
-      <form
+      <NewsletterFormShell
+        {...formShellSubmitProps}
         className="w-full space-y-3"
-        method={connectionReady ? formMethod : undefined}
-        action={connectionReady ? formAction : undefined}
         data-nextless-form-runtime={canUseFormsRuntime ? "1" : undefined}
         data-form-id={canUseFormsRuntime ? (resolved?.formId ?? "") : undefined}
         data-form-success-message={canUseFormsRuntime ? stateCopy.successMessage : undefined}
@@ -1116,6 +1119,7 @@ export function NewsletterBlock({
         }
         data-newsletter-submit-ready={String(connectionReady)}
         data-newsletter-submit-interactive={String(submitReady)}
+        data-newsletter-native-submit={submitReady ? "enabled" : "blocked"}
         aria-labelledby={titleId}
         aria-label={titleId ? undefined : "Newsletter signup"}
       >
@@ -1192,6 +1196,7 @@ export function NewsletterBlock({
                 type={submitReady ? "submit" : "button"}
                 data-form-submit="1"
                 aria-busy="false"
+                aria-disabled={!submitReady ? true : undefined}
                 disabled={!submitReady}
                 className="w-full rounded-md px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70"
                 style={buttonStyle}
@@ -1235,7 +1240,7 @@ export function NewsletterBlock({
         >
           {stateCopy.errorMessage}
         </p>
-      </form>
+      </NewsletterFormShell>
 
       {showOptInCopy ? (
         <p className="text-xs opacity-75" style={fieldStyle} data-newsletter-double-opt-in="true">

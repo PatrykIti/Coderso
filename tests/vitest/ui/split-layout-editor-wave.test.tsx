@@ -345,8 +345,13 @@ test("SplitLayout visual editor shows ratio disclosure, miniatures, and legacy z
 
     const ratioSummary = view.container.querySelector("[data-split-ratio-summary]");
     expect(ratioSummary?.getAttribute("data-split-ratio-override")).toBe("true");
+    expect(ratioSummary?.getAttribute("data-split-ratio-effective-starter")).toBe("false");
+    expect(ratioSummary?.getAttribute("data-split-ratio-device-specific")).toBe("true");
     expect(ratioSummary?.textContent).toContain("Desktop 40 / 60, tablet 60 / 40, mobile 60 / 40.");
     expect(ratioSummary?.textContent).toContain("Custom device layout");
+    expect(ratioSummary?.textContent).toContain(
+      "Desktop split cards update the desktop layout. Tablet and phone overrides stay intact when they differ from desktop."
+    );
 
     const spacingSection = findSectionByTitle(
       view.container,
@@ -359,6 +364,78 @@ test("SplitLayout visual editor shows ratio disclosure, miniatures, and legacy z
     expect(optionValues).not.toContain("0");
     expect(gapSelect.value).toBe("none");
     expect(gapCopy?.textContent).toContain("Older saved zero-gap layouts are shown here.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SplitLayout visual disclosure does not call explicit matching phone splits independent", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ratio: {
+        desktop: "60-40",
+        tablet: "60-40",
+        mobile: "60-40",
+      },
+      collapseMobile: "keep",
+    },
+    initialVariant: "60-40",
+  });
+
+  try {
+    const ratioSummary = view.container.querySelector("[data-split-ratio-summary]");
+    expect(ratioSummary?.getAttribute("data-split-ratio-override")).toBe("false");
+    expect(ratioSummary?.getAttribute("data-split-ratio-effective-starter")).toBe("true");
+    expect(ratioSummary?.textContent).toContain("Matches starter layout");
+    expect(ratioSummary?.textContent).toContain(
+      "Phone split is saved explicitly, but it currently matches the starter layout."
+    );
+    expect(ratioSummary?.textContent).not.toContain("Phone layout has its own saved split.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SplitLayout visual preset cards follow desktop ratio and preserve device overrides", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ratio: {
+        desktop: "50-50",
+        tablet: "40-60",
+        mobile: "50-50",
+      },
+      collapseMobile: "keep",
+      reverseOnMobile: false,
+      gap: "6",
+      verticalAlign: "stretch",
+    },
+    initialVariant: "60-40",
+  });
+
+  try {
+    expect(
+      view.container
+        .querySelector('button[data-split-variant-card="50-50"]')
+        ?.getAttribute("aria-pressed")
+    ).toBe("true");
+    expect(
+      view.container
+        .querySelector('button[data-split-variant-card="60-40"]')
+        ?.getAttribute("aria-pressed")
+    ).toBe("false");
+
+    clickByText(view.container, "60 / 40");
+
+    expect(view.getLatestVariant()).toBe("60-40");
+    expect(view.getLatestValue()).toMatchObject({
+      ratio: {
+        desktop: "60-40",
+        tablet: "40-60",
+        mobile: "50-50",
+      },
+    });
   } finally {
     view.cleanup();
   }

@@ -3,8 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 
-import type { Block, DeviceTarget, WidgetDefinition, WidgetEditorContext } from "./types";
-import { applyWidgetBlockPatch, sanitizeLayout } from "./blockUtils";
+import type {
+  Block,
+  DeviceTarget,
+  WidgetDefinition,
+  WidgetEditorContext,
+  WidgetLayoutDefaults,
+} from "./types";
+import {
+  applyWidgetBlockPatch,
+  resolveSharedBlockVisibilityState,
+  sanitizeLayout,
+} from "./blockUtils";
 import { LayoutPanel } from "./LayoutPanel";
 import {
   WidgetControlRow,
@@ -57,6 +67,7 @@ export type VisualPanelProps = {
     : (patch: Parameters<typeof applyWidgetBlockPatch>[1]) => void;
   editorContext?: WidgetEditorContext;
   slotControls?: VisualPanelSlotControls;
+  pageDefaults?: WidgetLayoutDefaults;
 };
 
 export function VisualPanel({
@@ -66,6 +77,7 @@ export function VisualPanel({
   onBlockPatch,
   editorContext,
   slotControls,
+  pageDefaults,
 }: VisualPanelProps) {
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const Editor = widget.editor.visual;
@@ -76,7 +88,8 @@ export function VisualPanel({
     ((patch: Parameters<typeof applyWidgetBlockPatch>[1]) => {
       onChange(applyWidgetBlockPatch(block, patch));
     });
-  const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
+  const visibilityState = resolveSharedBlockVisibilityState(block.visibility);
+  const devices = visibilityState.devices;
   const toggleDevice = (device: DeviceTarget) => {
     const nextDevices = devices.includes(device)
       ? devices.filter((entry) => entry !== device)
@@ -253,7 +266,11 @@ export function VisualPanel({
         title="Block layout"
         description="Control this block's outer content width and spacing."
       >
-        <LayoutPanel value={layoutValue} onChange={(layout) => patchBlock({ layout })} />
+        <LayoutPanel
+          value={layoutValue}
+          pageDefaults={pageDefaults}
+          onChange={(layout) => patchBlock({ layout })}
+        />
       </WidgetEditorSection>
       <WidgetEditorSection
         id="builder.visual.visibility"
@@ -263,6 +280,12 @@ export function VisualPanel({
         description="Choose which visitor device sizes should show this block."
       >
         <div className="space-y-2">
+          <p className="text-xs text-muted-foreground" data-builder-visibility-summary>
+            {visibilityState.summary}
+            {visibilityState.hiddenOnAllDevices
+              ? ". Public rendering is disabled until at least one device is shown."
+              : null}
+          </p>
           {deviceLabels.map((device) => (
             <WidgetControlRow
               key={device.id}

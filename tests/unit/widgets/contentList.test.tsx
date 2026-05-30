@@ -237,7 +237,10 @@ test("content list renders image aspect classes and CTA fallback label when href
   expect(html).toContain("aspect-[16/9]");
   expect(html).toContain('aria-disabled="true"');
   expect(html).toContain('aria-label="Open post: Release notes"');
+  expect(html).toContain('data-content-list-cta-disabled="missing-href"');
   expect(html).toContain("Open post");
+  expect(html).not.toContain('data-content-list-link-unavailable="1"');
+  expect(html).not.toContain("Links unavailable until a detail route is configured.");
   expect(html).not.toContain('href="/blog/release-notes"');
 });
 

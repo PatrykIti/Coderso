@@ -115,6 +115,7 @@ export type RichTextSectionData = {
   body?: {
     html?: string;
     blocks?: RichTextSectionBlock[];
+    sanitizerDiagnostics?: RichTextSanitizerDiagnostic[];
   };
   options?: {
     dropcap?: boolean;
@@ -252,6 +253,20 @@ export const richTextSectionSchema = {
               title: { type: "string" },
               aspectRatio: { enum: ["16:9", "4:3", "1:1"] },
               renderMode: { enum: ["link-card"] },
+            },
+          },
+        },
+        sanitizerDiagnostics: {
+          type: "array",
+          maxItems: richTextDiagnosticsMax,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["code"],
+            properties: {
+              code: { enum: ["tag_removed", "attribute_removed", "href_rewritten"] },
+              tagName: { type: "string" },
+              attributeName: { type: "string" },
             },
           },
         },
@@ -525,6 +540,7 @@ export const resolveRichTextSectionVariant = (variant: string): RichTextSectionV
 };
 
 const headingTextBlockTags = new Set(["h2", "h3", "h4", "span", "strong", "em"]);
+const richTextPlainTextBlockTags = new Set(["p", "li", "blockquote", "h2", "h3", "h4", "pre"]);
 
 const extractHeadingText = (value: string) => htmlToPlainText(value, headingTextBlockTags);
 
@@ -591,6 +607,34 @@ const dedupeRichTextDiagnostics = (diagnostics: RichTextSanitizerDiagnostic[]) =
 
   return unique;
 };
+
+export function normalizeRichTextSanitizerDiagnostics(
+  diagnostics: RichTextSanitizerDiagnostic[] | undefined
+): RichTextSanitizerDiagnostic[] {
+  if (!Array.isArray(diagnostics)) return [];
+  return dedupeRichTextDiagnostics(
+    diagnostics
+      .filter((diagnostic): diagnostic is RichTextSanitizerDiagnostic => {
+        if (typeof diagnostic !== "object" || diagnostic === null) return false;
+        return (
+          diagnostic.code === "tag_removed" ||
+          diagnostic.code === "attribute_removed" ||
+          diagnostic.code === "href_rewritten"
+        );
+      })
+      .map((diagnostic) => ({
+        code: diagnostic.code,
+        tagName:
+          typeof diagnostic.tagName === "string" && diagnostic.tagName.trim().length > 0
+            ? diagnostic.tagName.trim().toLowerCase()
+            : undefined,
+        attributeName:
+          typeof diagnostic.attributeName === "string" && diagnostic.attributeName.trim().length > 0
+            ? diagnostic.attributeName.trim().toLowerCase()
+            : undefined,
+      }))
+  );
+}
 
 export function sanitizeRichTextHtmlWithDiagnostics(rawHtml: string | undefined): {
   html: string;
@@ -760,6 +804,19 @@ export function renderRichTextSectionHtmlPreview(value: string | undefined): Rea
   return parseSanitizedRichTextPreviewHtml(sanitized).map((node, index) =>
     renderRichTextPreviewNode(node, `rich-text-preview-${index}`)
   );
+}
+
+export function summarizeRichTextBlockPreview(block: RichTextSectionBlock): string {
+  if (block.kind && block.kind !== "text") return "";
+  const contentHtml = "contentHtml" in block ? block.contentHtml : undefined;
+  const htmlText =
+    typeof contentHtml === "string" && contentHtml.trim().length > 0
+      ? htmlToPlainText(sanitizeRichTextHtml(contentHtml), richTextPlainTextBlockTags).trim()
+      : "";
+  if (htmlText.length > 0) return htmlText;
+
+  const legacyContent = "content" in block ? block.content : undefined;
+  return typeof legacyContent === "string" ? legacyContent.trim() : "";
 }
 
 const normalizeRichTextPublicMediaSrc = (value: unknown) => {
@@ -1131,6 +1188,7 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
           "<p>Use this section for longer editorial content.</p>"
       ),
       blocks: normalizeRichTextBlocks(data.body?.blocks),
+      sanitizerDiagnostics: normalizeRichTextSanitizerDiagnostics(data.body?.sanitizerDiagnostics),
     },
     options: {
       dropcap:
@@ -1152,6 +1210,67 @@ export function normalizeRichTextSectionData(data: RichTextSectionData): RichTex
         : styleDefaults.background,
       spacing: resolveRichTextSpacing(data.style?.spacing),
     },
+  };
+}
+
+const normalizePlainTextForDrift = (value: string) => value.replace(/\s+/g, " ").trim();
+
+const summarizeRichTextBlocksPlainText = (blocks: RichTextSectionBlock[] | undefined) =>
+  normalizePlainTextForDrift(
+    normalizeRichTextBlocks(blocks)
+      .map((block) => {
+        if (block.kind === "image") {
+          return [block.alt, block.caption].filter(Boolean).join(" ");
+        }
+        if (block.kind === "attachment") {
+          return [block.label, block.description].filter(Boolean).join(" ");
+        }
+        if (block.kind === "embed") {
+          return block.title ?? "";
+        }
+        return [block.heading, summarizeRichTextBlockPreview(block)].filter(Boolean).join(" ");
+      })
+      .join(" ")
+  );
+
+export function resolveRichTextSourceDrift(data: RichTextSectionData): {
+  hasDrift: boolean;
+  htmlTextLength: number;
+  blocksTextLength: number;
+} {
+  const normalized = normalizeRichTextSectionData(data);
+  const htmlText = normalizePlainTextForDrift(
+    htmlToPlainText(sanitizeRichTextHtml(normalized.body?.html ?? ""), richTextPlainTextBlockTags)
+  );
+  const blocksText = summarizeRichTextBlocksPlainText(normalized.body?.blocks);
+
+  return {
+    hasDrift:
+      htmlText.length > 0 &&
+      blocksText.length > 0 &&
+      htmlText.toLowerCase() !== blocksText.toLowerCase(),
+    htmlTextLength: htmlText.length,
+    blocksTextLength: blocksText.length,
+  };
+}
+
+export function resolveRichTextSanitizerReport(data: RichTextSectionData): {
+  html: string;
+  diagnostics: RichTextSanitizerDiagnostic[];
+  storedDiagnostics: RichTextSanitizerDiagnostic[];
+  htmlDiagnostics: RichTextSanitizerDiagnostic[];
+} {
+  const normalized = normalizeRichTextSectionData(data);
+  const htmlDiagnostics = sanitizeRichTextHtmlWithDiagnostics(normalized.body?.html ?? "");
+  const storedDiagnostics = normalizeRichTextSanitizerDiagnostics(
+    normalized.body?.sanitizerDiagnostics
+  );
+
+  return {
+    html: htmlDiagnostics.html,
+    diagnostics: dedupeRichTextDiagnostics([...storedDiagnostics, ...htmlDiagnostics.diagnostics]),
+    storedDiagnostics,
+    htmlDiagnostics: htmlDiagnostics.diagnostics,
   };
 }
 
@@ -1322,6 +1441,7 @@ function RichTextSectionBlockView({
         resolveRichTextTitleHeadingLevel(normalized.titleBlock?.headingLevel)
       )}
       data-rich-text-toc-count={String(tocItems.length)}
+      data-rich-text-toc-scope="body-headings"
     >
       <div className="mx-auto w-full">
         {showTitleBlock ? (

@@ -20,6 +20,7 @@ export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
 export type ContentListImageAspect = "compact" | "standard" | "wide" | "square";
 export type ContentListPaginationMode = "none" | "paged" | "load-more" | "view-all";
 export type ContentListTagMode = "meta-line" | "badges" | "hidden";
+export type ContentListLinkUnavailableReason = "missing-route";
 
 export type ContentListRuntimeItem = {
   id?: string;
@@ -837,12 +838,14 @@ function ContentListItemCard({
   variant,
   fields,
   style,
+  linkUnavailableReason,
 }: {
   item: ContentListRuntimeItem;
   index: number;
   variant: ContentListVariantId;
   fields: NonNullable<ContentListData["fields"]>;
   style: NonNullable<ContentListData["style"]>;
+  linkUnavailableReason?: ContentListLinkUnavailableReason;
 }) {
   const cardStyle = style.cardStyle ?? "outlined";
   const wrapperClassName =
@@ -878,7 +881,9 @@ function ContentListItemCard({
   const showTagBadges = tagMode === "badges" && tags.length > 0;
   const showCta = Boolean(fields.showCta);
   const showCtaLink = showCta && Boolean(href);
-  const showCtaFallback = showCta && !href;
+  const hasHref = Boolean(href);
+  const showLinkUnavailable = !hasHref && linkUnavailableReason === "missing-route";
+  const showCtaFallback = showCta && !hasHref;
   const ctaLabel = style.ctaLabel ?? "Read more";
   const ctaAccessibleLabel = resolveContentListCtaAccessibleLabel(item, ctaLabel);
 
@@ -956,10 +961,16 @@ function ContentListItemCard({
               className="text-sm font-medium opacity-70"
               aria-disabled="true"
               aria-label={ctaAccessibleLabel}
+              data-content-list-cta-disabled={linkUnavailableReason ?? "missing-href"}
             >
               {ctaLabel}
             </span>
           </div>
+        ) : null}
+        {showLinkUnavailable ? (
+          <p className="text-xs opacity-70" data-content-list-link-unavailable="1">
+            Links unavailable until a detail route is configured.
+          </p>
         ) : null}
       </div>
     </article>
@@ -1048,6 +1059,19 @@ function ContentListPaginationActions({
     );
   }
 
+  if (mode === "view-all") {
+    return (
+      <div className="mt-6 text-sm" data-content-list-view-all-unavailable="1">
+        <span className="font-medium opacity-70" aria-disabled="true">
+          {pagination.viewAllLabel ?? "View all"}
+        </span>
+        <p className="mt-1 text-xs text-[var(--color-text)]/65">
+          View all is unavailable until a destination or list route is configured.
+        </p>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -1055,10 +1079,12 @@ export function ContentListBlock({
   data,
   variant,
   blockId,
+  linkUnavailableReason,
 }: {
   data: ContentListData;
   variant: string;
   blockId?: string;
+  linkUnavailableReason?: ContentListLinkUnavailableReason;
 }) {
   const normalized = normalizeContentListData(data);
   const resolvedVariant = resolveContentListVariant(variant);
@@ -1151,6 +1177,7 @@ export function ContentListBlock({
                 variant={resolvedVariant}
                 fields={fields}
                 style={style}
+                linkUnavailableReason={linkUnavailableReason}
               />
             ))}
           </div>

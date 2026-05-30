@@ -30,6 +30,20 @@ import {
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 const displayModeOptions: SearchBoxDisplayMode[] = ["full", "compact"];
+const searchBoxClearedColorState = {
+  label: "No inline color",
+  description:
+    "No color override is saved. The search shell stays unstyled until you pick a color.",
+  clearResultLabel: "removes the saved color and leaves the field unstyled",
+};
+const searchBoxThemeDefaultStyleValues = {
+  frameBackground: [
+    searchBoxDefaults.style?.frameBackground ??
+      "color-mix(in srgb, var(--color-bg) 80%, transparent)",
+  ],
+  frameBorderColor: [searchBoxDefaults.style?.frameBorderColor ?? "var(--color-border)"],
+  actionBackground: [searchBoxDefaults.style?.actionBackground ?? "var(--color-primary)"],
+};
 
 function EditorSection({
   id,
@@ -560,6 +574,10 @@ function SurfaceEditor({
             onClear={() => clearStyle(value, onChange, "frameBackground")}
             pickerFallback="#ffffff"
             showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.frameBackground}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
           />
         )}
       </WidgetControlRow>
@@ -577,6 +595,10 @@ function SurfaceEditor({
             onClear={() => clearStyle(value, onChange, "frameBorderColor")}
             pickerFallback="#d4d4d8"
             showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.frameBorderColor}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
           />
         )}
       </WidgetControlRow>
@@ -594,6 +616,10 @@ function SurfaceEditor({
             onClear={() => clearStyle(value, onChange, "actionBackground")}
             pickerFallback="#2563eb"
             showValueInput={false}
+            treatAsThemeDefaultValues={searchBoxThemeDefaultStyleValues.actionBackground}
+            clearedLabel={searchBoxClearedColorState.label}
+            clearedDescription={searchBoxClearedColorState.description}
+            clearResultLabel={searchBoxClearedColorState.clearResultLabel}
           />
         )}
       </WidgetControlRow>

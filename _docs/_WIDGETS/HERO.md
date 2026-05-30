@@ -76,6 +76,9 @@ Advanced must not duplicate Visual as a second design panel.
   `media-center`.
 - `split`, `media-left`, and `media-center`: media frame renders image/video
   inline.
+- Explicit background image overlays render as valid layered
+  `linear-gradient(color, color), ... , url(...)` background-image output, so
+  overlays do not invalidate or remove the image on fresh public render.
 - Visual mode keeps Media authoring available in `centered` so authors can
   still change or clear background media while hiding inline-frame-only border
   controls.
@@ -111,6 +114,8 @@ Advanced must not duplicate Visual as a second design panel.
   and clear actions. Section-level palette presets can bulk-apply safe explicit
   colors. Existing theme token or rgba values remain compatible as saved custom
   color state that can be replaced or cleared without typing CSS.
+- Media and background overlay opacity controls preserve the saved overlay hue
+  from RGBA values when only strength changes.
 - Motion presets are reduced-motion safe and currently support `none`,
   `fade-in`, and `slide-up`.
 - Contrast guidance reuses the shared editor advisory helper and only gives a
@@ -133,6 +138,10 @@ Advanced must not duplicate Visual as a second design panel.
   `transparent` or an empty string.
 - Media overlay authoring uses color and strength controls rather than raw
   `rgba(...)` text.
+- Saved non-empty Hero blocks preserve an absent `secondaryCta` through widget
+  default normalization. A single-CTA Hero therefore stays single after save,
+  reload, and server-side validation instead of restoring the default secondary
+  action.
 - `style.primaryButtonBg`, `style.secondaryButtonBg`, and related CTA color
   fields are clearable without changing CTA labels or links.
 - A deliberate user-entered `transparent` value remains valid authored data and

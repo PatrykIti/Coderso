@@ -26,6 +26,8 @@ test("search box renders listing placeholder when query is not selected", () => 
   const html = renderToString(<SearchBoxBlock data={searchBoxDefaults} variant="default" />);
   expect(html).toContain("Select a listing query");
   expect(html).toContain('data-listing-widget="search-box"');
+  expect(html).toContain('aria-labelledby="search-box-listing-search-title"');
+  expect(html).toContain('id="search-box-listing-search-title"');
 });
 
 test("search box renders listing mode with runtime query value", () => {
@@ -46,7 +48,33 @@ test("search box renders listing mode with runtime query value", () => {
 
   expect(html).toContain('data-listing-block-id="search-box-1"');
   expect(html).toContain('data-listing-query-id="listing-query-1"');
+  expect(html).toContain('aria-labelledby="search-box-search-box-1-title"');
+  expect(html).toContain('id="search-box-search-box-1-title"');
+  expect(html).toContain('for="search-box-search-box-1-query"');
+  expect(html).toContain('id="search-box-search-box-1-query"');
+  expect(html).toContain("max-w-4xl");
+  expect(html).not.toContain("max-w-5xl");
   expect(html).toContain("newsletter");
+});
+
+test("search box compact listing mode narrows the shell and hides helper copy", () => {
+  const html = renderToString(
+    <SearchBoxBlock
+      variant="default"
+      blockId="search-box-compact"
+      data={normalizeSearchBoxData({
+        ...searchBoxDefaults,
+        displayMode: "compact",
+        listingQueryId: "listing-query-1",
+        description: "Detailed helper copy should collapse in compact mode.",
+      })}
+    />
+  );
+
+  expect(html).toContain('data-search-box-display-mode="compact"');
+  expect(html).toContain("max-w-3xl");
+  expect(html).toContain("space-y-2");
+  expect(html).not.toContain("Detailed helper copy should collapse in compact mode.");
 });
 
 test("search box renders global mode source toggles", () => {
@@ -70,6 +98,12 @@ test("search box renders global mode source toggles", () => {
   expect(html).toContain('name="sources"');
   expect(html).toContain("Pages");
   expect(html).toContain("Posts");
+  expect(html).toContain('for="search-box-global-search-query"');
+  expect(html).toContain('id="search-box-global-search-query"');
+  expect(html).toMatch(/<input[^>]*checked=""[^>]*value="pages"/);
+  expect(html).toMatch(/<input[^>]*value="entries"(?![^>]*checked)/);
+  expect(html).toMatch(/<input[^>]*checked=""[^>]*value="posts"/);
+  expect(html).not.toContain("readOnly");
 });
 
 test("search box normalizes and renders route-submit mode separately from endpoint", () => {

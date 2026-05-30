@@ -1332,7 +1332,8 @@ export function NewsletterVisualEditor({
         ) : (
           <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
             This block is not connected to a public signup flow yet. Choose a Coderso Form to let
-            Coderso handle loading, success, error, captcha, and redirect behavior.
+            Coderso handle loading, success, error, captcha, and redirect behavior. Public render
+            stays disabled and cannot submit until a destination is selected.
           </div>
         )}
 
@@ -1452,7 +1453,7 @@ export function NewsletterVisualEditor({
                 : "Choose a Coderso Form"
               : transport.actionStatus === "valid" || transport.webhookId
                 ? "External signup service saved"
-                : "Not connected yet"
+                : "Not connected yet; visitor submit disabled"
           }
         />
         <ReadonlyWidgetSummaryRow

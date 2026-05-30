@@ -6,7 +6,7 @@
 **Category:** Widgets + Feature Grid + Admin UI + A11y + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -23,13 +23,13 @@ unclickable and card-count reduction silently destroys content.
 
 ## Sub-Tasks
 
-- [ ] Fix the card editor layout so emoji quick actions are not covered by the
+- [x] Fix the card editor layout so emoji quick actions are not covered by the
   image picker at normal desktop widths.
-- [ ] Add destructive-state confirmation or recovery semantics to count
+- [x] Add destructive-state confirmation or recovery semantics to count
   reduction, not only per-card remove.
-- [ ] Preserve card data when count is temporarily reduced and restored, or make
+- [x] Preserve card data when count is temporarily reduced and restored, or make
   the destruction explicit and confirmed.
-- [ ] Add a section accessible name for the public `<section>` container.
+- [x] Add a section accessible name for the public `<section>` container.
 
 ## Files To Change
 
@@ -89,3 +89,30 @@ No API routes are added. Existing URL/media safety checks stay intact.
 - Emoji quick actions are directly clickable.
 - Count reduction is no longer a silent destructive path.
 - Public Feature Grid sections expose an accessible name.
+
+## Completion Notes (2026-05-30)
+
+- Feature-card fields now stack in a single-column card editor layout with
+  explicit emoji preset markers and labels, removing the viewport-based
+  two-column overlap that let the MediaPicker intercept emoji clicks.
+- Cards-count reductions and variant changes that would reduce the saved card
+  array now open the shared destructive confirmation dialog before truncating
+  card data.
+- The public renderer now labels the section with the header title when present
+  and falls back to `aria-label="Feature grid"` when the title is absent.
+- A constrained Playwright CLI hit-target smoke at 1280x720 verified all eight
+  emoji preset centers resolve to their own buttons via `elementFromPoint` and
+  click successfully. Full authenticated admin replay was not run because no
+  local Playwright admin credentials are configured in `.env`.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/featureGrid.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/feature-grid-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `playwright-cli -s=task343-feature-grid-smoke run-code ...`
+  (constrained 1280x720 emoji hit-target smoke: passed)
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-07
+  drift review: no blockers)

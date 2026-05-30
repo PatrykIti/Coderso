@@ -39,6 +39,19 @@ test("resolveNavigationRuntimeData falls back to defaults when manual items are 
   expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBe(true);
 });
 
+test("resolveNavigationRuntimeData keeps cleared saved manual items hidden", async () => {
+  const resolved = await resolveNavigationRuntimeData({
+    linksSource: "manual",
+    items: [
+      { label: "Docs", href: "" },
+      { label: "Pricing", href: null },
+    ],
+  });
+
+  expect(resolved.linksSource).toBe("manual");
+  expect(resolved.items).toEqual([]);
+});
+
 test("resolveNavigationRuntimeData resolves pages index when at least 2 pages match", async () => {
   let calls = 0;
   const resolved = await resolveNavigationRuntimeData(

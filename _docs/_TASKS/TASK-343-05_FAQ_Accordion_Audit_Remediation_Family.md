@@ -6,7 +6,7 @@
 **Category:** Widgets + FAQ Accordion + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343, TASK-342
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,12 +24,22 @@ preview ARIA still drifts from runtime behavior.
 
 ## Sub-Tasks
 
-- [ ] Add a truthful writable spacing control for `style.spacing`.
-- [ ] Align section description and Advanced summary with the real control
+- [x] Add a truthful writable spacing control for `style.spacing`.
+- [x] Align section description and Advanced summary with the real control
   surface.
-- [ ] Keep admin-preview `aria-expanded` synchronized or explicitly mark the
+- [x] Keep admin-preview `aria-expanded` synchronized or explicitly mark the
   preview as non-runtime.
-- [ ] Add regression coverage for spacing ownership and preview semantics.
+- [x] Add regression coverage for spacing ownership and preview semantics.
+
+## Completion Notes
+
+- Visual `Layout and typography` now exposes a writable `Spacing` select for
+  `style.spacing`.
+- Renderer coverage proves spacing owns both list gap and panel padding output.
+- Static SSR/admin-preview summaries no longer emit `aria-expanded`; the public
+  runtime continues to set and synchronize it after binding.
+- Advanced remains read-only and now truthfully reflects the selected spacing
+  label in the layout summary.
 
 ## Files To Change
 
@@ -85,3 +95,15 @@ No API routes are added. Existing schema and JSON-LD boundaries stay strict.
 - `style.spacing` is editable from the actual editor surface.
 - Editor copy and Advanced summary stop promising hidden controls.
 - Admin preview no longer exposes stale expand/collapse semantics.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/ui/faq-accordion-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `git diff --cached --check`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget faq-accordion --session task-343-05-faq-accordion --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-05-faq-accordion-smoke.json --output-md .tmp/task-343-05-faq-accordion-smoke.md`
+
+Strict smoke passed with `adminFailures=0`, `publicFailures=0`,
+`fixtureGaps=0`, and `metadataGaps=0`.

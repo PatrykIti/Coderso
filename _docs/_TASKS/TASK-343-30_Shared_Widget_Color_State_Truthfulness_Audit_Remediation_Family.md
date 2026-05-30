@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Color Controls + Admin UI + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -35,13 +35,13 @@ on the widget without enough local explanation.
 
 ## Sub-Tasks
 
-- [ ] Define one shared color-state vocabulary for `theme token`, `selected
+- [x] Define one shared color-state vocabulary for `theme token`, `selected
   swatch`, `transparent`, `cleared`, `saved custom`, and `fallback preview`.
-- [ ] Update shared color/clearable controls so fallback hex previews never imply
+- [x] Update shared color/clearable controls so fallback hex previews never imply
   a user-saved override by themselves.
-- [ ] Provide per-widget override copy only where `Clear` intentionally means
+- [x] Provide per-widget override copy only where `Clear` intentionally means
   transparent or reset instead of theme default.
-- [ ] Add cross-widget regression coverage for at least Content List, Search Box,
+- [x] Add cross-widget regression coverage for at least Content List, Search Box,
   Logo Cloud, Tabs, Navigation, Feature Grid, and Form Embed.
 
 ## Files To Change
@@ -116,3 +116,31 @@ existing schema/normalizer allowlist.
   truthfully across the audited widgets.
 - Widget override counters and Clear labels stop treating pristine defaults as
   author-saved custom values.
+
+## Completion Notes (2026-05-30)
+
+- Added `describeSharedColorControlState` as the shared state owner for
+  cleared, theme-default token, theme token, transparent, selected swatch, and
+  saved custom color states.
+- Updated swatch-only shared color controls so CSS tokens and `color-mix(...)`
+  values are no longer labelled as saved custom colors, and all fallback
+  swatches are described as previews rather than concrete saved values.
+- Changed shared Clear accessible names to describe removal of the saved color
+  value, with Search Box using explicit `No inline color` semantics and Form
+  Embed `Background` using explicit transparent semantics.
+- Extended shared-control and cross-widget Vitest coverage for Content List,
+  Search Box, Logo Cloud, Tabs, Navigation, Feature Grid, Form Embed, and
+  adjacent color-control surfaces that referenced the old wording.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/clearable-fields.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/search-box-editor-wave.test.tsx tests/vitest/ui/form-embed-editor-wave.test.tsx tests/vitest/ui/content-list-editor-wave.test.tsx tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/feature-grid-editor-wave.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/ui/posts-feed-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/faq-accordion-editor-wave.test.tsx tests/vitest/ui/section-editor-wave.test.tsx tests/vitest/ui/entry-teaser-editor-wave.test.tsx tests/vitest/ui/hero-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/compare-timeline-editor-wave.test.tsx tests/vitest/ui/stats-kpi-editor-wave.test.tsx tests/vitest/ui/cta-banner-editor-wave.test.tsx tests/vitest/ui/split-layout-editor-wave.test.tsx tests/vitest/widgets/heroEditors.test.tsx tests/vitest/widgets/faqAccordion.test.tsx tests/vitest/widgets/splitLayout.test.tsx tests/vitest/widgets/statsKpi.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-30
+  drift review: no blockers)

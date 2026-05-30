@@ -209,6 +209,11 @@ Strona zwraca `200` i renderuje **1 realny `<article>`**:
 | **N4 — Swatch nie pokazuje rzeczywistej wartości tokenu ani stanu „cleared"** | Visual (Surface colors) | `<input type=color>` nie potrafi wyświetlić `var(--color-*)` ani stanu pustego, więc po „Clear" badge mówi „Theme default", ale swatch **dalej pokazuje fallback-hex** (np. `#d4d4d8`). Wizualnie sugeruje konkretny kolor niezależnie od faktycznego stanu. |
 | **N5 — Brak datalisty taksonomii dla typu bez terminów** | Visual (Daily filters) | „House Projects Catalog QA" nie ma terminów → brak `datalist`, hint „No taxonomy suggestions available for this content type." Zachowanie **poprawne**, ale input bywa „ślepy" (free-text bez podpowiedzi). Gałęzi z wypełnioną datalistą nie udało się wyzwolić tym typem treści (patrz 8, NT7). |
 
+> **Status TASK-343-30 (2026-05-30):** N2-N4 są zamknięte wspólnym
+> komponentem koloru. `var(...)` i `color-mix(...)` są opisywane jako tokeny
+> motywu albo domyślne tokeny, swatch jest jawnie opisany jako fallback preview,
+> a `Clear` nie obiecuje fałszywego zapisanego koloru własnego.
+
 **Nie wykryto** żadnego twardego buga renderowania, błędu konsoli (front i admin: 0/0) ani rozbieżności w zachowaniu kontrolek. Cała logika warunkowa i klampowanie działają poprawnie.
 
 ---

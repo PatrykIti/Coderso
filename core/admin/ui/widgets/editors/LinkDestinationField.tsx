@@ -27,6 +27,7 @@ type LinkDestinationFieldProps = {
   helpText?: string;
   feedback?: string | null;
   feedbackTone?: "destructive" | "warning";
+  clearLabel?: string;
 };
 
 function normalizeComparableHref(value: string) {
@@ -61,6 +62,7 @@ export function LinkDestinationField({
   helpText = "Choose an existing site page. Custom destinations stay read-only in Wizard and Visual modes.",
   feedback,
   feedbackTone = "warning",
+  clearLabel,
 }: LinkDestinationFieldProps) {
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -68,6 +70,7 @@ export function LinkDestinationField({
   const selectedPage = findPageForHref(pages, trimmedValue);
   const selectedValue =
     selectedPage?.id ?? (trimmedValue ? CUSTOM_DESTINATION_VALUE : EMPTY_DESTINATION_VALUE);
+  const resolvedClearLabel = clearLabel ?? `Clear ${label.trim() || "destination"}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -112,6 +115,7 @@ export function LinkDestinationField({
               variant="outline"
               size="sm"
               disabled={disabled}
+              aria-label={resolvedClearLabel}
               onClick={() => onChange("")}
             >
               Clear destination

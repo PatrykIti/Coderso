@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared Block Inspector + Runtime Wrapper + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -30,13 +30,13 @@ all devices" without actually hiding public SSR output.
 
 ## Sub-Tasks
 
-- [ ] Separate inherited block-layout display values from saved override values
+- [x] Separate inherited block-layout display values from saved override values
   in Visual and Advanced summaries.
-- [ ] Prevent the first layout edit from silently shrinking inherited padding
+- [x] Prevent the first layout edit from silently shrinking inherited padding
   without clear "save as override" semantics.
-- [ ] Fix or explicitly document Device Visibility semantics for empty device
+- [x] Fix or explicitly document Device Visibility semantics for empty device
   arrays, editor labels, and public SSR behavior.
-- [ ] Add shared wrapper regression coverage that uses Product Compare as the
+- [x] Add shared wrapper regression coverage that uses Product Compare as the
   primary reproducer and at least one non-commerce widget as a control.
 
 ## Files To Change
@@ -110,3 +110,29 @@ content in admin-only previews; public SSR behavior must be deterministic.
 
 - Shared block layout summaries no longer imply false saved values.
 - Device Visibility labels and public SSR behavior are aligned and tested.
+
+## Completion Notes (2026-05-30)
+
+- `sanitizeLayout` now preserves `inherit` tokens instead of coercing them to
+  `md`/`none`; Visual keeps inherited padding/margin/container values through
+  the first unrelated layout edit.
+- Shared layout state now distinguishes saved overrides from inherited
+  effective values. Visual and Advanced receive page section defaults from
+  `PageEditor`, so inherited Product Compare padding is labelled as inherited
+  `XL` instead of a saved `MD`.
+- Device Visibility now has one aligned contract: an empty device list is
+  labelled as hidden on all devices and public SSR returns no widget output.
+- Added a shared builder UI regression using Product Compare as the reproducer
+  and renderer coverage using Hero as the non-commerce control.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/ui/block-layout-shared-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/widgets/renderer.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `rg -n '"devices"\s*:\s*\[\s*\]|devices:\s*\[\s*\]' --glob '!node_modules/**' --glob '!core/dist/**' --glob '!_docs/_CHANGELOG/**' .`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-21
+  drift review: final compact pass found no blockers after verifying the earlier
+  cited normalize/layoutClasses files are absent in this checkout)

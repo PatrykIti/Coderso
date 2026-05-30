@@ -36,9 +36,53 @@ test("stats kpi renders defaults with new style markers", () => {
   expect(html).toContain('data-stats-kpi-max-width="lg"');
   expect(html).toContain('data-stats-kpi-padding="md"');
   expect(html).toContain('data-stats-kpi-icon-size="md"');
+  expect(html).toContain('data-stats-kpi-divider="false"');
+  expect(html).toContain('data-stats-kpi-divider-saved="true"');
   expect(html).toContain('data-stats-kpi-trend-direction="up"');
   expect(html).toContain('data-stats-kpi-link="true"');
   expect(html).toContain("data-stats-kpi-suffix");
+});
+
+test("stats kpi exposes effective divider and inline card-surface semantics", () => {
+  const styledData: StatsKpiData = {
+    ...statsKpiDefaults,
+    style: {
+      ...statsKpiDefaults.style,
+      cardBackground: "#abcdef",
+      cardBorderColor: "#123456",
+      iconSurface: "#fedcba",
+      iconBorderColor: "#654321",
+    },
+  };
+  const cardsHtml = renderToString(<StatsKpiBlock data={styledData} variant="cards" />);
+  const inlineHtml = renderToString(<StatsKpiBlock data={styledData} variant="inline" />);
+  const inlineNoDividerHtml = renderToString(
+    <StatsKpiBlock
+      data={{
+        ...styledData,
+        style: {
+          ...styledData.style,
+          divider: false,
+        },
+      }}
+      variant="inline"
+    />
+  );
+
+  expect(cardsHtml).toContain('data-stats-kpi-divider="false"');
+  expect(cardsHtml).toContain('data-stats-kpi-divider-saved="true"');
+  expect(cardsHtml).toContain("background-color:#abcdef");
+  expect(cardsHtml).toContain("border-color:#123456");
+
+  expect(inlineHtml).toContain('data-stats-kpi-divider="true"');
+  expect(inlineHtml).toContain('data-stats-kpi-divider-saved="true"');
+  expect(inlineHtml).not.toContain("background-color:#abcdef");
+  expect(inlineHtml).not.toContain("border-color:#123456");
+  expect(inlineHtml).toContain("background-color:#fedcba");
+  expect(inlineHtml).toContain("border-color:#654321");
+
+  expect(inlineNoDividerHtml).toContain('data-stats-kpi-divider="false"');
+  expect(inlineNoDividerHtml).toContain('data-stats-kpi-divider-saved="false"');
 });
 
 test("stats kpi split-highlight balances odd and even secondary metric grids", () => {

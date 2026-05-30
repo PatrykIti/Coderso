@@ -6,7 +6,7 @@
 **Category:** Widgets + Listing Filters + Admin UI + Runtime + A11y + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,13 +24,13 @@ explanation, and the public renderer misses basic accessible names.
 
 ## Sub-Tasks
 
-- [ ] Add a bounded option-authoring path for checkbox, radio, and taxonomy
+- [x] Add a bounded option-authoring path for checkbox, radio, and taxonomy
   facets, or make the support/runtime-only ownership explicit and non-misleading.
-- [ ] Show a clear empty-facet explanation in the main canvas, not only Wizard
+- [x] Show a clear empty-facet explanation in the main canvas, not only Wizard
   preview.
-- [ ] Add accessible names for the public `<section>` and `<form>`, and give the
+- [x] Add accessible names for the public `<section>` and `<form>`, and give the
   search input a stable `id`/label/autocomplete contract.
-- [ ] Replace technical `support-owned` copy with author-facing wording while
+- [x] Replace technical `support-owned` copy with author-facing wording while
   preserving support-owned field safety.
 
 ## Files To Change
@@ -94,3 +94,32 @@ must not introduce raw query/operator passthrough.
 - Authors are not left with unexplained empty facets.
 - Listing Filters exposes accessible public region/form/search semantics.
 - Option ownership is truthful for both daily authors and support-owned data.
+
+## Completion Notes (2026-05-30)
+
+- Option-backed facets remain read-only for match values in this wave, but the
+  editor no longer promises a missing daily authoring path. Wizard and Visual
+  now explain that options come from listing data or a safe configured option
+  list, while Visual can only rename existing visitor labels.
+- Public/admin canvas rendering now shows empty checkbox/radio/taxonomy facets
+  with a visible `data-listing-empty-options` explanation instead of rendering
+  an unlabeled empty fieldset.
+- `ListingFiltersBlock` now uses stable widget-instance ids for the title and
+  search input. The public `<section>` and runtime `<form>` are labelled by the
+  title, the missing-query placeholder has an `aria-label`, and the search input
+  has an explicit `id`, `<label for>`, `type="search"`, and
+  `autoComplete="off"`.
+- Technical `support-owned` wording was replaced with author-facing stable-key,
+  read-only binding, and safe-option-list copy while preserving the existing
+  safety rule that match values and custom field bindings are not casually
+  cleared or hand-edited.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/listingFilters.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/listing-filters-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-18
+  drift review: no blockers)

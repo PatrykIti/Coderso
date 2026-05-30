@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -15,11 +16,7 @@ import { isApiClientError } from "@/services/apiClient";
 import { getCachedMedia, listMediaCached } from "@/services/mediaClient";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
-import {
-  formatBytes,
-  resolveMediaDisplayName,
-  toMediaItem,
-} from "@/ui/media/utils";
+import { formatBytes, resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
 
 type MediaPickerProps = {
   value: unknown;
@@ -82,8 +79,7 @@ export function MediaPicker({
   const isResolvingSelection =
     hasSelection && selectedItems.length === 0 && (isLoading || !hasLoaded);
 
-  const canAddMore =
-    !multiple || !maxItems || selectedIds.length < maxItems;
+  const canAddMore = !multiple || !maxItems || selectedIds.length < maxItems;
 
   useEffect(() => {
     if (hasLoaded) return;
@@ -130,9 +126,7 @@ export function MediaPicker({
     if (multiple) {
       const exists = selectedIds.includes(id);
       if (!exists && !canAddMore) return;
-      const next = exists
-        ? selectedIds.filter((entry) => entry !== id)
-        : [...selectedIds, id];
+      const next = exists ? selectedIds.filter((entry) => entry !== id) : [...selectedIds, id];
       onChange(next);
       return;
     }
@@ -160,9 +154,7 @@ export function MediaPicker({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{helperText}</p>
           {accept && accept.length > 0 ? (
-            <p className="text-[11px] text-muted-foreground">
-              Allowed: {accept.join(", ")}
-            </p>
+            <p className="text-[11px] text-muted-foreground">Allowed: {accept.join(", ")}</p>
           ) : null}
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -175,6 +167,10 @@ export function MediaPicker({
           <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Media library</DialogTitle>
+              <DialogDescription>
+                Choose an existing media asset for this widget field. Search by name or title, then
+                select an asset from the library.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <Input
@@ -182,9 +178,7 @@ export function MediaPicker({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search by name or title..."
               />
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
-              ) : null}
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="max-h-[420px] overflow-y-auto pr-2">
                 {isLoading ? (
                   <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
@@ -203,9 +197,7 @@ export function MediaPicker({
                 )}
               </div>
               {!canAddMore && multiple ? (
-                <p className="text-xs text-muted-foreground">
-                  Max items reached ({maxItems}).
-                </p>
+                <p className="text-xs text-muted-foreground">Max items reached ({maxItems}).</p>
               ) : null}
             </div>
             <DialogFooter>
@@ -240,30 +232,28 @@ export function MediaPicker({
                 const displayName = resolveMediaDisplayName(item);
                 return (
                   <>
-              {item.type === "image" ? (
-                <img
-                  src={item.url}
-                  alt={item.alt ?? displayName}
-                  className="h-16 w-20 rounded-lg object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-16 w-20 items-center justify-center rounded-lg border bg-muted/30">
-                  {item.type === "audio" ? (
-                    <FileAudio className="h-6 w-6 text-muted-foreground" />
-                  ) : item.type === "video" ? (
-                    <Video className="h-6 w-6 text-muted-foreground" />
-                  ) : (
-                    <FileText className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-              )}
-              <div className="flex-1">
-                <p className="text-sm font-medium">{displayName}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatBytes(item.sizeBytes)}
-                </p>
-              </div>
+                    {item.type === "image" ? (
+                      <img
+                        src={item.url}
+                        alt={item.alt ?? displayName}
+                        className="h-16 w-20 rounded-lg object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-20 items-center justify-center rounded-lg border bg-muted/30">
+                        {item.type === "audio" ? (
+                          <FileAudio className="h-6 w-6 text-muted-foreground" />
+                        ) : item.type === "video" ? (
+                          <Video className="h-6 w-6 text-muted-foreground" />
+                        ) : (
+                          <FileText className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{displayName}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(item.sizeBytes)}</p>
+                    </div>
                   </>
                 );
               })()}

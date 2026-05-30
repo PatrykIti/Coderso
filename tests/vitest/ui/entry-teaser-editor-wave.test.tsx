@@ -730,6 +730,103 @@ test("EntryTeaser visual editor adopts swatch-only color controls with saved cus
   }
 });
 
+test("EntryTeaser editor labels clear actions with field context", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      cta: {
+        hrefMode: "custom",
+        href: "/custom-entry",
+      },
+      style: {
+        surface: "#112233",
+        border: "#334455",
+        radius: "lg",
+        spacing: "md",
+      },
+    },
+  });
+
+  try {
+    await flush();
+
+    const styleSection = findSectionByTitle(view.container, "Style");
+    if (!(styleSection instanceof HTMLElement)) {
+      throw new Error("Missing style section");
+    }
+    expect(
+      styleSection.querySelector(
+        'button[aria-label="Clear Surface color; removes the saved color value"]'
+      )
+    ).toBeTruthy();
+    expect(
+      styleSection.querySelector(
+        'button[aria-label="Clear Border color; removes the saved color value"]'
+      )
+    ).toBeTruthy();
+
+    const ctaSection = findSectionByTitle(view.container, "CTA behavior");
+    if (!(ctaSection instanceof HTMLElement)) {
+      throw new Error("Missing CTA section");
+    }
+    expect(ctaSection.querySelector('button[aria-label="Clear CTA destination"]')).toBeTruthy();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryTeaser CTA editor explains auto and selected-page non-link states", async () => {
+  const autoView = await renderEditors({
+    initialValue: {
+      cta: {
+        hrefMode: "auto",
+      },
+      resolved: {
+        item: {
+          id: "entry-1",
+          title: "Launch note",
+          status: "published",
+        },
+      },
+    },
+  });
+
+  try {
+    const ctaSection = findSectionByTitle(autoView.container, "CTA behavior");
+    if (!(ctaSection instanceof HTMLElement)) {
+      throw new Error("Missing auto CTA section");
+    }
+    expect(ctaSection.textContent).toContain(
+      "Auto CTA renders as text until the resolved entry has a safe detail route."
+    );
+    expect(
+      ctaSection.querySelector('[data-entry-teaser-cta-guidance="missing_auto_destination"]')
+    ).toBeTruthy();
+  } finally {
+    autoView.cleanup();
+  }
+
+  const customView = await renderEditors({
+    initialValue: {
+      cta: {
+        hrefMode: "custom",
+        href: "",
+      },
+    },
+  });
+
+  try {
+    const ctaSection = findSectionByTitle(customView.container, "CTA behavior");
+    if (!(ctaSection instanceof HTMLElement)) {
+      throw new Error("Missing custom CTA section");
+    }
+    expect(ctaSection.textContent).toContain(
+      "Selected-page CTA renders as text until you choose a published page or keep a safe saved destination."
+    );
+  } finally {
+    customView.cleanup();
+  }
+});
+
 test("EntryTeaser editors fall back safely for sparse normalized values and ignore variant changes without a handler", async () => {
   await mockEntryTeaserContract({
     sourceMode: undefined,

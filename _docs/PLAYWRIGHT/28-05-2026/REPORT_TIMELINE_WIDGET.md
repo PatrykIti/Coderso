@@ -11,6 +11,16 @@
 > - `core/admin/ui/widgets/editors/TimelineEditors.tsx` — edytory Wizard / Visual / Advanced
 > - `core/admin/ui/widgets/editors/SharedColorControl.tsx`, `ClearableFields.tsx`, `LinkDestinationField.tsx`
 
+> **Status remediacji (2026-05-30, TASK-343-13):** zamknięto główną niespójność
+> selecta i kart trybu. Obie kontrolki wywołują ten sam kontrakt aktualizacji
+> trybu i preferowanego wariantu. Dodatkowo doprecyzowano diagnostykę
+> `markerDisplay=icon` bez ikon, `descriptionSize=none` oraz efektywną szerokość
+> `maxWidth=6xl` przy trzech lub mniej krokach. Pokrycie: focused Vitest,
+> lint/types i smoke Playwright opisane w changelogu TASK-343-13. Podczas
+> remediacji istniejąca publiczna fixture `/ctr-timeline-2305` miała pusty
+> opublikowany payload Timeline (`data: {}`), więc publiczny smoke runtime
+> wykonano na krótkotrwałej poprawnej stronie smoke i posprzątano ją po teście.
+
 ---
 
 ## 0. Metoda i zakres — czym ten audyt różni się od poprzedniego

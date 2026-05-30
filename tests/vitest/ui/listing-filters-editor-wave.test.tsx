@@ -684,7 +684,14 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
     expect(latestValue.facets?.[1]?.op).toBe("neq");
 
     expect(findInputsByPlaceholder(facetsSection as HTMLElement, "Option value")).toHaveLength(0);
-    expect(facetsSection?.textContent).toContain("Option values are support-owned");
+    expect(facetsSection?.textContent).toContain(
+      "Option values come from listing data or a safe configured option list."
+    );
+    expect(facetsSection?.textContent).toContain(
+      "Options will appear when listing data resolves or a safe option list is configured."
+    );
+    expect(facetsSection?.textContent).not.toContain("support-owned");
+    expect(facetsSection?.textContent).not.toContain("Re-open setup to add option rows");
     expect(facetsSection?.textContent).toContain("Preview");
 
     kindSelects = findSelectsByOptions(facetsSection!, [
@@ -762,7 +769,7 @@ test("ListingFilters wizard editor covers loading state, query reset, field sugg
   }
 });
 
-test("ListingFilters wizard preserves support-owned custom field bindings until replaced", async () => {
+test("ListingFilters wizard preserves read-only custom field bindings until replaced", async () => {
   const { ListingFiltersWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
 
@@ -798,9 +805,9 @@ test("ListingFilters wizard preserves support-owned custom field bindings until 
   try {
     await flush();
     const facetsSection = findSectionByTitle(view.container, "Facet setup") as HTMLElement;
-    expect(facetsSection.textContent).toContain(
-      "A custom field binding is already configured by support."
-    );
+    expect(facetsSection.textContent).toContain("A custom field binding is already configured.");
+    expect(facetsSection.textContent).toContain("preserve the existing binding");
+    expect(facetsSection.textContent).not.toContain("configured by support");
     expect(facetsSection.textContent).not.toContain("metadata.custom.path");
 
     const fieldSelects = findSelectsByOptions(facetsSection, [
@@ -1027,6 +1034,45 @@ test("ListingFilters editors preserve incomplete facet drafts when visual settin
     expect(findInputsByPlaceholder(facetsSection, "facet-id")).toHaveLength(0);
     expect(latestValue.facets).toHaveLength(2);
     expect(view.container.textContent).toContain("Choose a listing field for this facet.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingFilters visual editor explains empty option facets without promising row creation", async () => {
+  const { ListingFiltersVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ListingFiltersEditors");
+
+  const value: ListingFiltersData = {
+    listingQueryId: "query-1",
+    facets: [
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "status",
+        op: "in",
+        options: [],
+      },
+    ],
+  };
+
+  const view = mount(
+    <ListingFiltersVisualEditor value={value} onChange={() => undefined} variant="default" />
+  );
+
+  try {
+    await flush();
+
+    const facetsSection = findSectionByTitle(view.container, "Facet presentation") as HTMLElement;
+    expect(facetsSection.textContent).toContain(
+      "Options appear after listing data resolves or a safe option list is configured."
+    );
+    expect(facetsSection.textContent).toContain(
+      "Visual can rename existing labels, but it does not create new match values."
+    );
+    expect(facetsSection.textContent).not.toContain("Re-open setup to add option rows");
+    expect(facetsSection.textContent).not.toContain("support-owned");
   } finally {
     view.cleanup();
   }

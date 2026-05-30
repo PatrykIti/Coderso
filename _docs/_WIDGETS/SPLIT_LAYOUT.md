@@ -40,10 +40,15 @@ Sections:
 Notes:
 
 - Visual owns variant selection (`visualOwnsVariantSelection = true`).
-- Selecting a preset re-syncs the current desktop/tablet/mobile ratios through
-  the landed shared atomic block-patch path.
+- Wizard starter selection re-syncs the current desktop/tablet/mobile ratios
+  through the landed shared atomic block-patch path.
+- Visual desktop split cards preserve tablet and phone overrides when those
+  device ratios already differ from desktop, so responsive overrides are not
+  silently discarded.
 - Variant cards include bounded graphical miniatures plus a beginner-facing
   device-layout summary that states the effective desktop/tablet/phone split.
+- Variant card selected state follows the effective desktop split; the saved
+  starter seed can differ when desktop/tablet/phone ratios have been tuned.
 - Desktop and tablet ratios remain directly editable.
 - Mobile ratio appears only when `collapseMobile = "keep"`; otherwise Visual
   shows explicit stacked-phone copy instead of an inactive control.
@@ -115,6 +120,8 @@ Notes:
 
 - `ratio.mobile` is optional in persisted data, bounded by schema validation,
   and normalizes to the resolved tablet ratio when omitted.
+- Ratio disclosure distinguishes a saved phone ratio that currently matches the
+  starter from a true device-specific phone split.
 - `splitLayoutSchema` stays strict (`additionalProperties: false`) and rejects
   unknown ratio keys.
 - Gap labels and diagnostics are derived from static owner metadata instead of

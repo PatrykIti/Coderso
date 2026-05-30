@@ -30,6 +30,14 @@
 
 > **Uwaga o środowisku testowym:** na początku sesji współdzielona VM była **rate-limitowana** — pierwsze żądania zwracały `429 Too Many Requests` na `/admin/api/auth/csrf` i w konsekwencji `403 Forbidden` / „Invalid CSRF token" na `/admin/api/widgets/product-gallery/preview` (Advanced pokazywał „Preview warning"). Po krótkiej chwili i kliknięciu „Refresh products" preview zaczął działać i resolwował 3 produkty. To **efekt obciążenia VM (równolegle pracuje kilka sesji agentów), nie bug widgetu** — ścieżka preview i CSRF działa, gdy limit się zresetuje.
 
+> **Status TASK-343-16 (2026-05-30):** N1-N5, N7 i N8 są zamknięte w kodzie.
+> Wizard i Visual inicjują teraz pierwszy fetch preview bez wejścia w Advanced,
+> tryby dzienne pokazują stan stale-source z przyciskiem „Refresh products",
+> brak trasy produktu i ukryte stany „view all" mają jawne komunikaty oraz
+> znaczniki `data-product-gallery-*`, publiczna sekcja ma nazwę dostępną, a
+> legacy `fields.showMediaHint` jest akceptowane tylko jako wejście
+> kompatybilnościowe i normalizowane poza owned data.
+
 ---
 
 ## 1. Przegląd widgetu

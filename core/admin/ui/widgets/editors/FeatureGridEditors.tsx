@@ -169,6 +169,9 @@ const itemCountOptions = Array.from({ length: featureGridItemMax }, (_, index) =
 
 type HeaderData = NonNullable<FeatureGridData["header"]>;
 type StyleData = NonNullable<FeatureGridData["style"]>;
+type PendingFeatureGridReduction =
+  | { kind: "count"; nextCount: number }
+  | { kind: "variant"; nextVariant: FeatureGridVariantId; nextCount: number };
 
 function normalizeValue(value: FeatureGridData): FeatureGridData {
   return normalizeFeatureGridData(value);
@@ -589,10 +592,32 @@ export function FeatureGridVisualEditor({
   const items = normalizeFeatureGridItems(normalized.items);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+  const [pendingReduction, setPendingReduction] = useState<PendingFeatureGridReduction | null>(
+    null
+  );
   const [selectedMediaIds, setSelectedMediaIds] = useState<Record<string, string | null>>({});
   const [mediaPickerError, setMediaPickerError] = useState<string | null>(null);
   const pendingRemoveItem =
     typeof pendingRemoveIndex === "number" ? items[pendingRemoveIndex] : undefined;
+  const pendingReductionRemovedCount =
+    pendingReduction !== null ? Math.max(0, items.length - pendingReduction.nextCount) : 0;
+  const pendingReductionDescription =
+    pendingReduction === null
+      ? ""
+      : pendingReduction.kind === "variant"
+        ? `Switching to ${
+            variantOptions.find((option) => option.id === pendingReduction.nextVariant)?.label ??
+            "this layout"
+          } reduces this grid from ${items.length} cards to ${
+            pendingReduction.nextCount
+          }. ${pendingReductionRemovedCount} card${
+            pendingReductionRemovedCount === 1 ? "" : "s"
+          } will be removed from the saved widget data.`
+        : `Reducing this grid from ${items.length} cards to ${
+            pendingReduction.nextCount
+          } removes ${pendingReductionRemovedCount} card${
+            pendingReductionRemovedCount === 1 ? "" : "s"
+          } from the saved widget data.`;
 
   const handleCardDragStart = (event: React.DragEvent<HTMLButtonElement>, index: number) => {
     event.dataTransfer.setData("text/plain", `feature-grid:${index}`);
@@ -643,6 +668,62 @@ export function FeatureGridVisualEditor({
     }
   };
 
+  const clearSelectedMediaForRemovedItems = (nextCount: number) => {
+    const removedKeys = items
+      .slice(nextCount)
+      .map((item, index) => item.id ?? `feature-item-${nextCount + index + 1}`);
+    if (removedKeys.length === 0) return;
+
+    setSelectedMediaIds((current) => {
+      const next = { ...current };
+      for (const key of removedKeys) {
+        delete next[key];
+      }
+      return next;
+    });
+  };
+
+  const applyVariantChange = (nextVariant: FeatureGridVariantId) => {
+    applyVariantDataPatch(
+      nextVariant,
+      buildVariantSyncedFeatureGridData(value, nextVariant),
+      onChange,
+      onVariantChange,
+      onBlockPatch
+    );
+  };
+
+  const requestVariantChange = (nextVariant: FeatureGridVariantId) => {
+    const nextCount = resolveFeatureGridItemCountForVariant(nextVariant);
+    if (nextCount < items.length) {
+      setPendingReduction({ kind: "variant", nextVariant, nextCount });
+      return;
+    }
+
+    applyVariantChange(nextVariant);
+  };
+
+  const requestItemsCountChange = (nextCount: number) => {
+    if (nextCount < items.length) {
+      setPendingReduction({ kind: "count", nextCount });
+      return;
+    }
+
+    setItemsCount(value, onChange, nextCount);
+  };
+
+  const confirmPendingReduction = () => {
+    if (pendingReduction === null) return;
+    const nextCount = pendingReduction.nextCount;
+    if (pendingReduction.kind === "variant") {
+      applyVariantChange(pendingReduction.nextVariant);
+    } else {
+      setItemsCount(value, onChange, nextCount);
+    }
+    clearSelectedMediaForRemovedItems(nextCount);
+    setPendingReduction(null);
+  };
+
   return (
     <div className="space-y-4">
       <EditorSection
@@ -654,15 +735,7 @@ export function FeatureGridVisualEditor({
       >
         <VariantCards
           value={resolvedVariant}
-          onChange={(next) =>
-            applyVariantDataPatch(
-              next as FeatureGridVariantId,
-              buildVariantSyncedFeatureGridData(value, next as FeatureGridVariantId),
-              onChange,
-              onVariantChange,
-              onBlockPatch
-            )
-          }
+          onChange={(next) => requestVariantChange(next as FeatureGridVariantId)}
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -739,7 +812,7 @@ export function FeatureGridVisualEditor({
           <p className="text-sm font-medium">Cards count</p>
           <Select
             value={String(items.length)}
-            onValueChange={(next) => setItemsCount(value, onChange, Number(next))}
+            onValueChange={(next) => requestItemsCountChange(Number(next))}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select count" />
@@ -871,8 +944,8 @@ export function FeatureGridVisualEditor({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
+              <div className="grid gap-3" data-feature-grid-card-fields="single-column">
+                <div className="space-y-2">
                   <div
                     data-widget-control={`feature-grid.visual.items.${index}.title`}
                     data-widget-control-path="items.title"
@@ -890,7 +963,7 @@ export function FeatureGridVisualEditor({
                   </div>
                 </div>
 
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <div
                     data-widget-control={`feature-grid.visual.items.${index}.description-mode`}
                     data-widget-control-path="items.descriptionMode"
@@ -961,7 +1034,7 @@ export function FeatureGridVisualEditor({
                     }
                     placeholder="⚡"
                   />
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2" data-feature-grid-emoji-presets="true">
                     {featureGridEmojiOptions.map((icon) => (
                       <Button
                         key={`${item.id ?? index}-${icon}`}
@@ -970,6 +1043,9 @@ export function FeatureGridVisualEditor({
                         size="sm"
                         onClick={() => updateItem(value, onChange, index, { icon })}
                         aria-pressed={item.icon === icon}
+                        aria-label={`Set card ${index + 1} icon to ${icon}`}
+                        title={`Set card ${index + 1} icon to ${icon}`}
+                        data-feature-grid-emoji-preset={icon}
                       >
                         {icon}
                       </Button>
@@ -1048,7 +1124,7 @@ export function FeatureGridVisualEditor({
                   </p>
                 </div>
 
-                <div className="space-y-3 sm:col-span-2">
+                <div className="space-y-3">
                   <div
                     data-widget-control={`feature-grid.visual.items.${index}.cta-enabled`}
                     data-widget-control-path="items.ctaEnabled"
@@ -1063,7 +1139,7 @@ export function FeatureGridVisualEditor({
                       }
                     />
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3">
                     <div
                       data-widget-control={`feature-grid.visual.items.${index}.cta-label`}
                       data-widget-control-path="items.ctaLabel"
@@ -1174,6 +1250,18 @@ export function FeatureGridVisualEditor({
             setPendingRemoveIndex(null);
           }}
         />
+        <ConfirmActionDialog
+          open={pendingReduction !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingReduction(null);
+          }}
+          title="Reduce feature cards"
+          description={pendingReductionDescription}
+          confirmLabel={pendingReduction?.kind === "variant" ? "Switch layout" : "Reduce cards"}
+          onConfirm={confirmPendingReduction}
+        >
+          This cannot be undone from this control. Use per-card Remove for targeted deletion.
+        </ConfirmActionDialog>
       </EditorSection>
 
       <EditorSection

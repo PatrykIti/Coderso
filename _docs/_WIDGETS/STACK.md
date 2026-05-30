@@ -54,6 +54,9 @@ Notes:
 
 - Renders as a responsive flex container using per-breakpoint `direction`,
   `gap`, `align`, `justify`, and `wrap` values.
+- Responsive Tailwind utilities are emitted from explicit literal class maps for
+  mobile, tablet (`md:`), and desktop (`lg:`); no Stack responsive class depends
+  on runtime prefix composition.
 - Legacy scalar `align`, `justify`, and `wrap` values remain valid input and
   normalize to all three breakpoints.
 - Compatibility markers `data-stack-align`, `data-stack-justify`, and

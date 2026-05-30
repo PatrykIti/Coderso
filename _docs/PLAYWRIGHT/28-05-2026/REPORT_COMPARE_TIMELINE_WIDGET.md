@@ -42,6 +42,14 @@ współdzielonej fixtury. Wszystkie zmiany w admin były wyłącznie w pamięci 
 DOM/`eval`. Ewentualne nazwy zrzutów Playwright byłyby wyłącznie lokalnymi etykietami
 (ignorowanymi przez Git) i nie stanowiłyby evidence w repo.
 
+> **Status remediacji (2026-05-30, TASK-343-08):** zamknięto jedyny
+> funkcjonalny defekt raportu. Bazowa klasa badge segmentu nie zawiera już
+> hard-coded `text-xs`; rozmiar segmentu jest teraz w całości własnością
+> `style.segmentLabelSize`. Token `none` nie emituje klasy rozmiaru, a `xs`,
+> `sm` i `base` emitują odpowiednio `text-xs`, `text-sm` i `text-base` bez
+> konkurencyjnego fallbacku. Pokrycie regresyjne asercją sprawdza klasę samego
+> elementu segmentu.
+
 ---
 
 ## 1. Inwentarz kontrolek (zweryfikowany w DOM)
@@ -209,14 +217,14 @@ Planowanie: step-1, Build: step-2, Deliver: step-3". Dialog **„Normalize compa
 
 ---
 
-## 4. CO NIE DZIAŁA (defekt funkcjonalny)
+## 4. Znalezisko funkcjonalne i status
 
-### 4.1 `Segment label size` jest wizualnie bezskuteczny — DEFEKT
-**Objaw:** zmiana selektu **„Segment label size"** (Hidden / Tiny / Small / Default) nie
+### 4.1 `Segment label size` był wizualnie bezskuteczny — zamknięte w TASK-343-08
+**Objaw przed remediacją:** zmiana selektu **„Segment label size"** (Hidden / Tiny / Small / Default) nie
 zmienia faktycznego rozmiaru tekstu badge segmentu — `computed font-size` pozostaje
 **12px** dla każdej opcji.
 
-**Przyczyna (potwierdzona w kodzie i w cascade):** renderer w
+**Przyczyna przed remediacją (potwierdzona w kodzie i w cascade):** renderer w
 `core/widgets/core/compareTimeline.tsx` buduje klasę badge tak:
 ```
 segmentLabelBaseClass = "rounded-full border px-2 py-1 text-xs" + weight
@@ -228,6 +236,11 @@ jest dopisywana **po niej**. W wygenerowanym CSS reguła `.text-xs` wygrywa kask
 `.text-sm`/`.text-base`, więc dopisany rozmiar nigdy nie obowiązuje. Dowód: dla „Default"
 klasa elementu to `… text-xs font-normal text-base`, a `computed font-size = 12px`.
 
+**Zmiana w TASK-343-08:** `segmentLabelBaseClass` zachowuje już tylko wspólne
+klasy badge (`rounded-full border px-2 py-1` + weight), a
+`segmentLabelSizeClassMap` jest jedynym źródłem klasy rozmiaru. Regresja
+sprawdza klasy elementu segmentu dla `none`, `xs`, `sm` i `base`.
+
 **Zakres:** dotyczy wyłącznie **rozmiaru** etykiety segmentu. **Waga** etykiety segmentu
 (`segmentLabelFontWeight`) działa poprawnie (400→700), bo w klasie bazowej nie ma
 konkurencyjnej klasy wagi. Dla porównania `trackLabelSize`/`stepLabelSize` działają, bo ich
@@ -236,9 +249,11 @@ renderery nie mają zaszytego `text-xs`.
 **Dodatkowy niuans nazewnictwa:** opcja „Hidden" (token `none`) dla segmentu **nie ukrywa
 ani nie czyści** rozmiaru — pozostaje przy bazowym `text-xs` (12px). Dla track/step „Hidden"
 faktycznie usuwa klasę rozmiaru (dziedziczenie). To kolejna niespójność wynikająca z tej
-samej zaszytej klasy.
+samej zaszytej klasy. Po remediacji `none` nie emituje żadnej klasy `text-*`
+z mapy rozmiaru segmentu.
 
-> To jest jedyny jednoznaczny defekt funkcjonalny znaleziony w tej (wyczerpującej) sesji.
+> To był jedyny jednoznaczny defekt funkcjonalny znaleziony w tej
+> wyczerpującej sesji i jest zamknięty w TASK-343-08.
 
 ---
 
@@ -274,10 +289,11 @@ samej zaszytej klasy.
 
 **Ocena ogólna:** widget `compare-timeline` jest w **dobrym, dojrzałym stanie**. W tej
 wyczerpującej sesji (przeklikano **wszystkie** dyskretne opcje wszystkich kontrolek
-fixtury) znaleziono **jeden jednoznaczny defekt funkcjonalny**:
+fixtury) znaleziono **jeden jednoznaczny defekt funkcjonalny**, zamknięty w
+TASK-343-08:
 
-- **`Segment label size` jest wizualnie bezskuteczny** (zaszyty `text-xs` w klasie bazowej
-  badge wygrywa kaskadę nad dopisaną klasą rozmiaru) — §4.1. Wszystkie pozostałe kontrolki
+- **`Segment label size` był wizualnie bezskuteczny** (zaszyty `text-xs` w klasie bazowej
+  badge wygrywał kaskadę nad dopisaną klasą rozmiaru) — §4.1. Wszystkie pozostałe kontrolki
   Visual (warianty, nagłówek, oś 3–10 + Add/Remove, etykiety/ikony/opisy kroków, etykiety
   ścieżek, markery + ostrzeżenie, highlight targets a/b/both, segmenty + From/To + Add/Remove
   + linkowanie, guides, highlight label style ×3, 7 kolorów + Clear, advisory kontrastu ×3,
@@ -306,7 +322,7 @@ pełni przetestowany.
 | Linkowanie kroku i segmentu (end-to-end) | 2 / 2 (potwierdzone realnym `href`) |
 | Stany advisory kontrastu | 3 / 3 (unknown / ok / warning) |
 | Marker shapes / highlight label styles | 4 / 4 · 3 / 3 |
-| Defekty funkcjonalne | **1** (Segment label size — wizualnie bezskuteczny) |
+| Defekty funkcjonalne | **1** (Segment label size — zamknięty w TASK-343-08) |
 | Niuanse UX/UI | 10 (U1–U10) |
 | Niezweryfikowane (z przyczyną) | 4 (N1–N4) |
 | Trasa publiczna | HTTP 200, SSR, dual-track-highlight, 6 kroków, segment 2-5, 0 błędów konsoli |

@@ -14,8 +14,6 @@ import { cn } from "@/lib/utils";
 
 import {
   accordionDefaults,
-  accordionItemMax,
-  accordionItemMin,
   accordionMaxWidthTokens,
   accordionMotionTokens,
   accordionPaddingTokens,
@@ -63,11 +61,6 @@ const variantOptions: Array<{
   },
 ];
 
-const itemCountOptions = Array.from(
-  { length: accordionItemMax - accordionItemMin + 1 },
-  (_, index) => String(accordionItemMin + index)
-);
-
 const accordionMotionOptions = accordionMotionTokens.map((id) => ({
   id,
   label: id === "none" ? "None" : id === "subtle" ? "Subtle" : "Smooth",
@@ -111,47 +104,12 @@ function normalizeValue(value: AccordionData, desiredCount?: number): AccordionD
 function updateValue(
   value: AccordionData,
   onChange: (next: AccordionData) => void,
-  updater: (current: AccordionData) => AccordionData
+  updater: (current: AccordionData) => AccordionData,
+  desiredCount?: number
 ) {
-  const current = normalizeValue(value);
+  const current = normalizeValue(value, desiredCount);
   const next = updater(current);
-  onChange(normalizeValue(next));
-}
-
-function setCount(value: AccordionData, onChange: (next: AccordionData) => void, count: number) {
-  const current = normalizeValue(value, count);
-  const items = normalizeAccordionItems(current.items, count);
-  const itemIds = new Set(items.map((item) => item.id));
-  const currentDefaultOpenIds = (current.options?.defaultOpenIds ?? []).filter((id) =>
-    itemIds.has(id)
-  );
-  const keepsAllCollapsed =
-    (current.options?.collapsible ?? true) && (current.options?.defaultOpenIds?.length ?? 0) === 0;
-  const nextDefaultOpenIds = keepsAllCollapsed
-    ? []
-    : currentDefaultOpenIds.length > 0
-      ? current.options?.openMode === "multiple"
-        ? currentDefaultOpenIds
-        : [currentDefaultOpenIds[0]!]
-      : items[0]?.id
-        ? [items[0].id]
-        : [];
-  const initiallyOpenId = nextDefaultOpenIds[0];
-
-  onChange(
-    normalizeValue(
-      {
-        ...current,
-        items,
-        options: {
-          ...current.options,
-          defaultOpenIds: nextDefaultOpenIds,
-          initiallyOpenId,
-        },
-      },
-      count
-    )
-  );
+  onChange(normalizeValue(next, desiredCount));
 }
 
 function updateItem(
@@ -177,15 +135,21 @@ function updateItem(
 function updateOptions(
   value: AccordionData,
   onChange: (next: AccordionData) => void,
-  patch: Partial<NonNullable<AccordionData["options"]>>
+  patch: Partial<NonNullable<AccordionData["options"]>>,
+  desiredCount?: number
 ) {
-  updateValue(value, onChange, (current) => ({
-    ...current,
-    options: {
-      ...current.options,
-      ...patch,
-    },
-  }));
+  updateValue(
+    value,
+    onChange,
+    (current) => ({
+      ...current,
+      options: {
+        ...current.options,
+        ...patch,
+      },
+    }),
+    desiredCount
+  );
 }
 
 function updateLayout(
@@ -375,7 +339,7 @@ function StructureSection({
 }) {
   const isSetupMode = mode === "setup";
   const slotTargetCount = resolveAccordionSlotTargetCount(context);
-  const desiredCount = !isSetupMode && slotTargetCount > 0 ? slotTargetCount : undefined;
+  const desiredCount = slotTargetCount > 0 ? slotTargetCount : undefined;
   const normalized = normalizeValue(value, desiredCount);
   const items = normalizeAccordionItems(normalized.items, desiredCount);
   const defaultOpenIds = normalized.options?.defaultOpenIds ?? [];
@@ -391,39 +355,23 @@ function StructureSection({
       title={isSetupMode ? "Starter items" : "Item content"}
       description={
         isSetupMode
-          ? "Set the initial item count and first open item before daily visual editing."
+          ? "Review the slot-owned panel count and choose the first open item before daily visual editing."
           : "Edit item titles, helper text, and optional decorative icons."
       }
     >
       {isSetupMode ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <WidgetControlRow
-            id="accordion.wizard.item-count"
-            label="Number of items"
-            path="items.count"
-          >
-            {(fieldProps) => (
-              <Select
-                value={String(items.length)}
-                onValueChange={(next) => setCount(value, onChange, Number(next))}
-              >
-                <SelectTrigger
-                  id={fieldProps.id}
-                  aria-labelledby={fieldProps["aria-labelledby"]}
-                  aria-describedby={fieldProps["aria-describedby"]}
-                >
-                  <SelectValue placeholder="Select count" />
-                </SelectTrigger>
-                <SelectContent>
-                  {itemCountOptions.map((option) => (
-                    <SelectItem key={`accordion-count-${option}`} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </WidgetControlRow>
+          <ReadonlyWidgetSummaryRow
+            id="accordion.wizard.slot-count"
+            label="Panel count"
+            path="slots.item"
+            value={
+              slotTargetCount > 0
+                ? `${slotTargetCount} slot-owned panels`
+                : `${items.length} starter panels`
+            }
+            help="Panel count is owned by the page-builder Structure controls. Wizard only reviews the current panel set."
+          />
 
           <WidgetControlRow
             id="accordion.wizard.default-open"
@@ -435,16 +383,26 @@ function StructureSection({
                 value={initialOpenValue}
                 onValueChange={(next) => {
                   if (next === accordionNoneOpenValue) {
-                    updateOptions(value, onChange, {
-                      initiallyOpenId: undefined,
-                      defaultOpenIds: [],
-                    });
+                    updateOptions(
+                      value,
+                      onChange,
+                      {
+                        initiallyOpenId: undefined,
+                        defaultOpenIds: [],
+                      },
+                      desiredCount
+                    );
                     return;
                   }
-                  updateOptions(value, onChange, {
-                    initiallyOpenId: next,
-                    defaultOpenIds: [next],
-                  });
+                  updateOptions(
+                    value,
+                    onChange,
+                    {
+                      initiallyOpenId: next,
+                      defaultOpenIds: [next],
+                    },
+                    desiredCount
+                  );
                 }}
               >
                 <SelectTrigger
@@ -931,10 +889,14 @@ function BehaviorSection({
   );
 }
 
-export function AccordionWizardEditor({ value, onChange }: WidgetEditorProps<AccordionData>) {
+export function AccordionWizardEditor({
+  value,
+  onChange,
+  context,
+}: WidgetEditorProps<AccordionData>) {
   return (
     <div className="space-y-4">
-      <StructureSection value={value} onChange={onChange} mode="setup" />
+      <StructureSection value={value} onChange={onChange} context={context} mode="setup" />
     </div>
   );
 }

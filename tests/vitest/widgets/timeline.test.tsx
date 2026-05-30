@@ -34,7 +34,11 @@ test("timeline renders defaults with container metadata", () => {
   expect(html).toContain('data-timeline-label-position="top"');
   expect(html).toContain('data-timeline-padding="md"');
   expect(html).toContain('data-timeline-max-width="6xl"');
+  expect(html).toContain('data-timeline-effective-max-width="5xl"');
+  expect(html).toContain('data-timeline-max-width-narrowed="true"');
   expect(html).toContain('data-timeline-marker-display="dot"');
+  expect(html).toContain('data-timeline-marker-icon-fallback-count="0"');
+  expect(html).toContain('data-timeline-description-size="xs"');
   expect(html).toContain('data-timeline-title-weight="semibold"');
 });
 
@@ -452,4 +456,60 @@ test("timeline whole-step links stay safe and do not nest with CTA links", () =>
   expect(html).toContain('href="/cta-step"');
   expect(html).not.toContain("/suppressed-whole-step");
   expect(html).toContain('data-timeline-marker-display="icon"');
+});
+
+test("timeline exposes truthful marker fallback, description-size, and effective-width diagnostics", () => {
+  const html = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        steps: normalizeTimelineSteps([
+          { id: "step-1", title: "Discover", description: "Visible description" },
+          { id: "step-2", title: "Plan", description: "Also visible", markerIcon: "star" },
+          { id: "step-3", title: "Ship", description: "Still visible" },
+        ]),
+        layout: {
+          ...timelineDefaults.layout,
+          maxWidth: "6xl",
+        },
+        style: {
+          ...timelineDefaults.style,
+          markerDisplay: "icon",
+          descriptionSize: "none",
+        },
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(html).toContain('data-timeline-max-width="6xl"');
+  expect(html).toContain('data-timeline-effective-max-width="5xl"');
+  expect(html).toContain('data-timeline-max-width-narrowed="true"');
+  expect(html).toContain('data-timeline-marker-display="icon"');
+  expect(html).toContain('data-timeline-marker-icon-fallback-count="2"');
+  expect(html).toContain('data-timeline-marker-requested-display="icon"');
+  expect(html).toContain('data-timeline-marker-effective-display="dot"');
+  expect(html).toContain('data-timeline-marker-effective-display="icon"');
+  expect(html).toContain('data-timeline-description-size="none"');
+  expect(html).toContain(">Visible description</p>");
+  expect(html).toContain(">Also visible</p>");
+  expect(html).not.toContain('class="text-xs" style="color:var(--color-text)">Visible description');
+
+  const widerHtml = renderToString(
+    <TimelineBlock
+      data={{
+        ...timelineDefaults,
+        steps: normalizeTimelineSteps(timelineDefaults.steps, 4),
+        layout: {
+          ...timelineDefaults.layout,
+          maxWidth: "6xl",
+        },
+      }}
+      variant="milestones"
+    />
+  );
+
+  expect(widerHtml).toContain('data-timeline-effective-max-width="6xl"');
+  expect(widerHtml).toContain('data-timeline-max-width-narrowed="false"');
+  expect(widerHtml).toContain("max-w-6xl");
 });

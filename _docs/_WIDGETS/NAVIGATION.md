@@ -47,17 +47,26 @@ Primary CTA jest renderowane tylko dla:
 - owns metadata/target controls, reorder UX, menu previews, active-link mode,
   mobile copy, Media Library logo replacement, bounded style/brand controls,
   layout width/spacing, sticky behavior, and collapse-on-scroll behavior
-- daily color authoring is swatch-first like `hero`; saved custom/token values
-  remain replace-or-clear compatible without visible raw color text inputs
+- daily color authoring is swatch-first like `hero`; theme tokens, transparent
+  values, and saved custom values remain replace-or-clear compatible without
+  visible raw color text inputs
+- pristine Navigation theme-token defaults are labelled as `Theme default`
+  instead of saved custom colors; the swatch is a fallback preview, while
+  public pages resolve tokens such as `var(--color-bg)` from the active theme
 - manual link, child link, logo and CTA destinations use the shared
   published-page destination picker. Existing custom/hash/external `href`
   values remain read-only replace/clear state in Visual.
+- clearing a manual link or child destination keeps the draft in the editor and
+  shows inline feedback that runtime hides it until a public-safe destination is
+  selected
 
 ### Advanced
 
 - read-only source/runtime summary
 - read-only layout token summary
-- read-only runtime behavior summary
+- read-only runtime behavior summary covering `sticky`, `transparent`,
+  `collapseOnScroll`, `mobileMode`, `hideCtaOnMobile`, `activeLinkMode`, and the
+  admin-preview/runtime-script boundary
 - `Advanced` sections use stable widget-owned ids matching the rendered UI:
   `navigation.advanced.runtime-summary`,
   `navigation.advanced.layout-token-summary`,
@@ -131,6 +140,12 @@ Primary CTA jest renderowane tylko dla:
 - logo renders as a keyboard-focusable `<a>`
 - image logos keep `alt`; link accessible name prefers the image `alt` instead
   of the asset URL
+- clearing an image logo keeps image mode but removes the image `src`; runtime
+  renders a safe text fallback from `alt` or `Logo` instead of falling back to a
+  broken `Coderso` image source
+- image logo `value` must be an `http(s)` URL or root-relative path; unsupported
+  or unsafe values are dropped during normalization and use the same text
+  fallback
 
 ### Link metadata
 
@@ -147,6 +162,9 @@ Primary CTA jest renderowane tylko dla:
   `aria-hidden`
 - click/touch/keyboard open/close logic is root-scoped and closes siblings and
   outside clicks safely
+- admin preview renders static Navigation markup; drawer, submenu,
+  collapse-on-scroll, and active-link updates are activated by the public
+  runtime script
 
 ### Mobile modes
 
@@ -193,8 +211,11 @@ Primary CTA jest renderowane tylko dla:
 
 ## Clear Controls
 
-- `style.surfaceColor`, `style.ctaBackgroundColor`, `style.ctaTextColor`, and
-  `style.ctaBorderColor` are clearable
+- all Navigation color fields are clearable:
+  `style.surfaceColor`, `style.borderColor`, `style.textColor`,
+  `style.logoColor`, `style.linkColor`, `style.linkHoverColor`,
+  `style.linkActiveColor`, `style.ctaBackgroundColor`, `style.ctaTextColor`,
+  and `style.ctaBorderColor`
 - `behavior.transparent` remains a separate runtime behavior, not a clear-value
   sentinel
 

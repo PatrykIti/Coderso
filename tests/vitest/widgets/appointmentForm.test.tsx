@@ -149,6 +149,56 @@ test("appointment form renders phone validation and notes bounds when optional f
   expect(html).toContain('data-booking-notes-counter="true"');
 });
 
+test("appointment form preserves blank phone validation and omits runtime validation attrs", () => {
+  const normalized = normalizeAppointmentFormData({
+    ...appointmentFormDefaults,
+    phonePattern: "",
+    phonePatternMessage: "",
+  });
+  const html = renderToString(<AppointmentFormBlock variant="default" data={normalized} />);
+  const phoneInput = html.match(/<input[^>]*name="customerPhone"[^>]*>/)?.[0] ?? "";
+
+  expect(normalized.phonePattern).toBe("");
+  expect(normalized.phonePatternMessage).toBe("");
+  expect(phoneInput).toContain('name="customerPhone"');
+  expect(phoneInput).not.toContain("pattern=");
+  expect(phoneInput).not.toContain("title=");
+  expect(html).not.toContain("Use digits, spaces, parentheses, or an optional leading +.");
+});
+
+test("appointment form treats whitespace-only phone validation as accidental and restores defaults", () => {
+  const normalized = normalizeAppointmentFormData({
+    ...appointmentFormDefaults,
+    phonePattern: "   ",
+    phonePatternMessage: "   ",
+  });
+  const html = renderToString(<AppointmentFormBlock variant="default" data={normalized} />);
+  const phoneInput = html.match(/<input[^>]*name="customerPhone"[^>]*>/)?.[0] ?? "";
+
+  expect(normalized.phonePattern).toBe(appointmentFormDefaults.phonePattern);
+  expect(normalized.phonePatternMessage).toBe(appointmentFormDefaults.phonePatternMessage);
+  expect(phoneInput).toContain('pattern="^\\+?[0-9()\\-.\\s]{7,20}$"');
+  expect(phoneInput).toContain(
+    'title="Use digits, spaces, parentheses, or an optional leading +."'
+  );
+});
+
+test("appointment form keeps non-empty phone validation presets active", () => {
+  const normalized = normalizeAppointmentFormData({
+    ...appointmentFormDefaults,
+    phonePattern: "^[0-9\\s]{7,20}$",
+    phonePatternMessage: "Use 7-20 digits and spaces.",
+  });
+  const html = renderToString(<AppointmentFormBlock variant="default" data={normalized} />);
+  const phoneInput = html.match(/<input[^>]*name="customerPhone"[^>]*>/)?.[0] ?? "";
+
+  expect(normalized.phonePattern).toBe("^[0-9\\s]{7,20}$");
+  expect(normalized.phonePatternMessage).toBe("Use 7-20 digits and spaces.");
+  expect(phoneInput).toContain('pattern="^[0-9\\s]{7,20}$"');
+  expect(phoneInput).toContain('title="Use 7-20 digits and spaces."');
+  expect(html).toContain("Use 7-20 digits and spaces.");
+});
+
 test("appointment form renders bounded custom fields with deterministic metadata markers", () => {
   const html = renderToString(
     <AppointmentFormBlock

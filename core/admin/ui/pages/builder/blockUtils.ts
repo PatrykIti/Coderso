@@ -1,9 +1,13 @@
 import type {
   Block,
+  ContainerToken,
+  DeviceTarget,
   LayoutValue,
+  SpacingToken,
   WidgetBlockPatch,
   WidgetDefinition,
   WidgetEditorState,
+  WidgetLayoutDefaults,
   WidgetVisibility,
 } from "./types";
 import { containerTokens, spacingTokens } from "./types";
@@ -29,6 +33,12 @@ const defaultVisibility: WidgetVisibility = {
   devices: ["desktop", "tablet", "mobile"],
   enabled: true,
 };
+const defaultLayoutEffective: WidgetLayoutDefaults = {
+  container: "default",
+  padding: { top: "xl", bottom: "xl" },
+  margin: { top: "none", bottom: "none" },
+};
+const deviceTargets: DeviceTarget[] = ["desktop", "tablet", "mobile"];
 const defaultEditor: WidgetEditorState = {
   mode: "wizard",
   wizardCompleted: false,
@@ -45,6 +55,15 @@ const isContainerToken = (value: unknown): value is (typeof containerTokens)[num
 const isSpacingToken = (value: unknown): value is (typeof spacingTokens)[number] =>
   typeof value === "string" && spacingTokens.includes(value as (typeof spacingTokens)[number]);
 
+const isInheritableContainerToken = (value: unknown): value is LayoutValue["container"] =>
+  value === "inherit" || isContainerToken(value);
+
+const isInheritableSpacingToken = (value: unknown): value is LayoutValue["padding"]["top"] =>
+  value === "inherit" || isSpacingToken(value);
+
+const isDeviceTarget = (value: unknown): value is DeviceTarget =>
+  typeof value === "string" && deviceTargets.includes(value as DeviceTarget);
+
 const resolveDefinition = (input: WidgetDefinition | string) =>
   typeof input === "string" ? getRegisteredWidget(input) : input;
 
@@ -60,6 +79,30 @@ type BlockLocation = {
   path: BlockPath;
   parentListPath: BlockPath;
   index: number;
+};
+
+export type SharedBlockValueState<Saved, Effective = Saved> =
+  | { source: "inherited"; effective: Effective }
+  | { source: "saved"; saved: Saved; effective: Effective };
+
+export type SharedBlockLayoutState = {
+  container: SharedBlockValueState<LayoutValue["container"], ContainerToken>;
+  padding: {
+    top: SharedBlockValueState<LayoutValue["padding"]["top"], SpacingToken>;
+    bottom: SharedBlockValueState<LayoutValue["padding"]["bottom"], SpacingToken>;
+  };
+  margin: {
+    top: SharedBlockValueState<LayoutValue["margin"]["top"], SpacingToken>;
+    bottom: SharedBlockValueState<LayoutValue["margin"]["bottom"], SpacingToken>;
+  };
+};
+
+export type SharedBlockVisibilityState = {
+  enabled: boolean;
+  devices: DeviceTarget[];
+  visibleDevices: DeviceTarget[];
+  hiddenOnAllDevices: boolean;
+  summary: string;
 };
 
 const normalizeSlotId = (slotId?: string | null) => {
@@ -523,15 +566,107 @@ export function sanitizeLayout(layout?: LayoutValue | null): LayoutValue {
   };
   return {
     ...resolved,
-    container: isContainerToken(resolved.container) ? resolved.container : "default",
+    container: isInheritableContainerToken(resolved.container) ? resolved.container : "default",
     padding: {
-      top: isSpacingToken(resolved.padding.top) ? resolved.padding.top : "md",
-      bottom: isSpacingToken(resolved.padding.bottom) ? resolved.padding.bottom : "md",
+      top: isInheritableSpacingToken(resolved.padding.top) ? resolved.padding.top : "md",
+      bottom: isInheritableSpacingToken(resolved.padding.bottom) ? resolved.padding.bottom : "md",
     },
     margin: {
-      top: isSpacingToken(resolved.margin.top) ? resolved.margin.top : "none",
-      bottom: isSpacingToken(resolved.margin.bottom) ? resolved.margin.bottom : "none",
+      top: isInheritableSpacingToken(resolved.margin.top) ? resolved.margin.top : "none",
+      bottom: isInheritableSpacingToken(resolved.margin.bottom) ? resolved.margin.bottom : "none",
     },
+  };
+}
+
+const resolveEffectiveDefaults = (
+  pageDefaults: WidgetLayoutDefaults | undefined
+): WidgetLayoutDefaults => ({
+  container: isContainerToken(pageDefaults?.container)
+    ? pageDefaults.container
+    : defaultLayoutEffective.container,
+  padding: {
+    top: isSpacingToken(pageDefaults?.padding.top)
+      ? pageDefaults.padding.top
+      : defaultLayoutEffective.padding.top,
+    bottom: isSpacingToken(pageDefaults?.padding.bottom)
+      ? pageDefaults.padding.bottom
+      : defaultLayoutEffective.padding.bottom,
+  },
+  margin: {
+    top: isSpacingToken(pageDefaults?.margin.top)
+      ? pageDefaults.margin.top
+      : defaultLayoutEffective.margin.top,
+    bottom: isSpacingToken(pageDefaults?.margin.bottom)
+      ? pageDefaults.margin.bottom
+      : defaultLayoutEffective.margin.bottom,
+  },
+});
+
+const resolveContainerState = (
+  value: LayoutValue["container"],
+  defaults: WidgetLayoutDefaults
+): SharedBlockLayoutState["container"] =>
+  value === "inherit"
+    ? { source: "inherited", effective: defaults.container }
+    : { source: "saved", saved: value, effective: value };
+
+const resolveSpacingState = <T extends LayoutValue["padding"]["top"]>(
+  value: T,
+  effective: SpacingToken
+): SharedBlockValueState<T, SpacingToken> =>
+  value === "inherit"
+    ? { source: "inherited", effective }
+    : { source: "saved", saved: value, effective: value };
+
+export function resolveSharedBlockLayoutState(
+  layout?: LayoutValue | null,
+  pageDefaults?: WidgetLayoutDefaults
+): SharedBlockLayoutState {
+  const normalized = sanitizeLayout(layout);
+  const effectiveDefaults = resolveEffectiveDefaults(pageDefaults);
+
+  return {
+    container: resolveContainerState(normalized.container, effectiveDefaults),
+    padding: {
+      top: resolveSpacingState(normalized.padding.top, effectiveDefaults.padding.top),
+      bottom: resolveSpacingState(normalized.padding.bottom, effectiveDefaults.padding.bottom),
+    },
+    margin: {
+      top: resolveSpacingState(normalized.margin.top, effectiveDefaults.margin.top),
+      bottom: resolveSpacingState(normalized.margin.bottom, effectiveDefaults.margin.bottom),
+    },
+  };
+}
+
+export function sanitizeVisibility(visibility?: WidgetVisibility | null): WidgetVisibility {
+  const rawDevices = Array.isArray(visibility?.devices)
+    ? visibility.devices.filter(isDeviceTarget)
+    : defaultVisibility.devices;
+  const devices = Array.from(new Set(rawDevices));
+
+  return {
+    enabled: visibility?.enabled ?? defaultVisibility.enabled,
+    devices,
+  };
+}
+
+export function resolveSharedBlockVisibilityState(
+  visibility?: WidgetVisibility | null
+): SharedBlockVisibilityState {
+  const normalized = sanitizeVisibility(visibility);
+  const visibleDevices = normalized.enabled ? normalized.devices : [];
+  const hiddenOnAllDevices = visibleDevices.length === 0;
+  const labels = [
+    visibleDevices.includes("desktop") ? "Desktop" : null,
+    visibleDevices.includes("tablet") ? "Tablet" : null,
+    visibleDevices.includes("mobile") ? "Mobile" : null,
+  ].filter((item): item is string => Boolean(item));
+
+  return {
+    ...normalized,
+    visibleDevices,
+    hiddenOnAllDevices,
+    summary: hiddenOnAllDevices ? "Hidden on all devices" : labels.join(", "),
   };
 }
 

@@ -6,7 +6,7 @@
 **Category:** Widgets + Posts Feed + Fixture Routing + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -26,15 +26,15 @@ actionable editor feedback.
 
 ## Sub-Tasks
 
-- [ ] Separate the 28-05 audit-assignment drift from current repo fixture state:
+- [x] Separate the 28-05 audit-assignment drift from current repo fixture state:
   confirm the current inventory route points at Posts Feed, then only repair
   fixture/bootstrap data if the checked-out repo still points to a wrong page or
   public `404`.
-- [ ] Make missing list/detail route consequences explicit for cards, item
+- [x] Make missing list/detail route consequences explicit for cards, item
   links, and any CTA/read-more affordance.
-- [ ] Explain or prevent silent `View all` disappearance when the destination is
+- [x] Explain or prevent silent `View all` disappearance when the destination is
   missing or all posts are already visible.
-- [ ] Add fixture/route regression coverage so future deep-audit prompts cannot
+- [x] Add fixture/route regression coverage so future deep-audit prompts cannot
   point to a non-Posts-Feed page or a public `404`.
 
 ## Files To Change
@@ -52,7 +52,10 @@ actionable editor feedback.
 
 ```ts
 function resolvePostsFeedRouteState(resolved: PostsFeedData["resolved"], data: PostsFeedData) {
-  if (!resolved?.listPath?.trim()) return { mode: "missing_detail_route" };
+  const items = normalizeResolvedItems(resolved?.items);
+  if (items.some((item) => !item.href?.trim()) || !resolved?.listPath?.trim()) {
+    return { mode: "missing_detail_route" };
+  }
   if (data.pagination?.mode === "view-all" && !data.pagination.viewAllHref) {
     return { mode: "missing_view_all_destination" };
   }
@@ -84,6 +87,7 @@ safe-relative and do not add arbitrary external navigation defaults.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/postsFeedWidget.test.tsx`
+- `bun test tests/unit/widgets/contentList.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
 - `git diff --check`
 
@@ -98,3 +102,37 @@ safe-relative and do not add arbitrary external navigation defaults.
 - Posts Feed deep audits target a valid Posts Feed fixture and public route.
 - Missing route configuration is explicit instead of making links disappear
   without context.
+
+## Completion Notes (2026-05-30)
+
+- The checked-out smoke inventory already points Posts Feed to
+  `/posts-feed-test-page` for both admin and public fixtures. No fixture rewrite
+  was needed; a Bun regression test now asserts that the inventory does not
+  point to the stale listing-filters page or missing `/test-posts-feed-0516`
+  route.
+- Posts Feed now owns `resolvePostsFeedRouteState`, which classifies card/detail
+  link readiness, missing list/detail route state, missing View all
+  destinations, and all-items-visible View all states.
+- The shared Content List renderer now supports an explicit
+  `linkUnavailableReason="missing-route"` mode. Posts Feed opts into that mode
+  when route state says card/detail links are unavailable, so href-less cards
+  render `data-content-list-link-unavailable` copy and disabled CTA labels use
+  `data-content-list-cta-disabled="missing-route"` without forcing route copy
+  onto generic href-less Content List items.
+- `view-all` no longer disappears silently when neither a selected destination
+  nor a resolved list path exists; it renders a disabled explanatory state with
+  `data-content-list-view-all-unavailable`.
+- Posts Feed Visual/Advanced now explain route consequences before publication:
+  card titles/CTAs render as non-links without a posts route, View all is hidden
+  without a destination/list route, and all-visible feeds explain why the action
+  may be redundant.
+
+## Validation Executed (2026-05-30)
+
+- `bun test tests/unit/widgets/contentList.test.tsx tests/unit/widgets/postsFeedWidget.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/posts-feed-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-19
+  drift review: no blockers)

@@ -6,7 +6,7 @@
 **Category:** Widgets + Booking Calendar + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -23,10 +23,19 @@ clear behavior and misleading Advanced booking-flow matching.
 
 ## Sub-Tasks
 
-- [ ] Make partial Surface clear return to a truthful legacy fallback state or
+- [x] Make partial Surface clear return to a truthful legacy fallback state or
   explicitly present the new mixed-style semantics.
-- [ ] Prevent Advanced from implying a self-match for booking flow selection.
-- [ ] Add regression coverage for both the clear path and flow-summary logic.
+- [x] Prevent Advanced from implying a self-match for booking flow selection.
+- [x] Add regression coverage for both the clear path and flow-summary logic.
+
+## Completion Notes
+
+- Booking Calendar frame background and frame border now fall back independently
+  to legacy theme classes when the corresponding Surface field is cleared.
+- Selected-slot and hover swatches remain saved as root CSS variables without
+  suppressing cleared frame fallback classes.
+- Advanced booking-flow diagnostics now reuse the same peer-calendar filtering
+  as Wizard, so the current block is never shown as its own match.
 
 ## Files To Change
 
@@ -40,15 +49,11 @@ clear behavior and misleading Advanced booking-flow matching.
 ## Implementation Pseudocode
 
 ```ts
-function hasAnySurfaceOverride(style: BookingCalendarStyle): boolean {
-  return Boolean(
-    style.frameBackground ||
-      style.frameBorderColor ||
-      style.selectedSlotBackground ||
-      style.selectedSlotBorderColor ||
-      style.slotHoverBorderColor
-  );
-}
+const frameBackground = resolveClearableStyleValue(style.frameBackground);
+const frameBorderColor = resolveClearableStyleValue(style.frameBorderColor);
+const legacyFrameBackgroundClass = frameBackground === undefined ? "bg-[var(--color-bg)]/95" : "";
+const legacyFrameBorderClass =
+  frameBorderColor === undefined ? "border-[var(--color-border)]" : "";
 
 function resolveBookingFlowSummary(context: EditorContext, calendars: CalendarSummary[]) {
   return calendars.filter((calendar) => calendar.blockId !== context.blockId);
@@ -82,3 +87,18 @@ No API routes are added.
 
 - Surface clear behavior is truthful and visually consistent.
 - Advanced no longer implies a self-matched booking flow.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/bookingCalendar.test.tsx tests/vitest/ui/booking-calendar-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `git diff --cached --check`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget booking-calendar --session task-343-06-booking-calendar-rerun2 --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-06-booking-calendar-smoke-rerun2.json --output-md .tmp/task-343-06-booking-calendar-smoke-rerun2.md`
+
+The first strict smoke attempt reached the public fixture but failed admin auth
+because credentials were not exported into the process. The authenticated rerun
+hung in the known first-helper-start admin probe. After restarting
+`coderso-dev-core-host`, rerun2 passed with `adminFailures=0`,
+`publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`.

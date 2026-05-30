@@ -11,6 +11,7 @@ import {
   normalizePostsFeedData,
   postsFeedDefaults,
   PostsFeedBlock,
+  resolvePostsFeedRouteState,
   type PostsFeedData,
 } from "../../../core/widgets/core/postsFeed";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -216,6 +217,76 @@ test("posts feed renders section chrome, view-all fallback, and bounded motion",
   expect(html).toContain('href="/news"');
   expect(html).toContain("View all posts");
   expect(html).toContain('data-posts-feed-motion="fade"');
+});
+
+test("posts feed makes missing route and view-all destination states explicit", () => {
+  const data = normalizePostsFeedData({
+    ...postsFeedDefaults,
+    pagination: {
+      ...postsFeedDefaults.pagination,
+      mode: "view-all",
+      viewAllHref: "",
+      viewAllLabel: "All posts",
+    },
+    fields: {
+      ...postsFeedDefaults.fields,
+      showCta: true,
+    },
+    resolved: {
+      items: [
+        {
+          id: "post-1",
+          title: "Post without route",
+          excerpt: "No linked destination yet.",
+          status: "published",
+        },
+      ],
+      total: 1,
+      sourceMode: "latest",
+      listPath: "",
+      resolvedAt: "2026-02-22T10:05:00.000Z",
+    },
+  });
+  const routeState = resolvePostsFeedRouteState(data);
+  const html = renderToString(
+    <PostsFeedBlock data={data} variant="cards" blockId="posts-feed-1" />
+  );
+
+  expect(routeState.cardLinks.mode).toBe("missing_detail_route");
+  expect(routeState.viewAll.mode).toBe("missing_view_all_destination");
+  expect(html).toContain('data-content-list-link-unavailable="1"');
+  expect(html).toContain("Links unavailable until a detail route is configured.");
+  expect(html).toContain('data-content-list-cta-disabled="missing-route"');
+  expect(html).toContain('data-content-list-view-all-unavailable="1"');
+  expect(html).toContain(
+    "View all is unavailable until a destination or list route is configured."
+  );
+  expect(html).not.toContain('href="/post-without-route"');
+});
+
+test("posts feed smoke inventory targets the Posts Feed fixture and not the stale audit route", async () => {
+  const inventory = JSON.parse(
+    await Bun.file("_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json").text()
+  ) as {
+    widgets?: Array<{
+      widgetType?: string;
+      adminFixtureSlug?: string;
+      publicPath?: string | null;
+      publicFixtureStatus?: string;
+    }>;
+  };
+
+  const postsFeedEntry = inventory.widgets?.find((entry) => entry.widgetType === "posts-feed");
+
+  expect(postsFeedEntry).toEqual(
+    expect.objectContaining({
+      adminFixtureSlug: "/posts-feed-test-page",
+      publicPath: "/posts-feed-test-page",
+      publicFixtureStatus: "published",
+    })
+  );
+  expect(postsFeedEntry?.adminFixtureSlug).not.toBe("/ctr-listing-filters-2305");
+  expect(postsFeedEntry?.publicPath).not.toBe("/test-posts-feed-0516");
 });
 
 test("posts feed resolver filters by preview visibility and route mapping", async () => {

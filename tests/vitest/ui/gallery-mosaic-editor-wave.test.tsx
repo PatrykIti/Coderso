@@ -468,6 +468,17 @@ test("GalleryMosaic wizard seeds layout selection and deterministic item growth"
     setSelectValue(countSelect, "4");
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.items).toHaveLength(4);
+
+    const callsBeforeReduction = onChangeSpy.mock.calls.length;
+    setSelectValue(view.container.querySelector("select"), "2");
+    expect(onChangeSpy).toHaveBeenCalledTimes(callsBeforeReduction);
+    expect(latestValue.items).toHaveLength(4);
+    expect(view.container.textContent).toContain("Reduce gallery items");
+    expect(view.container.textContent).toContain(
+      "Increasing the count again creates new placeholder tiles; removed content is not restored."
+    );
+    clickElement(findButtonByText(view.container, "confirm-action"));
+    expect(latestValue.items).toHaveLength(2);
   } finally {
     view.cleanup();
   }
@@ -628,6 +639,9 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     setSelectValue(interactionSelects[0], "lightbox");
     setSelectValue(interactionSelects[1], "fill");
     expect(view.container.textContent).toContain(
+      "Admin preview shows lightbox markup as static. Published pages bind the lightbox script;"
+    );
+    expect(view.container.textContent).toContain(
       "This item keeps link navigation. Clear the destination to open it in the lightbox instead."
     );
     expect(view.container.textContent).toContain(
@@ -688,8 +702,15 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
     });
     expect(view.container.textContent).toContain("Item 3: failed to resolve selected media.");
 
-    setSelectValue(selects[0], "1");
-    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    setSelectValue(Array.from(view.container.querySelectorAll("select"))[0], "1");
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(latestValue.items).toHaveLength(3);
+    expect(view.container.textContent).toContain("Reduce gallery items");
+    expect(view.container.textContent).toContain(
+      "Increasing the count again creates new placeholder tiles; removed content is not restored."
+    );
+    clickElement(findButtonByText(view.container, "confirm-action"));
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
     expect(latestValue.items).toHaveLength(1);
     expect(view.container.textContent).toContain(
       "Feature Left works best with one lead tile plus at least one supporting item."
@@ -765,8 +786,13 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with truthful su
       },
       {
         id: "duplicate",
+        href: "/lead",
       },
     ],
+    interaction: {
+      mode: "lightbox",
+      zoom: "fit",
+    },
     style: {
       ratio: "cinematic",
       gap: "wide",
@@ -801,6 +827,9 @@ test("GalleryMosaic advanced editor keeps diagnostics read-only with truthful su
       "Advanced mode is read-only. Use Visual for public-facing Gallery Mosaic media, captions, links, interaction, overlay, density, and layout changes."
     );
     expect(view.container.textContent).toContain("Runtime summary");
+    expect(view.container.textContent).toContain(
+      "Lightbox on unlinked items; 1 linked item keeps navigation"
+    );
     expect(view.container.textContent).toContain("Style summary");
     expect(view.container.textContent).toContain("Accessibility diagnostics");
     expect(view.container.textContent).toContain("Contract summary");

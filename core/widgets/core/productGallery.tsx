@@ -16,6 +16,7 @@ import {
   type CommerceWidgetSource,
 } from "./commerceWidgetShared";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type ProductGalleryVariantId = "cards" | "compact";
@@ -67,7 +68,6 @@ export type ProductGalleryData = {
     showPrice?: boolean;
     showStock?: boolean;
     showStatus?: boolean;
-    showMediaHint?: boolean;
   };
   emptyState?: {
     title?: string;
@@ -88,6 +88,22 @@ export type ProductGalleryData = {
     error?: string;
   };
 };
+
+export type ProductGalleryRouteState = {
+  cardLinks:
+    | { mode: "ready"; basePath: string }
+    | { mode: "missing_product_route"; reason: string };
+  cta:
+    | { mode: "visible"; basePath: string }
+    | { mode: "disabled_by_author" }
+    | { mode: "hidden_missing_route"; reason: string };
+};
+
+export type ProductGalleryViewAllState =
+  | { mode: "disabled" }
+  | { mode: "missing_destination"; reason: string }
+  | { mode: "all_products_visible"; href: string; reason: string }
+  | { mode: "visible"; href: string };
 
 export const productGalleryDefaults: ProductGalleryData = {
   source: {
@@ -156,6 +172,22 @@ export const productGalleryEditorContract: WidgetEditorContract = {
       title: "Price filters",
       role: "source",
       writablePaths: ["source.minPriceMinor", "source.maxPriceMinor"],
+    },
+    {
+      mode: "wizard",
+      id: "product-gallery.wizard.preview-summary",
+      title: "Preview summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved"],
+    },
+    {
+      mode: "visual",
+      id: "product-gallery.visual.preview-summary",
+      title: "Preview summary",
+      role: "diagnostics",
+      writablePaths: [],
+      readOnlyPaths: ["resolved"],
     },
     {
       mode: "visual",
@@ -642,7 +674,6 @@ export const normalizeProductGalleryData = (value: ProductGalleryData): ProductG
       showPrice: value.fields?.showPrice !== false,
       showStock: value.fields?.showStock !== false,
       showStatus: value.fields?.showStatus === true,
-      showMediaHint: value.fields?.showMediaHint === true,
     },
     emptyState: {
       title: text(
@@ -757,6 +788,68 @@ const joinProductGalleryProductHref = (basePath: string | undefined, slug: strin
   return normalizeWidgetSafeHref(joined, { allowRelative: true });
 };
 
+export function resolveProductGalleryRouteState(
+  data: ProductGalleryData
+): ProductGalleryRouteState {
+  const normalized = normalizeProductGalleryData(data);
+  const basePath = normalizeWidgetSafeHref(normalized.link?.basePath, { allowRelative: true });
+  const ctaStyle = normalized.link?.ctaStyle ?? "text";
+  const reason =
+    "Product detail route is not configured; product cards and CTA labels stay non-clickable until support configures a product detail route.";
+
+  return {
+    cardLinks: basePath
+      ? { mode: "ready", basePath }
+      : {
+          mode: "missing_product_route",
+          reason,
+        },
+    cta:
+      ctaStyle === "none"
+        ? { mode: "disabled_by_author" }
+        : basePath
+          ? { mode: "visible", basePath }
+          : {
+              mode: "hidden_missing_route",
+              reason,
+            },
+  };
+}
+
+export function resolveProductGalleryViewAllState(
+  data: ProductGalleryData,
+  total: number,
+  shown: number
+): ProductGalleryViewAllState {
+  const normalized = normalizeProductGalleryData(data);
+  if (normalized.pagination?.mode !== "view-all") {
+    return { mode: "disabled" };
+  }
+
+  const href = normalizeWidgetSafeHref(normalized.pagination.viewAllHref, {
+    allowRelative: true,
+    allowHttp: true,
+  });
+  if (!href) {
+    return {
+      mode: "missing_destination",
+      reason: "More products link is hidden until a destination page is selected.",
+    };
+  }
+
+  const boundedTotal = Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0;
+  const boundedShown = Number.isFinite(shown) ? Math.max(0, Math.floor(shown)) : 0;
+  if (boundedTotal <= boundedShown) {
+    return {
+      mode: "all_products_visible",
+      href,
+      reason: "More products link is hidden because every resolved product is already shown.",
+    };
+  }
+
+  return { mode: "visible", href };
+}
+
 const formatResolvedTimestamp = (value: string | undefined) => {
   const normalized = optionalText(value);
   if (!normalized) return "Not resolved yet";
@@ -803,34 +896,38 @@ export function ProductGalleryBlock({
         : resolveClearableStyleValue(normalized.style?.cardBorderColor),
   });
   const total = normalized.resolved?.total ?? items.length;
-  const canViewAll =
-    normalized.pagination?.mode === "view-all" &&
-    typeof normalized.pagination.viewAllHref === "string" &&
-    total > items.length;
-  const blockTitleIdPrefix = (optionalText(blockId) ?? "product-gallery").replace(
-    /[^a-zA-Z0-9_-]/g,
-    "-"
-  );
-  const viewAllAttrs = canViewAll
-    ? resolveWidgetLinkAttrs(normalized.pagination?.viewAllHref, {
-        allowRelative: true,
-        allowHttp: true,
-      })
-    : undefined;
+  const routeState = resolveProductGalleryRouteState(normalized);
+  const viewAllState = resolveProductGalleryViewAllState(normalized, total, items.length);
+  const rootInstanceId = createWidgetInstanceId("product-gallery", blockId, resolvedVariant);
+  const sectionTitleId = normalized.header?.title ? scopedId(rootInstanceId, "title") : undefined;
+  const viewAllAttrs =
+    viewAllState.mode === "visible"
+      ? resolveWidgetLinkAttrs(viewAllState.href, {
+          allowRelative: true,
+          allowHttp: true,
+        })
+      : undefined;
 
   return (
     <section
       className="space-y-4"
+      aria-labelledby={sectionTitleId}
+      aria-label={sectionTitleId ? undefined : "Product gallery"}
       data-widget="product-gallery"
       data-product-gallery-count={String(items.length)}
       data-product-gallery-total={String(total)}
       data-product-gallery-curation={normalized.curation?.mode ?? "query"}
       data-product-gallery-pagination={normalized.pagination?.mode ?? "none"}
+      data-product-gallery-route-state={
+        routeState.cardLinks.mode === "ready" ? "ready" : "missing-route"
+      }
+      data-product-gallery-cta-state={routeState.cta.mode}
+      data-product-gallery-view-all-state={viewAllState.mode}
     >
       {normalized.header?.title || normalized.header?.description ? (
         <div className="space-y-1">
           {normalized.header?.title ? (
-            <h2 className="text-xl font-semibold text-[var(--color-text)]">
+            <h2 id={sectionTitleId} className="text-xl font-semibold text-[var(--color-text)]">
               {normalized.header.title}
             </h2>
           ) : null}
@@ -856,6 +953,17 @@ export function ProductGalleryBlock({
         <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Commerce runtime warning: {normalized.resolved?.error}
         </div>
+      ) : null}
+
+      {isEditorPreview &&
+      items.length > 0 &&
+      routeState.cardLinks.mode === "missing_product_route" ? (
+        <p
+          className="rounded-lg border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-[var(--color-text)]/70"
+          data-product-gallery-route-guidance="missing-route"
+        >
+          {routeState.cardLinks.reason}
+        </p>
       ) : null}
 
       {items.length === 0 ? (
@@ -892,9 +1000,10 @@ export function ProductGalleryBlock({
                   openInNewTab: normalized.link?.target === "new-tab",
                 })
               : undefined;
-            const titleId = `${blockTitleIdPrefix}-title-${item.id}`;
+            const titleId = scopedId(rootInstanceId, `${item.id}-title`);
             const mediaAlt = item.media?.alt?.trim() || item.title;
             const ctaStyle = normalized.link?.ctaStyle ?? "text";
+            const showUnavailableCta = isEditorPreview && !linkAttrs && ctaStyle !== "none";
             const cardClassName = [
               variantCardClassMap[resolvedVariant],
               normalized.style?.cardStyle === "minimal" ? null : "border",
@@ -976,6 +1085,20 @@ export function ProductGalleryBlock({
                     {normalized.link?.ctaLabel}
                   </span>
                 ) : null}
+
+                {showUnavailableCta ? (
+                  <span
+                    className={
+                      ctaStyle === "button"
+                        ? "inline-flex w-fit items-center rounded-md border border-border/70 px-3 py-2 text-sm font-medium opacity-70"
+                        : "inline-flex w-fit items-center text-sm font-medium opacity-70"
+                    }
+                    aria-disabled="true"
+                    data-product-gallery-cta-disabled="missing-route"
+                  >
+                    {normalized.link?.ctaLabel}
+                  </span>
+                ) : null}
               </>
             );
 
@@ -985,6 +1108,7 @@ export function ProductGalleryBlock({
                 className={cardClassName}
                 style={cardSurfaceStyle}
                 data-product-id={item.id}
+                data-product-gallery-card-link={linkAttrs ? "ready" : "missing-route"}
                 aria-labelledby={titleId}
               >
                 {linkAttrs ? (
@@ -1012,6 +1136,17 @@ export function ProductGalleryBlock({
             {normalized.pagination?.viewAllLabel}
           </a>
         </div>
+      ) : null}
+
+      {isEditorPreview &&
+      (viewAllState.mode === "missing_destination" ||
+        viewAllState.mode === "all_products_visible") ? (
+        <p
+          className="rounded-lg border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-[var(--color-text)]/70"
+          data-product-gallery-view-all-guidance={viewAllState.mode}
+        >
+          {viewAllState.reason}
+        </p>
       ) : null}
 
       {isEditorPreview ? (

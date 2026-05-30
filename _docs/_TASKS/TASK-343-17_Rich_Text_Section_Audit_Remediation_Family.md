@@ -6,7 +6,7 @@
 **Category:** Widgets + Rich Text Section + Editor UX + Renderer + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,19 +25,35 @@ inert embed aspect controls and sanitizer shadowing to this family.
 
 ## Sub-Tasks
 
-- [ ] Make Wizard preview show meaningful text for rich-text blocks instead of
+- [x] Make Wizard preview show meaningful text for rich-text blocks instead of
   `"No paragraph text yet"`.
-- [ ] Decide whether the section heading belongs in TOC/anchor generation and
+- [x] Decide whether the section heading belongs in TOC/anchor generation and
   implement the documented behavior consistently.
-- [ ] Surface real sanitizer activity in Visual/Advanced instead of near-always
+- [x] Surface real sanitizer activity in Visual/Advanced instead of near-always
   zero diagnostics.
-- [ ] Add a visible drift signal when `body.html` and `body.blocks` diverge.
-- [ ] Hide, disable, or explain embed aspect-ratio controls while embeds render
+- [x] Add a visible drift signal when `body.html` and `body.blocks` diverge.
+- [x] Hide, disable, or explain embed aspect-ratio controls while embeds render
   only as link cards.
-- [ ] Preserve or surface `href_rewritten` and other sanitizer events that are
+- [x] Preserve or surface `href_rewritten` and other sanitizer events that are
   currently shadowed by the upstream editor serializer.
-- [ ] Route report notes N2/N4/N6 explicitly as local fixes or documented
+- [x] Route report notes N2/N4/N6 explicitly as local fixes or documented
   product decisions; do not leave them implicit behind the sanitizer/TOC work.
+
+## Implementation Notes
+
+- Added `summarizeRichTextBlockPreview` so Wizard strips safe `contentHtml` to
+  readable preview text before falling back to legacy `content`.
+- Documented and marked the TOC policy as `body-headings`: body H2/H3/H4
+  headings are anchored, while the section title remains the section label and
+  is not repeated in the TOC.
+- Added bounded stored sanitizer diagnostics and Advanced reporting that merges
+  latest editor events with the current stored HTML scan.
+- Added visible body-vs-block source drift warnings in Visual and Advanced.
+- Disabled the embed aspect ratio selector while link-card rendering remains
+  the only supported embed render mode.
+- Added an optional `PostRichTextAdapter` unsafe-link signal so Rich Text
+  Section can surface `href_rewritten` while the live editor command receives a
+  safe placeholder href before widget sanitization.
 
 ## Files To Change
 

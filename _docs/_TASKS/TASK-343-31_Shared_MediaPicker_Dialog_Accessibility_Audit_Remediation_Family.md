@@ -6,7 +6,7 @@
 **Category:** Widgets + Shared MediaPicker + Admin UI + Accessibility + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -28,13 +28,13 @@ accessible description or explicit `aria-describedby={undefined}` policy.
 
 ## Sub-Tasks
 
-- [ ] Add an accessible description to the shared Media Library dialog, or set an
+- [x] Add an accessible description to the shared Media Library dialog, or set an
   explicit no-description policy only if the design system contract requires it.
-- [ ] Keep dialog title, description, and focus management stable for all widget
+- [x] Keep dialog title, description, and focus management stable for all widget
   media picker entry points.
-- [ ] Add a shared regression test that opens MediaPicker from at least two
+- [x] Add a shared regression test that opens MediaPicker from at least two
   widget editor surfaces and asserts no Radix description warning is emitted.
-- [ ] Document the shared owner so future widget reports do not route this
+- [x] Document the shared owner so future widget reports do not route this
   warning to individual widget families.
 
 ## Files To Change
@@ -103,3 +103,27 @@ public URL handling, and upload restrictions remain unchanged.
 - Shared MediaPicker no longer emits the missing dialog description warning in
   audited widget authoring flows.
 - Individual widget families do not duplicate this shared accessibility owner.
+
+## Completion Notes (2026-05-30)
+
+- Added `DialogDescription` to the shared `MediaPicker` `Media library` dialog
+  so Radix wires `aria-describedby` instead of emitting the missing-description
+  warning.
+- Extended the existing MediaPicker Vitest suite with a warning-free dialog
+  regression that opens the shared picker from two representative widget-field
+  contexts and asserts the description is reachable through `aria-describedby`.
+- Ran Hero, Logo Cloud, and Footer editor smoke suites to guard the reported
+  widget entry points while keeping the fix shared.
+- Updated the 28-05 Hero, Logo Cloud, and Footer reports and the Logo Cloud
+  pending task routing so individual widget families do not duplicate this
+  shared owner.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/ui/media-picker.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx tests/vitest/ui/logo-cloud-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-31
+  drift review: no blockers)

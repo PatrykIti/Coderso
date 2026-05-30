@@ -14,11 +14,13 @@ import {
   galleryMosaicDefaults,
   galleryMosaicItemMax,
   GalleryMosaicBlock,
+  describeGalleryMosaicCountReduction,
   getGalleryMosaicLightboxRuntimeScript,
   importGalleryMosaicConfig,
   normalizeGalleryMosaicData,
   normalizeGalleryMosaicItemCount,
   normalizeGalleryMosaicItems,
+  summarizeGalleryMosaicCountReduction,
   type GalleryMosaicData,
 } from "../../../core/widgets/core/galleryMosaic";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -33,6 +35,8 @@ test("gallery mosaic renders defaults", () => {
   expect(html).toContain(galleryMosaicDefaults.header?.title ?? "");
   expect(html).toContain('data-gallery-mosaic-variant="mosaic"');
   expect(html).toContain('data-gallery-mosaic-count="5"');
+  expect(html).toContain('aria-labelledby="gallery-mosaic-gallery-1-title"');
+  expect(html).toContain('id="gallery-mosaic-gallery-1-title"');
 });
 
 test("gallery mosaic normalization keeps deterministic ids and item bounds", () => {
@@ -256,6 +260,49 @@ test("gallery mosaic lightbox stays opt-in, normalizes interaction defaults, and
   expect(getGalleryMosaicLightboxRuntimeScript()).toContain("data-gallery-lightbox-root='1'");
 });
 
+test("gallery mosaic section naming falls back when no visible heading exists", () => {
+  const html = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        header: {
+          title: "",
+          description: "",
+        },
+      }}
+      variant="mosaic"
+    />
+  );
+
+  expect(html).toContain('aria-label="Gallery"');
+  expect(html).not.toContain("aria-labelledby=");
+});
+
+test("gallery mosaic count-reduction summary names removed authored tiles", () => {
+  const items = normalizeGalleryMosaicItems(
+    [
+      { id: "gallery-1", caption: "Lead", image: "/lead.jpg" },
+      { id: "gallery-2", caption: "Motion draft", video: "/motion.mp4" },
+      { id: "gallery-3", caption: "Linked detail", href: "/detail" },
+    ],
+    3
+  );
+
+  const summary = summarizeGalleryMosaicCountReduction(items, 1);
+
+  expect(summary).toEqual({
+    nextCount: 1,
+    removedCount: 2,
+    authoredRemovedCount: 2,
+    labels: ["Motion draft", "Linked detail"],
+    extraLabelCount: 0,
+    hasAuthoredData: true,
+  });
+  expect(describeGalleryMosaicCountReduction(summary!)).toContain(
+    "Increasing the count again creates new placeholder tiles; removed content is not restored."
+  );
+});
+
 test("gallery mosaic density and motion presets stay bounded and render deterministic markers", () => {
   const normalized = normalizeGalleryMosaicData({
     ...galleryMosaicDefaults,
@@ -419,6 +466,34 @@ test("gallery mosaic feature-left avoids empty support column and redundant feat
 
   expect(html).not.toContain("flex flex-col gap-4");
   expect(html).not.toContain("lg:row-span-2");
+
+  const denseHtml = renderToString(
+    <GalleryMosaicBlock
+      data={{
+        ...galleryMosaicDefaults,
+        items: [
+          {
+            id: "lead-item",
+            image: "https://cdn.example.com/one.jpg",
+            caption: "Lead frame",
+          },
+          {
+            id: "support-item",
+            image: "https://cdn.example.com/two.jpg",
+            caption: "Support frame",
+          },
+        ],
+        style: {
+          ...galleryMosaicDefaults.style,
+          layoutDensity: "dense",
+        },
+      }}
+      variant="feature-left"
+    />
+  );
+
+  expect(denseHtml).toContain("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4");
+  expect(denseHtml).not.toContain("grid grid-cols-1 grid grid-cols-1");
 });
 
 test("gallery mosaic renders figure semantics and current video controls", () => {

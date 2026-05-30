@@ -32,6 +32,17 @@
 > trwałość/propagacja na front **nie** była weryfikowana (sekcja 7). Wszystkie
 > interakcje w tej sesji były niezapisane i nie wpływają na zaseedowany stan.
 
+> **Status remediacji (2026-05-30, TASK-343-11):** zamknięto defekty Team
+> wskazane jako N1, N2, N4 i N5. Zmiana platformy z LinkedIn na inną znaną
+> platformę zachowuje profil (`linkedin.com/in/anna-kowalska` →
+> `github.com/anna-kowalska`, nie `github.com/in`). Wizard nie ucina już
+> członków przy przejściu na Spotlight; redukcja liczby profili pozostaje w
+> Visual, gdzie działa jawny destructive guard. Nazwy członków renderują się
+> jako `h3` pod tytułem sekcji, a helper dodawania członków mówi wprost, że
+> nowe profile są dopisywane na końcu. Shared color-clear wording pozostaje
+> własnością TASK-343-30, a placeholderowe publiczne `href="#"` są cechą
+> fixture danych.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -80,7 +91,7 @@ Wszystkie interakcje w sesji `claude-29-05-team-gap-close`, zweryfikowane inspek
 - **Realny kolor obramowania karty:** Card border ustawiony pickerem na `#ff0000` (wcześniej tylko „Clear") → realny efekt + obserwacja semantyki „Clear".
 - **Gałąź „custom" destynacji społecznościowej:** wymuszona zmianą etykiety na nieznaną platformę („Portfolio") → render gałęzi custom → powrót do znanej platformy (GitHub).
 - **Pełny cykl destynacji CTA:** label-only (guard) → picker stron (HomePage, render `/homepage`) → „No destination" (CTA znika).
-- **Re-weryfikacja defektu N1:** LinkedIn→GitHub przekłamuje handle (`github.com/in`), naprawialne czystym handle.
+- **Re-weryfikacja defektu N1 przed remediacją:** LinkedIn→GitHub przekłamywał handle (`github.com/in`), naprawialne czystym handle. TASK-343-11 zamyka tę ścieżkę regresją UI.
 
 **Re-audyt bazowy (potwierdzony ponownie):** trzy warianty, members count data-driven, nagłówek/align/title size, edycja name/role/bio, Advanced read-only, render frontu, semantyka/ARIA, konsola, responsywność 375 px.
 
@@ -154,7 +165,7 @@ Strona zwraca `200`, tytuł „TEST-TEAM-0516", renderuje zapisany stan: wariant
 
 - **Struktura spotlight poprawna** — lider = Anna Kowalska (`data-team-spotlight-lead="true"`), Marek + Ewa jako supporting (`false`). ✓
 - **Semantyka/ARIA:** `<section aria-label="Meet the team">`; 3× `<article>` z `aria-label` „Imię, Rola"; avatary `<img loading="lazy">` z poprawnym `alt` „Photo of {imię}, {rola}"; linki w `<ul><li>`. ✓
-- **Hierarchia nagłówków:** `H2` (tytuł) → `H4` (nazwy członków) — **brak `H3`** (niuans N4). 
+- **Hierarchia nagłówków:** audyt wykazał `H2` (tytuł) → `H4` (nazwy członków) — **brak `H3`** (niuans N4). TASK-343-11 zmienia nazwy członków na `H3`.
 - **Linki społecznościowe:** wszystkie `href="#"` (placeholder fixture), bez `target`/`rel` (hash traktowany jak wewnętrzny). ✓ (mechanika poprawna; brak realnych destynacji to cecha danych — N6)
 - **CTA:** brak (fixture bez CTA). ✓
 - **Konsola:** **0 błędów, 0 ostrzeżeń.** ✓
@@ -162,19 +173,19 @@ Strona zwraca `200`, tytuł „TEST-TEAM-0516", renderuje zapisany stan: wariant
 
 ---
 
-## 5. Co NIE działa / jest błędne lub mylące (niuanse UX/UI)
+## 5. Znaleziska i status remediacji
 
 | # | Obszar | Obserwacja |
 |---|--------|-----------|
 | **N0 — Publiczny route z zadania `team-audit-0516` zwraca 404** | Środowisko / fixture | Wskazany w zadaniu adres `http://localhost:3000/team-audit-0516` **nie istnieje** — serwer zwraca `404 Not Found` (w DOM tylko „Not Found", brak `[data-team-variant]`; w konsoli 404 na zasób). Jedyny działający publiczny fixture Team to `http://localhost:3000/test-team-0516` (`200`). To blokada środowiska/danych, nie błąd renderera (patrz też sekcja 7). |
-| **N1 — Zmiana platformy społecznościowej z LinkedIn przekłamuje handle** | Visual / Members / social | **Re-potwierdzone w tej sesji.** LinkedIn trzyma profil jako `in/handle`. Po przełączeniu LinkedIn→GitHub edytor czyta `in/anna-kowalska` i bierze pierwszy segment ścieżki → powstaje błędny `https://github.com/in`, a „Profile name" pokazuje samo `in`. **Realny defekt fidelity danych.** Odwracalny: wpisanie czystego handle („octocat") naprawia URL do `https://github.com/octocat` (z `rel`/`target` dla zewnętrznych). Dotyczy kierunku **z** LinkedIn (jego profil ma prefiks `in/`); przełączenia między platformami z gołym handle są bezpieczne. |
-| **N2 — Wizard: wybór Spotlight przy >6 członkach ucina do 3 BEZ potwierdzenia** | Wizard / asymetria z Visual | W Wizard przy >6 członkach wybór „Spotlight" po cichu redukuje listę do 3 (bez dialogu), podczas gdy redukcja licznika w Visual **zawsze** pyta `window.confirm`, a zmiana wariantu na spotlight w Visual w ogóle NIE ucina. Ta sama intencja („przejdź na spotlight") zachowuje się różnie zależnie od trybu → ryzyko cichej utraty danych. (weryfikacja z 28-05; logika `handleVariantChange` w `TeamWizardEditor` niezmieniona) |
+| **N1 — Zmiana platformy społecznościowej z LinkedIn przekłamuje handle** | Visual / Members / social | **Zamknięte w TASK-343-11.** LinkedIn nadal przechowuje profil jako `in/handle`, ale przełączenie na platformę inną niż LinkedIn usuwa prefiks `in/` lub `company/` przed zbudowaniem nowego URL-a. Regresja zaczyna od `https://www.linkedin.com/in/anna-kowalska` i asercją potwierdza `https://github.com/anna-kowalska`. |
+| **N2 — Wizard: wybór Spotlight przy >6 członkach ucina do 3 BEZ potwierdzenia** | Wizard / asymetria z Visual | **Zamknięte w TASK-343-11.** Wizard zmienia teraz tylko wariant; nie mutuje `members`. Redukcja liczby członków pozostaje w Visual, gdzie istnieje jawny guard dla redukcji destructive. |
 | **N3 — „Clear" koloru = przezroczystość / fallback utility, nie token motywu** | Visual / colors | **Doprecyzowane dla Card border w tej sesji.** Po „Clear" na Card border inline `border-color` znika całkowicie, a computed spada do domyślnego koloru klasy Tailwind `border` (`rgb(240,232,213)`), **nie** do `var(--color-border)` (`rgb(29,23,15)`). Analogicznie Card/Section background po „Clear" stają się transparentne. Status „Theme default" jest więc subtelnie mylący (to fallback, nie token). Zgodne z semantyką clearable, ale wizualnie myli. |
-| **N4 — Pominięcie poziomu nagłówka H3 (H2 → H4)** | Renderer / a11y (front i admin) | Sekcja używa `<h2>` na tytuł i `<h4>` na nazwy członków — **brak `<h3>`** (potwierdzone na froncie: kolejność `H2, H4, H4, H4`). Drobny skok hierarchii nagłówków. Niski priorytet. |
-| **N5 — Mylący tekst „Add members from the top"** | Visual / Members | Helper sugeruje wstawianie u góry, ale `addMember` **zawsze dopisuje na końcu** tablicy. Tekst odnosi się do pozycji *przycisku* (jest u góry i u dołu sekcji), nie do miejsca wstawienia — łatwe do nieporozumienia. |
+| **N4 — Pominięcie poziomu nagłówka H3 (H2 → H4)** | Renderer / a11y (front i admin) | **Zamknięte w TASK-343-11.** Nazwy członków renderują się jako `<h3>`, zachowując dotychczasową klasę typograficzną i dostępne `article[aria-label]`. |
+| **N5 — Mylący tekst „Add members from the top"** | Visual / Members | **Zamknięte w TASK-343-11.** Helper mówi teraz, że oba przyciski są równoważne, a nowy członek jest dopisywany po obecnej liście. |
 | **N6 — Linki społecznościowe na froncie prowadzą do `#`** | Frontend / dane fixture | Wszystkie linki społecznościowe na `test-team-0516` mają `href="#"` (placeholder). Renderują się jako klikalne, ale skaczą na górę strony. Cecha **zaseedowanych danych**, nie błąd widgetu (renderer poprawnie respektuje `allowHash`). |
 
-**Nie wykryto** żadnego błędu konsoli (admin: 0 błędów; front `test-team-0516`: 0/0), żadnego twardego buga renderowania, ani rozjazdu wspólnego renderera admin↔front. Poza N1 wszystkie przetestowane kontrolki działają i aktualizują podgląd na żywo.
+**Nie wykryto** żadnego błędu konsoli (admin: 0 błędów; front `test-team-0516`: 0/0), żadnego twardego buga renderowania, ani rozjazdu wspólnego renderera admin↔front. Historyczne N1/N2/N4/N5 są zamknięte w TASK-343-11; pozostałe przetestowane kontrolki działają i aktualizują podgląd na żywo.
 
 ---
 
@@ -217,11 +228,11 @@ Po domknięciu luk MediaPicker i twardych limitów, **nie-do-przetestowania w ty
   - **MediaPicker** — pełny flow `Browse media → wybór assetu → podmiana avatara w canvas + stan „picked" → usunięcie z pickera → fallback do inicjału` działa end-to-end (4.1).
   - **Twarde limity** — 12 członków (Add member disabled), 5 linków (Add link disabled), min 1 (Remove/Move disabled), z poprawnymi dialogami confirm liczącymi usuwane profile (4.2).
 - **Dodatkowo domknięte:** realny kolor Card border (4.3), gałąź `custom` destynacji społecznościowej z powrotem do znanej platformy (4.4), pełny cykl destynacji CTA (label-only → HomePage → No destination) (4.4).
-- **Najważniejsze realne znaleziska:**
+- **Najważniejsze realne znaleziska i status po TASK-343-11:**
   - **N0** — publiczny route z zadania `team-audit-0516` **zwraca 404**; audyt frontu wykonano na `test-team-0516` z jawną adnotacją rozbieżności.
-  - **N1** — przełączenie platformy społecznościowej **z** LinkedIn przekłamuje handle (`github.com/in`); odwracalne, lecz to defekt fidelity (re-potwierdzone).
-  - **N2** — w Wizard wybór Spotlight przy >6 członkach po cichu ucina do 3 bez potwierdzenia (niespójność z Visual).
-- **Drobniejsze niuanse:** „Clear" koloru daje fallback utility/transparent zamiast tokenu motywu (N3, doprecyzowane dla Card border); skok hierarchii H2→H4 (N4); mylący helper „Add members from the top" (N5); placeholderowe `href="#"` na froncie (N6).
+  - **N1** — przełączenie platformy społecznościowej **z** LinkedIn przekłamywało handle (`github.com/in`); zamknięte w TASK-343-11.
+  - **N2** — w Wizard wybór Spotlight przy >6 członkach po cichu ucinał do 3; zamknięte w TASK-343-11 przez non-destructive wariant change.
+- **Drobniejsze niuanse:** „Clear" koloru daje fallback utility/transparent zamiast tokenu motywu (N3, doprecyzowane dla Card border, własność TASK-343-30); skok hierarchii H2→H4 (N4) i mylący helper „Add members from the top" (N5) są zamknięte w TASK-343-11; placeholderowe `href="#"` na froncie (N6) pozostaje cechą fixture danych.
 - **Plus widgetu:** w pełni **statyczny** (brak desync ARIA/skryptu), **data-driven** licznik członków, spójne i bezpieczne budowanie linków (handle → safe URL + `rel`/`target`), spójne „Clear" dla 3 kolorów, sensowne guardy (confirm przy redukcji count, in-panel confirm przy usuwaniu, disabled przy limitach), MediaPicker poprawnie spina się z podglądem i canvas.
 - **Nie znaleziono** żadnego błędu renderowania ani rozbieżności admin↔front na poziomie kodu — różnice to wyłącznie efekt różnych zaseedowanych danych dwóch niezależnych fixture'ów.
 

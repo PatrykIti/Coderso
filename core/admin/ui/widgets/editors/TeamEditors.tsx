@@ -524,6 +524,17 @@ function buildTeamSocialHref(platform: TeamSocialPlatform, profile: string | und
   }
 }
 
+function resolvePortableTeamSocialProfile(
+  currentPlatform: TeamSocialPlatform | "custom",
+  nextPlatform: TeamSocialPlatform,
+  profile: string
+) {
+  if (currentPlatform === "linkedin" && nextPlatform !== "linkedin") {
+    return profile.replace(/^(?:in|company)\//, "");
+  }
+  return profile;
+}
+
 function updateMemberSocialPlatform(
   value: TeamData,
   onChange: (next: TeamData) => void,
@@ -537,9 +548,10 @@ function updateMemberSocialPlatform(
 
   const currentPlatform = resolveTeamSocialPlatform(link);
   const profile = readTeamSocialProfile(currentPlatform, link.url);
+  const portableProfile = resolvePortableTeamSocialProfile(currentPlatform, nextPlatform, profile);
   updateMemberSocialLink(value, onChange, memberIndex, socialIndex, {
     label: teamSocialPlatformLabels[nextPlatform],
-    url: buildTeamSocialHref(nextPlatform, profile),
+    url: buildTeamSocialHref(nextPlatform, portableProfile),
   });
 }
 
@@ -935,35 +947,11 @@ function resolveActivePendingRemoval(
   return links.some((link) => link.id === pendingRemoval.socialId) ? pendingRemoval : null;
 }
 
-export function TeamWizardEditor({
-  value,
-  onChange,
-  variant,
-  onVariantChange,
-  onBlockPatch,
-}: WidgetEditorProps<TeamData>) {
+export function TeamWizardEditor({ value, variant, onVariantChange }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
   const members = normalizeTeamMembers(normalized.members);
   const handleVariantChange = (next: string) => {
-    if (next !== "spotlight" || members.length <= 6) {
-      onVariantChange?.(next);
-      return;
-    }
-
-    const nextValue = {
-      ...normalized,
-      members: normalizeTeamMembers(normalized.members, 3),
-    };
-    if (onBlockPatch) {
-      onBlockPatch((current) => ({
-        ...current,
-        variant: next,
-        data: nextValue,
-      }));
-      return;
-    }
     onVariantChange?.(next);
-    onChange(nextValue);
   };
 
   return (
@@ -1005,7 +993,7 @@ export function TeamWizardEditor({
 
         <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
           Use Visual to change member count, name members, set roles, add bios, upload photos,
-          connect social links, and choose the spotlight lead.
+          connect social links, choose the spotlight lead, and reduce the member list intentionally.
         </div>
       </div>
     </WidgetEditorSection>
@@ -1310,8 +1298,9 @@ export function TeamVisualEditor({
       >
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/20 p-3">
           <p className="text-xs text-muted-foreground">
-            Add members from the top when the list gets long. The secondary action stays at the
-            bottom for parity with existing flows.
+            Use either Add member action when the list gets long. New members are appended after the
+            current list, and the secondary action stays at the bottom for parity with existing
+            flows.
           </p>
           <Button
             type="button"

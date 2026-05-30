@@ -2,7 +2,7 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -48,6 +48,37 @@ const flushEffects = async () => {
   });
 };
 
+const clickButtonByText = (root: ParentNode, label: string) => {
+  const button = Array.from(root.querySelectorAll("button")).find(
+    (candidate) => candidate.textContent?.trim() === label
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button: ${label}`);
+  }
+  React.act(() => {
+    button.click();
+  });
+};
+
+const getDialogDescription = (dialog: Element) => {
+  const describedBy = dialog.getAttribute("aria-describedby");
+  expect(describedBy).toBeTruthy();
+  const ids = describedBy?.split(/\s+/).filter(Boolean) ?? [];
+  const descriptions = ids.map((id) => document.getElementById(id)).filter(Boolean);
+  expect(descriptions).toHaveLength(ids.length);
+  return descriptions.map((element) => element?.textContent ?? "").join(" ");
+};
+
+const hasMissingDialogDescriptionWarning = (calls: unknown[][]) =>
+  calls.some((args) => {
+    const message = args.map((arg) => String(arg)).join(" ");
+    return (
+      message.includes("Missing") &&
+      message.includes("Description") &&
+      message.includes("DialogContent")
+    );
+  });
+
 const mountPicker = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -69,6 +100,7 @@ const mountPicker = (node: React.ReactNode) => {
 };
 
 afterEach(() => {
+  vi.restoreAllMocks();
   clearMediaCache();
   window.localStorage.clear();
 });
@@ -103,6 +135,50 @@ test("MediaPicker stays idle while closed without a selection", async () => {
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("MediaPicker dialog has a shared description without Radix warnings across widget fields", async () => {
+  writeMediaCache([mediaRecord({ title: "Shared media asset" })]);
+  const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  const view = mountPicker(
+    <div>
+      <section aria-label="Hero media field">
+        <MediaPicker value={null} onChange={() => undefined} accept={["image/*"]} />
+      </section>
+      <section aria-label="Logo Cloud media field">
+        <MediaPicker value={null} onChange={() => undefined} accept={["image/*"]} />
+      </section>
+    </div>
+  );
+
+  try {
+    await flushEffects();
+
+    for (const sectionLabel of ["Hero media field", "Logo Cloud media field"]) {
+      const section = view.container.querySelector(`section[aria-label="${sectionLabel}"]`);
+      expect(section).toBeInstanceOf(HTMLElement);
+
+      clickButtonByText(section as ParentNode, "Browse media");
+      await flushEffects();
+
+      const dialog = document.body.querySelector('[role="dialog"]');
+      expect(dialog).toBeInstanceOf(HTMLElement);
+      expect(getDialogDescription(dialog!)).toContain(
+        "Choose an existing media asset for this widget field."
+      );
+      expect(dialog?.textContent).toContain("Shared media asset");
+
+      clickButtonByText(document.body, "Done");
+      await flushEffects();
+    }
+
+    expect(hasMissingDialogDescriptionWarning(consoleWarn.mock.calls)).toBe(false);
+    expect(hasMissingDialogDescriptionWarning(consoleError.mock.calls)).toBe(false);
+  } finally {
+    view.cleanup();
   }
 });
 

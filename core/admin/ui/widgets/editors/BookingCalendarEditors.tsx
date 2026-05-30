@@ -72,6 +72,11 @@ const readPreviewResolved = (context: WidgetEditorProps<BookingCalendarData>["co
   }).resolved;
 };
 
+const readPeerBookingCalendars = (context: WidgetEditorProps<BookingCalendarData>["context"]) =>
+  (context?.bookingFlows?.calendars ?? []).filter(
+    (calendar) => calendar.blockId !== context?.blockId
+  );
+
 const DEFAULT_BOOKING_FLOW_ID = "booking-flow";
 const DEFAULT_FLOW_SELECT_VALUE = "__coderso_booking_flow_default__";
 const SAVED_FLOW_SELECT_VALUE = "__coderso_booking_flow_saved__";
@@ -413,9 +418,7 @@ export function BookingCalendarWizardEditor({
   context,
 }: WidgetEditorProps<BookingCalendarData>) {
   const normalized = normalizeBookingCalendarData(value);
-  const calendars = (context?.bookingFlows?.calendars ?? []).filter(
-    (calendar) => calendar.blockId !== context?.blockId
-  );
+  const calendars = readPeerBookingCalendars(context);
   const flowId = normalized.flowId ?? DEFAULT_BOOKING_FLOW_ID;
   const matchedCalendar = findCalendarForFlow(calendars, flowId);
   const flowSelectValue =
@@ -784,6 +787,7 @@ export function BookingCalendarAdvancedEditor({
   const services = previewResolved?.services ?? normalized.resolved?.services ?? [];
   const resources = previewResolved?.resources ?? normalized.resolved?.resources ?? [];
   const previewError = previewResolved?.error;
+  const calendars = readPeerBookingCalendars(context);
 
   return (
     <div className="space-y-4">
@@ -814,7 +818,7 @@ export function BookingCalendarAdvancedEditor({
           id="booking-calendar-advanced-flow"
           label="Booking flow"
           path="flowId"
-          value={describeBookingFlow(normalized.flowId, context?.bookingFlows?.calendars ?? [])}
+          value={describeBookingFlow(normalized.flowId, calendars)}
         />
         <ReadonlyWidgetSummaryRow
           id="booking-calendar-advanced-catalog-counts"

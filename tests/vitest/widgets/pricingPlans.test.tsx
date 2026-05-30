@@ -10,6 +10,7 @@ import {
 } from "../../../core/admin/ui/widgets/editors/PricingPlansEditors";
 import {
   createPricingPlansWidget,
+  describePricingPlanCapacity,
   normalizePricingPlanCount,
   normalizePricingPlans,
   normalizePricingPlansData,
@@ -34,6 +35,7 @@ test("pricing plans renders defaults", () => {
   expect(html).toContain('data-pricing-hidden-count="0"');
   expect(html).toContain('role="region"');
   expect(html).toContain('aria-labelledby="pricing-plans-three-plans-title"');
+  expect(html).toContain('data-pricing-badge-tone="highlight"');
 });
 
 test("pricing plans comparison rows render deterministic table markers", () => {
@@ -165,6 +167,24 @@ test("pricing plans preserve hidden authored plans for fixed-count variants", ()
   expect(html).toContain('data-pricing-count="3"');
   expect(html).toContain('data-pricing-hidden-count="1"');
   expect(html).not.toContain("Enterprise");
+});
+
+test("pricing plans distinguish layout capacity from rendered saved plans", () => {
+  const summary = describePricingPlanCapacity("four-plans", pricingPlansDefaults.plans);
+  const html = renderToString(
+    <PricingPlansBlock data={pricingPlansDefaults} variant="four-plans" />
+  );
+
+  expect(summary).toEqual({
+    capacity: 4,
+    rendered: 3,
+    missing: 1,
+    authored: 3,
+    hidden: 0,
+  });
+  expect(html).toContain('data-pricing-variant="four-plans"');
+  expect(html).toContain('data-pricing-count="3"');
+  expect(html).not.toContain('data-pricing-count="4"');
 });
 
 test("pricing plans render plan hierarchy, structured pricing, and footer notes", () => {
@@ -448,13 +468,16 @@ test("pricing plans render annual cycle and feature marker when billing toggle i
   );
 
   expect(html).toContain('data-pricing-billing-toggle="static"');
+  expect(html).toContain('data-pricing-billing-display="static-cycle"');
   expect(html).toContain('data-pricing-cycle="annual"');
   expect(html).toContain('aria-label="Billing cycle: Yearly pricing shown"');
+  expect(html).toContain("Billing cycle:");
   expect(html).toContain("Yearly");
   expect(html).toContain("$190");
   expect(html).toContain("/year");
   expect(html).toContain("✓");
   expect(html).toContain('role="status"');
+  expect(html).not.toContain('data-state="active"');
   expect(html).not.toContain("Scale");
 });
 

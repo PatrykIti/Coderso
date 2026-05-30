@@ -288,6 +288,8 @@ test("ToggleBlock wizard editor keeps setup focused on variant and points daily 
   try {
     expect(view.container.textContent).toContain("Step 1: Variant");
     expect(view.container.textContent).toContain("Wizard is one-time starter setup.");
+    expect(view.container.textContent).toContain("editor preview is static in setup mode");
+    expect(view.container.textContent).toContain("public pages mount click and keyboard switching");
     expect(view.container.textContent).not.toContain("Theme");
     expect(view.container.textContent).not.toContain("Diagnostics");
     const variantSection = getSectionByTitle(view.container, "Step 1: Variant");
@@ -344,6 +346,10 @@ test("ToggleBlock visual editor owns motion, accessibility, pane cards, and swat
     expect(view.getVariant()).toBe("cards");
 
     const experienceSection = getSectionByTitle(view.container, "Experience");
+    expect(experienceSection.textContent).toContain("Editor preview is static");
+    expect(experienceSection.textContent).toContain(
+      "Public pages mount click and keyboard switching"
+    );
     const motionSelect = findSelectByOptions(experienceSection, ["none", "fade", "slide"]);
     setSelectValue(motionSelect, "slide");
 
@@ -391,6 +397,36 @@ test("ToggleBlock visual editor owns motion, accessibility, pane cards, and swat
     expect(view.getValue().style?.panes?.primary?.borderEmphasis).toBe("strong");
     expect(view.getValue().style?.panes?.secondary?.surface).toBe("soft");
     expect(view.getValue().style?.panes?.secondary?.radius).toBe("lg");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ToggleBlock visual editor evaluates the rendered active trigger contrast pair", async () => {
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "cards",
+    initialValue: {
+      style: {
+        accentColor: "#000080",
+        accentContrastColor: "#ffffff",
+      },
+    },
+  });
+
+  try {
+    const themeSection = getSectionByTitle(view.container, "Theme");
+    expect(themeSection.textContent).not.toContain(
+      "Configured colors may be hard to read together."
+    );
+
+    setInputValue(findInputByAriaLabel(themeSection, "Accent contrast color swatch"), "#000080");
+
+    expect(themeSection.textContent).toContain(
+      "Active trigger rendered contrast: Configured colors may be hard to read together."
+    );
+    expect(view.getValue().style?.accentColor).toBe("#000080");
+    expect(view.getValue().style?.accentContrastColor).toBe("#000080");
   } finally {
     view.cleanup();
   }

@@ -4,6 +4,7 @@ import React from "react";
 import type { ComponentType } from "react";
 import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
+import { createRoot } from "react-dom/client";
 
 import {
   AccordionAdvancedEditor,
@@ -21,6 +22,8 @@ import { validateWidgetEditorContract } from "../../../core/widgets/editorContra
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const StubEditor: ComponentType<WidgetEditorProps<AccordionData>> = () => null;
 
@@ -162,6 +165,92 @@ test("accordion keeps one item open when collapsible is disabled", () => {
     first.dispatchEvent(new Event("toggle"));
   }
   expect(first?.open).toBe(true);
+});
+
+test("accordion preview render instances scope single-open details groups", () => {
+  const slots = {
+    "item:1": [],
+    "item:2": [],
+  };
+  const html = renderToString(
+    <>
+      <AccordionBlock
+        data={accordionDefaults}
+        variant="soft"
+        slots={slots}
+        blockId="shared-accordion"
+        renderContext={{ mode: "editor-preview" }}
+      />
+      <AccordionBlock
+        data={accordionDefaults}
+        variant="soft"
+        slots={slots}
+        blockId="shared-accordion"
+        renderContext={{ mode: "editor-preview" }}
+      />
+    </>
+  );
+  const names = Array.from(html.matchAll(/\sname="([^"]+)"/g)).map((match) => match[1]);
+
+  expect(names).toHaveLength(4);
+  expect(new Set(names.slice(0, 2)).size).toBe(1);
+  expect(new Set(names.slice(2, 4)).size).toBe(1);
+  expect(names[0]).not.toBe(names[2]);
+});
+
+test("accordion admin preview toggle handler syncs aria expanded without runtime script", () => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  React.act(() => {
+    root.render(
+      <AccordionBlock
+        data={normalizeAccordionData({
+          ...accordionDefaults,
+          options: {
+            openMode: "single",
+            defaultOpenIds: ["1"],
+            collapsible: true,
+          },
+        })}
+        variant="soft"
+        slots={{
+          "item:1": [],
+          "item:2": [],
+        }}
+        renderContext={{ mode: "editor-preview" }}
+      />
+    );
+  });
+
+  try {
+    expect(
+      (container.querySelector("[data-coderso-accordion]") as HTMLElement | null)?.dataset
+        .codersoAccordionBound
+    ).toBeUndefined();
+    const details = container.querySelectorAll("details");
+    const second = details[1] as HTMLDetailsElement | undefined;
+    const summary = second?.querySelector("[data-coderso-accordion-summary]");
+
+    expect(second?.open).toBe(false);
+    expect(summary?.getAttribute("aria-expanded")).toBe("false");
+
+    React.act(() => {
+      if (second) {
+        second.open = true;
+        second.dispatchEvent(new Event("toggle", { bubbles: true }));
+      }
+    });
+
+    expect(second?.open).toBe(true);
+    expect(summary?.getAttribute("aria-expanded")).toBe("true");
+  } finally {
+    React.act(() => {
+      root.unmount();
+    });
+    container.remove();
+  }
 });
 
 test("accordion validator accepts schema", () => {

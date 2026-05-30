@@ -432,6 +432,12 @@ const normalizeNavigationHref = (value: unknown) =>
     allowHttp: true,
   });
 
+const normalizeNavigationImageHref = (value: unknown) =>
+  normalizeWidgetSafeHref(value, {
+    allowRelative: true,
+    allowHttp: true,
+  });
+
 const normalizeNavigationTarget = (value: unknown): NavigationLinkTarget =>
   value === "blank" ? "blank" : "self";
 
@@ -1021,6 +1027,24 @@ function normalizeNavigationItems(items: NavigationData["items"]): NavigationIte
   return normalizeList(items);
 }
 
+function normalizeNavigationLogo(logo: NavigationData["logo"]): NavigationData["logo"] {
+  const type = logo?.type === "image" ? "image" : "text";
+  const value = toTrimmedString(logo?.value);
+  const normalizedValue =
+    type === "image"
+      ? (normalizeNavigationImageHref(value) ?? "")
+      : (value ?? navigationDefaults.logo.value ?? "Coderso");
+
+  return {
+    ...navigationDefaults.logo,
+    ...logo,
+    type,
+    value: normalizedValue,
+    href: normalizeNavigationHref(logo?.href) ?? navigationDefaults.logo.href,
+    alt: toTrimmedString(logo?.alt) ?? logo?.alt,
+  };
+}
+
 export function normalizeNavigationData(data: NavigationData): NavigationData {
   const normalizedItems = normalizeNavigationItems(data.items);
   const ctaLabel = toTrimmedString(data.cta?.label);
@@ -1034,13 +1058,7 @@ export function normalizeNavigationData(data: NavigationData): NavigationData {
   return {
     ...navigationDefaults,
     ...data,
-    logo: {
-      ...navigationDefaults.logo,
-      ...data.logo,
-      value: toTrimmedString(data.logo?.value) ?? navigationDefaults.logo.value,
-      href: normalizeNavigationHref(data.logo?.href) ?? navigationDefaults.logo.href,
-      alt: toTrimmedString(data.logo?.alt) ?? data.logo?.alt,
-    },
+    logo: normalizeNavigationLogo(data.logo),
     items: normalizedItems,
     behavior: baseBehavior,
     style: {
@@ -1095,7 +1113,7 @@ export function NavigationBlock({
   const isMinimalMode = mobileMode === "minimal";
   const linksVisibleOnMobile = mobileMode === "expanded";
   const showMobileToggle = isDrawerMode;
-  const renderedItems = normalized.items.length > 0 ? normalized.items : navigationDefaults.items;
+  const renderedItems = normalized.items;
   const hasInteractiveSubmenus = renderedItems.some((item) => (item.children?.length ?? 0) > 0);
   const rightSlotBlocks = slots?.right ?? [];
   const hasRightActions = rightSlotBlocks.length > 0 || Boolean(showCta && normalized.cta);
@@ -1132,10 +1150,9 @@ export function NavigationBlock({
         "var(--color-text)",
     }) ?? {};
 
-  const logoStyle: CSSProperties =
-    normalized.logo.type === "text"
-      ? { color: style.logoColor ?? style.textColor ?? "var(--color-text)" }
-      : {};
+  const logoStyle: CSSProperties = {
+    color: style.logoColor ?? style.textColor ?? "var(--color-text)",
+  };
 
   const ctaStyle: CSSProperties =
     compactStyle({
@@ -1162,6 +1179,7 @@ export function NavigationBlock({
   );
 
   const logoHref = normalized.logo.href ?? "/";
+  const hasLogoImage = normalized.logo.type === "image" && normalized.logo.value.trim().length > 0;
   const logoAccessibleName =
     normalized.logo.type === "image"
       ? (toTrimmedString(normalized.logo.alt) ?? "Logo")
@@ -1338,7 +1356,7 @@ export function NavigationBlock({
           className="inline-flex items-center gap-3 text-sm font-semibold text-[var(--color-text)] transition-colors hover:text-[var(--navigation-link-hover-color)]"
           aria-label={`${logoAccessibleName} home`}
         >
-          {normalized.logo.type === "image" ? (
+          {hasLogoImage ? (
             <img
               src={normalized.logo.value}
               alt={normalized.logo.alt ?? "Logo"}
@@ -1348,7 +1366,14 @@ export function NavigationBlock({
               )}
             />
           ) : (
-            <span style={logoStyle}>{normalized.logo.value}</span>
+            <span
+              data-navigation-logo-missing-image={
+                normalized.logo.type === "image" ? "true" : undefined
+              }
+              style={logoStyle}
+            >
+              {normalized.logo.type === "image" ? logoAccessibleName : normalized.logo.value}
+            </span>
           )}
         </a>
 

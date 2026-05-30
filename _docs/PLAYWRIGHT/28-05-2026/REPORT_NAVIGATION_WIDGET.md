@@ -322,13 +322,29 @@ ponowny `GET /admin/api/pages/2789358f-…` zwracał niezmienione: `currentData.
 | **N1** | **Domyślne kolory CSS-var mylnie etykietowane „Saved custom color".** Na nietkniętej fixturze: `surfaceColor` (`var(--color-bg)`) → „Saved custom color" + Clear; `ctaBackgroundColor` (`var(--color-primary)`) → „Saved custom color" + Clear; `ctaTextColor` (`var(--color-bg)`) → „Saved custom color" **bez** Clear. Pozostałe (border/text/logo/link/hover/active, wszystkie `undefined`) poprawnie „Theme default"; `ctaBorderColor` (`transparent`) poprawnie „Transparent". Przyczyna: edytor dostaje znormalizowane defaulty z tokenami `var(...)`, które nie są picker-representable → fałszywe „Saved custom color". | Mylące UI (potwierdzone na świeżej fixturze) |
 | **N2** | **Natywny picker koloru bez pola hex.** Wszystkie 10 kolorów ma `showValueInput={false}` → jedyną drogą jest systemowy `<input type="color">`; nie da się wpisać/wkleić hex. Wartości udało się ustawić **programowo** (handler React działa), ale realny użytkownik ma tylko dialog OS. | Nuta UX/dostępność |
 | **N3** | **Advanced „Runtime behavior summary" pokazuje 2 z 6 deklarowanych ścieżek.** Kontrakt sekcji deklaruje `readOnlyPaths` dla `sticky, transparent, collapseOnScroll, mobileMode, hideCtaOnMobile, activeLinkMode`, ale UI renderuje wyłącznie „Sticky navigation" i „Collapse on scroll". `transparent`, `mobileMode`, `hideCtaOnMobile`, `activeLinkMode` **nie są pokazane**. | Luka diagnostyki / rozjazd kontrakt↔UI |
-| **N4** | **„Visibility summary: Hidden on all devices"** dla `visibility.devices: []`, choć widget renderuje się w podglądzie i na froncie. Generyczny panel bloku, mylna etykieta pustej tablicy urządzeń. | Drobna nuta (panel generyczny) |
+| **N4** | **Status TASK-343-21 (2026-05-30): zamknięte współdzielonym fixem.** `visibility.devices: []` oznacza teraz realne ukrycie bloku również na publicznym SSR, a panel generyczny pokazuje tę semantykę wprost. | Zamknięte przez shared block visibility |
 | **N5** | **`var(--color-bg)` resolve'uje się różnie**: admin preview `rgba(0,0,0,0)` (efektywnie przezroczyste) vs front `rgb(255,255,255)`. Domyślne tło nawigacji **nie renderuje zamierzonego koloru w podglądzie admin**. | Niespójność podglądu admin (kontekst motywu) |
 | **N6** | **Runtime navigation nie działa w podglądzie admin.** Skrypt wstrzykiwany przez `dangerouslySetInnerHTML`, którego React **nie wykonuje**. Drawer mobilny, toggle sub-menu, collapse-on-scroll i podświetlanie aktywnego linku **nie są interaktywne w podglądzie admin** — autor nie podejrzy tych zachowań przed publikacją. Na froncie runtime działa (flaga globalna). | Ograniczenie podglądu (brak realnego runtime) |
 | **N7** | **Nagłówek „Navigation Links" sugeruje edycję także dla menu/pages.** Opis „Edit labels, URLs, and first-level dropdown links" pozostaje, gdy `linksSource = menu/pages`, mimo że linki stają się read-only podglądem. | Drobna nuta UX |
 | **N8** (nowe) | **Wyczyszczenie destynacji linku usuwa go z renderu bez ostrzeżenia.** „Clear destination" ustawia `href=""`; `normalizeNavigationItems` **odrzuca** itemy bez href → link znika z podglądu/frontu, ale **blok pozostaje w edytorze**. Zweryfikowane: 4 bloki w edytorze → 3 wyrenderowane (Home z pustym href zniknął). Autor może być zdezorientowany („gdzie mój link?"). | Pułapka UX (cichy drop) |
 | **N9** (nowe) | **„Clear image" przy logo type = image robi fallback `src="Coderso"`.** Czyszczenie obrazu ustawia `value=""`, ale normalizacja podstawia default `value="Coderso"` jako `src` `<img>` → uszkodzony obraz zamiast pustego/placeholdera (w tej fixturze bez realnego assetu). | Drobny quirk renderera |
 | **N10** (nowe) | **8 z 10 kolorów nie ma żadnego „Clear"/resetu.** Tylko `surfaceColor` i `ctaBackgroundColor` mają przycisk Clear. Pozostałe (border/text/logo/link/hover/active/ctaText/ctaBorder) po ustawieniu można jedynie **ponownie wybrać** — nie ma powrotu do „Theme default" z poziomu UI. | Luka UX (brak resetu) |
+
+> **Status TASK-343-30 (2026-05-30):** N1 jest zamknięte dla wspólnego
+> etykietowania: tokenowe kolory nawigacji są opisywane jako `Theme token` albo
+> `Transparent`, nie jako `Saved custom color`. N10 pozostaje lokalnym zakresem
+> `TASK-343-15`, bo dotyczy braku resetów na części pól, nie słownika shared.
+
+> **Status TASK-343-15 (2026-05-30):** N3, N5, N6, N7, N8, N9 i N10 są
+> zamknięte lokalnie. Advanced pokazuje wszystkie pola runtime behavior i
+> granicę admin-preview/runtime-script; Visual wyjaśnia różnicę tokenu
+> `var(--color-bg)` między swatch fallbackiem a publicznym motywem; opis
+> `Navigation Links` zmienia się dla menu/pages; czyszczenie linku pokazuje
+> inline feedback zanim runtime ukryje link; `Clear image` nie tworzy już
+> `src="Coderso"`; wszystkie 10 pól kolorów ma spójny reset. N2 pozostaje
+> świadomą decyzją produktu/shared UI: Navigation używa swatch-first color
+> controls bez widocznego pola hex, zgodnie z aktualnym modelem dziennego
+> authoringu. N4 jest zamknięte przez `TASK-343-21`.
 
 > **Nie stwierdzono żadnego twardego buga renderera** ani błędu konsoli (admin i frontend = 0/0).
 

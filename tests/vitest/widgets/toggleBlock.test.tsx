@@ -19,6 +19,27 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
 
+const getOpeningTagByAttribute = (
+  html: string,
+  tagName: string,
+  attribute: string,
+  value: string
+) => {
+  const match = html.match(new RegExp(`<${tagName}\\b(?=[^>]*${attribute}="${value}")[^>]*>`));
+  if (!match) {
+    throw new Error(`Missing <${tagName}> with ${attribute}="${value}"`);
+  }
+  return match[0];
+};
+
+const getAttributeValue = (tag: string, attribute: string) => {
+  const match = tag.match(new RegExp(`${attribute}="([^"]*)"`));
+  return match?.[1];
+};
+
+const countClassToken = (className: string | undefined, token: string) =>
+  (className ?? "").split(/\s+/).filter((entry) => entry === token).length;
+
 test("toggle block reset helper returns normalized defaults", () => {
   expect(resetToggleBlockData()).toEqual({
     labels: {
@@ -220,6 +241,80 @@ test("toggle block cards variant renders accent contrast, motion classes, and pa
   expect(html).toContain("p-6");
   expect(html).toContain("rounded-xl");
   expect(html).toContain("shadow-sm");
+});
+
+test("toggle block active trigger uses accent contrast without inline accent text color", () => {
+  const html = renderToString(
+    <ToggleBlock
+      blockId="toggle-contrast"
+      variant="cards"
+      data={{
+        labels: {
+          primary: "Monthly",
+          secondary: "Yearly",
+          helper: "",
+        },
+        options: {
+          defaultState: "secondary",
+        },
+        style: {
+          borderColor: "#cbd5e1",
+          accentColor: "#000080",
+          accentContrastColor: "#ffffff",
+        },
+      }}
+    />
+  );
+
+  const activeTrigger = getOpeningTagByAttribute(
+    html,
+    "button",
+    "data-coderso-toggle-state-id",
+    "secondary"
+  );
+  const inactiveTrigger = getOpeningTagByAttribute(
+    html,
+    "button",
+    "data-coderso-toggle-state-id",
+    "primary"
+  );
+
+  expect(html).toContain("--nextless-toggle-accent:#000080");
+  expect(html).toContain("--nextless-toggle-accent-contrast:#ffffff");
+  expect(activeTrigger).toContain(
+    "data-[state=active]:text-[var(--nextless-toggle-accent-contrast)]"
+  );
+  const activeStyle = getAttributeValue(activeTrigger, "style") ?? "";
+  expect(activeStyle).toContain("border-color:#cbd5e1");
+  expect(activeStyle.split(";").some((entry) => entry.startsWith("color:"))).toBe(false);
+  expect(getAttributeValue(inactiveTrigger, "style") ?? "").toContain("color:#000080");
+});
+
+test("toggle block pane class output dedupes shared shadow tokens", () => {
+  const html = renderToString(
+    <ToggleBlock
+      blockId="toggle-pane-shadow"
+      variant="switch"
+      data={{
+        labels: {
+          helper: "",
+        },
+        style: {
+          panes: {
+            primary: {
+              surface: "contrast",
+              borderEmphasis: "strong",
+            },
+          },
+        },
+      }}
+    />
+  );
+  const primaryPane = getOpeningTagByAttribute(html, "div", "data-coderso-toggle-pane", "primary");
+
+  expect(primaryPane).toContain("bg-[var(--color-surface)]");
+  expect(primaryPane).toContain("border-width:2px");
+  expect(countClassToken(getAttributeValue(primaryPane, "class"), "shadow-sm")).toBe(1);
 });
 
 test("toggle block editor-preview placeholders use pane labels and stay out of public runtime", () => {

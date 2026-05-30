@@ -6,7 +6,7 @@
 **Category:** Widgets + Tabs + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, TASK-343-04, TASK-343-30
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,15 +25,28 @@ inconsistent.
 
 ## Sub-Tasks
 
-- [ ] Either implement `triggerOverflow=scroll` end-to-end or remove/reject the
+- [x] Either implement `triggerOverflow=scroll` end-to-end or remove/reject the
   dead schema value with a migration-safe adapter.
-- [ ] Align Wizard count ownership with slot-rendered tabs, following the
+- [x] Align Wizard count ownership with slot-rendered tabs, following the
   Accordion decision from `TASK-343-04`.
-- [ ] Add a consistent destructive confirmation/recovery path for Structure
+- [x] Add a consistent destructive confirmation/recovery path for Structure
   removal and Wizard count reduction; if Structure removal is owned by shared
   slot controls, coordinate the change in `BlockSettings`/`VisualPanel` instead
   of hiding it inside Tabs-only editors.
-- [ ] Coordinate color default/Clear semantics with `TASK-343-30`.
+- [x] Coordinate color default/Clear semantics with `TASK-343-30`.
+
+## Implementation Notes
+
+- `triggerOverflow: "scroll"` remains accepted as legacy data, but
+  `normalizeTabsTriggerOverflow` explicitly normalizes it to `wrap`, and
+  Advanced now labels saved `scroll` as a legacy value that renders as wrapping.
+- Wizard no longer writes `items.count`; it summarizes saved starter labels and
+  Structure-owned rendered panel count.
+- Shared repeatable slot removal in `BlockSettings` now confirms before
+  deleting a slot, including nested block impact in the prompt copy.
+- All six Tabs color fields are clearable through shared color-state semantics;
+  clearing active background now falls back to the saved border color for the
+  active trigger border.
 
 ## Files To Change
 
@@ -79,6 +92,7 @@ No API routes are added. Nested widget slot safety remains unchanged.
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/widgets/tabs.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/block-layout-shared-wave.test.tsx`
 - `git diff --check`
 
 ## Documentation Updates Required

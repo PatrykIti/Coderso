@@ -3,6 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { sanitizeRichTextHtml } from "./richTextSection";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type FeatureGridVariantId = "cards-3" | "cards-4" | "highlight-first";
@@ -598,7 +599,15 @@ export function normalizeFeatureGridData(data: FeatureGridData): FeatureGridData
   };
 }
 
-export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; variant: string }) {
+export function FeatureGridBlock({
+  data,
+  variant,
+  blockId,
+}: {
+  data: FeatureGridData;
+  variant: string;
+  blockId?: string;
+}) {
   const resolvedVariant = resolveFeatureGridVariant(variant);
   const normalizedData = normalizeFeatureGridData(data);
   const style = normalizedData.style ?? featureGridDefaults.style!;
@@ -625,6 +634,9 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
     (normalizedData.header?.eyebrow ?? "").trim().length > 0 ||
     (normalizedData.header?.title ?? "").trim().length > 0 ||
     (normalizedData.header?.description ?? "").trim().length > 0;
+  const rootInstanceId = createWidgetInstanceId("feature-grid", blockId, resolvedVariant);
+  const titleText = (normalizedData.header?.title ?? "").trim();
+  const titleId = titleText.length > 0 ? scopedId(rootInstanceId, "title") : undefined;
 
   const gridClassName =
     resolvedVariant === "highlight-first"
@@ -648,6 +660,8 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
     <section
       className={joinClasses("mx-auto w-full px-4 py-8", maxWidthClassMap[resolvedMaxWidth])}
       style={sectionStyle}
+      aria-labelledby={titleId}
+      aria-label={titleId ? undefined : "Feature grid"}
       data-feature-grid-variant={resolvedVariant}
       data-feature-grid-columns={resolvedColumns}
       data-feature-grid-gap={resolvedGap}
@@ -662,6 +676,7 @@ export function FeatureGridBlock({ data, variant }: { data: FeatureGridData; var
           ) : null}
           {(normalizedData.header?.title ?? "").trim().length > 0 ? (
             <h3
+              id={titleId}
               className={joinClasses(
                 headerSizeClassMap[resolvedHeaderSize],
                 "font-semibold text-[var(--color-text)]"

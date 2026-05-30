@@ -45,12 +45,21 @@ Notes:
 - Stats KPI owns variant selection in Visual (`visualOwnsVariantSelection = true`).
 - Metric management includes drag-friendly reorder, Move up/Move down fallback, and confirmed removal.
 - Per-metric links stay presentational and reuse the shared safe-href contract.
+- `inline` has no card boxes. Card background and card border controls are
+  shown as read-only/inactive in `inline`, while icon surface controls remain
+  active because they still render.
+- Divider controls are effective only in `inline`. Other variants preserve the
+  saved divider setting but show no divider output and no checked inactive
+  toggle.
 
 ### Advanced (read-only diagnostics)
 - Runtime diagnostics: resolved variant, metric count, split-highlight secondary grid, and static-animation policy.
 - Style diagnostics: layout, typography, surface, and divider summaries derived from normalized data.
 - Runtime summary: safe-link status, normalized item count, and contract summary without raw JSON snapshots.
-- Repair actions: `Normalize now` and `Reset to defaults` are explicit action controls with confirmation, not daily writable owners.
+- Repair actions: `Normalize now` and `Reset to defaults` are explicit action
+  controls with confirmation and inline feedback, not daily writable owners.
+- `Reset to defaults` restores both the default data payload and the default
+  `cards` variant through the block/variant patch path.
 
 Advanced has no writable metric, style, layout, header, or variant control paths.
 Daily presentation ownership stays in Visual.
@@ -66,6 +75,7 @@ Daily presentation ownership stays in Visual.
   - `data-stats-kpi-alignment`
   - `data-stats-kpi-spacing`
   - `data-stats-kpi-divider`
+  - `data-stats-kpi-divider-saved`
   - `data-stats-kpi-divider-intensity`
   - `data-stats-kpi-value-size`
   - `data-stats-kpi-max-width`
@@ -88,6 +98,9 @@ Daily presentation ownership stays in Visual.
 - `split-highlight` secondary-metric odd-count rebalancing was closed by
   shared `TASK-331`; the current branch now uses count-aware odd/even rest-grid
   classes without inventing widget-local runtime drift.
+- `data-stats-kpi-divider` reports effective rendered divider output. Saved
+  divider intent is exposed separately through `data-stats-kpi-divider-saved`
+  because non-inline variants do not render dividers.
 
 ## Clear Controls
 

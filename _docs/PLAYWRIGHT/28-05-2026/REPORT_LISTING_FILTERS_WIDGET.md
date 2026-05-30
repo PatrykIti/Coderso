@@ -63,9 +63,9 @@ wyników — steruje osobnym widgetem listingu przez stan w URL.
 
 ### 1.2 Podział odpowiedzialności trybów (model „ownership")
 
-- **Wizard** = setup: wybór źródła (listing query) + tworzenie facetów (kind, field, operator, opcje sortowania). Klucze techniczne (`id`/value) są „support-owned" (read-only, generowane automatycznie).
+- **Wizard** = setup: wybór źródła (listing query) + tworzenie facetów (kind, field, operator, opcje sortowania). Klucze/match values są stabilne i read-only, a opcje pochodzą z danych listingów/runtime metrics albo bezpiecznie skonfigurowanej listy.
 - **Visual** = codzienna edycja: wariant, layout, copy/labels, kolory, prezentacja facetów (etykiety, kolejność, tryb opcji/zakresu/dat). Pola kind/field/operator są tu read-only.
-- **Advanced** = wyłącznie diagnostyka read-only dla supportu.
+- **Advanced** = wyłącznie diagnostyka read-only.
 
 ---
 
@@ -134,11 +134,11 @@ Dla facetu `date-range` (pole `updatedAt`):
 
 - **Radio:**
   - Operatory `eq/neq` (patrz §3.1).
-  - Renderer publiczny (kanwa główna) tworzy **pusty `<fieldset>`** (0 `input[type=radio]`), bo opcje są support-owned (brak „Add option" w UI — patrz L1).
-  - **Własny podgląd Wizarda per-facet** pokazuje jednak **disabled radio + tekst pomocniczy** „Add radio options to preview this facet." — czyli w setupie pustka jest objaśniona (inaczej niż na kanwie głównej, patrz L2).
+  - Po TASK-343-18 pusty renderer publiczny/kanwa główna pokazuje notę `data-listing-empty-options` zamiast samego `<fieldset>`, a UI wyjaśnia, że match values są read-only i pochodzą z danych/runtime metrics albo bezpiecznej listy opcji.
+  - **Własny podgląd Wizarda per-facet** pokazuje tę samą notę o runtime/safe option list zamiast sugerować dodanie opcji w miejscu, które nie ma przycisku „Add option".
 - **Taxonomy:**
   - Operatory `in/nin/eq` (patrz §3.1).
-  - Renderuje się jako **lista checkboxów** (multi-select). Podgląd Wizarda: dwa disabled checkboxy „Add taxonomy options to preview this facet."
+  - Renderuje się jako **lista checkboxów** (multi-select), a gdy nie ma opcji, pokazuje notę `data-listing-empty-options`.
   - **Option mode** (Visual) — **ten sam** select co dla checkbox (Inline list / Searchable list). Dla taxonomy obok pojawia się **dedykowana nota** (disabled): „Use parent values on option rows to build nested taxonomy levels." (dla checkbox tekst jest inny: „Inline checkbox list…" / „Search box is shown above the checkbox list.").
   - Przełączenie Option mode → **„Searchable list"**: na kanwie pojawia się `fieldset[data-listing-searchable-options]` **oraz** input `[data-listing-option-search]` (po 1 szt., potwierdzone przez DOM). Mechanizm identyczny jak dla checkbox.
 
@@ -192,8 +192,8 @@ Opublikowana konfiguracja route'a (niezmieniona): wariant `default`, query `22f2
 
 | # | Problem | Obszar |
 |---|---------|--------|
-| L1 | **Brak możliwości dodania opcji dla facetów checkbox/radio/taxonomy z poziomu UI.** Sekcja „Options" pokazuje „Option values are support-owned until runtime metrics can suggest safe values." i **nie ma „Add option"**. W setupie można jedynie *usunąć* istniejącą opcję. Skutek: facet checkbox/radio/taxonomy utworzony w kreatorze ma 0 opcji; renderer publiczny pokazuje pusty `<fieldset>` (sama legenda). Opcje wypełnia dopiero runtime-metrics SSR. | Wizard / renderer |
-| L2 | **Pusty facet na kanwie głównej admina jest mylący** — facet bez opcji pokazuje tylko nagłówek; renderer główny **nie** dodaje noty „opcje pojawią się w runtime". (Uwaga: *podgląd Wizarda per-facet* **ma** taką notę — np. „Add radio/taxonomy options to preview this facet." — więc problem dotyczy renderera głównego, nie kreatora.) | Renderer (admin preview) |
+| L1 | **Status po TASK-343-18:** opcje checkbox/radio/taxonomy pozostają read-only dla match values w tym wave, ale UI nie obiecuje już nieistniejącej ścieżki daily authoringu. Wizard/Visual wyjaśniają, że opcje pochodzą z danych listingów/runtime metrics albo bezpiecznie skonfigurowanej listy, a Visual tylko zmienia etykiety istniejących opcji. | Wizard / renderer |
+| L2 | **Status po TASK-343-18:** pusty facet w rendererze głównym nie jest już niemy. Checkbox/radio/taxonomy bez opcji renderują notę `data-listing-empty-options`, rozróżniając brak dopasowanych wartości z danych od jeszcze nierozwiązanych runtime metrics. | Renderer (admin preview) |
 | L3 | **Sort select bez czytelnej etykiety pustego wyboru** poza „Default order" — drobne, działa, ale brak komunikatu, że „Default order" = brak sortu. | Renderer |
 
 ### 4.2 Niezweryfikowane (ograniczenia narzędzia/zakresu — NIE oznaczają błędu)
@@ -202,7 +202,7 @@ Opublikowana konfiguracja route'a (niezmieniona): wariant `default`, query `22f2
 |---|----|--------------------------|
 | N2 | **Front: facety inne niż Sort + search, z realnymi metrykami runtime, oraz warianty inne niż `default`.** Opublikowana konfiguracja route'a ma tylko facet Sort. Nowe rodziny (range/date-range/radio/taxonomy) ćwiczyłem **wyłącznie w adminie (draft)** — nie zostały opublikowane, więc render checkbox/radio/taxonomy/range/date-range z liczbami (`count`) z metryk SSR oraz warianty `horizontal/sidebar/drawer` na froncie pozostają niezweryfikowane na żywo. | Publikacja zmieniłaby live route — celowo pominięta (poza zakresem audytu). |
 | N3 | **Trwałość zmian admina po zapisie/reloadzie.** Nie klikałem „Save draft"/„Publish" (przy nawigacji dialog `beforeunload` odrzucony). Potwierdziłem trwałość *w sesji* (reaktywność + zachowanie stanu przy Wizard↔Visual), ale **nie** weryfikowałem persystencji do bazy ani po reloadzie strony admina. | Zapis modyfikowałby fixture/draft — celowo pominięty. |
-| N4 | **Zagnieżdżenie taxonomy (wcięcia `parentValue`/depth).** Renderer wspiera hierarchię (`flattenTaxonomyOptions` → `paddingInlineStart`), ale **nie da się dodać opcji z `parentValue` z UI** (pochodna L1). Nota „Use parent values on option rows…" potwierdzona, ale samego zagnieżdżenia z realnymi danymi nie zademonstrowano. | Zależne od L1 (opcje support-owned). |
+| N4 | **Zagnieżdżenie taxonomy (wcięcia `parentValue`/depth).** Renderer wspiera hierarchię (`flattenTaxonomyOptions` → `paddingInlineStart`), ale match values i `parentValue` pozostają implementation-owned/read-only w UI. Samego zagnieżdżenia z realnymi danymi nie zademonstrowano. | Wymaga realnych danych runtime albo bezpiecznie skonfigurowanej listy opcji. |
 
 > **Domknięte względem poprzedniej wersji:** dawne „N1" (zapis koloru przez swatch)
 > zostało **rozwiązane** i przeniesione do §3.5 jako działające. Range/date-range/radio/taxonomy
@@ -214,12 +214,12 @@ Opublikowana konfiguracja route'a (niezmieniona): wariant `default`, query `22f2
 
 - **U1 — Wejście do Wizarda jest nieoczywiste.** Edytor otwiera się w Visualu (zakładki Visual/Advanced). Tryb Wizard nie jest zakładką — uruchamia go przycisk **„Run setup again"** przy statusie „Setup complete".
 - **U2 — Swatch koloru pokazuje fallback dla wartości motywu.** Pola domyślnie trzymają CSS-y (`color-mix(in srgb, var(--color-bg) 80%, transparent)`, `var(--color-border)`, `var(--color-primary)`), których natywny `<input type=color>` nie potrafi pokazać (wyświetla fallbacki #ffffff/#d4d4d8/#2563eb). Chip „Theme default/Selected color/Saved custom color" + nota łagodzą to, ale **brak pola tekstowego** (`showValueInput=false`) oznacza, że autor nie może wpisać dowolnego CSS — tylko wybrać kolor z pickera lub Clear.
-- **U3 — Komunikaty „support-owned" są techniczne.** „Option values are support-owned…", „A custom field binding is already configured by support…" — język operacyjny, mało przyjazny dla autora treści.
-- **U4 — „Sort by" przy braku query** pokazuje „Custom field configured by support" (disabled); po wyborze query wartość wraca do realnego pola.
+- **U3 — Status po TASK-343-18:** komunikaty „support-owned" zostały zastąpione kopią o stabilnych kluczach, read-only match values, danych listingów i bezpiecznie skonfigurowanej liście opcji.
+- **U4 — Status po TASK-343-18:** custom field binding jest opisany jako istniejące read-only wiązanie, które można zastąpić polem z query albo zostawić bez ujawniania ścieżki technicznej.
 - **U5 — Reorder tylko Up/Down** — brak drag&drop dla facetów i opcji.
-- **U6 — Pusty facet bez wyjaśnienia na kanwie głównej (patrz L2).** Dotyczy renderera głównego; podgląd Wizarda objaśnia pustkę.
+- **U6 — Status po TASK-343-18:** pusty facet ma teraz wyjaśnienie również na kanwie głównej.
 - **U7 — Brak collapse sekcji edytora Visual** — przy wielu facetach panel robi się długi.
-- **U8 — Czytelny podział ownership (pozytyw).** „Wizard=setup / Visual=codzienne / Advanced=diagnostyka" — konsekwentny i dobrze opisany (Contract summary). Pola read-only jasno komunikują własność supportu.
+- **U8 — Czytelny podział ownership (pozytyw).** „Wizard=setup / Visual=codzienne / Advanced=diagnostyka" — konsekwentny i dobrze opisany (Contract summary). Po TASK-343-18 pola read-only opisują stabilne wiązania bez technicznego języka „support-owned".
 - **U9 — Spójność kontrolek prezentacji per kind (pozytyw).** Każdy kind dostaje *tylko* właściwe mu kontrolki: checkbox/taxonomy → Option mode; range → Range mode + Range step; date-range → Date input mode; radio/sort → brak dodatkowych. Brak „martwych" pól nie pasujących do kind.
 
 ---
@@ -228,9 +228,9 @@ Opublikowana konfiguracja route'a (niezmieniona): wariant `default`, query `22f2
 
 | # | Obserwacja |
 |---|-----------|
-| A1 | `<section data-listing-widget>` **bez** `aria-label`/`aria-labelledby` — kontener filtra bez dostępnej nazwy. |
-| A2 | `<form data-listing-runtime-form>` **bez** `aria-label`. |
-| A3 | Input search **bez** `id` i **bez** `autocomplete`. Etykietowanie działa przez wrapper `<label><span>Search</span><input></label>` (asocjacja implicytna), ale brak jawnego `id`/`for`. |
+| A1 | **Zamknięte w TASK-343-18:** `<section data-listing-widget>` dostaje `aria-labelledby` do tytułu; placeholder bez query ma `aria-label`. |
+| A2 | **Zamknięte w TASK-343-18:** `<form data-listing-runtime-form>` jest nazwany przez `aria-labelledby` do tytułu widgetu. |
+| A3 | **Zamknięte w TASK-343-18:** input search ma stabilny `id`, jawne `<label for>`, `type="search"` i `autoComplete="off"`. |
 | A4 | Sort `<select>` **ma** `name` (poprawnie — wymagane do GET). |
 | A5 | Drawer/Collapsible używają natywnych `<details>/<summary>` — dobra, dostępna baza (działa bez JS). |
 | A6 | Swatche koloru w adminie mają `aria-label` („Frame background swatch" itd.) — pozytyw dla edytora. |
@@ -278,20 +278,20 @@ Względem poprzedniej wersji raportu:
 
 Utrzymane zastrzeżenia:
 
-- **L1 (istotne):** brak dodawania opcji checkbox/radio/taxonomy z UI — facet pozostaje pusty do czasu metryk runtime; na kanwie głównej wygląda jak błąd (L2).
+- **L1/L2 po TASK-343-18:** brak daily authoringu match values jest teraz jawny, a puste checkbox/radio/taxonomy facets mają wyjaśnienie na kanwie głównej zamiast wyglądać jak błąd.
 - **N2/N3/N4:** na froncie nie zweryfikowano nowych rodzin facetów ani wariantów innych niż `default` (brak publikacji), persystencji po zapisie, oraz zagnieżdżenia taxonomy (pochodna L1).
-- Drobne luki dostępności (brak `aria-label` na section/form, brak `id`/`autocomplete` na search) i techniczny język komunikatów „support-owned".
+- Drobne luki dostępności A1-A3 i techniczny język „support-owned" zostały zamknięte w TASK-343-18.
 
 ### Macierz priorytetów (na podstawie tego audytu)
 
 | # | Pozycja | Priorytet |
 |---|---------|-----------|
-| L1 | Brak dodawania opcji checkbox/radio/taxonomy w UI | WYSOKI |
-| L2 | Pusty facet bez wyjaśnienia na kanwie głównej | ŚREDNI |
-| A1–A3 | aria-label section/form, id/autocomplete search | ŚREDNI |
+| L1 | Brak dodawania opcji checkbox/radio/taxonomy w UI | Zamknięte w TASK-343-18 jako jawny read-only/runtime-owned contract |
+| L2 | Pusty facet bez wyjaśnienia na kanwie głównej | Zamknięte w TASK-343-18 |
+| A1–A3 | aria-label section/form, id/autocomplete search | Zamknięte w TASK-343-18 |
 | U2 | Brak pola tekstowego koloru; swatch pokazuje fallback dla wartości motywu | NISKI |
 | U1 | Nieoczywiste wejście do Wizarda („Run setup again") | NISKI |
-| U3 | Techniczny język komunikatów „support-owned" | NISKI |
+| U3 | Techniczny język komunikatów „support-owned" | Zamknięte w TASK-343-18 |
 | U7 | Brak collapse sekcji Visual | NISKI |
 
 ---
@@ -306,7 +306,7 @@ Utrzymane zastrzeżenia:
 | Potwierdzone działające funkcje (Visual) | 17 (w tym range×2, date-range×1, taxonomy×1, kolory×3) |
 | Potwierdzone działające funkcje (Advanced) | 4 sekcje read-only |
 | Potwierdzone działające funkcje (Front/runtime) | 9 |
-| Ograniczenia funkcjonalne (L) | 3 |
+| Ograniczenia funkcjonalne (L) | 3 historyczne; L1/L2 zamknięte w TASK-343-18, L3 pozostaje drobne |
 | Niezweryfikowane (N) | 3 (N2, N3, N4) — dawny N1 rozwiązany |
 | Niuanse UX (U) | 9 |
-| Luki / uwagi dostępności (A) | 6 |
+| Luki / uwagi dostępności (A) | 6 historyczne; A1-A3 zamknięte w TASK-343-18 |

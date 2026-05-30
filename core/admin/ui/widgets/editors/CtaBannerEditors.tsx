@@ -21,6 +21,7 @@ import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
   ctaBannerDefaults,
   normalizeCtaBannerData,
+  resolveCtaBannerActionRenderState,
   resolveCtaBannerVariant,
   type CtaActionIcon,
   type CtaBackgroundMediaFit,
@@ -68,7 +69,7 @@ const variantOptions: Array<{
   {
     id: "with-badge",
     label: "With Badge",
-    description: "Highlights badge above CTA heading.",
+    description: "Framed badge treatment above the CTA heading.",
   },
 ];
 
@@ -666,6 +667,11 @@ function ActionFields({
   };
   const warning = getCtaHrefWarning(resolvedAction.href);
   const isEnabled = resolvedAction.enabled !== false;
+  const actionState = resolveCtaBannerActionRenderState(resolvedAction);
+  const missingDestinationFeedback =
+    actionState.render === "missing_destination"
+      ? "This CTA has a label but no destination, so it renders as disabled until you choose a page or clear the label."
+      : null;
 
   return (
     <div className="space-y-3 rounded-md border p-3" data-cta-action-editor={kind}>
@@ -707,8 +713,8 @@ function ActionFields({
         value={resolvedAction.href ?? ""}
         disabled={showToggle && !isEnabled}
         onChange={(next) => onPatch({ href: next })}
-        feedback={warning}
-        feedbackTone="destructive"
+        feedback={warning ?? missingDestinationFeedback}
+        feedbackTone={warning ? "destructive" : "warning"}
       />
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -914,6 +920,7 @@ export function CtaBannerVisualEditor({
   const primary = normalized.actions?.primaryCta;
   const secondary = normalized.actions?.secondaryCta;
   const tertiary = normalized.actions?.tertiaryCta;
+  const resolvedVariant = resolveCtaBannerVariant(variant);
   const backgroundMedia = normalized.background?.media ?? {
     type: "none" as const,
     source: "external" as const,
@@ -930,11 +937,17 @@ export function CtaBannerVisualEditor({
         title="Variant and layout structure"
         description="Choose CTA layout variant for this conversion strip."
       >
-        <VariantCards value={resolveCtaBannerVariant(variant)} onChange={onVariantChange} />
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
         <p className="text-xs text-muted-foreground">
           Full-width lives in the shared block Layout panel. CTA Banner only removes its own
           redundant inner width constraint.
         </p>
+        {resolvedVariant === "with-badge" ? (
+          <p className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+            With Badge uses a framed badge treatment distinct from Centered. Add badge text in
+            Content copy to show the badge itself.
+          </p>
+        ) : null}
         <div className="space-y-1">
           <span className="text-sm font-medium">Padding</span>
           <Select
@@ -1420,6 +1433,7 @@ export function CtaBannerAdvancedEditor({
   const [pendingSupportAction, setPendingSupportAction] = useState<"normalize" | "reset" | null>(
     null
   );
+  const [supportFeedback, setSupportFeedback] = useState<string | null>(null);
   const styleRows = [
     {
       label: "Background",
@@ -1475,14 +1489,29 @@ export function CtaBannerAdvancedEditor({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setPendingSupportAction("normalize")}
+            onClick={() => {
+              setPendingSupportAction("normalize");
+              setSupportFeedback(null);
+            }}
           >
             Normalize now
           </Button>
-          <Button type="button" variant="outline" onClick={() => setPendingSupportAction("reset")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setPendingSupportAction("reset");
+              setSupportFeedback(null);
+            }}
+          >
             Reset to defaults
           </Button>
         </div>
+        {supportFeedback ? (
+          <p className="text-xs text-muted-foreground" role="status">
+            {supportFeedback}
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection
@@ -1514,8 +1543,10 @@ export function CtaBannerAdvancedEditor({
         onConfirm={() => {
           if (pendingSupportAction === "reset") {
             onChange(ctaBannerDefaults);
+            setSupportFeedback("CTA banner reset to defaults.");
           } else if (pendingSupportAction === "normalize") {
             onChange(normalizeValue(value));
+            setSupportFeedback("CTA banner data normalized.");
           }
           setPendingSupportAction(null);
         }}

@@ -22,8 +22,9 @@ links, and an optional section CTA.
 - Read-only members count summary
 
 Notes:
-- Switching to `spotlight` from a larger setup clamps the member list to `3`
-  when the current count is greater than `6`.
+- Switching to `spotlight` is non-destructive. Wizard only changes the layout
+  variant; intentional member-count reductions belong to Visual where the
+  destructive count guard is explicit.
 - Team intentionally keeps the `1..12` member contract. Larger directories
   should use multiple Team sections or a different listing surface.
 - Member count changes, names, roles, bios, photos, social links, spotlight
@@ -54,6 +55,9 @@ Notes:
 - Social authoring uses known platform choices plus profile names/handles.
   Legacy custom social destinations remain clearable compatibility state
   instead of editable raw URL fields.
+- Switching a saved LinkedIn social link to another known platform preserves
+  the portable profile handle by removing LinkedIn-only `in/` or `company/`
+  path prefixes before the new platform URL is built.
 - Color controls surface contrast advisories against the default theme text
   color for Team-local presentation changes and use swatch-only authoring
   instead of editable raw CSS/token text fields.
@@ -104,6 +108,7 @@ Notes:
 - The shared Team baseline from `TASK-256-06-04` remains in force:
   - section output uses an accessibility label
   - the header title renders through the shared bounded heading baseline
+  - member names render as `h3` headings under the Team section heading
   - member cards expose explicit accessible labels, avatar images lazy-load
     with contextual `Photo of ...` alt text, and invalid/missing values fall
     back to initials

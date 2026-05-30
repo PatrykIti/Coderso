@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,17 @@ import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdap
 
 import {
   normalizeRichTextBlocks,
+  normalizeRichTextSanitizerDiagnostics,
   normalizeRichTextSectionData,
   renderRichTextSectionHtmlPreview,
   resolveRichTextDropcapStatus,
   resolveRichTextRenderedSource,
   resolveRichTextSectionVariant,
+  resolveRichTextSanitizerReport,
+  resolveRichTextSourceDrift,
   richTextBlockMax,
   sanitizeRichTextHtmlWithDiagnostics,
+  summarizeRichTextBlockPreview,
   type RichTextRenderedSourceState,
   type RichTextSanitizerDiagnostic,
   type RichTextSectionAttachmentBlock,
@@ -471,6 +475,15 @@ function formatSanitizerMessage(diagnostic: RichTextSanitizerDiagnostic) {
   return "Unsupported rich text markup is removed before save.";
 }
 
+const unsafeHrefDiagnostic: RichTextSanitizerDiagnostic = {
+  code: "href_rewritten",
+  tagName: "a",
+  attributeName: "href",
+};
+
+const mergeSanitizerDiagnostics = (...groups: Array<RichTextSanitizerDiagnostic[] | undefined>) =>
+  normalizeRichTextSanitizerDiagnostics(groups.flatMap((group) => group ?? []));
+
 function RichTextSanitizerNotice({ diagnostics }: { diagnostics: RichTextSanitizerDiagnostic[] }) {
   if (diagnostics.length === 0) return null;
 
@@ -666,9 +679,7 @@ export function RichTextSectionWizardEditor({
                   id={`rich-text-section.wizard.blocks.${index}.content`}
                   label={`Paragraph ${index + 1}`}
                   path="body.blocks"
-                  value={
-                    (block.contentHtml ? "" : block.content)?.trim() || "No paragraph text yet"
-                  }
+                  value={summarizeRichTextBlockPreview(block) || "No paragraph text yet"}
                 />
               </div>
             );
@@ -687,6 +698,7 @@ export function RichTextSectionVisualEditor({
 }: WidgetEditorProps<RichTextSectionData>) {
   const normalized = normalizeValue(value);
   const source = resolveRichTextRenderedSource(normalized);
+  const sourceDrift = resolveRichTextSourceDrift(normalized);
   const dropcapStatus = resolveRichTextDropcapStatus(normalized);
   const selectedOutputMode =
     outputModeOptions.find(
@@ -698,10 +710,13 @@ export function RichTextSectionVisualEditor({
   const [pendingRemoveBlockId, setPendingRemoveBlockId] = useState<string | null>(null);
   const [pendingBlockCount, setPendingBlockCount] = useState<number | null>(null);
   const [pendingUndo, setPendingUndo] = useState<PendingUndoState | null>(null);
-  const [bodyDiagnostics, setBodyDiagnostics] = useState<RichTextSanitizerDiagnostic[]>([]);
+  const [bodyDiagnostics, setBodyDiagnostics] = useState<RichTextSanitizerDiagnostic[]>(() =>
+    normalizeRichTextSanitizerDiagnostics(normalized.body?.sanitizerDiagnostics)
+  );
   const [blockDiagnosticsById, setBlockDiagnosticsById] = useState<
     Record<string, RichTextSanitizerDiagnostic[]>
   >({});
+  const pendingUnsafeLinkDiagnosticsRef = useRef<RichTextSanitizerDiagnostic[]>([]);
   const [selectedMediaIdsByBlockId, setSelectedMediaIdsByBlockId] = useState<
     Record<string, string | null>
   >({});
@@ -728,23 +743,48 @@ export function RichTextSectionVisualEditor({
 
   const handleBodyRichTextChange = (nextHtml: string) => {
     const result = sanitizeRichTextHtmlWithDiagnostics(nextHtml);
-    setBodyDiagnostics(result.diagnostics);
-    updateBody(value, onChange, { html: result.html });
+    const diagnostics = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      result.diagnostics
+    );
+    pendingUnsafeLinkDiagnosticsRef.current = [];
+    setBodyDiagnostics(diagnostics);
+    updateBody(value, onChange, { html: result.html, sanitizerDiagnostics: diagnostics });
   };
 
   const handleBlockRichTextChange = (blockId: string, nextHtml: string) => {
     const result = sanitizeRichTextHtmlWithDiagnostics(nextHtml);
+    const diagnostics = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      result.diagnostics
+    );
+    pendingUnsafeLinkDiagnosticsRef.current = [];
     setBlockDiagnosticsById((current) => ({
       ...current,
-      [blockId]: result.diagnostics,
+      [blockId]: diagnostics,
     }));
-    updateBlocks(value, onChange, (currentBlocks) => {
+    updateValue(value, onChange, (current) => {
+      const currentBlocks = normalizeRichTextBlocks(current.body?.blocks);
       const nextBlocks = [...currentBlocks];
       const blockIndex = nextBlocks.findIndex((block) => block.id === blockId);
-      if (blockIndex < 0) return currentBlocks;
+      if (blockIndex < 0) {
+        return {
+          ...current,
+          body: {
+            ...current.body,
+            sanitizerDiagnostics: diagnostics,
+          },
+        };
+      }
       const currentBlock = nextBlocks[blockIndex];
       if (!currentBlock || (currentBlock.kind && currentBlock.kind !== "text")) {
-        return currentBlocks;
+        return {
+          ...current,
+          body: {
+            ...current.body,
+            sanitizerDiagnostics: diagnostics,
+          },
+        };
       }
       nextBlocks[blockIndex] = {
         ...(currentBlock as RichTextSectionTextBlock),
@@ -752,8 +792,22 @@ export function RichTextSectionVisualEditor({
         contentHtml: result.html,
         content: undefined,
       };
-      return nextBlocks;
+      return {
+        ...current,
+        body: {
+          ...current.body,
+          blocks: normalizeRichTextBlocks(nextBlocks),
+          sanitizerDiagnostics: diagnostics,
+        },
+      };
     });
+  };
+
+  const handleUnsafeLinkAttempt = () => {
+    pendingUnsafeLinkDiagnosticsRef.current = mergeSanitizerDiagnostics(
+      pendingUnsafeLinkDiagnosticsRef.current,
+      [unsafeHrefDiagnostic]
+    );
   };
 
   const handleAddBlock = (kind: RichTextSectionBlock["kind"]) => {
@@ -1062,6 +1116,15 @@ export function RichTextSectionVisualEditor({
           <p className="text-xs text-muted-foreground">{selectedOutputMode.description}</p>
         </div>
         <RichTextSourceStatus source={source} section="html" />
+        {sourceDrift.hasDrift ? (
+          <div
+            className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900"
+            data-rich-text-source-drift="true"
+          >
+            Body HTML and structured blocks contain different text. The current preference renders{" "}
+            {source.renderedSource}, so review the standby source before switching output modes.
+          </div>
+        ) : null}
         <PostRichTextAdapter
           value={normalized.body?.html ?? ""}
           onChange={handleBodyRichTextChange}
@@ -1069,6 +1132,7 @@ export function RichTextSectionVisualEditor({
           ariaLabel="Rich text body editor"
           minHeightClassName="min-h-52"
           toolbarProfile="writing-canvas"
+          onUnsafeLinkAttempt={handleUnsafeLinkAttempt}
         />
         <p className="text-xs text-muted-foreground">
           Allowed body markup stays within the widget contract. Images, raw embeds, H1, and unsafe
@@ -1300,6 +1364,7 @@ export function RichTextSectionVisualEditor({
                         ariaLabel={`Structured text block ${activeBlockIndex + 1}`}
                         minHeightClassName="min-h-40"
                         toolbarProfile="writing-canvas"
+                        onUnsafeLinkAttempt={handleUnsafeLinkAttempt}
                       />
                       <p className="text-xs text-muted-foreground">
                         Legacy plain text is preserved until you edit it here. Rich block content is
@@ -1628,6 +1693,7 @@ export function RichTextSectionVisualEditor({
                         <p className="text-sm font-medium">Aspect ratio token</p>
                         <Select
                           value={activeEmbedBlock.aspectRatio ?? "16:9"}
+                          disabled
                           onValueChange={(next) =>
                             updateBlocks(value, onChange, (currentBlocks) => {
                               const nextBlocks = [...currentBlocks];
@@ -1651,6 +1717,10 @@ export function RichTextSectionVisualEditor({
                             ))}
                           </SelectContent>
                         </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Current embeds render as link cards, so aspect ratio is kept as legacy
+                          metadata and has no visual effect.
+                        </p>
                       </div>
                     </div>
                     {!activeEmbedBlock.url ? (
@@ -1699,7 +1769,8 @@ export function RichTextSectionVisualEditor({
           <div>
             <p className="text-sm font-medium">Show table of contents</p>
             <p className="text-xs text-muted-foreground">
-              Builds TOC from rendered H2, H3, and H4 headings.
+              Builds TOC from rendered body H2, H3, and H4 headings. The section title stays the
+              page heading and is not repeated in the TOC.
             </p>
           </div>
           <Switch
@@ -1838,7 +1909,8 @@ export function RichTextSectionAdvancedEditor({
   const normalized = normalizeValue(value);
   const blocks = normalizeRichTextBlocks(normalized.body?.blocks);
   const source = resolveRichTextRenderedSource(normalized);
-  const htmlDiagnostics = sanitizeRichTextHtmlWithDiagnostics(normalized.body?.html ?? "");
+  const sourceDrift = resolveRichTextSourceDrift(normalized);
+  const sanitizerReport = resolveRichTextSanitizerReport(normalized);
   const mediaBlockCount = blocks.filter(
     (block) => block.kind === "image" || block.kind === "attachment"
   ).length;
@@ -1879,6 +1951,16 @@ export function RichTextSectionAdvancedEditor({
             swatches stay in Visual mode.
           </p>
         </div>
+        {sourceDrift.hasDrift ? (
+          <div
+            className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900"
+            data-rich-text-source-drift="true"
+          >
+            Body HTML and structured blocks contain different text. Current rendering uses{" "}
+            {source.renderedSource}; review the standby source in Visual before switching output
+            modes.
+          </div>
+        ) : null}
       </EditorSection>
 
       <EditorSection
@@ -1888,22 +1970,23 @@ export function RichTextSectionAdvancedEditor({
         title="Sanitizer diagnostics"
         description="Read-only sanitizer status for the active HTML source."
       >
-        <RichTextSanitizerNotice diagnostics={htmlDiagnostics.diagnostics} />
+        <RichTextSanitizerNotice diagnostics={sanitizerReport.diagnostics} />
         <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
           <p>
-            Stored HTML length: {htmlDiagnostics.html.length} characters · Diagnostics:{" "}
-            {htmlDiagnostics.diagnostics.length}
+            Stored HTML length: {sanitizerReport.html.length} characters · Diagnostics:{" "}
+            {sanitizerReport.diagnostics.length}
           </p>
           <p className="mt-1 text-xs">
-            Edit body copy and structured blocks in Visual mode. Advanced only reports sanitizer
-            results.
+            Latest editor events: {sanitizerReport.storedDiagnostics.length} · Stored HTML scan:{" "}
+            {sanitizerReport.htmlDiagnostics.length}. Edit body copy and structured blocks in Visual
+            mode.
           </p>
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Sanitized preview</p>
           <div className="rounded-md border bg-background p-3 text-sm text-muted-foreground">
-            {htmlDiagnostics.html.length > 0 ? (
-              <div>{renderRichTextSectionHtmlPreview(htmlDiagnostics.html)}</div>
+            {sanitizerReport.html.length > 0 ? (
+              <div>{renderRichTextSectionHtmlPreview(sanitizerReport.html)}</div>
             ) : (
               <p>No rendered HTML after sanitization.</p>
             )}
@@ -1928,8 +2011,8 @@ export function RichTextSectionAdvancedEditor({
           <div className="rounded-lg border bg-muted/20 p-3 text-sm">
             <p className="font-medium">HTML source</p>
             <p className="mt-1 text-muted-foreground">
-              {htmlDiagnostics.html.length > 0
-                ? `${htmlDiagnostics.html.length} sanitized characters`
+              {sanitizerReport.html.length > 0
+                ? `${sanitizerReport.html.length} sanitized characters`
                 : "No rendered HTML source"}
             </p>
           </div>

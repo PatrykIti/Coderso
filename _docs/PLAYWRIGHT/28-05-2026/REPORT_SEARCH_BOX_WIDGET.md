@@ -371,6 +371,19 @@ mylące „Saved custom color" na domyślnych kolorach (N2), żywy podgląd chec
 trybem (N5), „Clear" = transparentność (N6), page-picker zamiast URL (N7), brak
 `aria-label`/etykiety pola (N8). Niezweryfikowane/odcięte ścieżki i przyczyny — §5.
 
+> **Status TASK-343-30 (2026-05-30):** N2 i N6 są zamknięte w shared-control
+> zakresie. Domyślne tokeny Search Boxa pokazują `Theme token`/fallback preview
+> zamiast `Saved custom color`, a wyczyszczony stan pól koloru jest opisany jako
+> `No inline color` z accessible `Clear` copy, które nie obiecuje resetu do
+> motywu.
+>
+> **Status TASK-343-20 (2026-05-30):** N3, N4 i N8 są zamknięte w Search
+> Boxie. Sekcja i pola wyszukiwania mają stabilne nazwy/etykiety, globalne
+> checkboxy źródeł są kontrolowane w podglądzie React i odświeżają `.checked`
+> bez reloadu, a `compact` w trybie `listing` zwęża shell, zacieśnia spacing i
+> ukrywa opis tak jak pozostałe gałęzie. Search Box przekazuje też swoje
+> domyślne tokeny do shared `Theme default` klasyfikacji z TASK-343-30.
+
 ---
 
 ## 10. Podsumowanie
@@ -383,8 +396,8 @@ trybem (N5), „Clear" = transparentność (N6), page-picker zamiast URL (N7), b
 | Błędy funkcjonalne | **0** |
 | Błędy / ostrzeżenia konsoli | admin 0/0, front 0/0 |
 | Renderer | 4 poprawnie rozdzielone gałęzie (placeholder / listing-runtime / route-submit / global); skrypt runtime wstrzykiwany tylko tam, gdzie potrzebny; bezpieczne `targetRoute`/`queryParam` |
-| Dostępność | **minus:** brak `aria-label`/`aria-labelledby` na `<section>`, tytuł jako `<p>` zamiast nagłówka, `<input>` bez etykiety (N8) |
-| Główne niuanse UX | publiczny fixture bez query (N1); „Saved custom color" na domyślnych kolorach (N2); `compact` niemal bezczynne w `listing` (N4); znikanie `targetRoute` po zmianie trybu (N5) |
+| Dostępność | TASK-343-20 zamyka N8: sekcja ma stabilne `aria-labelledby`, tytuł renderuje się jako heading, a input ma etykietę i stabilne `id` |
+| Główne niuanse UX | publiczny fixture bez query (N1); znikanie `targetRoute` po zmianie trybu (N5); N2/N3/N4/N8 mają statusy zamknięcia w notach TASK-343-30/TASK-343-20 powyżej |
 | Nietestowalne (z przyczyną) | live runtime listing/global na froncie (fixture w placeholderze); persystencja/publish (nie zapisywano); `queryParam` (brak kontrolki); stany `resolved.error`/`rejectedTokens` (brak wstrzyknięcia); „Add variant preset" (brak efektu w fixture) |
 | API global search `/api/search` | sprawny: respektuje `sources`, domyślnie wszystkie 3 źródła, 400 przy braku `q` |
 | Front vs Admin | spójne (wspólny renderer); różnice treści wynikają z innych **opublikowanych** danych, nie z rozbieżności rendererów |

@@ -287,6 +287,13 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findSelectsByOptions = (container: ParentNode, values: string[]) =>
+  Array.from(container.querySelectorAll("select")).filter((element) => {
+    if (!(element instanceof HTMLSelectElement)) return false;
+    const optionValues = Array.from(element.options).map((option) => option.value);
+    return values.every((value) => optionValues.includes(value));
+  });
+
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -357,6 +364,64 @@ test("Team wizard editor covers variant fallback and leaves member count to Visu
     expect(findInputsByPlaceholder(view.container, "Member 1 name")).toHaveLength(0);
     expect(findInputsByPlaceholder(view.container, "Member 1 role")).toHaveLength(0);
     expect(onChangeSpy).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team wizard keeps Spotlight transitions non-destructive for larger teams", async () => {
+  const { TeamWizardEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  const onChangeSpy = vi.fn();
+  const onVariantChangeSpy = vi.fn();
+  let latestValue: TeamData = {
+    members: Array.from({ length: 7 }, (_, index) => ({
+      id: `member-${index + 1}`,
+      name: `Member ${index + 1}`,
+      role: "Role",
+      bio: "Configured profile.",
+      socialLinks: [],
+    })),
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+    const [variant, setVariant] = useState("cards");
+
+    return (
+      <TeamWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("7 members");
+    const variantSelect = findSelectByOptions(view.container, [
+      "cards",
+      "compact-list",
+      "spotlight",
+    ]);
+
+    setSelectValue(variantSelect, "spotlight");
+
+    expect(onVariantChangeSpy).toHaveBeenLastCalledWith("spotlight");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+    expect(latestValue.members).toHaveLength(7);
+    expect(view.container.textContent).toContain("7 members");
+    expect(view.container.textContent).toContain("reduce the member list intentionally");
   } finally {
     view.cleanup();
   }
@@ -494,6 +559,84 @@ test("Team visual editor integrates social links into member panels and confirms
     clickButtonByText(membersSection as ParentNode, "Confirm remove");
     expect(latestValue.members).toHaveLength(1);
     expect(latestValue.members[0]?.name).toBe("Ada");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Team visual editor preserves LinkedIn handles when switching social platforms", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  let latestValue: TeamData = {
+    header: {
+      title: "Leadership",
+      description: "",
+    },
+    members: [
+      {
+        id: "member-1",
+        name: "Anna",
+        role: "Head of Product",
+        bio: "Owns product strategy.",
+        socialLinks: [
+          {
+            id: "social-1",
+            label: "LinkedIn",
+            url: "https://www.linkedin.com/in/anna-kowalska",
+          },
+          {
+            id: "social-2",
+            label: "LinkedIn",
+            url: "https://www.linkedin.com/company/coderso",
+          },
+        ],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const platformValues = ["linkedin", "x", "github", "instagram", "facebook", "youtube"];
+    const platformSelects = findSelectsByOptions(view.container, platformValues);
+    expect(platformSelects).toHaveLength(2);
+
+    setSelectValue(platformSelects[0], "github");
+
+    expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
+      expect.objectContaining({
+        label: "GitHub",
+        url: "https://github.com/anna-kowalska",
+      })
+    );
+    expect(latestValue.members[0]?.socialLinks?.[0]?.url).not.toBe("https://github.com/in");
+
+    setSelectValue(findSelectsByOptions(view.container, platformValues)[1], "github");
+
+    expect(latestValue.members[0]?.socialLinks?.[1]).toEqual(
+      expect.objectContaining({
+        label: "GitHub",
+        url: "https://github.com/coderso",
+      })
+    );
+    expect(latestValue.members[0]?.socialLinks?.[1]?.url).not.toBe("https://github.com/company");
   } finally {
     view.cleanup();
   }

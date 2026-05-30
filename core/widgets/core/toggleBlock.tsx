@@ -317,8 +317,21 @@ const motionClassMap: Record<ToggleBlockMotion, string | undefined> = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const joinClasses = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
+const joinClasses = (...classes: Array<string | false | undefined>) => {
+  const tokens: string[] = [];
+  const seen = new Set<string>();
+
+  classes.forEach((entry) => {
+    if (!entry) return;
+    entry.split(/\s+/).forEach((token) => {
+      if (!token || seen.has(token)) return;
+      seen.add(token);
+      tokens.push(token);
+    });
+  });
+
+  return tokens.join(" ");
+};
 
 const toTrimmedString = (value: unknown) => {
   if (typeof value !== "string") return null;
@@ -578,6 +591,16 @@ const resolveTriggerClass = (variant: ToggleBlockVariantId) => {
   return "rounded-full border px-3 py-1.5 text-sm font-semibold transition data-[state=active]:bg-[var(--nextless-toggle-accent)] data-[state=active]:text-[var(--nextless-toggle-accent-contrast)] data-[state=active]:border-transparent";
 };
 
+function resolveTriggerStyle(
+  style: NormalizedToggleBlockData["style"],
+  isActive: boolean
+): CSSProperties | undefined {
+  return compactStyle({
+    borderColor: style.borderColor,
+    color: isActive ? undefined : style.accentColor,
+  });
+}
+
 const resolvePaneClass = (
   variant: ToggleBlockVariantId,
   motion: ToggleBlockMotion,
@@ -651,11 +674,6 @@ export function ToggleBlock({
       backgroundColor: resolveClearableStyleValue(style.surfaceColor),
     }) ?? {};
 
-  const triggerStyle: CSSProperties = {
-    borderColor: style.borderColor,
-    color: style.accentColor,
-  };
-
   const primaryPaneStyle: CSSProperties =
     compactStyle({
       borderColor: style.borderColor,
@@ -707,7 +725,7 @@ export function ToggleBlock({
                 aria-checked={isActive ? "true" : "false"}
                 aria-controls={toggleState.id === "secondary" ? secondaryPaneId : primaryPaneId}
                 tabIndex={isActive ? 0 : -1}
-                style={triggerStyle}
+                style={resolveTriggerStyle(style, isActive)}
               >
                 {resolvedVariant === "cards" ? (
                   <span className="flex flex-col items-start gap-1">

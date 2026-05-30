@@ -36,6 +36,8 @@ test("team renders defaults", () => {
   expect(html).toContain('data-team-border-width="1"');
   expect(html).toContain('data-team-compact-mobile-bio="show"');
   expect(html).toContain('aria-label="Meet the team"');
+  expect(html).toContain("<h3");
+  expect(html).not.toContain("<h4");
 });
 
 test("team normalization keeps deterministic ids, bounds, and allows cleared bios", () => {
@@ -250,6 +252,29 @@ test("team compact-list can hide bios visually on mobile", () => {
   );
 
   expect(html).toContain("sr-only sm:not-sr-only sm:block");
+});
+
+test("team spotlight renders all normalized members without a three-member cap", () => {
+  const html = renderToString(
+    <TeamBlock
+      data={{
+        header: { title: "Leadership" },
+        members: Array.from({ length: 7 }, (_, index) => ({
+          id: `member-${index + 1}`,
+          name: `Member ${index + 1}`,
+          role: "Role",
+          bio: "Configured profile.",
+          socialLinks: [],
+        })),
+        spotlightLeadId: "member-4",
+      }}
+      variant="spotlight"
+    />
+  );
+
+  expect(html.match(/data-team-member="/g)).toHaveLength(7);
+  expect(html.match(/data-team-spotlight-lead="true"/g)).toHaveLength(1);
+  expect(html).toContain("Member 7");
 });
 
 test("team social links stay safe and member photos lazy-load", () => {

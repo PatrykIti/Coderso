@@ -448,6 +448,53 @@ test("AppointmentForm editors cover normalized defaults, field toggles, copy upd
   }
 });
 
+test("AppointmentForm visual editor preserves the no extra phone validation preset", async () => {
+  const { AppointmentFormVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
+  const { appointmentFormDefaults } = await import("../../../core/widgets/core/appointmentForm");
+
+  let latestValue: AppointmentFormData = {
+    ...appointmentFormDefaults,
+    showPhone: true,
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<AppointmentFormData>(latestValue);
+    return (
+      <AppointmentFormVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(
+      (findLabelSelect(view.container, "Phone validation") as HTMLSelectElement | null | undefined)
+        ?.value
+    ).toBe("default");
+
+    setSelectValue(findLabelSelect(view.container, "Phone validation"), "not-required");
+
+    expect(latestValue.phonePattern).toBe("");
+    expect(latestValue.phonePatternMessage).toBe("");
+    expect(
+      (findLabelSelect(view.container, "Phone validation") as HTMLSelectElement | null | undefined)
+        ?.value
+    ).toBe("not-required");
+    expect((findLabelInput(view.container, "Phone help text") as HTMLInputElement)?.value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("AppointmentForm wizard shows same-surface booking flow pairing feedback", async () => {
   const { AppointmentFormWizardEditor } =
     await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");

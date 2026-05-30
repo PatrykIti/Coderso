@@ -654,9 +654,11 @@ export function BookingCalendarBlock({
   const resources = normalized.resolved?.resources ?? [];
   const hasCatalog = services.length > 0 && resources.length > 0;
   const variantId = resolveBookingCalendarVariant(variant);
+  const frameBackground = resolveClearableStyleValue(normalized.style?.frameBackground);
+  const frameBorderColor = resolveClearableStyleValue(normalized.style?.frameBorderColor);
   const frameStyle: CSSProperties | undefined = compactStyle({
-    backgroundColor: resolveClearableStyleValue(normalized.style?.frameBackground),
-    borderColor: resolveClearableStyleValue(normalized.style?.frameBorderColor),
+    backgroundColor: frameBackground,
+    borderColor: frameBorderColor,
     "--booking-slot-selected-bg": resolveClearableStyleValue(
       normalized.style?.selectedSlotBackground
     ),
@@ -667,8 +669,9 @@ export function BookingCalendarBlock({
       normalized.style?.slotHoverBorderColor
     ),
   } as Record<string, string | undefined>);
-  const legacyFrameClass =
-    normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/95" : "";
+  const legacyFrameBorderClass =
+    frameBorderColor === undefined ? "border-[var(--color-border)]" : "";
+  const legacyFrameBackgroundClass = frameBackground === undefined ? "bg-[var(--color-bg)]/95" : "";
 
   const initialServiceId = pickInitialServiceId(services, normalized.defaultServiceId);
   const initialService = services.find((service) => service.id === initialServiceId) ?? null;
@@ -695,7 +698,8 @@ export function BookingCalendarBlock({
     variantId === "compact"
       ? "grid grid-cols-2 gap-2 sm:grid-cols-3"
       : "grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4";
-  const rootClass = `${variantClassMap[variantId]} ${legacyFrameClass}`.trim();
+  const rootClass =
+    `${variantClassMap[variantId]} ${legacyFrameBorderClass} ${legacyFrameBackgroundClass}`.trim();
   const flowIdSlug = (normalized.flowId ?? "booking-flow").replace(/[^a-zA-Z0-9_-]+/g, "-");
   const titleId = `${flowIdSlug}-booking-calendar-title`;
   const slotsRegionLabelId = `${flowIdSlug}-booking-calendar-slots-label`;

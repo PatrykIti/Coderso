@@ -6,7 +6,7 @@
 **Category:** Widgets + Search Box + Accessibility + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,14 +25,26 @@ theme colors are labeled as custom, and `compact` display is nearly inert in
 
 ## Sub-Tasks
 
-- [ ] Add a stable accessible name for the Search Box section and a real label
+- [x] Add a stable accessible name for the Search Box section and a real label
   or `aria-label`/`aria-labelledby` for the search input.
-- [ ] Make source checkbox toggles in the rendered global branch visually
+- [x] Make source checkbox toggles in the rendered global branch visually
   reflect current state immediately, not only through emitted markup or reload.
-- [ ] Route theme-token color label fixes through the shared color-state owner
+- [x] Route theme-token color label fixes through the shared color-state owner
   in `TASK-343-30`, while preserving Search Box-specific tests for the surface.
-- [ ] Make `compact` in `listing` mode either visibly meaningful or explicitly
+- [x] Make `compact` in `listing` mode either visibly meaningful or explicitly
   documented as limited to the `route-submit` branch.
+
+## Implementation Notes
+
+- Added widget-scoped section heading and input label/id wiring across
+  placeholder, listing runtime, route-submit, and global Search Box branches.
+- Made global source checkboxes controlled by widget data in React preview so
+  data updates immediately refresh live `.checked` state while public SSR keeps
+  ordinary source inputs for form submission.
+- Applied compact layout semantics to listing mode: narrower shell, tighter
+  spacing, single-line input row, and collapsed helper description copy.
+- Passed Search Box default theme tokens into `SharedColorControl` as
+  `Theme default` values while keeping cleared color fields as `No inline color`.
 
 ## Files To Change
 

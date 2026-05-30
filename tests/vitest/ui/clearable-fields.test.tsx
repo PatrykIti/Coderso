@@ -126,6 +126,7 @@ test("clearable input disables empty clear and delegates configured clear behavi
   try {
     const button = view.container.querySelector("button");
     expect(button?.disabled).toBe(true);
+    expect(button?.getAttribute("aria-label")).toBe("Clear Surface");
     React.act(() => {
       button?.click();
     });
@@ -148,6 +149,7 @@ test("clearable input disables empty clear and delegates configured clear behavi
   try {
     const button = filled.container.querySelector("button");
     expect(button?.disabled).toBe(false);
+    expect(button?.getAttribute("aria-label")).toBe("Clear Surface");
     React.act(() => {
       button?.click();
     });
@@ -184,11 +186,32 @@ test("clearable field header emits shared feedback even without an undo handler"
   try {
     const button = view.container.querySelector("button");
     expect(button?.disabled).toBe(false);
+    expect(button?.getAttribute("aria-label")).toBe("Clear Background gradient");
     React.act(() => {
       button?.click();
     });
     expect(onClear).toHaveBeenCalledTimes(1);
     expect(toastInfo).toHaveBeenCalledWith("Background gradient cleared.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("clearable field header can describe post-clear semantics in accessible name", () => {
+  const view = mount(
+    <ClearableFieldHeader
+      label="Panel surface"
+      value="#ffffff"
+      onClear={() => undefined}
+      clearResultLabel="removes the panel surface override"
+    />
+  );
+
+  try {
+    const button = view.container.querySelector("button");
+    expect(button?.getAttribute("aria-label")).toBe(
+      "Clear Panel surface; removes the panel surface override"
+    );
   } finally {
     view.cleanup();
   }
@@ -218,7 +241,7 @@ test("shared color field inputs preserve text tokens while showing a token hint"
 
     expect(colorInput?.value).toBe("#e2e8f0");
     expect(textInput?.value).toBe("var(--color-border)");
-    expect(view.container.textContent).toContain("Custom token active");
+    expect(view.container.textContent).toContain("Theme token active");
 
     if (!colorInput) throw new Error("Missing color input");
     React.act(() => {

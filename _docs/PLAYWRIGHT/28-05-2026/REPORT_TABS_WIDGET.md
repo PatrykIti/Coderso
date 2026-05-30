@@ -8,6 +8,12 @@
 > **Fixture public:** http://localhost:3000/test-tabs-0516
 > **Pliki źródłowe:** `core/widgets/core/tabs.tsx` (renderer + normalizacja + runtime script) · `core/admin/ui/widgets/editors/TabsEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` (kontrolka kolorów)
 
+> **Status TASK-343-27 (2026-05-30):** ustalenia B1 oraz N1/N2/N4/N5 są zamknięte.
+> `triggerOverflow=scroll` pozostaje wyłącznie legacy wejściem normalizowanym do `wrap`,
+> Wizard pokazuje tylko read-only licznik paneli ze Structure i zapisane etykiety startowe,
+> Structure → Remove ma wspólne potwierdzenie przed usunięciem slotu, a wszystkie 6 pól
+> kolorów ma spójny Clear. Clear aktywnego tła zachowuje zapisany border aktywnego triggera.
+
 > **Cel tej iteracji:** zamknięcie luk z poprzedniego audytu. Wcześniej NIE było w pełni
 > przećwiczone: (a) rodziny stylów/kolorów, (b) gałęzie liczby zakładek / slotów
 > (add/remove/reorder), (c) gałęzie orientacji / wariantu / motion. W tym przebiegu
@@ -213,6 +219,16 @@ Strona zwraca `200`. Render: variant `pills`, orientation **`vertical`**, 2 zak�
 | **N5 — skutek „Clear" na aktywnym tle** | Colors (Visual) | „Clear" na „Active background" usuwa z aktywnego triggera **zarówno** `background-color`, **jak i** `border-color` (renderer wiąże oba z `activeBackgroundColor`). W wariancie `pills` aktywna zakładka może stać się wizualnie nieodróżnialna od nieaktywnej. Brak ostrzeżenia o utracie wyróżnienia. |
 | **N6 — Wizard nie jest równorzędnym trybem** | UX nawigacji | Wizard ukryty za „Run setup again"; w panelu trybów widoczne tylko „Visual"/„Advanced". |
 | **N7 — automatyczna aktywacja klawiaturą** | Frontend a11y | Strzałki/Home/End jednocześnie przenoszą focus i aktywują zakładkę (brak „manual activation"). Dopuszczalny wzorzec WAI-ARIA; przy zakładkach z ciężką zawartością może być kosztowny — świadoma decyzja, nie błąd. |
+
+> **Status TASK-343-30 (2026-05-30):** N3 jest zamknięte przez wspólny
+> słownik kolorów: CSS tokeny nie są już faux `Saved custom color`, a swatche
+> opisują fallback preview. N4/N5 są lokalnym zakresem `TASK-343-27`, bo
+> dotyczą dostępności resetów i efektu konkretnego pola.
+>
+> **Status TASK-343-27 (2026-05-30):** N4/N5 są zamknięte lokalnie dla Tabs.
+> Border, Active text i Inactive text mają teraz takie same Clear affordance jak
+> pozostałe pola, a renderer nie traci aktywnego borderu, gdy czyszczone jest
+> tylko `activeBackgroundColor`.
 
 ---
 

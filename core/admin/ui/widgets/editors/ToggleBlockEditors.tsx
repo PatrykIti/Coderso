@@ -311,7 +311,9 @@ function DefaultStateNotice({ value }: { value: ToggleBlockData }) {
       data-widget-control="toggle-block.default-state.preview"
       data-widget-control-ownership="preview"
     >
-      {pane} pane opens first in preview and runtime: {label}.
+      {pane} pane opens first in editor preview and public runtime: {label}. Editor preview is
+      static; change Default state to inspect each pane. Public pages mount click and keyboard
+      switching.
     </p>
   );
 }
@@ -477,7 +479,7 @@ function ThemeSection({
   onChange: (next: ToggleBlockData) => void;
 }) {
   const normalized = normalizeValue(value);
-  const accentContrastAdvisory = resolveColorContrastAdvisory({
+  const activeTriggerContrastAdvisory = resolveColorContrastAdvisory({
     foreground: normalized.style.accentContrastColor,
     background: normalized.style.accentColor,
   });
@@ -542,8 +544,8 @@ function ThemeSection({
         </div>
       </div>
       <ColorContrastNotice
-        advisory={accentContrastAdvisory}
-        label="Active trigger contrast advisory"
+        advisory={activeTriggerContrastAdvisory}
+        label="Active trigger rendered contrast"
       />
     </EditorSection>
   );
@@ -973,7 +975,8 @@ export function ToggleBlockWizardEditor({ variant }: WidgetEditorProps<ToggleBlo
       </EditorSection>
       <div className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-3 text-xs text-muted-foreground">
         Wizard is one-time starter setup. Use Visual to change the toggle surface, name both panes,
-        write helper copy, choose the starting pane, and tune motion or styling.
+        write helper copy, choose the starting pane, and tune motion or styling. The editor preview
+        is static in setup mode; public pages mount click and keyboard switching.
       </div>
     </div>
   );

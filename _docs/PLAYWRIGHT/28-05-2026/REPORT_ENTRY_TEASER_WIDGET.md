@@ -32,6 +32,15 @@ Poprawny fixture entry-teaser (zweryfikowany w `widget-contract-smoke-task-336-1
 
 > Uwaga o trwałości: świadomie **nie** klikałem „Save draft" ani „Publish" — wszystkie edycje były w obrębie sesji edytora (niezapisane). Fixture admin pozostaje w stanie zapisanym (`missing-source`). Frontend (`test-entry-teaser-0516`) to **osobna**, opublikowana strona z własnym stanem.
 
+> **Status TASK-343-29 (2026-05-30):** uwagi N3, N5 i N8 są zamknięte w kodzie. Publiczny
+> `EntryTeaserBlock` nadaje sekcji `aria-labelledby` dla widocznego nagłówka albo fallback
+> `aria-label="Entry teaser"`, non-link CTA ma jawny marker
+> `data-entry-teaser-cta-unavailable` i `aria-disabled`, a Visual pokazuje guidance dla trybu Auto
+> bez bezpiecznej trasy detalu oraz Selected site page bez bezpiecznego celu. Przyciski czyszczenia
+> kolorów i CTA destination mają kontekstowe accessible names. Populated render przez Listing query
+> pozostaje zależny od danych fixture ze stabilnymi entry-backed rows i nie został rozszerzony w tej
+> rodzinie.
+
 ---
 
 ## 1. Encje użyte do domknięcia luk (dobrane probe'em API)
@@ -201,6 +210,11 @@ Wszystkie wartości enum kliknięte i potwierdzone — pełne pokrycie.
 | **N7** | Logika (code review) | `resolveEntryTeaserSpacing`: `if (value==="none"||"sm"||"lg") return value; return "md";` — „md" i każda zła wartość trafiają do tego samego fallbacku „md". Nieszkodliwe (domyślna i tak „md"), ale niespójne z resolverami jawnie wymieniającymi wszystkie tokeny. |
 | **N8 (nowy)** | Testowalność / a11y | Przyciski **„Clear"** kolorów nie mają unikalnej dostępnej nazwy — w panelu jest kilka przycisków o nazwie samego „Clear" (Surface, Border, a także w Block layout). Lokalizacja `getByRole('button',{name:'Clear'})` jest **niejednoznaczna** (trafia w pierwszy pasujący). Sugestia: dodać kontekst do etykiety (np. „Clear surface color"). Funkcjonalnie działa po doprecyzowaniu selektora do `[data-widget-control-path]`. |
 | **N9 (nowy, pozytywny)** | Wydajność | Tylko `fallbackToLatest` i `showImage` re-pobierają preview z serwera; pozostałe toggle pól, media, styl i layout stosują się **klient-side** z już rozwiązanej encji — natychmiastowy podgląd bez zbędnych round-tripów (zgodne z `buildEntryTeaserPreviewKey`). |
+
+**Status TASK-343-29:** N3/N5/N8 są zamknięte. Visual nie zostawia już non-link CTA bez
+wyjaśnienia, renderer wiąże region z nagłówkiem sekcji albo fallback label, a repeated Clear actions
+mają nazwy dostępne z kontekstem pola. N7 pozostaje historycznym niuansem resolvera bez zmiany
+zachowania, a Listing query populated render nadal wymaga fixture z entry-backed stable row IDs.
 
 ---
 

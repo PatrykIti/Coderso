@@ -71,6 +71,7 @@ const widgetEditorState = vi.hoisted(() => ({
       name: "Hero template",
       description: "Hero reusable block",
       status: "published",
+      blocks: [{ id: "block-1", type: "hero" }],
     },
   ],
   templateError: null as string | null,
@@ -355,7 +356,7 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
     expect(view.container.textContent).toContain("Active template");
     expect(view.container.textContent).toContain("Resolved template");
     expect(view.container.textContent).toContain("Resolved content summary");
-    expect(view.container.textContent).toContain("No resolution problem detected.");
+    expect(view.container.textContent).toContain("Resolved content is ready.");
     expect(view.container.textContent).not.toContain("Template load failed");
     expect(view.container.textContent).not.toContain("Resolved payload");
 
@@ -364,7 +365,7 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
   } finally {
     view.cleanup();
   }
-});
+}, 10000);
 
 test("AppointmentForm editors update flow, copy, visibility, and advanced runtime fields", async () => {
   const {

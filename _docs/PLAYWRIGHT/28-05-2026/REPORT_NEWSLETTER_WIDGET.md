@@ -35,6 +35,14 @@
 > reloadzie i ich propagacja na front **nie** były weryfikowane (patrz sekcja 9). Front
 > otwierałem w **osobnej karcie**, więc stan edytora w karcie admina pozostał nietknięty.
 
+> **Remediation status (TASK-343-03, 2026-05-30).** N2/N3 są zamknięte w kodzie: stany
+> niepołączone i nieinteraktywne renderują teraz `div role="form"` z disabled semantics zamiast
+> natywnego `<form>`, więc Enter w polu email nie może uruchomić implicit GET do bieżącej strony.
+> Poprawne ścieżki submitu pozostają natywnym `<form>`: safe external `action-url` oraz
+> dotychczasowy Forms runtime. Pokrycie regresji:
+> `bun run test:vitest -- tests/vitest/widgets/newsletter.test.tsx`,
+> `bun run test:vitest -- tests/vitest/ui/newsletter-editor-wave.test.tsx`.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -71,7 +79,7 @@ Renderer renderuje formularz **zawsze**, ale jego interaktywność zależy od dw
 - **Forms runtime** (`submission.mode = forms-runtime`): wymaga wybranego, **opublikowanego, publicznego** Formularza Coderso, którego pola są kompatybilne z mapowaniem newslettera (Email + opcjonalnie First name + Consent). Wtedy `action = /forms/{id}/submissions`, `method = post`, wstrzykiwany jest `formRuntimeClientScript`, nonce i (opcjonalnie) captcha.
 - **Native action-url** (`submission.mode = static` + `integration.mode = action-url` + poprawny `actionUrl`): natywny submit na bezpieczny zewnętrzny URL (tylko `https://`, bez prywatnych/loopback hostów; ścieżki `/forms/.../submissions` celowo wymagają trybu forms-runtime).
 
-Gdy **żadna** ścieżka nie jest gotowa → `data-newsletter-submit-ready="false"`, przycisk `disabled`, typ `button` (nie `submit`), a pod formularzem komunikat diagnostyczny (`[data-newsletter-diagnostics="missing-target"]`). Treść komunikatu **zależy od trybu renderowania** (edytor vs public) — pełna macierz w sekcji 8.
+Gdy **żadna** ścieżka nie jest gotowa → `data-newsletter-submit-ready="false"`, `data-newsletter-native-submit="blocked"`, przycisk `disabled`, typ `button` (nie `submit`), a pod nieinteraktywnym shellem `div role="form"` komunikat diagnostyczny (`[data-newsletter-diagnostics="missing-target"]`). Treść komunikatu **zależy od trybu renderowania** (edytor vs public) — pełna macierz w sekcji 8.
 
 ---
 
@@ -226,6 +234,12 @@ Wszystkie mapowania zgodne ze `spacingClassMap` / `sectionAlignClassMap` + `form
 |---|-----------|------|-------|
 | N2 | **Front: natywny submit GET mimo „not connected".** Na publicznym fixture (jedno pole tekstowe = tylko email, przycisk nieaktywny) **Enter w polu email wywołuje implicit native submission**: URL zmienia się na `…/test-newsletter-widget-0516?email=leak-test%40example.com`, strona przeładowuje się, **email wycieka do query stringa**, bez feedbacku. `disabled` na przycisku blokuje submit myszką, ale **nie** Enter. Zweryfikowane ponownie w tej sesji (`textInputs=1`, `enabledSubmit=0`, `form.action=null`). | **WYSOKI** (UX/prywatność) | Renderer (front) |
 | N3 | **Mylący stan przycisku przy „niepołączeniu".** Przycisk `disabled` + `type=button` wygląda na celowo nieaktywny, ale formularz wciąż jest realnym `<form>` bez `onSubmit`/`preventDefault` → patrz N2. | ŚREDNI | Renderer |
+
+**Status TASK-343-03:** N2/N3 są naprawione. Niepołączone i nieinteraktywne stany nie renderują
+natywnego `<form>`; renderer emituje `data-newsletter-native-submit="blocked"`, `role="form"` i
+`aria-disabled="true"`. Testy potwierdzają brak `<form>` w stanie disconnected, zachowanie
+prawdziwego `<form>` dla safe `action-url` i public Forms runtime oraz blokowany shell
+editor-preview dla powiązanego Forms runtime do czasu wstrzyknięcia nonce/bot-protection.
 | N4 | **Publiczny fixture niesie legacy `integration.mode=webhook`**, którego bieżące UI edytora **nie potrafi wytworzyć** (Submission mode oferuje tylko „Not connected yet" / „Use a Coderso Form"). Widget traktuje to jako „niepołączone" — wygląda na gotowy, ale **nie przyjmie zapisu**. | ŚREDNI | Dane fixture / Renderer |
 | N5 | **Wspólna „Device visibility" pokazuje Desktop/Tablet/Mobile = Hidden** dla tego bloku, mimo że renderuje się normalnie w canvas i na froncie. Quirk wspólnej infrastruktury device-visibility (lub realny zapis widoczności fixture), nie logika newslettera. Do weryfikacji po stronie właściciela tego komponentu. | NISKI (shared) | shared |
 
@@ -279,8 +293,8 @@ Wszystkie mapowania zgodne ze `spacingClassMap` / `sectionAlignClassMap` + `form
 - **Niepołączony** (legacy `webhook`): `submit-ready=false`, przycisk `disabled`, **brak** `formRuntimeClientScript`. Dostępność OK.
 - **Inny komunikat niż w edytorze** — public „This signup form is not connected yet." vs edytor „Connect a Forms runtime binding…". Celowe rozróżnienie per `renderContext.mode`.
 
-### 7.2 Próba submitu (Enter) — N2 (reprodukcja)
-`leak-test@example.com` + Enter → nawigacja na `?email=leak-test%40example.com`, reload, brak feedbacku. Realny odwiedzający **nie zapisze się**, a jego email **trafia do URL**.
+### 7.2 Próba submitu (Enter) — N2 (reprodukcja historyczna)
+`leak-test@example.com` + Enter → nawigacja na `?email=leak-test%40example.com`, reload, brak feedbacku. Realny odwiedzający **nie zapisze się**, a jego email **trafia do URL**. TASK-343-03 usuwa tę ścieżkę przez zastąpienie nieinteraktywnego `<form>` shellem `div role="form"`.
 
 ### 7.3 Responsywność (375 px)
 Brak poziomego scrolla (`overflowX=false`), przycisk pełnej szerokości (343 px), układ stacked pionowy (`flex-direction: column`). **OK.**
@@ -294,9 +308,10 @@ Front: **0 errors / 0 warnings**.
 
 | Gałąź | Osiągalna z UI? | Dowód | `data-*` / diagnostyka |
 |-------|------------------|-------|------------------------|
-| **static + actionUrl pusty** (edytor) | TAK | sekcja 4 | `action-status=empty`, `submit-ready=false`, btn `disabled/button`; diag „Connect a Forms runtime binding or a safe external action URL…" |
-| **forms-runtime + brak formularza** (edytor) | TAK | przełączono Submission mode | `submission-mode=forms-runtime`, `action-status=empty`, `submit-ready=false`; diag **„Select a published Form to preview the Forms runtime contract."** (ścieżka `previewRuntimeError`); Bound form „No forms found" |
-| **legacy webhook** (public) | TAK (z fixture) | sekcja 7.1 | `integration-mode=webhook`, `submission-mode=static`, `submit-ready=false`; diag „This signup form is not connected yet." |
+| **static + actionUrl pusty** (edytor) | TAK | sekcja 4 | `action-status=empty`, `submit-ready=false`, `native-submit=blocked`, shell `div role=form`; diag „Connect a Forms runtime binding or a safe external action URL…" |
+| **forms-runtime + brak formularza** (edytor) | TAK | przełączono Submission mode | `submission-mode=forms-runtime`, `action-status=empty`, `submit-ready=false`, `native-submit=blocked`; diag **„Select a published Form to preview the Forms runtime contract."** (ścieżka `previewRuntimeError`); Bound form „No forms found" |
+| **forms-runtime + powiązany formularz** (editor-preview) | TAK | fixture kontraktu Forms | `submit-ready=true`, `submit-interactive=false`, `native-submit=blocked`, shell `div role=form`; public runtime dopiero wstrzykuje nonce i bot-protection |
+| **legacy webhook** (public) | TAK (z fixture) | sekcja 7.1 | `integration-mode=webhook`, `submission-mode=static`, `submit-ready=false`, `native-submit=blocked`; diag „This signup form is not connected yet." |
 | **action-status = invalid** | **NIE z UI** | — | Pole `integration.actionUrl` jest read-only/legacy (support-owned); UI nie pozwala zapisać niepoprawnego URL. Gałąź (Advanced „Saved external connection needs review" / „needs review") wymaga zaseedowanych danych. |
 | **actionUrl = trasa `/forms/.../submissions`** w action-url (`actionRequiresFormsRuntime`) | **NIE z UI** | — | j.w. — diag „Switch Newsletter submission mode to Forms runtime…" (edytor) / „This signup form needs a Forms runtime binding…" (public) tylko z zaseedowanych danych. |
 | **previewRuntimeLoading** | tylko przejściowo | — | diag „Loading bound Form preview..." — moment ładowania `detail`; nieosiągalny stabilnie bez formularza. |
@@ -337,7 +352,7 @@ Front: **0 errors / 0 warnings**.
 - Front: poprawny render, czytelny „not connected", responsywność 375 px, 0 błędów konsoli.
 
 **BROKEN / UWAGA:**
-- **N2/N3** — Enter na froncie wywołuje natywny GET i **wycieka email do URL** mimo „niepołączenia" i zablokowanego przycisku (najpoważniejsze ryzyko).
+- **N2/N3** — zamknięte w TASK-343-03: niepołączone stany nie renderują natywnego `<form>`, więc Enter nie uruchamia GET i nie wycieka email do URL.
 - **N4** — publiczny fixture niesie legacy `webhook`, którego UI nie produkuje; widget wygląda na gotowy, ale nie przyjmie zapisu.
 - **N5** — wspólna „Device visibility" raportuje „Hidden" na wszystkich urządzeniach (shared infra).
 
@@ -347,8 +362,8 @@ Front: **0 errors / 0 warnings**.
 
 **Stan ogólny:** edytor newslettera jest dojrzały i spójny; **wszystkie osiągalne z UI rodziny
 kontrolek Visual zostały teraz wyczerpane** i propagują się do podglądu, a Wizard/Advanced są
-udowodnione jako read-only. Realne ryzyko to natywny submit na froncie przy niepołączonym
-widgecie (N2). Pełnej ścieżki wysyłki nie zweryfikowano z powodu braku skonfigurowanego celu
+udowodnione jako read-only. Historyczne ryzyko natywnego submitu przy niepołączonym
+widgecie (N2) jest zamknięte w TASK-343-03. Pełnej ścieżki wysyłki nie zweryfikowano z powodu braku skonfigurowanego celu
 w tym środowisku (N1).
 
 ---
@@ -357,7 +372,7 @@ w tym środowisku (N1).
 
 | Obserwacja | Plik / miejsce |
 |-----------|----------------|
-| N2/N3 (native submit, disabled vs `<form>`) | `core/widgets/core/newsletter.tsx` — `<form>` bez `onSubmit`; `action/method` tylko gdy `connectionReady`; `<button disabled type={submitReady?'submit':'button'}>` |
+| N2/N3 (native submit, disabled vs `<form>`) | `core/widgets/core/newsletter.tsx` — TASK-343-03 zmienia nieinteraktywne stany na `div role="form"` z `data-newsletter-native-submit="blocked"`; tylko `submitReady` renderuje natywny `<form>` |
 | Macierz diagnostyki per `renderContext.mode` | `newsletter.tsx` — `connectionMessage` (sekcja 8) |
 | N1 (lista form) | `NewsletterEditors.tsx` — `useForms`, select „Bound form", `NO_FORM_VALUE`, „No forms found" |
 | N4 (legacy webhook) | `newsletter.tsx` — `resolveNewsletterIntegrationMode`, `resolveNewsletterTransport`; UI: `submissionModeOptions` (brak opcji webhook) |

@@ -556,6 +556,7 @@ export function AppointmentFormVisualEditor({
   const showPhone = normalized.showPhone !== false;
   const showNotes = normalized.showNotes !== false;
   const splitName = normalized.nameMode === "split";
+  const phoneValidationPreset = resolvePhoneValidationPreset(normalized.phonePattern);
 
   return (
     <div className="space-y-4">
@@ -807,7 +808,7 @@ export function AppointmentFormVisualEditor({
             />
             <SelectField
               label="Phone validation"
-              value={resolvePhoneValidationPreset(normalized.phonePattern)}
+              value={phoneValidationPreset}
               path="phonePattern"
               onChange={(next) => {
                 const preset = phoneValidationPresets.find((item) => item.value === next);
@@ -818,7 +819,7 @@ export function AppointmentFormVisualEditor({
                 });
               }}
               options={[
-                ...(resolvePhoneValidationPreset(normalized.phonePattern) === "custom"
+                ...(phoneValidationPreset === "custom"
                   ? [{ value: "custom", label: "Saved custom validation" }]
                   : []),
                 ...phoneValidationPresets.map((preset) => ({

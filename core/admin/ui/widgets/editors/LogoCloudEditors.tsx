@@ -44,7 +44,7 @@ import type {
 } from "../../../../widgets/types";
 import { ReadonlyWidgetSummaryRow, WidgetEditorSection } from "./WidgetEditorControls";
 import { LinkDestinationField } from "./LinkDestinationField";
-import { SharedColorControl } from "./SharedColorControl";
+import { SharedColorControl, describeSharedColorControlState } from "./SharedColorControl";
 
 const variantOptions: Array<{
   id: LogoCloudVariantId;
@@ -365,6 +365,30 @@ function setLogoCountInData(current: LogoCloudData, count: number) {
   };
 }
 
+function resolveLogoRemovalLabel(logo: LogoCloudLogo, index: number) {
+  return logo.name?.trim() || logo.alt?.trim() || `Logo ${index + 1}`;
+}
+
+function confirmLogoCountReduction(logos: LogoCloudLogo[], nextCount: number) {
+  if (nextCount >= logos.length) return true;
+  if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
+
+  const removed = logos.slice(nextCount);
+  if (removed.length === 0) return true;
+
+  const visibleLabels = removed
+    .slice(0, 5)
+    .map((logo, index) => resolveLogoRemovalLabel(logo, nextCount + index));
+  const extraCount = removed.length - visibleLabels.length;
+  const extraCopy = extraCount > 0 ? ` and ${extraCount} more` : "";
+
+  return window.confirm(
+    `Reduce logo count to ${nextCount}? This removes ${removed.length} logo${
+      removed.length === 1 ? "" : "s"
+    }: ${visibleLabels.join(", ")}${extraCopy}. This cannot be undone.`
+  );
+}
+
 function addLogoToData(current: LogoCloudData) {
   const logos = normalizeLogoCloudLogos(current.logos);
   if (logos.length >= logoCloudLogoMax) return current;
@@ -419,9 +443,7 @@ function findOptionLabel<T extends string>(
 }
 
 function describeLogoCloudColor(value: string | undefined) {
-  if (!value?.trim()) return "Theme default";
-  if (/^#[0-9a-f]{6}$/i.test(value.trim())) return "Selected swatch";
-  return "Saved custom color";
+  return describeSharedColorControlState({ value }).label;
 }
 
 function summarizeLogoCloudImages(logos: LogoCloudLogo[]) {
@@ -446,6 +468,31 @@ function summarizeLogoCloudCta(cta: CtaData) {
     return "Enabled but missing a label or destination";
   }
   return `Visible, opens in ${cta.target === "new-tab" ? "a new tab" : "the same tab"}`;
+}
+
+function summarizeLogoCloudStripBehavior({
+  variant,
+  style,
+  logoCount,
+}: {
+  variant: LogoCloudVariantId;
+  style: StyleData;
+  logoCount: number;
+}) {
+  const savedRow = findOptionLabel(rowModeOptions, style.rowMode, "Wrapped rows");
+  const savedMotion = findOptionLabel(motionModeOptions, style.motionMode, "Static");
+
+  if (variant !== "strip") {
+    const variantLabel = variantOptions.find((option) => option.id === variant)?.label ?? "Grid";
+    return `Effective in ${variantLabel}: not active. Saved Strip settings: ${savedRow} / ${savedMotion}.`;
+  }
+
+  if (style.motionMode === "marquee" && logoCount <= 1) {
+    return `Effective in Strip: Single row / Static because marquee needs at least 2 logos. Saved Strip settings: ${savedRow} / ${savedMotion}.`;
+  }
+
+  const effectiveRow = style.motionMode === "marquee" ? "Single row scroll" : savedRow;
+  return `Effective in Strip: ${effectiveRow} / ${savedMotion}.`;
 }
 
 function useLogoMediaSelection({
@@ -999,6 +1046,11 @@ export function LogoCloudVisualEditor({
   const resolvedVariant = resolveLogoCloudVariant(variant);
   const stripLayoutControlsDisabled = resolvedVariant !== "strip";
   const rowModeDisabled = stripLayoutControlsDisabled || style.motionMode === "marquee";
+  const stripBehaviorSummary = summarizeLogoCloudStripBehavior({
+    variant: resolvedVariant,
+    style,
+    logoCount: logos.length,
+  });
   const {
     commitLogoMutation,
     mediaSelection,
@@ -1035,11 +1087,13 @@ export function LogoCloudVisualEditor({
           <p className="text-sm font-medium">Logo count</p>
           <Select
             value={String(logos.length)}
-            onValueChange={(next) =>
-              commitLogoMutation((current) => setLogoCountInData(current, Number(next)), {
+            onValueChange={(next) => {
+              const nextCount = Number(next);
+              if (!confirmLogoCountReduction(logos, nextCount)) return;
+              commitLogoMutation((current) => setLogoCountInData(current, nextCount), {
                 structural: true,
-              })
-            }
+              });
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select count" />
@@ -1457,7 +1511,7 @@ export function LogoCloudVisualEditor({
           </Select>
           <p className="text-xs text-muted-foreground">
             {stripLayoutControlsDisabled
-              ? "Single-row overflow is available only in the Strip variant."
+              ? "Saved Strip row behavior is inactive in Grid and Dense variants."
               : style.motionMode === "marquee"
                 ? "Marquee always uses a single horizontal track, so row behavior stays locked."
                 : "Switch between wrapped rows and a single horizontal scroll row."}
@@ -1491,9 +1545,18 @@ export function LogoCloudVisualEditor({
           </Select>
           <p className="text-xs text-muted-foreground">
             {stripLayoutControlsDisabled
-              ? "Marquee and horizontal overflow are unavailable in Grid and Dense variants."
+              ? "Saved Strip motion is inactive in Grid and Dense variants."
               : "Marquee duplicates logos in a reduced-motion-safe scrolling track and pauses on hover or focus."}
           </p>
+        </div>
+
+        <div
+          data-widget-control="logo-cloud.visual.strip-effective-summary"
+          data-widget-control-path="style.motionMode"
+          data-widget-control-ownership="readonly"
+          className="rounded-md border border-dashed border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"
+        >
+          {stripBehaviorSummary}
         </div>
 
         <div
@@ -1583,7 +1646,10 @@ export function LogoCloudVisualEditor({
           <Switch
             checked={style.grayscale}
             onCheckedChange={(checked) =>
-              updateStyle(value, onChange, { grayscale: Boolean(checked) })
+              updateStyle(value, onChange, {
+                grayscale: Boolean(checked),
+                ...(checked ? {} : { hoverColor: false }),
+              })
             }
           />
         </div>
@@ -1604,7 +1670,7 @@ export function LogoCloudVisualEditor({
           </div>
           <Switch
             disabled={!style.grayscale}
-            checked={style.hoverColor}
+            checked={Boolean(style.grayscale && style.hoverColor)}
             onCheckedChange={(checked) =>
               updateStyle(value, onChange, { hoverColor: Boolean(checked) })
             }
@@ -1750,7 +1816,11 @@ export function LogoCloudAdvancedEditor({ value, variant }: WidgetEditorProps<Lo
           id="logo-cloud-advanced-strip-behavior"
           label="Strip behavior"
           path="style.rowMode"
-          value={`${findOptionLabel(rowModeOptions, style.rowMode, "Wrapped rows")} / ${findOptionLabel(motionModeOptions, style.motionMode, "Static")}`}
+          value={summarizeLogoCloudStripBehavior({
+            variant: resolvedVariant,
+            style,
+            logoCount: logos.length,
+          })}
         />
         <ReadonlyWidgetSummaryRow
           id="logo-cloud-advanced-tile-shape"

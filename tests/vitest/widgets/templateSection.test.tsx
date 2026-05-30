@@ -48,6 +48,7 @@ test("template section renders placeholder when empty", () => {
 
   expect(html).toContain("Template section");
   expect(html).toContain("Select a widget template");
+  expect(html).toContain('data-template-section-resolution="not_selected"');
 });
 
 test("template section placeholder does not expose raw template ids", () => {
@@ -66,7 +67,31 @@ test("template section placeholder does not expose raw template ids", () => {
 
   expect(html).toContain("Template section");
   expect(html).toContain("Template not found. Pick another template.");
+  expect(html).toContain('data-template-section-resolution="template_missing"');
   expect(visibleText).not.toContain("tpl_01HT_RAW_IDENTIFIER");
+});
+
+test("template section selected admin placeholder reports unresolved preview state", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Draft template",
+        metadata: {
+          category: "Marketing",
+          version: "v2",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="preview_unresolved"');
+  expect(html).toContain('data-template-section-category="Marketing"');
+  expect(html).toContain('data-template-section-version="v2"');
+  expect(html).toContain("Marketing / v2");
+  expect(html).toContain("Admin preview is placeholder-only until runtime resolves this template.");
 });
 
 test("template section renders resolved blocks", () => {
@@ -99,6 +124,7 @@ test("template section renders resolved blocks", () => {
   );
 
   expect(html).toContain('data-template-section-state="ready"');
+  expect(html).toContain('data-template-section-resolution="ready"');
   expect(html).toContain('data-template-section-category="Marketing"');
   expect(html).toContain('data-template-section-version="v2"');
   expect(html).toContain("Homepage Hero");
@@ -131,8 +157,47 @@ test("template section renders safe placeholder when resolution has an error", (
   );
 
   expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_unpublished"');
   expect(html).toContain("Template is not published yet.");
   expect(html).not.toContain('data-dummy="true"');
+});
+
+test("template section reports template loop placeholders", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Looped Hero Cluster",
+        resolved: {
+          error: "template_loop",
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_loop"');
+  expect(html).toContain("Template loop detected. Remove nested template sections.");
+});
+
+test("template section reports resolved empty templates separately from unresolved preview", () => {
+  const html = renderToString(
+    <TemplateSectionBlock
+      data={{
+        templateId: "template-1",
+        templateName: "Empty Hero Cluster",
+        resolved: {
+          blocks: [],
+        },
+      }}
+      variant="default"
+    />
+  );
+
+  expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_empty"');
+  expect(html).toContain("This template has no blocks yet.");
 });
 
 test("template section renders safe placeholder when a missing template carries stale blocks", () => {
@@ -161,6 +226,7 @@ test("template section renders safe placeholder when a missing template carries 
   );
 
   expect(html).toContain('data-template-section-state="empty"');
+  expect(html).toContain('data-template-section-resolution="template_missing"');
   expect(html).toContain("Template not found. Pick another template.");
   expect(html).not.toContain('data-dummy="true"');
 });

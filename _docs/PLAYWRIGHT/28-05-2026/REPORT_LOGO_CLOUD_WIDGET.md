@@ -9,6 +9,12 @@
 > **Viewport testowy:** 1280×720 (desktop), 375×800 (mobile)
 > **Pliki źródłowe:** `core/widgets/core/logoCloud.tsx` (renderer + typy + normalizacja) · `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` (edytory Wizard/Visual/Advanced) · `core/admin/ui/widgets/editors/SharedColorControl.tsx` + `ClearableFields.tsx` (kolory) · `core/admin/ui/widgets/editors/LinkDestinationField.tsx` (picker stron) · `core/site/styles/site.css` (animacja marquee)
 
+> **Status TASK-343-24 (2026-05-30):** N2/N3/N4 są zamknięte. Redukcja
+> `Logo count` potwierdza destrukcyjną truncację przed zapisem, Visual i
+> Advanced rozdzielają efektywne zachowanie Grid/Dense od zapisanych ustawień
+> Strip row/motion, a wyłączenie grayscale czyści i odznacza nieaktywny
+> `Colorize on hover`.
+
 > **Metodologia.** Przebieg jest **wyczerpujący, nie reprezentatywny**. Dla każdej
 > rodziny kontrolek **kliknąłem osobno KAŻDĄ dyskretną opcję** (wszystkie pozycje
 > 10 selectów, obie wartości 3 toggle, 3 karty wariantów, oba targety CTA, granice
@@ -246,6 +252,20 @@ Konfiguracja używa `showValueInput={false}` i **nie** ustawia `allowTransparent
 | **N6** | Renderer (z założenia) | **`alt` bez efektu dla logo tekstowych bez linku.** „Accessible description" wpływa na `alt` obrazu i `aria-label` podlinkowanego kafelka, ale dla logo **bez obrazu i bez linku** (czysty tekst w `<div>`) nie jest renderowane nigdzie. |
 | **N7** | Draft vs publish | **Rozjazd: admin canvas (defaulty) vs opublikowany front (bogatsza konfiguracja).** Draft renderuje czysty widget domyślny (tekst, `<div>`), a publiczna trasa serwuje inną zapisaną konfigurację (logo 1 z obrazem Amazon, 6× `<a href="#">`). Bez zapisu/publikacji nie rozstrzygam przyczyny (normalna separacja draft/publish vs niespójny seeding) — odnotowuję jako fakt. |
 | **N8** | Visual vs Advanced | **Niespójne etykiety stanu koloru.** Dla tej samej wartości hex Visual pokazuje badge **„Selected color"**, a Advanced w wierszu „Colors" — **„Selected swatch"**. Drobna niespójność nazewnictwa między dwoma powierzchniami. |
+
+> **Status TASK-343-30 (2026-05-30):** N1 jest zamknięte przez wspólny
+> `SharedColorControl`: wartości `var(--color-bg)` i `color-mix(...)` są
+> `Theme token`/fallback preview zamiast `Saved custom color`. N8 pozostaje
+> tylko drobną różnicą nazwy hex w podsumowaniu Advanced.
+
+> **Status TASK-343-31 (2026-05-30):** N5 jest zamknięte przez shared
+> `MediaPicker`: `Media library` zawiera `DialogDescription`, więc Radix ma
+> stabilne `aria-describedby` dla Logo Cloud i pozostałych widgetowych wejść.
+
+> **Status TASK-343-24 (2026-05-30):** N2/N3/N4 są zamknięte lokalnie w Logo
+> Cloud: count reduction is confirmed, saved Strip settings are labelled
+> inactive outside Strip, and hover-color state is cleared/unchecked when
+> grayscale is off.
 
 ---
 

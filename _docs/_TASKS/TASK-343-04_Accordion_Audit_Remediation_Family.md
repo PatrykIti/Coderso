@@ -6,7 +6,7 @@
 **Category:** Widgets + Accordion + Admin Preview + UX + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,13 +24,24 @@ between canvas and live preview, and stale `aria-expanded` in admin preview.
 
 ## Sub-Tasks
 
-- [ ] Replace or retire the misleading Wizard count so it no longer pretends to
+- [x] Replace or retire the misleading Wizard count so it no longer pretends to
   change the real slot-owned render count.
-- [ ] Scope single-open group names per render instance so canvas and wizard
+- [x] Scope single-open group names per render instance so canvas and wizard
   preview do not fight each other.
-- [ ] Synchronize admin-preview `aria-expanded` with real `<details open>` state
+- [x] Synchronize admin-preview `aria-expanded` with real `<details open>` state
   even when the runtime script does not execute.
-- [ ] Add regression coverage for slot truthfulness and preview isolation.
+- [x] Add regression coverage for slot truthfulness and preview isolation.
+
+## Completion Notes
+
+- Wizard no longer exposes a mutating `Number of items` select; it now shows a
+  read-only `Panel count` summary sourced from slot targets.
+- Single-open details group names are scoped per admin preview render instance,
+  isolating canvas and setup/live preview.
+- Admin preview now synchronizes summary `aria-expanded` through a React
+  `onToggle` handler when injected runtime scripts are not executed.
+- The v2 editor contract now treats Wizard panel count as read-only slot
+  context and keeps only default-open setup writable.
 
 ## Files To Change
 
@@ -92,3 +103,15 @@ No API routes are added. Schema stays strict; no raw HTML or script widening.
 - Accordion no longer presents two conflicting owners for item count.
 - Canvas and wizard preview are isolated in single-open mode.
 - Admin preview ARIA state matches visible open/closed state.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/accordionWidget.test.tsx tests/vitest/ui/accordion-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `git diff --cached --check`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget accordion --session task-343-04-accordion --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-04-accordion-smoke.json --output-md .tmp/task-343-04-accordion-smoke.md`
+
+Strict smoke passed with `adminFailures=0`, `publicFailures=0`,
+`fixtureGaps=0`, and `metadataGaps=0`.

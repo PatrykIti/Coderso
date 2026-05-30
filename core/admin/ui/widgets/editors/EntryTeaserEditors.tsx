@@ -29,7 +29,9 @@ import {
   type EntryTeaserDataSourceMode,
   type EntryTeaserRuntimeItem,
   normalizeEntryTeaserData,
+  resolveEntryTeaserCtaRenderState,
   resolveEntryTeaserVariant,
+  type EntryTeaserCtaUnavailableReason,
   type EntryTeaserCtaHrefMode,
   type EntryTeaserCtaStyle,
   type EntryTeaserData,
@@ -1960,15 +1962,35 @@ function PresentationDiagnosticsSection({
   );
 }
 
+const entryTeaserCtaGuidanceMessages: Record<EntryTeaserCtaUnavailableReason, string> = {
+  missing_auto_destination:
+    "Auto CTA renders as text until the resolved entry has a safe detail route.",
+  missing_custom_destination:
+    "Selected-page CTA renders as text until you choose a published page or keep a safe saved destination.",
+};
+
 function EntryTeaserCtaFields({
   value,
   onChange,
+  context,
 }: {
   value: EntryTeaserData;
   onChange: (next: EntryTeaserData) => void;
+  context?: WidgetEditorProps<EntryTeaserData>["context"];
 }) {
   const normalized = normalizeValue(value);
+  const ctaHrefMode = normalized.cta?.hrefMode ?? "auto";
   const currentCustomHref = normalized.cta?.href ?? "";
+  const ctaRenderState = resolveEntryTeaserCtaRenderState({
+    ...normalized,
+    resolved: resolvePreviewResolvedData(normalized, context?.previewState),
+  });
+  const ctaResolutionPending =
+    ctaHrefMode === "auto" && context?.previewState?.status === "loading";
+  const ctaGuidance =
+    ctaRenderState.mode === "non_link" && !ctaResolutionPending
+      ? entryTeaserCtaGuidanceMessages[ctaRenderState.reason]
+      : null;
 
   return (
     <EditorSection
@@ -1997,7 +2019,7 @@ function EntryTeaserCtaFields({
         >
           <p className="text-sm font-medium">Destination mode</p>
           <Select
-            value={normalized.cta?.hrefMode ?? "auto"}
+            value={ctaHrefMode}
             onValueChange={(next) => {
               const nextMode = next as EntryTeaserCtaHrefMode;
               updateCta(value, onChange, {
@@ -2017,14 +2039,14 @@ function EntryTeaserCtaFields({
               ))}
             </SelectContent>
           </Select>
-          {(normalized.cta?.hrefMode ?? "auto") === "auto" ? (
+          {ctaHrefMode === "auto" ? (
             <p className="text-xs text-muted-foreground">
               Auto entry URL uses the resolved entry detail route from CMS content routes.
             </p>
           ) : null}
         </div>
       </div>
-      {(normalized.cta?.hrefMode ?? "auto") === "custom" ? (
+      {ctaHrefMode === "custom" ? (
         <div {...controlAttributes("entry-teaser.visual.cta.href", "cta.href")}>
           <LinkDestinationField
             fieldId="entry-teaser.visual.cta.destination"
@@ -2033,8 +2055,18 @@ function EntryTeaserCtaFields({
             onChange={(next) => updateCta(value, onChange, { href: next })}
             emptyLabel="No custom destination"
             helpText="Pick a published site page. Saved custom/hash/external destinations stay replace-or-clear compatible."
+            feedback={ctaGuidance}
+            clearLabel="Clear CTA destination"
           />
         </div>
+      ) : null}
+      {ctaHrefMode === "auto" && ctaRenderState.mode === "non_link" && ctaGuidance ? (
+        <p
+          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800"
+          data-entry-teaser-cta-guidance={ctaRenderState.reason}
+        >
+          {ctaGuidance}
+        </p>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <label
@@ -2289,6 +2321,7 @@ export function EntryTeaserVisualEditor({
         key={context?.blockId ?? "entry-teaser-cta"}
         value={value}
         onChange={onChange}
+        context={context}
       />
 
       <EditorSection

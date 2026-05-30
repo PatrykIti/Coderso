@@ -189,6 +189,14 @@ Ustawione: Surface #fef9c3, Border #2563eb, Accent #ff0000, Accent contrast #00f
 | **B2 — „Accent contrast color" jest martwą kontrolką, gdy accent jest ustawiony (sprzężone z B1)** | Renderer / Theme | Pole „Accent contrast color" istnieje, by zapewnić czytelny tekst na aktywnym triggerze, i **poprawnie aktualizuje** zmienną `--nextless-toggle-accent-contrast` (zweryfikowano: #00ff00 trafia do zmiennej) oraz stan „Clear". Jednak z powodu B1 inline `color: accentColor` zawsze wygrywa, więc accent contrast **nie ma żadnego wpływu** na realny render aktywnego triggera. Test: accent=#ff0000, contrast=#00ff00 → zmienna zielona, ale realny `color` aktywnego triggera = czerwony. Kontrolka jest de facto „martwa" dokładnie w scenariuszu, w którym ma największe znaczenie. |
 | **B3 — zduplikowana klasa `shadow-sm` (kosmetyka)** | Renderer | Kombinacja Pane surface „Contrast surface" + Border emphasis „Strong" daje na panelu `… shadow-sm shadow-sm` (zweryfikowane: `shadowCount=2`), bo klasę dokłada zarówno `paneSurfaceClassMap.contrast`, jak i `paneBorderClassMap.strong`. Bez wpływu wizualnego — drobny zapach w generowaniu klas. |
 
+> **Status TASK-343-10 (2026-05-30):** B1/B2/B3 zamknięte w kodzie.
+> Renderer nie nadaje już inline `color: accentColor` aktywnemu triggerowi,
+> więc tekst aktywnego stanu przechodzi przez
+> `--nextless-toggle-accent-contrast`. Nieaktywny trigger może nadal używać
+> `accentColor` jako koloru tekstu. Kompozycja klas deduplikuje powtarzane
+> utility, więc Contrast surface + Strong border emituje pojedyncze
+> `shadow-sm`. Pokrycie: `tests/vitest/widgets/toggleBlock.test.tsx`.
+
 > Poza B1/B2/B3 **nie wykryto** twardych bugów renderowania: wszystkie enumy Visual aktualizują canvas, Advanced wiernie podsumowuje, frontend jest interaktywny i dostępny, konsola admina i frontu: **0 błędów / 0 ostrzeżeń**.
 
 ---
@@ -219,6 +227,13 @@ Ustawione: Surface #fef9c3, Border #2563eb, Accent #ff0000, Accent contrast #00f
 | **N7-clear — „Clear" na ariaLabel/selectedSuffix RESETUJE do domyślnej, nie czyści** | Accessibility | „Clear" przy „Toggle group label"/„Selected announcement" usuwa klucz, a normalizacja zwraca **wartość domyślną** („Toggle content view"/„selected") — pole nie staje się puste. Inaczej niż „Clear" przy Helper, który ustawia `""` i **ukrywa** `<p>`. Dwa pola z tą samą etykietą przycisku zachowują się różnie (reset vs ukrycie). |
 | **N8 — „Visibility summary: Hidden on all devices" przy renderującym się widgecie (współdzielony wrapper)** | Wrapper (poza Toggle Block) | W Advanced współdzielona sekcja pokazuje „Shown on: Hidden on all devices", podczas gdy wszystkie 3 przełączniki Device visibility są **odznaczone** (`aria-checked=false`, etykiety „Desktop/Tablet/Mobile Hidden"), a widget **renderuje się** (front desktop + canvas). Sformułowanie wygląda na odwrócone/mylące. To kontrolka **współdzielonego wrappera** (obecna we wszystkich widgetach), nie element Toggle Block — odnotowuję jako obserwację. |
 
+> **Routing po TASK-343-10 (2026-05-30):** N3 jest zamknięte razem z
+> B1/B2, bo doradca opisuje teraz realną parę aktywny tekst/tło i nie ma już
+> inline override psującego render. N4/N6 są opisane w edytorze: preview w
+> Wizard/Visual jest statyczne, a klik/klawiatura są montowane na publicznych
+> stronach. N8 pozostaje w `TASK-343-21`, a wspólna semantyka kolorów/Clear z
+> N7-clear pozostaje w `TASK-343-30`.
+
 **Pozytyw spójności:** wszystkie 4 pola kolorów w Theme mają spójny, poprawnie włączany/wyłączany „Clear" (lepiej niż w części innych widgetów); Advanced w 100% read-only i dokładny; ARIA na froncie kompletna; placeholder edytora nie wycieka na front.
 
 ---
@@ -232,20 +247,20 @@ Ustawione: Surface #fef9c3, Border #2563eb, Accent #ff0000, Accent contrast #00f
 | Skrypt runtime | nie wstrzykiwany (`bound=unset`) | wstrzyknięty i powiązany (`bound=true`, 1 skrypt) | ✗ różnica celowa |
 | Placeholder pustego panelu | „Use the page builder…" (tryb edytora) | brak (nie wyciekł) | ✓ poprawne rozróżnienie |
 | ARIA (role/aria) | obecna w markupie | obecna i działająca (roving tabindex, aria-live) | ✓ |
-| Defekt B1/B2 (niewidoczna etykieta aktywnego triggera) | ✓ reprodukuje się (red-na-red, navy-na-navy) | ✓ reprodukuje się na żywym fixture (blue-na-blue, dark-na-dark) | ✓ (oba błędne — defekt renderera) |
+| Defekt B1/B2 (niewidoczna etykieta aktywnego triggera) | Zamknięty przez TASK-343-10: aktywny tekst używa `--nextless-toggle-accent-contrast` | Zamknięty przez wspólny renderer | ✓ |
 
-**Wniosek:** renderer jest wspólny; markup admin↔front spójny. Jedyne celowe różnice to warstwa interaktywności (front ma runtime, admin nie ma — N4) i placeholder. Defekt B1/B2 jest na poziomie renderera, więc dotyczy obu środowisk.
+**Wniosek:** renderer jest wspólny; markup admin↔front spójny. Jedyne celowe różnice to warstwa interaktywności (front ma runtime, admin nie ma — N4) i placeholder. TASK-343-10 zamknął kontrast aktywnego triggera we wspólnym rendererze, więc poprawka obejmuje admin preview i frontend.
 
 ---
 
 ## 9. Podsumowanie
 
 - **Toggle Block jest w dobrym stanie funkcjonalnym po stronie konfiguracji i frontu.** W tej iteracji domknięto luki: **wszystkie** wartości wariantu, default state, **motion (w tym fade)**, oraz **komplet enumów kart paneli** (surface/padding/radius/borderEmphasis × oba panele) kliknięte i zweryfikowane w DOM; niezależność paneli potwierdzona; **wszystkie 4 kolory Theme** ustawione i zrewertowane przez „Clear"; oba branche doradcy kontrastu; komplet klawiszy klawiatury na froncie.
-- **Najważniejszy realny defekt (B1/B2):** ustawienie własnego **Accent color** czyni etykietę **aktywnego** triggera nieczytelną (tekst = kolor accentu = jego tło), bo inline `color: accentColor` nadpisuje klasę `accent-contrast`. Kontrolka „Accent contrast color" — przeznaczona dokładnie do naprawy tego kontrastu — jest przez to **martwa**. Defekt widoczny na żywym, zapisanym fixture (obie instancje) i reprodukowalny w admin canvas. Przy **wyczyszczonym** accencie render jest poprawny.
-- **N3 (sprzężony):** doradca kontrastu liczy kontrast intencjonalnej pary (contrast/accent), więc dla np. navy/white **nie ostrzega**, choć realny render jest niewidoczny — fałszywe poczucie bezpieczeństwa.
-- **Najważniejszy niuans UX (N4/N6):** podgląd w admin (canvas i „Live preview" Wizarda) jest **nieinteraktywny** — przełączanie działa wyłącznie na froncie.
+- **Najważniejszy realny defekt (B1/B2):** TASK-343-10 zamknął regresję. Ustawienie własnego **Accent color** nie nadaje już aktywnemu triggerowi inline `color: accentColor`; „Accent contrast color" ponownie steruje tekstem aktywnego stanu.
+- **N3 (sprzężony):** doradca kontrastu opisuje teraz realną parę aktywny tekst/tło po poprawce renderera; ostrzeżenie nie jest już fałszywie bezpieczne przez inline override.
+- **Najważniejszy niuans UX (N4/N6):** podgląd w admin (canvas i Wizard) pozostaje **nieinteraktywny** z założenia, ale edytor explicite opisuje statyczny preview i publiczny runtime click/keyboard.
 - **Wizard (N5):** ekran wyłącznie informacyjny (read-only), bez edytowalnych kontrolek.
-- **Drobne:** B3 (zduplikowane `shadow-sm`), N7-clear (różne zachowanie „Clear": reset vs ukrycie), N8 (mylące „Hidden on all devices" we współdzielonym wrapperze, poza zakresem), sprzężenie accent↔kolor wszystkich triggerów (N1-coupling).
+- **Drobne:** B3 zamknięte przez deduplikację klas; N7-clear pozostaje routingiem do `TASK-343-30`, N8 do `TASK-343-21`; nieaktywny trigger może nadal używać `accentColor` jako tekstu (świadome sprzężenie po usunięciu aktywnego override).
 - **Nietestowalne (nazwane):** trwałość po zapisie/publikacji (NT1), render dzieci paneli (NT2), wizualne animacje (NT3), `prefers-reduced-motion` (NT4), interaktywne przełączanie w admin (NT5 — niemożliwe z założenia).
 - **Higiena fixture:** żadnych „Save"/„Publish"; edycje to ulotny stan sesji; konsola admina i frontu **0/0**.
 
@@ -255,14 +270,14 @@ Ustawione: Surface #fef9c3, Border #2563eb, Accent #ff0000, Accent contrast #00f
 
 | # | Problem | Priorytet | Obszar |
 |---|---------|-----------|--------|
-| B1 | Tekst aktywnego triggera = kolor tła (niewidoczna etykieta) po ustawieniu Accent color | KRYTYCZNY | Renderer |
-| B2 | „Accent contrast color" bez efektu na aktywny trigger (nadpisany inline) — sprzężone z B1 | KRYTYCZNY | Renderer |
-| N3 | Doradca kontrastu nie ostrzega, choć realny render jest niewidoczny | WYSOKI | Edytor |
-| N4 | Brak interaktywności podglądu w admin (nie da się obejrzeć drugiego panelu) | WYSOKI | Edytor / preview |
-| N6 | „Live preview" w Wizardzie sugeruje interaktywność, której nie ma | ŚREDNI | Wizard |
+| B1 | Zamknięte przez TASK-343-10: aktywny trigger nie dostaje inline `color: accentColor` | KRYTYCZNY | Renderer |
+| B2 | Zamknięte przez TASK-343-10: „Accent contrast color" steruje aktywnym tekstem | KRYTYCZNY | Renderer |
+| N3 | Zamknięte przez TASK-343-10: doradca opisuje realną parę aktywnego triggera | WYSOKI | Edytor |
+| N4 | Wyjaśnione przez TASK-343-10 copy: admin preview jest statyczny, public runtime interaktywny | WYSOKI | Edytor / preview |
+| N6 | Wyjaśnione przez TASK-343-10 copy: Wizard/setup preview nie montuje runtime | ŚREDNI | Wizard |
 | N5 | Wizard bez edytowalnych kontrolek (ekran informacyjny) | ŚREDNI/NISKI | Wizard / UX |
 | N7-clear | Niespójne „Clear" (reset do domyślnej vs ukrycie) | NISKI | Edytor |
-| B3 | Zduplikowana klasa `shadow-sm` (Contrast + Strong) | NISKI (kosmetyka) | Renderer |
+| B3 | Zamknięte przez TASK-343-10: Contrast + Strong emituje pojedyncze `shadow-sm` | NISKI (kosmetyka) | Renderer |
 | N8 | „Visibility summary: Hidden on all devices" mylące (współdzielony wrapper) | NISKI / poza Toggle Block | Wrapper |
 
 ---

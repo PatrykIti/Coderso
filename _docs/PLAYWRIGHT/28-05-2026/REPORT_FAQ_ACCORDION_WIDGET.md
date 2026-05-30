@@ -20,6 +20,12 @@
 > ulotny stan React w sesji (nie mutują współdzielonego fixture). Izolację potwierdziłem osobno
 > (sekcja 4.7). Zrzutów PNG **nie** zapisywałem; ewentualne pliki byłyby **wyłącznie lokalnymi
 > etykietami** w `.playwright-cli/` (katalog ignorowany przez Git), nie są evidence w repo.
+>
+> **Remediacja TASK-343-05 (2026-05-30):** N1 i N2 są zamknięte. Visual ma
+> teraz realny select `Spacing` dla `style.spacing`, Advanced pokazuje tę samą
+> wartość jako read-only summary, a statyczny SSR/admin preview nie emituje
+> `aria-expanded`; publiczny runtime ustawia i synchronizuje ten atrybut po
+> zbindowaniu.
 
 ---
 
@@ -156,25 +162,25 @@
 
 - **Wizard:** karty wariantu (Single→Two Column → `data-faq-variant="two-column"`), select „Questions count", tekst pomocniczy, przycisk „**Finish setup and open Visual**" wraca poprawnie na zakładkę Visual (`aria-selected="true"`). ✓
 - **Advanced (read-only):** wiernie odbija wszystkie moje edycje z Visual — „Allow multiple: Enabled", „Default open: Item 1", „Questions: 3/12", „Answer formats: Markdown, Plain text", „Search: Enabled", surface/border „Theme default" (po Clear), divider/question/answer/header „Selected color", „Layout: **Full width · Right · Default**", „Panel style: Extra large corners · 3 px border · Auto title", „Markdown answers enabled", „Native summary/details disclosure", podział kontraktu Wizard/Visual/Advanced, „Saved FAQ data is already clean.". ✓ **Brak edytowalnych kontrolek.**
-  - **Uwaga:** w wierszu „Layout" pole `spacing` pokazuje **„Default"** (md) mimo wszystkich moich zmian — bo nie ma kontrolki, którą można by je zmienić. To bezpośredni dowód na N1.
+  - Po TASK-343-05 wiersz „Layout" nadal pozostaje read-only, ale odbija już spacing ustawiony z Visual, bo kontrolka `Spacing` istnieje w sekcji „Layout and typography".
 - **Izolacja edycji:** po wszystkich niezapisanych zmianach w Visual front (`/test-faq-accordion-0516`, świeża karta) nadal pokazuje **stan zapisany** (two-column, spacing none, count 3, single-open, defaultOpen −1, JSON-LD off). Żadna edycja nie wyciekła. ✓
 - **Konsola admina:** 0 błędów / 0 ostrzeżeń (tylko info React DevTools). ✓
 
 ---
 
-## 5. Co NIE działa / jest mylące / wymaga uwagi (niuanse UX/UI)
+## 5. Znaleziska i status po remediacji
 
-| # | Obszar | Obserwacja |
-|---|--------|-----------|
-| **N1 — brak kontrolki `style.spacing` + mylący opis (realna luka funkcjonalna)** | Visual / kontrakt | Token `style.spacing` steruje JEDNOCZEŚNIE odstępem między panelami (`spacingClassMap` gap-0…gap-4) **i** wewnętrznym paddingiem paneli (`panelPaddingClassMap`). Mimo to **w sekcji „Layout and typography" NIE ma żadnego selecta „Spacing"/„Gap"** — potwierdzone w żywym DOM (są tylko: Max width, Header alignment, Header title size, Horizontal/Vertical padding, Motion). Co gorsza: (a) **kontrakt** sekcji deklaruje `style.spacing` jako `writablePath`; (b) **opis** sekcji obiecuje „Control FAQ width, header alignment, **spacing**, title scale, and motion."; (c) Advanced **podsumowuje** spacing w wierszu „Layout". Efekt: użytkownik nie może z UI zmienić gęstości listy ani paddingu paneli — wartość zamrożona na `md` (Advanced pokazywał „Default" przez cały audyt). Fixture publiczny ma `spacing=none` — to dało się ustawić **tylko seedem danych**, nie edytorem. **Realna luka + mylący tekst + niespójność kontrakt↔UI.** |
-| **N2 — `aria-expanded` nie synchronizuje się w canvas adminowym** | Renderer / a11y (admin-only) | Skrypt runtime jest wstrzykiwany przez `dangerouslySetInnerHTML`, którego React **nie wykonuje** w edytorze (canvas `data-coderso-faq-bound` = *unset*). Po ręcznym toggle w canvas natywny `open` się zmienia, ale `aria-expanded` może zostać na wartości początkowej. **Na froncie problem nie występuje** (skrypt działa — patrz 4.1). Niski priorytet (tylko preview adminowy). |
-| **N3 — „Clear" na Panel surface = brak tła, nie kolor motywu** | Visual / colors | Po „Clear" na „Panel surface" kontener traci inline `background-color` całkowicie (transparent), zamiast wracać do `var(--color-bg)`. Inaczej niż „Panel border", który po Clear wraca do `var(--color-border)`. Badge mówi „Theme default", ale panel staje się przezroczysty (przepuszcza tło sekcji). Subtelnie mylące. |
-| **N4 — kolizja etykiet palet z przełącznikiem wyglądu admina** | Visual / colors (automatyzacja) | Na stronie istnieją **dwa** przyciski o accessible name „Dark" (przełącznik wyglądu admina + paleta FAQ). Dla realnego użytkownika nieistotne; problem tylko dla automatyzacji/lokatorów po nazwie (trzeba scope'ować do sekcji „FAQ palettes"). Po zescope'owaniu paleta działa bez zarzutu. Drobny niuans. |
-| **N5 — brak kontrolki gęstości także w Wizard** | Wizard | Wizard = wariant + liczba pytań. W połączeniu z N1: gęstość/odstępy nie są edytowalne na żadnym etapie. |
-| **U1 — pusty `question`/`answer` natychmiast „odbija" do fallbacku; live-trim białych znaków (NOWE)** | Walidacja / UX | Normalizacja na każdym keystroke powoduje, że gdy pole `question`/`answer` stanie się puste, input **natychmiast** wypełnia się tekstem fallback (np. „How long does setup take?"). Edytor próbujący „wyczyścić i napisać od nowa" zobaczy odbijający tekst — trzeba zaznaczyć-wszystko-i-nadpisać. Analogicznie leading/trailing spacje są **ścinane na żywo** (nie da się wpisać spacji wiodącej). Nie jest to bug danych (gwarantuje niepuste, przycięte wartości), ale **realny tarcie UX**. |
-| **U2 — listy >12 pozycji rozbijają się na osobne bloki; ordered-list restartuje numerację (NOWE)** | Renderer / markdown | Cap pozycji listy (`faqAccordionMarkdownListItemMax=12`) działa **per blok**, nie globalnie. Lista 15-pozycyjna renderuje się jako `[<ol> 1–12][<ol> 13–15]`. Ponieważ drugi `<ol>` to nowy element `list-decimal`, **numeracja restartuje od 1** — wizualnie wygląda jak „1…12, 1, 2, 3". Dla długich list numerowanych mylące. (Listy nieuporządkowane też się rozbijają, ale brak widocznej numeracji czyni to mniej dotkliwym.) |
+| # | Obszar | Obserwacja | Status |
+|---|--------|-----------|--------|
+| **N1 — brak kontrolki `style.spacing` + mylący opis (realna luka funkcjonalna)** | Visual / kontrakt | Token `style.spacing` steruje JEDNOCZEŚNIE odstępem między panelami (`spacingClassMap` gap-0…gap-4) **i** wewnętrznym paddingiem paneli (`panelPaddingClassMap`). Historycznie w sekcji „Layout and typography" nie było żadnego selecta „Spacing"/„Gap", mimo że kontrakt deklarował `style.spacing` jako `writablePath`, opis sekcji obiecywał spacing, a Advanced podsumowywał spacing w wierszu „Layout". | Zamknięte w TASK-343-05: Visual ma realny select `Spacing`, który zapisuje `style.spacing`; renderer testuje gap i padding, a Advanced summary pokazuje wybraną etykietę. |
+| **N2 — `aria-expanded` nie synchronizuje się w canvas adminowym** | Renderer / a11y (admin-only) | Skrypt runtime jest wstrzykiwany przez `dangerouslySetInnerHTML`, którego React **nie wykonuje** w edytorze (canvas `data-coderso-faq-bound` = *unset*). Historycznie SSR emitował początkowe `aria-expanded`, które mogło zostać stale po ręcznym toggle w admin canvas. | Zamknięte w TASK-343-05: statyczny SSR/admin preview nie emituje `aria-expanded`; publiczny runtime nadal ustawia i synchronizuje atrybut po zbindowaniu. |
+| **N3 — „Clear" na Panel surface = brak tła, nie kolor motywu** | Visual / colors | Po „Clear" na „Panel surface" kontener traci inline `background-color` całkowicie (transparent), zamiast wracać do `var(--color-bg)`. Inaczej niż „Panel border", który po Clear wraca do `var(--color-border)`. Badge mówi „Theme default", ale panel staje się przezroczysty (przepuszcza tło sekcji). Subtelnie mylące. | Pozostaje poza zakresem TASK-343-05. |
+| **N4 — kolizja etykiet palet z przełącznikiem wyglądu admina** | Visual / colors (automatyzacja) | Na stronie istnieją **dwa** przyciski o accessible name „Dark" (przełącznik wyglądu admina + paleta FAQ). Dla realnego użytkownika nieistotne; problem tylko dla automatyzacji/lokatorów po nazwie (trzeba scope'ować do sekcji „FAQ palettes"). Po zescope'owaniu paleta działa bez zarzutu. Drobny niuans. | Pozostaje niuansem automatyzacji. |
+| **N5 — brak kontrolki gęstości także w Wizard** | Wizard | Wizard = wariant + liczba pytań. Po TASK-343-05 gęstość jest świadomie własnością Visual, a Wizard pozostaje minimalnym setupem. | Zamknięte jako niespójność: spacing jest edytowalny w Visual. |
+| **U1 — pusty `question`/`answer` natychmiast „odbija" do fallbacku; live-trim białych znaków (NOWE)** | Walidacja / UX | Normalizacja na każdym keystroke powoduje, że gdy pole `question`/`answer` stanie się puste, input **natychmiast** wypełnia się tekstem fallback (np. „How long does setup take?"). Edytor próbujący „wyczyścić i napisać od nowa" zobaczy odbijający tekst — trzeba zaznaczyć-wszystko-i-nadpisać. Analogicznie leading/trailing spacje są **ścinane na żywo** (nie da się wpisać spacji wiodącej). Nie jest to bug danych (gwarantuje niepuste, przycięte wartości), ale **realny tarcie UX**. | Pozostaje poza zakresem TASK-343-05. |
+| **U2 — listy >12 pozycji rozbijają się na osobne bloki; ordered-list restartuje numerację (NOWE)** | Renderer / markdown | Cap pozycji listy (`faqAccordionMarkdownListItemMax=12`) działa **per blok**, nie globalnie. Lista 15-pozycyjna renderuje się jako `[<ol> 1–12][<ol> 13–15]`. Ponieważ drugi `<ol>` to nowy element `list-decimal`, **numeracja restartuje od 1** — wizualnie wygląda jak „1…12, 1, 2, 3". Dla długich list numerowanych mylące. (Listy nieuporządkowane też się rozbijają, ale brak widocznej numeracji czyni to mniej dotkliwym.) | Pozostaje poza zakresem TASK-343-05. |
 
-**Nie wykryto** żadnego błędu konsoli (admin i front: 0/0), żadnego twardego buga renderowania ani rozjazdu między wspólnie testowanymi opcjami w obrębie sesji. Wszystkie kontrolki Wizard/Visual, poza brakującą `spacing` (N1), działają i aktualizują podgląd na żywo.
+**Nie wykryto** żadnego błędu konsoli (admin i front: 0/0), żadnego twardego buga renderowania ani rozjazdu między wspólnie testowanymi opcjami w obrębie sesji. Po TASK-343-05 kontrolki Wizard/Visual z zakresu `style.spacing` są spójne z kontraktem.
 
 ---
 
@@ -186,7 +192,7 @@
 | Dane Draft vs published | defaults (single/md/0) | seed (two-col/none/−1) | ⚠ Draft ≠ published (sekcja 2) |
 | Otwieranie/zamykanie `<details>` | działa natywnie | działa + skrypt runtime | ✓ |
 | Single-open (`name`) | działa natywnie | działa natywnie | ✓ |
-| `aria-expanded` po ręcznym toggle | ✗ desync (N2, bound=unset) | ✓ sync (skrypt) | ⚠ tylko front poprawny |
+| `aria-expanded` po ręcznym toggle | brak statycznego atrybutu do desyncu | ✓ sync po zbindowaniu runtime | ✓ po TASK-343-05 |
 | Liczba renderów | 1 (brak kolizji `name`) | 1 | ✓ |
 | Markdown / ordered-list / budżety | render bezpieczny | kod współdzielony | ✓ |
 | JSON-LD `FAQPage` | wstrzykiwany przy włączeniu | fixture off → brak | ✓ logika spójna |
@@ -212,8 +218,10 @@
 - **Gałąź ordered-list i budżety markdown** działają zgodnie z projektem: `<ol> list-decimal`, cap pozycji 12 na blok, rozbicie list mieszanych, cap tokenów 80, oraz poprawne spłaszczenie ordered-list+markdown do plain textu w JSON-LD `FAQPage`.
 - **Pełne rodziny stylów** (maxWidth, headerAlign, titleSize + gałąź compact/auto, paddingX/Y, panelRadius, borderWidth, motion) zmapowane co do jednej wartości na poprawne klasy/inline. **Trzy palety** (Light/Brand/Dark) i **spójny „Clear"** dla wszystkich 7 kolorów.
 - **Operacje na itemach** (Add do 12, reorder przyciskiem, Remove z dialogiem, bulk-delete z guardem „nie usuwaj wszystkich", allowMultipleOpen) działają z poprawnymi dialogami i guardami. **Wizard** i **read-only Advanced** spójne; Advanced wiernie odbija stan Visual.
-- **Najważniejsze realne znalezisko (N1):** brak kontrolki `style.spacing` w edytorze, przy jednoczesnym deklarowaniu jej jako `writablePath` w kontrakcie, obiecywaniu w opisie sekcji i podsumowywaniu w Advanced — luka funkcjonalna + mylący opis + niespójność kontrakt↔UI. Gęstość listy jest nieedytowalna z UI.
-- **Nowe niuanse UX:** U1 (puste pole odbija do fallbacku + live-trim — tarcie przy edycji), U2 (listy >12 pozycji rozbijają się na osobne bloki, ordered-list restartuje numerację). Pozostałe: N2 (admin-only desync `aria-expanded`), N3 (surface Clear → transparent), N4 (kolizja etykiet — automatyzacja), N5 (brak gęstości w Wizard).
+- **TASK-343-05 zamknął najważniejsze realne znaleziska N1/N2:** `style.spacing`
+  jest edytowalne w Visual i runtime-owned `aria-expanded` nie driftuje w
+  statycznym admin preview.
+- **Nowe niuanse UX:** U1 (puste pole odbija do fallbacku + live-trim — tarcie przy edycji), U2 (listy >12 pozycji rozbijają się na osobne bloki, ordered-list restartuje numerację). Pozostałe: N3 (surface Clear → transparent), N4 (kolizja etykiet — automatyzacja), N5 (Wizard pozostaje minimalnym setupem; spacing jest Visual-owned).
 - **Obserwacja:** Draft (admin) i wersja opublikowana (front) są rozjechane — istotne przy każdym porównaniu admin↔front.
 - **Nie-do-zweryfikowania:** drag&drop reorder (ograniczenie symulacji HTML5 DnD w harnessie; funkcja bazowa `moveItem` potwierdzona przyciskami) oraz trwałość po zapisie (świadomie nie zapisywano).
 - Front: w pełni interaktywny, dostępny, bez overflow na 375 px, 0 błędów/ostrzeżeń konsoli; niezapisane edycje admina nie wyciekają.

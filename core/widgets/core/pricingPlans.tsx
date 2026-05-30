@@ -681,6 +681,31 @@ export const resolvePricingPlansVariant = (variant: string): PricingPlansVariant
 export const resolvePricingPlanCountForVariant = (variant: PricingPlansVariantId): number =>
   pricingVariantPlanCountMap[variant];
 
+export type PricingPlanCapacitySummary = {
+  capacity: number;
+  rendered: number;
+  missing: number;
+  authored: number;
+  hidden: number;
+};
+
+export function describePricingPlanCapacity(
+  variant: PricingPlansVariantId,
+  plans: PricingPlanItem[] | undefined
+): PricingPlanCapacitySummary {
+  const capacity = resolvePricingPlanCountForVariant(variant);
+  const authored = normalizePricingPlans(plans).length;
+  const rendered = Math.min(capacity, authored);
+
+  return {
+    capacity,
+    rendered,
+    missing: Math.max(0, capacity - rendered),
+    authored,
+    hidden: Math.max(0, authored - capacity),
+  };
+}
+
 export const normalizePricingPlanCount = (value: number) => {
   if (!Number.isFinite(value)) return resolvePricingPlanCountForVariant("three-plans");
   return Math.min(pricingPlanMax, Math.max(pricingPlanMin, Math.floor(value)));
@@ -1050,13 +1075,9 @@ function resolvePlanBadgeStyle(tone: PricingPlanBadgeTone, highlightColor: strin
   };
 }
 
-function renderPlanBadge(
-  plan: PricingPlanItem,
-  highlightColor: string,
-  options?: { hideText?: string }
-) {
+function renderPlanBadge(plan: PricingPlanItem, highlightColor: string) {
   const badgeText = resolveOptionalTrimmedString(plan.badge);
-  if (!badgeText || badgeText === options?.hideText) return null;
+  if (!badgeText) return null;
   const tone = resolvePricingPlanBadgeTone(plan.badgeTone, Boolean(plan.highlighted));
   return (
     <span
@@ -1236,7 +1257,7 @@ function PricingCardsLayout({
                 >
                   {plan.name}
                 </p>
-                {renderPlanBadge(plan, style.highlightRing, { hideText: highlightLabel })}
+                {renderPlanBadge(plan, style.highlightRing)}
               </div>
               {resolveOptionalTrimmedString(plan.description) ? (
                 <p
@@ -1429,7 +1450,7 @@ function PricingComparisonRowsLayout({
                         </span>
                       ) : null}
                       {comparison.showHeaderBadges
-                        ? renderPlanBadge(plan, style.highlightRing, { hideText: highlightLabel })
+                        ? renderPlanBadge(plan, style.highlightRing)
                         : null}
                       <p
                         id={scopedId(instanceId, `comparison-plan-${plan.id ?? index + 1}-title`)}
@@ -1654,25 +1675,23 @@ export function PricingPlansBlock({
 
       {billingToggle.enabled ? (
         <div
-          className="mb-4 flex items-center justify-center gap-2"
+          className="mb-4 flex justify-center"
           role="status"
           aria-live="polite"
           aria-atomic="true"
           aria-label={`Billing cycle: ${activeBillingLabel} pricing shown`}
           data-pricing-billing-toggle="static"
+          data-pricing-billing-display="static-cycle"
           data-pricing-cycle={billingToggle.defaultCycle ?? "monthly"}
         >
-          <span
-            className="rounded-full border px-3 py-1 text-xs font-semibold"
-            data-state={billingToggle.defaultCycle !== "annual" ? "active" : "inactive"}
-          >
-            {billingToggle.monthlyLabel}
-          </span>
-          <span
-            className="rounded-full border px-3 py-1 text-xs font-semibold"
-            data-state={billingToggle.defaultCycle === "annual" ? "active" : "inactive"}
-          >
-            {billingToggle.annualLabel}
+          <span className="inline-flex flex-wrap items-center justify-center gap-1 rounded-md border border-dashed px-3 py-1.5 text-xs text-[var(--color-text)]/70">
+            <span className="font-medium text-[var(--color-text)]">Billing cycle:</span>
+            <span
+              className="font-semibold text-[var(--color-text)]"
+              data-pricing-cycle-label="active"
+            >
+              {activeBillingLabel} pricing shown
+            </span>
           </span>
         </div>
       ) : null}

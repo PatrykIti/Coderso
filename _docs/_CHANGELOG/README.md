@@ -25,6 +25,37 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1029 | 2026-05-30 | TASK-343-02 Appointment Form phone validation | CMS Widgets/Appointment Form/Admin UI/Runtime/QA/Docs |
+| 1028 | 2026-05-30 | TASK-343-04 Accordion preview truthfulness | CMS Widgets/Accordion/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1027 | 2026-05-30 | TASK-343-05 FAQ Accordion spacing and preview truthfulness | CMS Widgets/FAQ/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1026 | 2026-05-30 | TASK-343-06 Booking Calendar truthfulness | CMS Widgets/Booking/Admin UI/Runtime/QA/Docs |
+| 1025 | 2026-05-30 | TASK-343-08 Compare Timeline segment label size | CMS Widgets/Compare Timeline/Runtime/QA/Docs |
+| 1024 | 2026-05-30 | TASK-343-11 Team truthfulness | CMS Widgets/Team/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1023 | 2026-05-30 | TASK-343-12 Template Section truthfulness | CMS Widgets/Template Section/Admin UI/Runtime/QA/Docs |
+| 1022 | 2026-05-30 | TASK-343-13 Timeline truthfulness | CMS Widgets/Timeline/Admin UI/Runtime/QA/Docs |
+| 1021 | 2026-05-30 | TASK-343-15 Navigation truthfulness | CMS Widgets/Navigation/Admin UI/Runtime/QA/Docs |
+| 1020 | 2026-05-30 | TASK-343-16 Product Gallery truthfulness | CMS Widgets/Commerce/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1019 | 2026-05-30 | TASK-343-17 Rich Text Section truthfulness | CMS Widgets/Rich Text/Admin UI/Runtime/Security/QA/Docs |
+| 1018 | 2026-05-30 | TASK-343-20 Search Box truthfulness | CMS Widgets/Search/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1017 | 2026-05-30 | TASK-343-22 CTA Banner truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1016 | 2026-05-30 | TASK-343-23 Gallery Mosaic truthfulness | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1015 | 2026-05-30 | TASK-343-26 Stats KPI truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1014 | 2026-05-30 | TASK-343-25 Pricing Plans truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1013 | 2026-05-30 | TASK-343-24 Logo Cloud truthfulness | CMS Widgets/Admin UI/Runtime/QA/Docs |
+| 1012 | 2026-05-30 | TASK-343-27 Tabs slot truthfulness | CMS Widgets/Admin UI/Builder/Runtime/QA/Docs |
+| 1011 | 2026-05-30 | TASK-343-28 Split Layout ratio truthfulness | CMS Widgets/Admin UI/UX/QA/Docs |
+| 1010 | 2026-05-30 | TASK-343-29 Entry Teaser a11y and CTA guidance | CMS Widgets/Admin UI/Runtime/Accessibility/QA/Docs |
+| 1009 | 2026-05-30 | TASK-343-31 MediaPicker dialog description | CMS Widgets/Admin UI/Accessibility/QA/Docs |
+| 1008 | 2026-05-30 | TASK-343-30 Shared color state truthfulness | CMS Widgets/Admin UI/QA/Docs |
+| 1007 | 2026-05-30 | TASK-343-21 Shared block layout and visibility | CMS Widgets/Admin UI/Builder/Runtime/QA |
+| 1006 | 2026-05-30 | TASK-343-19 Posts Feed route truthfulness | CMS Widgets/Posts/Admin UI/Runtime/QA |
+| 1005 | 2026-05-30 | TASK-343-18 Listing Filters a11y and empty facets | CMS Widgets/Listings/Admin UI/Runtime/A11y/QA |
+| 1004 | 2026-05-30 | TASK-343-14 Form Embed truthfulness | CMS Widgets/Forms/Admin UI/Runtime/QA |
+| 1003 | 2026-05-30 | TASK-343-10 Toggle Block contrast | CMS Widgets/Admin UI/Runtime/QA |
+| 1002 | 2026-05-30 | TASK-343-09 Stack responsive class maps | CMS Widgets/Runtime/Tailwind/QA |
+| 1001 | 2026-05-30 | TASK-343-07 Feature Grid remediation | CMS Widgets/Admin UI/A11y/QA |
+| 1000 | 2026-05-30 | TASK-343-03 Newsletter submit guard | CMS Widgets/Forms/Public UX/QA |
+| 999 | 2026-05-30 | TASK-343-01 Hero remediation | CMS Widgets/Admin UI/Runtime/QA |
 | 998 | 2026-05-30 | TASK-343 Claude cross-check | QA/Widgets/Docs |
 | 997 | 2026-05-29 | TASK-343 code alignment audit | QA/Widgets/Docs |
 | 996 | 2026-05-29 | TASK-343 shared MediaPicker routing | QA/Widgets/Admin UI/Accessibility/Docs |

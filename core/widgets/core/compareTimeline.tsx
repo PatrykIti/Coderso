@@ -904,7 +904,7 @@ function CompareTrackRow({
   const trackGridStyle = resolveCompareGridStyle(steps.length);
 
   const segmentLabelBaseClass = joinClasses(
-    "rounded-full border px-2 py-1 text-xs",
+    "rounded-full border px-2 py-1",
     segmentLabelWeightClass
   );
   const segmentLabelStyle: CSSProperties =

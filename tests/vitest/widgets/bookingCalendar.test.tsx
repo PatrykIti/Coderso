@@ -245,16 +245,56 @@ test("booking calendar normalizes date policy and renders clamped date attribute
   expect(html).toContain('value="2030-01-10"');
 });
 
-test("booking calendar cleared frame style omits decorative background", () => {
+test("booking calendar cleared frame style restores default frame fallback", () => {
   const html = renderToString(
     <BookingCalendarBlock
       data={normalizeBookingCalendarData({ ...bookingCalendarDefaults, style: {} })}
       variant="default"
     />
   );
+  const rootClass = /<section[^>]*class="([^"]*)"/.exec(html)?.[1] ?? "";
 
-  expect(html).not.toContain("bg-[var(--color-bg)]/95");
+  expect(rootClass).toContain("border-[var(--color-border)]");
+  expect(rootClass).toContain("bg-[var(--color-bg)]/95");
   expect(html).not.toContain("background-color:transparent");
+});
+
+test("booking calendar partial slot surface override keeps cleared frame fallback", () => {
+  const html = renderToString(
+    <BookingCalendarBlock
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        style: { selectedSlotBackground: "#123456" },
+      })}
+      variant="default"
+    />
+  );
+  const rootClass = /<section[^>]*class="([^"]*)"/.exec(html)?.[1] ?? "";
+  const rootStyle = /<section[^>]*\sstyle="([^"]*)"/.exec(html)?.[1] ?? "";
+
+  expect(rootClass).toContain("border-[var(--color-border)]");
+  expect(rootClass).toContain("bg-[var(--color-bg)]/95");
+  expect(rootStyle).toContain("--booking-slot-selected-bg:#123456");
+
+  const customBorderHtml = renderToString(
+    <BookingCalendarBlock
+      data={normalizeBookingCalendarData({
+        ...bookingCalendarDefaults,
+        style: {
+          frameBorderColor: "#112233",
+          selectedSlotBackground: "#123456",
+        },
+      })}
+      variant="default"
+    />
+  );
+  const customBorderRootClass = /<section[^>]*class="([^"]*)"/.exec(customBorderHtml)?.[1] ?? "";
+  const customBorderRootStyle = /<section[^>]*\sstyle="([^"]*)"/.exec(customBorderHtml)?.[1] ?? "";
+
+  expect(customBorderRootClass).not.toContain("border-[var(--color-border)]");
+  expect(customBorderRootClass).toContain("bg-[var(--color-bg)]/95");
+  expect(customBorderRootStyle).toContain("border-color:#112233");
+  expect(customBorderRootStyle).toContain("--booking-slot-selected-bg:#123456");
 });
 
 test("booking calendar supports compact and horizontal variants", () => {

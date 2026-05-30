@@ -991,6 +991,115 @@ test("PostsFeed visual editor keeps preview ready when routes or media degrade",
   }
 });
 
+test("PostsFeed visual editor explains missing card routes and view-all visibility", async () => {
+  const { PostsFeedVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  const missingRouteValue: PostsFeedData = {
+    pagination: {
+      mode: "view-all",
+      pageSize: 6,
+      viewAllHref: "",
+      viewAllLabel: "All posts",
+      loadMoreLabel: "Load more",
+    },
+    resolved: {
+      items: [
+        {
+          id: "post-1",
+          title: "Launch note",
+          status: "published",
+        },
+      ],
+      total: 2,
+      sourceMode: "latest",
+      listPath: "",
+    },
+  };
+
+  const missingRouteView = mount(
+    <PostsFeedVisualEditor value={missingRouteValue} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    await flush();
+
+    expect(
+      missingRouteView.container.querySelector('[data-posts-feed-route-guidance="cards"]')
+        ?.textContent
+    ).toContain("Card titles and CTA labels render as non-links");
+    expect(
+      missingRouteView.container.querySelector('[data-posts-feed-route-guidance="view-all"]')
+        ?.textContent
+    ).toContain("View all is hidden until you pick a destination");
+  } finally {
+    missingRouteView.cleanup();
+  }
+
+  const allVisibleView = mount(
+    <PostsFeedVisualEditor
+      value={{
+        ...missingRouteValue,
+        resolved: {
+          ...missingRouteValue.resolved,
+          total: 1,
+          listPath: "/news",
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(allVisibleView.container.textContent).toContain(
+      "All resolved posts already fit in the initial items count"
+    );
+  } finally {
+    allVisibleView.cleanup();
+  }
+});
+
+test("PostsFeed advanced route capability avoids blank list route copy", async () => {
+  const { PostsFeedAdvancedEditor } =
+    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  const view = mount(
+    <PostsFeedAdvancedEditor
+      value={{
+        resolved: {
+          items: [
+            {
+              id: "post-1",
+              title: "Launch note",
+              href: "/news/launch-note",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceMode: "latest",
+          listPath: "",
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Card/detail links are resolved; no posts list route resolved."
+    );
+    expect(view.container.textContent).not.toContain("List route: ");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostsFeed visual editor uses swatch-only color controls with saved custom compatibility", async () => {
   const { PostsFeedVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
@@ -1036,7 +1145,8 @@ test("PostsFeed visual editor uses swatch-only color controls with saved custom 
     expect(findInputByAriaLabel(view.container, "Card background value")).toBeUndefined();
     expect(findInputByAriaLabel(view.container, "Card border value")).toBeUndefined();
     expect(findInputByAriaLabel(view.container, "Text color value")).toBeUndefined();
-    expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).toContain("Theme token");
+    expect(view.container.textContent).toContain("fallback preview");
 
     React.act(() => {
       setInputValue(backgroundSwatch, "#112233");

@@ -8,6 +8,9 @@
 > **Trasa publiczna:** `/test-booking-calendar-0516` (tytuł strony: `TEST-BOOKING-CALENDAR-0516`)
 > **Referencja formatu:** `_docs/PLAYWRIGHT/REPORT_CONTACT_WIDGET.md`
 > **Raporty pokrewne:** poprzednia wersja tego pliku (29-05, sesja `claude-29-05-booking-calendar`), `27-05-2026/REPORT_BOOKING_CALENDAR_WIDGET.md` (smoke), `23-05-2026-22-18/REPORT_BOOKING_CALENDAR_WIDGET.md` (historyczny)
+> **Remediacja TASK-343-06 (2026-05-30):** I3 i I4 są zamknięte. Renderer
+> przywraca legacy tło/obramowanie ramki per wyczyszczone pole Surface, a
+> Advanced filtruje bieżący blok z diagnostyki booking-flow tak samo jak Wizard.
 
 ---
 
@@ -211,14 +214,14 @@ runtime). To architektura, nie błąd.
 
 ---
 
-## 5. CO NIE DZIAŁA / WYMAGA UWAGI (defekty + nuty UX)
+## 5. Defekty historyczne i status remediacji
 
-| # | Obserwacja | Klasyfikacja |
+| # | Obserwacja | Status |
 |---|---|---|
-| **I3** | **„Clear" w Surface nie przywraca klas legacy.** Potwierdzone ponownie: po ustawieniu kilku kolorów i kliknięciu „Clear" na `frameBackground`, `background-color` znika (`""`), ale `style` pozostaje zdefiniowanym obiektem (inne kolory wciąż ustawione), więc klasy fallback `border-[var(--color-border)] bg-[var(--color-bg)]/95` **pozostają wygaszone** (`legacy:false`). Po wyczyszczeniu pojedynczego pola rama nie wraca w 100% do pierwotnego wyglądu. | Drobny defekt kosmetyczny rendererра |
-| **I4** | **Advanced: „Booking flow — Matches Choose appointment slot".** Matchuje flow do kalendarza o tytule = własny tytuł widgetu (Wizard filtruje bieżący blok, Advanced nie), więc wygląda, jakby widget „matchował sam siebie". | Drobna nuta UX / niespójność |
+| **I3** | **„Clear" w Surface nie przywraca klas legacy.** Historycznie po ustawieniu kilku kolorów i kliknięciu „Clear" na `frameBackground`, `background-color` znikał (`""`), ale `style` pozostawał zdefiniowanym obiektem (inne kolory wciąż ustawione), więc klasy fallback `border-[var(--color-border)] bg-[var(--color-bg)]/95` pozostawały wygaszone (`legacy:false`). | Zamknięte w TASK-343-06: frame background i frame border przywracają legacy klasy per wyczyszczone pole, niezależnie od slotowych swatchy. |
+| **I4** | **Advanced: „Booking flow — Matches Choose appointment slot".** Historycznie matchował flow do kalendarza o tytule = własny tytuł widgetu (Wizard filtrował bieżący blok, Advanced nie), więc wyglądało, jakby widget „matchował sam siebie". | Zamknięte w TASK-343-06: Advanced używa tej samej listy peer calendars co Wizard i nie pokazuje self-match. |
 
-Powyższe to **jedyne** pozycje „nie-OK" o charakterze defektu/niespójności. Nie stwierdzono
+Po remediacji TASK-343-06 brak otwartych pozycji I3/I4. Nie stwierdzono
 żadnego twardego buga blokującego ani błędu konsoli.
 
 ---
@@ -258,9 +261,9 @@ jest w całości read-only i potwierdzony. Runtime frontu (najważniejsza, stero
 zadziałał end-to-end bez błędów konsoli: realny fetch, render, wybór, czyszczenie, konsumpcja
 zmiennych CSS, kaskada usług, ochrona daty przeszłej, a11y i live region.
 
-Pozycje „nie-OK" ograniczają się do **1 drobnego defektu kosmetycznego** (I3) i **1 drobnej
-niespójności UX** (I4). Pozycje nie-testowalne (N1–N7) wynikają z ograniczeń fixtury,
-zakresu widgetu lub świadomej ochrony danych (brak zapisu) — nie z defektów.
+Po remediacji TASK-343-06 historyczne pozycje „nie-OK" I3 i I4 są zamknięte.
+Pozycje nie-testowalne (N1–N7) wynikają z ograniczeń fixtury, zakresu widgetu
+lub świadomej ochrony danych (brak zapisu) — nie z defektów.
 
 ---
 
@@ -272,8 +275,8 @@ zakresu widgetu lub świadomej ochrony danych (brak zapisu) — nie z defektów.
 | Kontrolki domknięte w tym przebiegu | 4 (`description`, `resourceLabel`, `emptyStateMessage`, `selectedSlotBorderColor`) |
 | Funkcje zweryfikowane jako działające | ~45 |
 | Twarde bugi blokujące | 0 |
-| Drobny defekt kosmetyczny (renderer) | 1 (I3) |
-| Drobna niespójność UX | 1 (I4) |
+| Drobny defekt kosmetyczny (renderer) | 0 otwartych (I3 zamknięty w TASK-343-06) |
+| Drobna niespójność UX | 0 otwartych (I4 zamknięta w TASK-343-06) |
 | Nuty UX / architektura | 4 (U1–U4) |
 | Pozycje nie-testowalne / poza zakresem | 7 (N1–N7) |
 | Błędy / ostrzeżenia konsoli (frontend) | 0 |

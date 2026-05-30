@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties, ReactNode } from "react";
+import { useId, type ComponentType, type CSSProperties, type ReactNode } from "react";
 
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
@@ -172,8 +172,8 @@ export const accordionEditorContract: WidgetEditorContract = {
       id: "accordion.wizard.starter-setup",
       title: "Starter items",
       role: "setup",
-      writablePaths: ["items.count", "options.defaultOpenIds"],
-      readOnlyPaths: ["items.*.title", "items.*.description"],
+      writablePaths: ["options.defaultOpenIds"],
+      readOnlyPaths: ["slots.item", "items.*.title", "items.*.description"],
     },
     {
       mode: "visual",
@@ -693,11 +693,16 @@ export function AccordionBlock({
     ) ?? [];
   const style = normalized.style ?? accordionDefaults.style!;
   const renderClasses = resolveAccordionRenderClasses(normalized, resolvedVariant);
-  const rootInstanceId = createWidgetInstanceId(
+  const reactRenderInstanceId = useId();
+  const baseRootInstanceId = createWidgetInstanceId(
     "accordion",
     blockId,
     resolvedItems[0]?.instanceId ?? "group"
   );
+  const rootInstanceId =
+    renderContext?.mode === "editor-preview" || renderContext?.mode === "admin-preview"
+      ? scopedId(baseRootInstanceId, `preview-${reactRenderInstanceId}`)
+      : baseRootInstanceId;
   const detailsGroupName = scopedId(rootInstanceId, "group");
 
   const containerStyle: CSSProperties =
@@ -744,6 +749,12 @@ export function AccordionBlock({
             style={containerStyle}
             data-coderso-accordion-item={item.instanceId}
             data-coderso-accordion-item-details
+            onToggle={(event) => {
+              const summary = event.currentTarget.querySelector("[data-coderso-accordion-summary]");
+              if (summary instanceof HTMLElement) {
+                summary.setAttribute("aria-expanded", event.currentTarget.open ? "true" : "false");
+              }
+            }}
           >
             <summary
               id={scopedId(rootInstanceId, `summary-${item.instanceId}`)}

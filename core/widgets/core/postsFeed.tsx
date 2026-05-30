@@ -181,6 +181,14 @@ const normalizeResolvedItems = (value: unknown) =>
     Array.isArray(value) ? (value as ContentListRuntimeItem[]) : undefined
   );
 
+export type PostsFeedRouteState = {
+  cardLinks: { mode: "ready"; listPath: string } | { mode: "missing_detail_route"; reason: string };
+  viewAll:
+    | { mode: "not_applicable" }
+    | { mode: "ready"; href: string; allItemsVisible: boolean }
+    | { mode: "missing_view_all_destination"; reason: string };
+};
+
 export const postsFeedSchema = {
   type: "object",
   additionalProperties: false,
@@ -608,6 +616,49 @@ export function mapPostsFeedToContentListData(data: PostsFeedData): ContentListD
   });
 }
 
+export function resolvePostsFeedRouteState(
+  data: PostsFeedData,
+  resolvedOverride?: PostsFeedData["resolved"]
+): PostsFeedRouteState {
+  const normalized = normalizePostsFeedData(data);
+  const resolved = resolvedOverride ?? normalized.resolved;
+  const listPath = resolveTrimmedString(resolved?.listPath);
+  const explicitViewAllHref = resolveTrimmedString(normalized.pagination?.viewAllHref);
+  const paginationMode = normalized.pagination?.mode ?? "none";
+  const resolvedItems = normalizeResolvedItems(resolved?.items);
+  const hasMissingItemHref = resolvedItems.some((item) => !resolveTrimmedString(item.href));
+  const cardLinksReady = resolvedItems.length > 0 ? !hasMissingItemHref : Boolean(listPath);
+  const total =
+    typeof resolved?.total === "number" && Number.isFinite(resolved.total)
+      ? Math.max(0, Math.floor(resolved.total))
+      : 0;
+  const allItemsVisible = total > 0 && resolvedItems.length >= total;
+
+  return {
+    cardLinks: cardLinksReady
+      ? { mode: "ready", listPath }
+      : {
+          mode: "missing_detail_route",
+          reason:
+            "Card titles and CTA labels render as non-links until a posts route is configured.",
+        },
+    viewAll:
+      paginationMode !== "view-all"
+        ? { mode: "not_applicable" }
+        : explicitViewAllHref || listPath
+          ? {
+              mode: "ready",
+              href: explicitViewAllHref || listPath,
+              allItemsVisible,
+            }
+          : {
+              mode: "missing_view_all_destination",
+              reason:
+                "View all is hidden until you pick a destination or configure an enabled posts list route.",
+            },
+  };
+}
+
 const postsFeedMotionStyleText = `
 @keyframes posts-feed-fade-in {
   from { opacity: 0; }
@@ -646,6 +697,7 @@ export function PostsFeedBlock({
 }) {
   const resolvedVariant: ContentListVariantId = resolveContentListVariant(variant);
   const mapped = mapPostsFeedToContentListData(data);
+  const routeState = resolvePostsFeedRouteState(data);
   const motion = normalizePostsFeedData(data).style?.motion ?? "none";
   const withVariant = {
     ...mapped,
@@ -656,7 +708,14 @@ export function PostsFeedBlock({
     },
   };
   const content = (
-    <ContentListBlock data={withVariant} variant={resolvedVariant} blockId={blockId} />
+    <ContentListBlock
+      data={withVariant}
+      variant={resolvedVariant}
+      blockId={blockId}
+      linkUnavailableReason={
+        routeState.cardLinks.mode === "missing_detail_route" ? "missing-route" : undefined
+      }
+    />
   );
   if (motion === "none") {
     return content;

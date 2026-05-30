@@ -6,7 +6,7 @@
 **Category:** Widgets + Logo Cloud + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, TASK-343-30, TASK-343-31
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,15 +25,26 @@ misclassified as custom values.
 
 ## Sub-Tasks
 
-- [ ] Add confirmation/recovery for destructive logo-count reduction.
-- [ ] Separate saved Strip motion values from effective Grid behavior in Visual
+- [x] Add confirmation/recovery for destructive logo-count reduction.
+- [x] Separate saved Strip motion values from effective Grid behavior in Visual
   and Advanced summaries.
-- [ ] Make `Colorize on hover` unchecked or explicitly inactive when grayscale
+- [x] Make `Colorize on hover` unchecked or explicitly inactive when grayscale
   is off.
-- [ ] Route default color state truthfulness through `TASK-343-30` and keep
+- [x] Route default color state truthfulness through `TASK-343-30` and keep
   Logo Cloud-specific regression coverage.
-- [ ] Route the shared MediaPicker dialog warning from this report through
+- [x] Route the shared MediaPicker dialog warning from this report through
   `TASK-343-31`; do not duplicate the fix in Logo Cloud.
+
+## Implementation Notes
+
+- Logo count reductions now confirm before truncating saved logo rows, with
+  removed logo labels summarized in the native confirmation prompt.
+- Visual and Advanced now distinguish effective Strip behavior from saved Strip
+  row/motion settings when the active variant is Grid or Dense.
+- Turning grayscale off also clears the saved hover-color flag, and the disabled
+  `Colorize on hover` switch renders unchecked while inactive.
+- Advanced color summaries reuse the shared color-state classifier, so theme
+  tokens are no longer described as custom color values.
 
 ## Files To Change
 

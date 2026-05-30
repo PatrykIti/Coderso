@@ -325,7 +325,8 @@ test("Accordion editors expose non-overlapping writable ownership metadata", asy
       (path, index, paths) => paths.indexOf(path) !== index
     );
 
-    expect(wizardPaths).toEqual(expect.arrayContaining(["items.count", "options.defaultOpenIds"]));
+    expect(wizardPaths).toEqual(expect.arrayContaining(["options.defaultOpenIds"]));
+    expect(wizardPaths).not.toContain("items.count");
     expect(visualPaths).toEqual(
       expect.arrayContaining([
         "variant",
@@ -357,6 +358,14 @@ test("Accordion wizard editor preserves a valid open item and seeds generated it
   const view = await renderEditor({
     editor: "wizard",
     initialVariant: "legacy",
+    initialContext: {
+      surface: "page-builder",
+      slotTargets: [
+        { definitionId: "item", slotId: "item:1", label: "Item 1", kind: "repeatable" },
+        { definitionId: "item", slotId: "item:2", label: "Item 2", kind: "repeatable" },
+        { definitionId: "item", slotId: "item:3", label: "Item 3", kind: "repeatable" },
+      ],
+    },
     initialValue: {
       items: [
         { id: "1", title: "Intro", description: "Start here" },
@@ -377,14 +386,17 @@ test("Accordion wizard editor preserves a valid open item and seeds generated it
     );
     expect(() => getSectionByTitle(view.container, "Variant")).toThrow();
     expect(setupSection.textContent).toContain("Visual owns daily item title edits");
-
-    setSelectValue(
-      findSelectByOptions(setupSection, ["2", "3", "4", String(accordionItemMax)]),
-      "4"
+    expect(setupSection.textContent).toContain("Panel count");
+    expect(setupSection.textContent).toContain("3 slot-owned panels");
+    expect(findSelectByOptions(setupSection, ["2", "3", "4", String(accordionItemMax)])).toBe(
+      undefined
     );
-
-    expect(view.getValue().items).toHaveLength(4);
+    expect(setupSection.textContent).toContain("Item 3");
     expect(view.getValue().options?.initiallyOpenId).toBe("2");
+
+    setSelectValue(findSelectByOptions(setupSection, ["1", "2", "3"]), "3");
+    expect(view.getValue().options?.initiallyOpenId).toBe("3");
+    expect(view.getValue().options?.defaultOpenIds).toEqual(["3"]);
     expect(view.getValue().items?.[2]).toEqual(
       expect.objectContaining({
         id: "3",
@@ -392,11 +404,7 @@ test("Accordion wizard editor preserves a valid open item and seeds generated it
       })
     );
 
-    setSelectValue(findSelectByOptions(setupSection, ["1", "2", "3", "4"]), "4");
-    expect(view.getValue().options?.initiallyOpenId).toBe("4");
-
     expect(setupSection.querySelectorAll("input")).toHaveLength(0);
-    expect(view.getValue().items?.[3]).toEqual(expect.objectContaining({ id: "4" }));
     expect(view.onChangeSpy).toHaveBeenCalled();
     expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
   } finally {

@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
-  normalizePricingPlans,
   normalizePricingPlansData,
   pricingPlansDefaults,
   type PricingPlansData,
@@ -402,7 +401,10 @@ test("PricingPlans wizard editor keeps setup focused on layout and points daily 
     expect(view.container.querySelector("select")).toBeNull();
     expect(onVariantChangeSpy).not.toHaveBeenCalled();
     expect(onChangeSpy).not.toHaveBeenCalled();
-    expect(view.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(view.container.textContent).toContain("Three Plans supports up to 3 plans.");
+    expect(view.container.textContent).toContain(
+      "Saved content currently renders 3 plans in preview."
+    );
     expect(view.container.textContent).not.toContain("1 preserved plan is hidden");
     expect(view.container.textContent).toContain("Daily editing happens in Visual");
     expect(
@@ -522,6 +524,13 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
 
     clickButtonByText(view.container, "Four Plans");
     await flushAsyncUpdates();
+    expect(view.container.textContent).toContain("Four Plans supports up to 4 plans.");
+    expect(view.container.textContent).toContain(
+      "Saved content currently renders 3 plans in preview."
+    );
+    expect(view.container.textContent).toContain(
+      "Add 1 plan below to fill the remaining layout slot."
+    );
     clickElement(initialHighlightSwitches[0]);
     setInputValue(findInputByPlaceholder(view.container, "Monthly"), "Monthly");
     setInputValue(findInputByPlaceholder(view.container, "Annual"), "Yearly");
@@ -571,6 +580,10 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     firstPlanCard = getPlanCards(view.container)[0];
     featureRows = getFeatureRows(firstPlanCard ?? view.container);
     clickButtonByText(featureRows[0] ?? firstPlanCard ?? view.container, "Remove");
+    expect(view.container.textContent).toContain("Remove feature?");
+    expect(latestValue.plans[0]?.features).toHaveLength(2);
+    clickButtonByText(view.container, "Remove feature");
+    expect(latestValue.plans[0]?.features).toEqual([{ text: "Email support", status: "included" }]);
 
     firstPlanCard = getPlanCards(view.container)[0];
     setInputValue(findInputByPlaceholder(firstPlanCard ?? view.container, "Plan 1"), "Solo");
@@ -662,6 +675,9 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
 
     const scalePlanCard = getPlanCards(view.container)[2];
     clickButtonByText(scalePlanCard ?? view.container, "Remove");
+    expect(view.container.textContent).toContain("Remove pricing plan?");
+    expect(latestValue.plans).toHaveLength(3);
+    clickButtonByText(view.container, "Remove plan");
     await flushAsyncUpdates();
     expect(latestValue.plans).toHaveLength(2);
 
@@ -721,6 +737,7 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
     );
     clickElement(highlightRingClear);
     expect(latestValue.style?.highlightRing).toBe("var(--color-primary)");
+    expect(window.confirm).not.toHaveBeenCalled();
   } finally {
     Object.defineProperty(window, "confirm", {
       value: originalConfirm,
@@ -887,10 +904,16 @@ test("PricingPlans visual editor preserves hidden plans across fixed-count varia
   const view = mount(<Harness />);
 
   try {
-    expect(view.container.textContent).toContain("Four Plans shows 4 plans.");
+    expect(view.container.textContent).toContain("Four Plans supports up to 4 plans.");
+    expect(view.container.textContent).toContain(
+      "Saved content currently renders 4 plans in preview."
+    );
 
     clickButtonByText(view.container, "Three Plans");
-    expect(view.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(view.container.textContent).toContain("Three Plans supports up to 3 plans.");
+    expect(view.container.textContent).toContain(
+      "Saved content currently renders 3 plans in preview."
+    );
     expect(view.container.textContent).toContain("1 preserved plan is hidden");
 
     const hiddenPlanCard = getPlanCards(view.container)[3];
@@ -937,7 +960,13 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
   );
 
   try {
-    expect(wizardView.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(wizardView.container.textContent).toContain("Three Plans supports up to 3 plans.");
+    expect(wizardView.container.textContent).toContain(
+      "Saved content currently renders 2 plans in preview."
+    );
+    expect(wizardView.container.textContent).toContain(
+      "Use Visual to add 1 plan and fill the remaining layout slot."
+    );
     expect(wizardView.container.textContent).toContain("Daily editing happens in Visual");
     expect(
       findInputByPlaceholder(
@@ -989,12 +1018,18 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
         ) as HTMLTextAreaElement | null | undefined
       )?.value
     ).toBe(pricingPlansDefaults.header?.description);
-    expect(visualView.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(visualView.container.textContent).toContain("Three Plans supports up to 3 plans.");
+    expect(visualView.container.textContent).toContain(
+      "Saved content currently renders 2 plans in preview."
+    );
+    expect(visualView.container.textContent).toContain(
+      "Add 1 plan below to fill the remaining layout slot."
+    );
     expect(visualView.container.textContent).toContain("No features yet.");
 
     clickButtonByText(visualView.container, "Four Plans");
     expect(visualView.container.textContent).toContain("Selected");
-    expect(visualView.container.textContent).toContain("Three Plans shows 3 plans.");
+    expect(visualView.container.textContent).toContain("Three Plans supports up to 3 plans.");
   } finally {
     visualView.cleanup();
   }
@@ -1105,16 +1140,12 @@ test("PricingPlans visual editor keeps payload stable when guard actions are tri
   const view = mount(<Harness />);
 
   try {
-    const before = structuredClone(
-      normalizePricingPlansData({
-        ...latestValue,
-        plans: normalizePricingPlans(latestValue.plans, 3),
-      })
-    );
+    const before = structuredClone(latestValue);
     const planCards = getPlanCards(view.container);
 
     clickButtonByText(planCards[0] ?? view.container, "Move up");
     clickButtonByText(planCards[0] ?? view.container, "Remove");
+    expect(view.container.textContent).not.toContain("Remove pricing plan?");
     clickButtonByText(planCards[1] ?? view.container, "Move down");
 
     const secondPlanCard = getPlanCards(view.container)[1];

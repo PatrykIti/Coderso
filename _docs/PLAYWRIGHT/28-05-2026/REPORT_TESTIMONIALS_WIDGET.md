@@ -209,6 +209,9 @@ CTA (style link, href /homepage), etykieta load-more. ✅
    Text `#0f172a`, Section/Card bg `#ffffff`. Po „Clear" render wraca do realnego tokenu motywu (np. accent →
    `rgb(226,177,39)`), ale swatch dalej pokazuje fallback hex, a nie faktyczny kolor tokenu — sygnał „token vs własny
    kolor" jest mylący. (`showValueInput=false`, więc nie ma też pola tekstowego z wartością.)
+   **Status TASK-343-30 (2026-05-30):** shared color controls now label token
+   values as theme tokens/defaults and state that the swatch is only a fallback
+   preview, so the static swatch no longer implies a saved custom color.
 5. **„Rating zero display" dotyczy wyłącznie kart z rating=0.** Dla kart z rating>0 wszystkie 3 opcje wyglądają
    identycznie — różnicę widać tylko na karcie zerowej.
 6. **(NOWE) „Wyczyszczenie" Formatted quote zostawia `<br>` i renderuje pusty cytat.** Zaznacz-wszystko+Delete w

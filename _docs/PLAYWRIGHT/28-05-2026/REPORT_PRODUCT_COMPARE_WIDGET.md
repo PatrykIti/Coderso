@@ -274,6 +274,13 @@ featured + sticky, a11y tytułu, Advanced (w tym realny Refresh), frontend SSR (
 | B1 | **Padding: edytor „kłamie".** Visual select i Advance summary pokazują `MD`, a blok renderuje `XL` (dziedziczone). Edycja jakiejkolwiek kontrolki layoutu cicho zmniejsza padding `xl→md`. | Niespójność stanu UI vs render — realny problem korektności (nie crash) |
 | B2 | **Device visibility nie ukrywa na publicznym SSR.** „Hidden on all devices" nie ma efektu na żywej stronie; ukrywanie działa wyłącznie przy aktywnym `previewDevice`. | Mylący komunikat / funkcja efektywnie nieaktywna publicznie (możliwe „by design", ale UI sugeruje inaczej) |
 
+> **Status TASK-343-21 (2026-05-30):** B1 i B2 są zamknięte w warstwie
+> współdzielonej. `inherit` pozostaje zapisanym tokenem w panelu Layout, Visual
+> i Advanced pokazują go jako dziedziczoną wartość z efektywnym defaultem strony
+> zamiast fałszywego `MD`, a pierwsza edycja innego pola nie zmienia paddingu.
+> `visibility.devices: []` ukrywa blok także na publicznym SSR, więc etykieta
+> „Hidden on all devices" odpowiada realnemu renderowi.
+
 > Uwaga: B1 i B2 dotyczą **współdzielonych kontrolek blokowych**, nie samego kontraktu
 > `product-compare`. Zgłaszam je, bo to widoczne kontrolki na tej fixturze i wpływają na to,
 > co użytkownik realnie zobaczy.

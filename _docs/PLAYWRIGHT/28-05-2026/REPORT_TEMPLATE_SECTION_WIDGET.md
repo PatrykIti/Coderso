@@ -27,6 +27,18 @@
 > wyjściowego (§9). Zrzutów PNG **nie** zapisywałem — wszystkie etykiety przechwyceń byłyby wyłącznie
 > lokalne w `.playwright-cli/` (katalog ignorowany przez Git), nie są wymaganym evidence w repo.
 
+> **Status remediacji (2026-05-30, TASK-343-12):** zamknięto drift
+> truthfulness bez dodawania nowego endpointu resolucji. Admin preview pozostał
+> świadomie placeholder-only, ale placeholder i Advanced mówią to wprost przez
+> `admin_preview_unresolved` zamiast sugerować rozwiązane bloki. Advanced
+> rozróżnia `template_unpublished`, `template_missing`, `template_loop`,
+> `template_empty`, resolved oraz brak wyboru, a `metadata.category` i
+> `metadata.version` są widoczne w diagnostyce/Visual zgodnie z własnością.
+> Szczegóły walidacji są w changelogu TASK-343-12. Istniejąca publiczna
+> fixture ma `visibility.devices: []`, więc po shared visibility fix publiczny
+> route ukrywa blok; publiczny smoke wykonano na krótkotrwałej stronie z
+> poprawną widocznością i usunięto ją po teście.
+
 ---
 
 ## 1. Przegląd widgetu (skrót)

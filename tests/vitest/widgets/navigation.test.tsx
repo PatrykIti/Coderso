@@ -486,6 +486,69 @@ test("navigation injects submenu runtime in expanded mode and uses image alt for
   expect(html).toContain("__nextlessNavigationBound");
 });
 
+test("navigation image logo clear falls back to text without a broken Coderso image src", () => {
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    logo: {
+      type: "image",
+      value: "",
+      href: "/",
+      alt: "",
+      source: "external",
+    },
+  });
+
+  expect(normalized.logo).toMatchObject({
+    type: "image",
+    value: "",
+  });
+
+  const html = renderToString(<NavigationBlock data={normalized} variant="simple" />);
+
+  expect(html).not.toContain('src="Coderso"');
+  expect(html).not.toContain("<img");
+  expect(html).toContain('data-navigation-logo-missing-image="true"');
+  expect(html).toContain('aria-label="Logo home"');
+});
+
+test("navigation keeps cleared saved links hidden without replacing them with starter defaults", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [
+          { label: "Docs", href: "" },
+          { label: "Pricing", href: "javascript:alert(1)" },
+        ],
+      }}
+      variant="simple"
+    />
+  );
+
+  expect(html).toContain("Coderso");
+  expect(html).not.toContain("Docs");
+  expect(html).not.toContain("Pricing");
+  expect(html).not.toContain("Home");
+  expect(html).not.toContain("About");
+  expect(html).not.toContain("javascript:alert");
+});
+
+test("navigation renders resolved empty item lists without restoring starter defaults", () => {
+  const html = renderToString(
+    <NavigationBlock
+      data={{
+        ...navigationDefaults,
+        items: [],
+      }}
+      variant="simple"
+    />
+  );
+
+  expect(html).toContain("Coderso");
+  expect(html).not.toContain("Home");
+  expect(html).not.toContain("About");
+});
+
 test("navigation wizard shows CTA fields only for CTA variants", () => {
   const simpleHtml = renderToString(
     <NavigationWizardEditor
@@ -552,11 +615,17 @@ test("navigation advanced editor keeps technical-only controls", () => {
 
   expect(html).toContain("Layout token summary");
   expect(html).toContain("Runtime behavior summary");
+  expect(html).toContain("Configured");
   expect(html).toContain('data-widget-editor-section="navigation.advanced.runtime-summary"');
   expect(html).toContain('data-widget-editor-section="navigation.advanced.layout-token-summary"');
   expect(html).toContain(
     'data-widget-editor-section="navigation.advanced.runtime-behavior-summary"'
   );
+  expect(html).toContain("Transparent surface");
+  expect(html).toContain("Mobile mode");
+  expect(html).toContain("Hide CTA on mobile");
+  expect(html).toContain("Active link mode");
+  expect(html).toContain("Admin preview runtime");
   expect(html).not.toContain("Navigation Links");
   expect(html).not.toContain("CTA and Right Actions");
 });

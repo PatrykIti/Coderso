@@ -21,12 +21,12 @@ listing runtime token contract.
 ### Wizard
 - one-time listing query source selection (`listingQueryId`)
 - setup-only facet structure with beginner-safe controls:
-  - generated support keys instead of editable facet IDs
+  - generated stable keys instead of editable facet IDs
   - facet kinds and operators
   - listing fields chosen from the selected query's field picker
   - sort fields/directions with generated sort keys
-- option/data match values and taxonomy hierarchy keys are support-owned until
-  runtime metrics can suggest safe values
+- option/data match values and taxonomy hierarchy keys stay read-only; options
+  come from listing data/runtime metrics or a safe configured option list
 - setup guidance for missing queries, empty facets, invalid fields, duplicate
   IDs, and legacy operators
 - no runtime copy, layout, or surface styling ownership
@@ -37,12 +37,12 @@ listing runtime token contract.
 - runtime labels (`title`, `description`, search/apply copy), `showSearch`,
   and `autoApply`
 - facet labels, facet order, option labels, sort labels, and preview
-- field/kind/operator bindings are read-only human badges with setup/support
-  ownership
+- field/kind/operator bindings are read-only human badges with setup ownership
 - searchable-option mode, range input mode/step, and date input mode
 - range/date presentation settings with dual inputs and optional slider pairing
 - surface styling through swatch-only color controls
-- no listing query rebinding and no facet source/value row creation
+- no listing query rebinding and no facet source/value row creation; Visual can
+  rename existing option labels but does not create new match values
 
 ### Advanced
 - read-only listing query and normalized facet binding summary
@@ -69,6 +69,14 @@ listing runtime token contract.
 - Search and facet inputs bind to `listingRuntimeTokens`.
 - When `listingQueryId` is missing, runtime renders a configuration hint instead
   of a live filter form.
+- The public runtime region and form are labelled by the widget title. The
+  search input uses a deterministic id, explicit label association,
+  `type="search"`, and `autoComplete="off"`.
+- Empty checkbox/radio/taxonomy facets render a visible explanation instead of
+  a silent empty control list. If runtime metrics are resolved but empty, the
+  message says no matching listing-data options exist yet; otherwise it states
+  that options appear after listing data resolves or a safe option list is
+  configured.
 - Editor authoring keeps runtime normalization strict while the editor surface
   preserves incomplete facet drafts long enough to show inline validation.
 - Auto-apply mode renders helper copy instead of a second manual submit button.

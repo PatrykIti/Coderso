@@ -47,7 +47,10 @@ Notes:
 - `visualOwnsVariantSelection = true`
 - `Columns` is only effective for `cards`; `list` / `compact` show an explanatory note instead of a misleading selector.
 - Visual shows the current source mode and source-specific daily filters, but source binding and source-mode switching stay in Wizard.
-- Surface colors use swatches and clear controls in Visual; nontechnical users are not asked to type CSS variables or design-token strings.
+- Surface colors use swatches and clear controls in Visual. Theme tokens,
+  selected swatches, saved custom strings, and fallback previews are labelled
+  separately; nontechnical users are not asked to type CSS variables or
+  design-token strings.
 - View-all navigation uses the shared page-first destination picker. Editors
   choose a published page or leave the field empty to use the resolved list
   page when available; Visual does not ask users to type raw URL/path strings.
@@ -164,11 +167,19 @@ tokens, or editable support fields.
 - Preview output (`preview=true`) can respect broader status scope for legacy content.
 - Detail links use `site.contentRoutes` with safe fallback patterns.
 - View-all links use the configured page-picker href or the resolved list path when available.
+  If neither exists, the renderer emits a disabled explanatory state instead of
+  dropping the action silently.
 - Legacy `load-more` grows cumulatively from the first slice through the
   requested page instead of replacing the list with page-local results.
 - Legacy `view-all` ignores stale `cl.<blockId>.page` params and always starts
   from the first bounded slice.
-- CTA output is truthful: if `showCta=true` and an item has no href, a disabled label is rendered instead of silently disappearing.
+- CTA output is truthful: if `showCta=true` and an item has no href, the CTA
+  label is disabled with `data-content-list-cta-disabled="missing-href"`
+  instead of silently disappearing.
+- Route-driven consumers can opt into `linkUnavailableReason="missing-route"`.
+  In that mode, href-less cards also render a
+  `data-content-list-link-unavailable` explanation and disabled CTAs use
+  `data-content-list-cta-disabled="missing-route"`.
 - Tags can render in the meta line, as bounded badges, or stay hidden.
 - Empty-state copy is source-aware:
   - legacy mode defaults to `content type` copy
@@ -183,6 +194,9 @@ The widget renders stable DOM markers for QA/runtime assertions:
 - `data-content-list-items`
 - `data-content-list-status-scope`
 - `data-content-list-state`
+- `data-content-list-link-unavailable` for route-driven href-less cards
+- `data-content-list-cta-disabled` (`missing-href` or `missing-route`)
+- `data-content-list-view-all-unavailable`
 - `data-listing-widget="content-list"`
 - `data-listing-block-id`
 - `data-listing-query-id`
@@ -194,6 +208,6 @@ The widget renders stable DOM markers for QA/runtime assertions:
   readable UTC-stable labels when runtime dates are valid.
 - Shared CTA output now adds contextual accessible naming from the visible CTA
   label plus the item title without changing visible copy.
-- Background, border, and text color controls now use the landed shared
-  clear/picker implementation.
+- Background, border, and text color controls now use the shared clear/picker
+  implementation with truthful token/default/custom/fallback labels.
 - Tag badges and section context are Content List-local, not shared Posts Feed behavior.

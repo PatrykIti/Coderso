@@ -31,6 +31,14 @@ export type GalleryMosaicImportResult =
       code: GalleryMosaicImportErrorCode;
       path?: string;
     };
+export type GalleryMosaicCountReductionSummary = {
+  nextCount: number;
+  removedCount: number;
+  authoredRemovedCount: number;
+  labels: string[];
+  extraLabelCount: number;
+  hasAuthoredData: boolean;
+};
 
 export type GalleryMosaicItem = {
   id?: string;
@@ -550,6 +558,68 @@ export function normalizeGalleryMosaicItems(
   }
 
   return normalized;
+}
+
+export function hasAuthoredGalleryMosaicItemData(item: GalleryMosaicItem): boolean {
+  return Boolean(
+    item.image?.trim() ||
+    item.video?.trim() ||
+    item.poster?.trim() ||
+    item.alt?.trim() ||
+    item.caption?.trim() ||
+    item.href?.trim()
+  );
+}
+
+export function resolveGalleryMosaicItemRemovalLabel(
+  item: GalleryMosaicItem,
+  index: number
+): string {
+  return item.caption?.trim() || item.alt?.trim() || `Item ${index + 1}`;
+}
+
+export function summarizeGalleryMosaicCountReduction(
+  items: GalleryMosaicItem[],
+  nextCount: number
+): GalleryMosaicCountReductionSummary | null {
+  const normalizedNextCount = normalizeGalleryMosaicItemCount(nextCount);
+  if (normalizedNextCount >= items.length) return null;
+
+  const removedItems = items.slice(normalizedNextCount);
+  if (removedItems.length === 0) return null;
+
+  const labels = removedItems
+    .slice(0, 4)
+    .map((item, index) => resolveGalleryMosaicItemRemovalLabel(item, normalizedNextCount + index));
+
+  return {
+    nextCount: normalizedNextCount,
+    removedCount: removedItems.length,
+    authoredRemovedCount: removedItems.filter(hasAuthoredGalleryMosaicItemData).length,
+    labels,
+    extraLabelCount: Math.max(0, removedItems.length - labels.length),
+    hasAuthoredData: removedItems.some(hasAuthoredGalleryMosaicItemData),
+  };
+}
+
+export function describeGalleryMosaicCountReduction(
+  summary: GalleryMosaicCountReductionSummary
+): string {
+  const labelList = summary.labels.join(", ");
+  const extraLabelCopy = summary.extraLabelCount > 0 ? ` and ${summary.extraLabelCount} more` : "";
+  const labelCopy = labelList ? `: ${labelList}${extraLabelCopy}` : "";
+  const authoredCopy =
+    summary.authoredRemovedCount > 0
+      ? ` ${summary.authoredRemovedCount} removed item${
+          summary.authoredRemovedCount === 1 ? "" : "s"
+        } include saved media, captions, alt text, posters, or destinations.`
+      : "";
+
+  return `Reducing the gallery to ${summary.nextCount} item${
+    summary.nextCount === 1 ? "" : "s"
+  } removes ${summary.removedCount} saved item${
+    summary.removedCount === 1 ? "" : "s"
+  }${labelCopy}.${authoredCopy} Increasing the count again creates new placeholder tiles; removed content is not restored.`;
 }
 
 export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosaicData {
@@ -1212,14 +1282,15 @@ export function GalleryMosaicBlock({
     blockId,
     items[0]?.id ?? resolvedVariant
   );
+  const headerTitle = (normalized.header?.title ?? "").trim();
+  const headerDescription = (normalized.header?.description ?? "").trim();
+  const sectionTitleId = headerTitle ? scopedId(rootInstanceId, "title") : undefined;
   const lightboxItemCount = items.filter(
     (item) => resolveGalleryMosaicInteractionType(item, interactionMode) === "lightbox"
   ).length;
   const hasLightboxDialogs = lightboxItemCount > 0;
 
-  const showHeader =
-    (normalized.header?.title ?? "").trim().length > 0 ||
-    (normalized.header?.description ?? "").trim().length > 0;
+  const showHeader = headerTitle.length > 0 || headerDescription.length > 0;
 
   if (resolvedVariant === "feature-left") {
     const [lead, ...rest] = items;
@@ -1227,6 +1298,8 @@ export function GalleryMosaicBlock({
     return (
       <section
         className="mx-auto w-full max-w-6xl px-4 py-8"
+        aria-labelledby={sectionTitleId}
+        aria-label={sectionTitleId ? undefined : "Gallery"}
         data-gallery-mosaic-variant={resolvedVariant}
         data-gallery-mosaic-gap={gap}
         data-gallery-mosaic-ratio={ratio}
@@ -1241,23 +1314,20 @@ export function GalleryMosaicBlock({
       >
         {showHeader ? (
           <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
-            {(normalized.header?.title ?? "").trim().length > 0 ? (
-              <h3 className="text-2xl font-semibold text-[var(--color-text)]">
-                {normalized.header?.title}
+            {headerTitle.length > 0 ? (
+              <h3 id={sectionTitleId} className="text-2xl font-semibold text-[var(--color-text)]">
+                {headerTitle}
               </h3>
             ) : null}
-            {(normalized.header?.description ?? "").trim().length > 0 ? (
-              <p className="text-sm text-[var(--color-text)]/75">
-                {normalized.header?.description}
-              </p>
+            {headerDescription.length > 0 ? (
+              <p className="text-sm text-[var(--color-text)]/75">{headerDescription}</p>
             ) : null}
           </header>
         ) : null}
 
         <div
           className={joinClasses(
-            "grid grid-cols-1",
-            hasSupportingItems ? featureLeftLayoutDensityMap[layoutDensity].container : undefined,
+            featureLeftLayoutDensityMap[layoutDensity].container,
             gapClassMap[gap]
           )}
         >
@@ -1321,6 +1391,8 @@ export function GalleryMosaicBlock({
   return (
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
+      aria-labelledby={sectionTitleId}
+      aria-label={sectionTitleId ? undefined : "Gallery"}
       data-gallery-mosaic-variant={resolvedVariant}
       data-gallery-mosaic-gap={gap}
       data-gallery-mosaic-ratio={ratio}
@@ -1335,13 +1407,13 @@ export function GalleryMosaicBlock({
     >
       {showHeader ? (
         <header className="mx-auto mb-6 max-w-3xl space-y-2 text-center">
-          {(normalized.header?.title ?? "").trim().length > 0 ? (
-            <h3 className="text-2xl font-semibold text-[var(--color-text)]">
-              {normalized.header?.title}
+          {headerTitle.length > 0 ? (
+            <h3 id={sectionTitleId} className="text-2xl font-semibold text-[var(--color-text)]">
+              {headerTitle}
             </h3>
           ) : null}
-          {(normalized.header?.description ?? "").trim().length > 0 ? (
-            <p className="text-sm text-[var(--color-text)]/75">{normalized.header?.description}</p>
+          {headerDescription.length > 0 ? (
+            <p className="text-sm text-[var(--color-text)]/75">{headerDescription}</p>
           ) : null}
         </header>
       ) : null}

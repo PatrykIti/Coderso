@@ -345,13 +345,13 @@ const validateListingFacetDrafts = (drafts: ListingFacetDraft[]): ListingFacetDr
     const rawId = draft.id.trim();
 
     if (duplicateCount > 1) {
-      errors.push("Support key conflict detected. Ask support to repair this facet setup.");
+      errors.push("Stable key conflict detected. Repair this facet setup before publishing.");
     }
 
     if (rawId.length === 0) {
-      errors.push("Support key is missing. Ask support to repair this facet setup.");
+      errors.push("Stable key is missing. Repair this facet setup before publishing.");
     } else if (normalizedId !== rawId.toLowerCase()) {
-      errors.push("Legacy support key will be normalized when setup is saved.");
+      errors.push("Legacy stable key will be normalized when setup is saved.");
     }
 
     if (draft.kind !== "sort" && draft.field.trim().length === 0) {
@@ -672,10 +672,11 @@ function ListingFacetPreview({ facet }: { facet: ListingFacetDraft }) {
     );
   }
 
-  const previewOptions =
-    options.length > 0
-      ? options
-      : [{ value: "", label: `Add ${facet.kind} options to preview this facet.`, parentValue: "" }];
+  const previewOptions = options.length > 0 ? options : [];
+  const emptyOptionPreview =
+    options.length === 0
+      ? "Options will appear when listing data resolves or a safe option list is configured."
+      : null;
 
   return (
     <div className="space-y-2 rounded-md border border-dashed border-border/70 bg-background/60 p-3">
@@ -684,16 +685,25 @@ function ListingFacetPreview({ facet }: { facet: ListingFacetDraft }) {
         <fieldset className="space-y-2 text-sm">
           <legend className="font-medium">{facet.label || "Facet"}</legend>
           <div className="grid gap-1.5">
-            {previewOptions.map((option, index) => (
-              <label
-                key={`${option.value || "option"}-${index}`}
-                className="flex items-center gap-2"
-              >
-                <input type="radio" name={`preview-${facet.id || "facet"}`} disabled />
-                <span>{option.label.trim() || option.value.trim() || `Option ${index + 1}`}</span>
-              </label>
-            ))}
+            {previewOptions.length > 0
+              ? previewOptions.map((option, index) => (
+                  <label
+                    key={`${option.value || "option"}-${index}`}
+                    className="flex items-center gap-2"
+                  >
+                    <input type="radio" name={`preview-${facet.id || "facet"}`} disabled />
+                    <span>
+                      {option.label.trim() || option.value.trim() || `Option ${index + 1}`}
+                    </span>
+                  </label>
+                ))
+              : null}
           </div>
+          {emptyOptionPreview ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              {emptyOptionPreview}
+            </p>
+          ) : null}
         </fieldset>
       ) : facet.presentation?.controlMode === "searchable" ? (
         <fieldset className="space-y-2 text-sm">
@@ -719,6 +729,11 @@ function ListingFacetPreview({ facet }: { facet: ListingFacetDraft }) {
               </label>
             ))}
           </div>
+          {emptyOptionPreview ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              {emptyOptionPreview}
+            </p>
+          ) : null}
         </fieldset>
       ) : (
         <fieldset className="space-y-2 text-sm">
@@ -738,6 +753,11 @@ function ListingFacetPreview({ facet }: { facet: ListingFacetDraft }) {
               </label>
             ))}
           </div>
+          {emptyOptionPreview ? (
+            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              {emptyOptionPreview}
+            </p>
+          ) : null}
         </fieldset>
       )}
     </div>
@@ -792,7 +812,7 @@ function FieldCandidateSelect({
           ))}
           {hasCustomValue ? (
             <SelectItem value={CUSTOM_FIELD_VALUE} disabled>
-              Custom field configured by support
+              Custom field already configured
             </SelectItem>
           ) : null}
         </SelectContent>
@@ -808,8 +828,8 @@ function FieldCandidateSelect({
       )}
       {hasCustomValue ? (
         <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-          A custom field binding is already configured by support. Choose a query field above to
-          replace it; it cannot be cleared from setup.
+          A custom field binding is already configured. Choose a listed query field above to replace
+          it, or leave it untouched to preserve the existing binding.
         </p>
       ) : null}
     </div>
@@ -1098,8 +1118,8 @@ function FacetDraftEditor({
               {isSetupMode ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <ReadonlyWidgetSummaryRow
-                    id={`listing-filters.wizard.facet.${index}.support-key`}
-                    label="Support key"
+                    id={`listing-filters.wizard.facet.${index}.stable-key`}
+                    label="Stable key"
                     path={`facets.${index}.id`}
                     value="Generated automatically"
                     help="Generated automatically so authors do not type technical facet IDs."
@@ -1116,10 +1136,10 @@ function FacetDraftEditor({
                 <div className="grid gap-2 sm:grid-cols-2">
                   <ReadonlyWidgetSummaryRow
                     id={`listing-filters.visual.facet.${index}.source-id`}
-                    label="Support key"
+                    label="Stable key"
                     path={`facets.${index}.id`}
                     value="Configured"
-                    help="Technical identity is support-owned and stays stable when labels change."
+                    help="Technical identity stays stable when labels change."
                   />
                   <WidgetControlRow
                     id={`listing-filters.visual.facet.${index}.label`}
@@ -1149,7 +1169,7 @@ function FacetDraftEditor({
 
               {showsNormalizedId && isSetupMode ? (
                 <p className="text-xs text-muted-foreground">
-                  A legacy support key is saved and will stay stable.
+                  A legacy stable key is saved and will stay stable.
                 </p>
               ) : null}
               {validation.errors.map((error) => (
@@ -1524,8 +1544,8 @@ function FacetDraftEditor({
                   {(facet.options ?? []).length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       {isSetupMode
-                        ? "Option values are support-owned until runtime metrics can suggest safe values."
-                        : "Re-open setup to add option rows for this facet."}
+                        ? "Option values come from listing data or a safe configured option list. This editor keeps match values read-only so filters stay compatible with the selected query."
+                        : "Options appear after listing data resolves or a safe option list is configured. Visual can rename existing labels, but it does not create new match values."}
                     </p>
                   ) : null}
                   {(facet.options ?? []).map((option, optionIndex) => {
@@ -1549,15 +1569,15 @@ function FacetDraftEditor({
                               id={`listing-filters.wizard.facet.${index}.option.${optionIndex}.value`}
                               label="Matched value"
                               path={`facets.${index}.options.${optionIndex}.value`}
-                              value={option.value ? "Configured" : "Support setup required"}
-                              help="Technical data values are support-owned; Visual owns visitor labels."
+                              value={option.value ? "Configured" : "Setup required"}
+                              help="Matched data values stay read-only; Visual owns visitor labels."
                             />
                           ) : (
                             <ReadonlyWidgetSummaryRow
                               id={`listing-filters.visual.facet.${index}.option.${optionIndex}.value`}
                               label="Matched value"
                               path={`facets.${index}.options.${optionIndex}.value`}
-                              value={option.value ? "Configured" : "Support setup required"}
+                              value={option.value ? "Configured" : "Setup required"}
                             />
                           )}
                           {isPresentationMode ? (
@@ -1609,7 +1629,7 @@ function FacetDraftEditor({
                                 label="Parent group"
                                 path={`facets.${index}.options.${optionIndex}.parentValue`}
                                 value={option.parentValue ? "Configured" : "Top-level option"}
-                                help="Taxonomy hierarchy keys are support-owned."
+                                help="Taxonomy hierarchy keys stay read-only."
                               />
                             ) : (
                               <ReadonlyWidgetSummaryRow
@@ -2403,7 +2423,7 @@ function SourceAndFacetSummary({
             >
               <p className="font-medium text-foreground">{facet.label}</p>
               <p>
-                <span className="font-medium">Support key:</span> Configured
+                <span className="font-medium">Stable key:</span> Configured
               </p>
               <p>
                 <span className="font-medium">Kind:</span> {facet.kind}
@@ -2574,7 +2594,7 @@ export function ListingFiltersAdvancedEditor({ value }: WidgetEditorProps<Listin
         mode="advanced"
         role="summary"
         title="Contract summary"
-        description="Wizard chooses the source and safe field bindings. Visual edits labels, layout, presentation, and swatches. Advanced stays read-only for support."
+        description="Wizard chooses the source and safe field bindings. Visual edits labels, layout, presentation, and swatches. Advanced stays read-only for diagnostics."
       >
         <p className="text-xs text-muted-foreground">
           Runtime URL tokens and data match values are implementation details, not ordinary author

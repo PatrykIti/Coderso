@@ -1029,6 +1029,32 @@ export function FaqAccordionVisualEditor({
           </Select>
         </div>
 
+        <WidgetControlRow id="faq-accordion.style.spacing" path="style.spacing" label="Spacing">
+          {(fieldProps) => (
+            <Select
+              value={normalized.style?.spacing ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { spacing: next as FaqAccordionSpacing })
+              }
+            >
+              <SelectTrigger
+                id={fieldProps.id}
+                aria-labelledby={fieldProps["aria-labelledby"]}
+                aria-describedby={fieldProps["aria-describedby"]}
+              >
+                <SelectValue placeholder="Select spacing" />
+              </SelectTrigger>
+              <SelectContent>
+                {spacingOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </WidgetControlRow>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm font-medium">Header alignment</p>

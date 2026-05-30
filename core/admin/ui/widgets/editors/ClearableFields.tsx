@@ -180,6 +180,8 @@ export function ClearableFieldHeader({
   onRestore,
   onRestoreValue,
   clearFeedbackLabel,
+  clearResultLabel,
+  clearButtonAriaLabel,
 }: {
   label: string;
   value: unknown;
@@ -187,7 +189,12 @@ export function ClearableFieldHeader({
   onRestore?: () => void;
   onRestoreValue?: (next: string) => void;
   clearFeedbackLabel?: string;
+  clearResultLabel?: string;
+  clearButtonAriaLabel?: string;
 }) {
+  const resolvedClearLabel = clearButtonAriaLabel
+    ? clearButtonAriaLabel
+    : `Clear ${label}${clearResultLabel ? `; ${clearResultLabel}` : ""}`;
   const emitClearFeedback = () => {
     const derivedRestore =
       onRestore ??
@@ -215,6 +222,7 @@ export function ClearableFieldHeader({
           type="button"
           variant="ghost"
           size="sm"
+          aria-label={resolvedClearLabel}
           onClick={() => {
             onClear?.();
             emitClearFeedback();
@@ -273,7 +281,7 @@ export function ColorTokenHint({ value }: { value: string | undefined }) {
 
   return (
     <p className="text-xs text-muted-foreground">
-      Custom token active. Swatch preview uses the fallback until you replace it with a hex color.
+      Theme token active. Swatch preview uses the fallback until you replace it with a picker color.
     </p>
   );
 }

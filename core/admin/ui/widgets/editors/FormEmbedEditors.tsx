@@ -13,7 +13,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import {
+  clampSavedProgressTtl,
+  formEmbedDefaults,
+  isFormEmbedThemeDefaultStyleValue,
   normalizeFormEmbedData,
+  resolveFormEmbedSpacing,
   type FormEmbedData,
   type FormEmbedLayout,
   type FormEmbedResolvedData,
@@ -263,6 +267,7 @@ function resolveAuthoredStyleField(
   key: keyof FormEmbedStyle
 ) {
   if (!value.style || value.style[key] === undefined) return undefined;
+  if (isFormEmbedThemeDefaultStyleValue(key, value.style[key])) return undefined;
   return normalized.style?.[key];
 }
 
@@ -506,6 +511,9 @@ function ColorField({
   onChange,
   pickerFallback,
   onClear,
+  clearedLabel,
+  clearedDescription,
+  clearResultLabel,
 }: {
   id: string;
   label: string;
@@ -514,7 +522,16 @@ function ColorField({
   onChange: (next: string) => void;
   pickerFallback: string;
   onClear?: () => void;
+  clearedLabel?: string;
+  clearedDescription?: string;
+  clearResultLabel?: string;
 }) {
+  const colorStateProps = {
+    ...(clearedLabel !== undefined ? { clearedLabel } : {}),
+    ...(clearedDescription !== undefined ? { clearedDescription } : {}),
+    ...(clearResultLabel !== undefined ? { clearResultLabel } : {}),
+  };
+
   return (
     <SharedColorControl
       controlId={id}
@@ -525,6 +542,7 @@ function ColorField({
       onClear={onClear}
       pickerFallback={pickerFallback}
       showValueInput={false}
+      {...colorStateProps}
     />
   );
 }
@@ -753,7 +771,11 @@ function LayoutSection({
             value={normalized.layout?.spacing ?? "md"}
             onValueChange={(spacing) => {
               if (!isSpacingValue(spacing)) return;
-              updateLayout(value, onChange, { spacing });
+              const resolvedSpacing = resolveFormEmbedSpacing({ spacing });
+              updateLayout(value, onChange, {
+                spacing,
+                sectionPaddingY: resolvedSpacing.sectionPaddingY,
+              });
             }}
           >
             <SelectTrigger {...fieldProps}>
@@ -959,6 +981,9 @@ function StyleSection({
         onChange={(background) => updateStyle(value, onChange, { background })}
         onClear={() => clearStyleField(value, onChange, "background")}
         pickerFallback="#ffffff"
+        clearedLabel="Transparent"
+        clearedDescription="No background color override is saved. The form section remains transparent."
+        clearResultLabel="returns to transparent background"
       />
       <ColorField
         id="form-embed.style-surface"
@@ -1187,7 +1212,7 @@ function NavigationSection({
       mode="visual"
       role="visual"
       title="Multi-step navigation"
-      description="Controls shown only when the selected form resolves as multi-step."
+      description="Saved labels apply when the selected form resolves as multi-step."
     >
       <WidgetControlRow id="form-embed.back-label" label="Back label" path="navigation.backLabel">
         {(fieldProps) => (
@@ -1248,7 +1273,7 @@ function NavigationSection({
             value={String(normalized.navigation?.savedProgressTtlDays ?? 7)}
             onChange={(event) =>
               updateNavigation(value, onChange, {
-                savedProgressTtlDays: Number.parseInt(event.target.value || "7", 10) || 7,
+                savedProgressTtlDays: clampSavedProgressTtl(event.target.value),
               })
             }
           />
@@ -1361,7 +1386,11 @@ function describeFormStyleOverrides(style: FormEmbedData["style"]) {
   ];
   const overrideCount = colorKeys.filter((key) => {
     const current = style?.[key];
-    return typeof current === "string" && current.trim().length > 0;
+    return (
+      typeof current === "string" &&
+      current.trim().length > 0 &&
+      !isFormEmbedThemeDefaultStyleValue(key, current)
+    );
   }).length;
 
   if (overrideCount === 0) return "Theme defaults";
@@ -1370,10 +1399,14 @@ function describeFormStyleOverrides(style: FormEmbedData["style"]) {
 
 function AuthoringSummarySection({ value }: { value: FormEmbedData }) {
   const normalized = normalizeValue(value);
+  const hasCustomSuccessMessage =
+    typeof value.successMessage === "string" &&
+    value.successMessage.trim().length > 0 &&
+    value.successMessage.trim() !== formEmbedDefaults.successMessage;
   const copySummary = [
     normalized.title ? "Custom title" : "Form title",
     normalized.description ? "custom description" : "form description",
-    normalized.successMessage ? "success message configured" : "default success message",
+    hasCustomSuccessMessage ? "success message configured" : "default success message",
   ].join(" · ");
 
   return (

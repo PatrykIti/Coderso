@@ -12,6 +12,7 @@ import {
   TabsBlock,
   createTabsWidget,
   normalizeTabsData,
+  normalizeTabsTriggerOverflow,
   tabsDefaults,
   type TabsData,
 } from "../../../core/widgets/core/tabs";
@@ -122,6 +123,12 @@ test("tabs normalization migrates legacy descriptions, keeps disabled tabs out o
       motion: "slide",
     })
   );
+});
+
+test("tabs trigger overflow explicitly normalizes legacy scroll to wrap", () => {
+  expect(normalizeTabsTriggerOverflow("scroll")).toBe("wrap");
+  expect(normalizeTabsTriggerOverflow("wrap")).toBe("wrap");
+  expect(normalizeTabsTriggerOverflow("invalid")).toBe("wrap");
 });
 
 test("tabs normalization preserves a saved disabled default while activating the first enabled tab", () => {
@@ -304,7 +311,7 @@ test("tabs render vertical alignment classes for vertical layouts", () => {
   expect(html).toContain("items-end");
 });
 
-test("tabs cleared surfaces omit tab and panel background styles", () => {
+test("tabs cleared colors omit tab, panel, border, and text color styles", () => {
   const normalized = normalizeTabsData(
     {
       ...tabsDefaults,
@@ -315,10 +322,37 @@ test("tabs cleared surfaces omit tab and panel background styles", () => {
   const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
 
   expect(normalized.style?.surfaceColor).toBeUndefined();
+  expect(normalized.style?.borderColor).toBeUndefined();
   expect(normalized.style?.activeBackgroundColor).toBeUndefined();
+  expect(normalized.style?.activeTextColor).toBeUndefined();
+  expect(normalized.style?.inactiveTextColor).toBeUndefined();
   expect(normalized.style?.panelBackgroundColor).toBeUndefined();
   expect(html).toContain('data-coderso-tabs-variant="pills"');
   expect(html).not.toContain("background-color:");
+  expect(html).not.toContain("border-color:");
+  expect(html).not.toContain("color:");
+});
+
+test("tabs active background clear preserves the saved active trigger border", () => {
+  const normalized = normalizeTabsData(
+    {
+      ...tabsDefaults,
+      style: {
+        ...tabsDefaults.style,
+        activeBackgroundColor: "",
+      },
+    },
+    tabsDefaults.items?.length ?? 0
+  );
+  const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
+  const activeTrigger = html.match(
+    /<button(?=[^>]*role="tab")(?=[^>]*data-state="active")[^>]*>/
+  )?.[0];
+
+  expect(normalized.style?.activeBackgroundColor).toBeUndefined();
+  expect(normalized.style?.borderColor).toBe("var(--color-border)");
+  expect(activeTrigger).toContain("border-color:var(--color-border)");
+  expect(activeTrigger).not.toContain("background-color:");
 });
 
 test("tabs render editor placeholders only in preview contexts", () => {

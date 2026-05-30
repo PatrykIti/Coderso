@@ -12,6 +12,7 @@ export {
   type WidgetEditorContext,
   type WidgetEditorState,
   type WidgetLayout as LayoutValue,
+  type WidgetLayoutDefaults,
   type WidgetRepeatableSlotSyncAdapter,
   type WidgetVariant,
   type WidgetVisibility,

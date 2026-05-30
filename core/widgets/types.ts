@@ -192,6 +192,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   variants: WidgetVariant[];
   schema: Record<string, unknown>;
   defaults: T;
+  preserveAbsentDefaultKeys?: string[];
   editor: {
     wizard: ComponentType<WidgetEditorProps<T>>;
     visual: ComponentType<WidgetEditorProps<T>>;

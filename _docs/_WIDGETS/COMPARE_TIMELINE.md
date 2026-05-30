@@ -79,6 +79,9 @@ or step descriptions as editable fields for normal authoring.
 - Section, track rows, step cells, and segment badges now expose readable
   accessibility labels.
 - `guides.enabled=false` removes guide borders fully.
+- `style.segmentLabelSize` owns the segment badge text-size class. `none`
+  emits no explicit text-size class, while `xs`, `sm`, and `base` emit their
+  matching bounded class without a competing hard-coded fallback.
 - Highlighted segment backgrounds render a fallback color before the
   `color-mix(...)` enhancement.
 - Step and segment links normalize through `normalizeWidgetSafeHref()`.

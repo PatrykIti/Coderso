@@ -42,7 +42,8 @@ Notes:
   - native drag/drop reorder with Move Up/Down fallback,
   - bounded bulk delete that keeps the min-one-item guard.
 - Colors and panel style now keep Hero-style ownership boundaries:
-  - `Spacing` stays in `Layout and typography`,
+  - `Spacing` is editable in `Layout and typography` and owns both panel gap
+    and panel padding density,
   - palettes write explicit FAQ colors,
   - theme tokens render as `Theme default` instead of faux custom-color state,
   - contrast guidance stays visible next to the FAQ color controls.
@@ -76,8 +77,10 @@ normalization/repair actions.
   - `data-faq-motion`
 - FAQ sections now expose a named section (`aria-labelledby` or fallback
   `aria-label`) and per-item `summary`/`region` relationships.
-- FAQ summaries render a visible chevron affordance and runtime script syncs
-  `aria-expanded` after native `<details>` toggles.
+- FAQ summaries render a visible chevron affordance. `aria-expanded` is
+  runtime-owned: static SSR/admin-preview markup omits it so it cannot become
+  stale when the preview shell does not execute scripts, and the public runtime
+  sets and syncs it after binding.
 - `defaultOpenIndex = -1` renders all FAQ items collapsed by default.
 - `defaultOpenIndex` is normalized to valid item bounds.
 - `style.motion = "smooth"` enables CSS-only open/close transitions.

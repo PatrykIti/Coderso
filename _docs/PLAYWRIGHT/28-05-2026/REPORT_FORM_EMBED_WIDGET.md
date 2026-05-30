@@ -229,10 +229,11 @@ pristine (po reloadzie) oraz po edycjach:
 | **Komunikat stanu pustego** | „No fields configured yet." | „Form unavailable (**form_missing**)." | ✗ **rozbieżność copy** (I6) |
 | Moje edycje in-memory | widoczne w podglądzie | **NIE wyciekły** | ✓ (brak zapisu) |
 
-**Wniosek:** renderer jest współdzielony — dla tej samej konfiguracji admin i SSR dają
-identyczny wynik strukturalny. Jedyna różnica to **komunikat stanu pustego**: na froncie runtime
-projektuje `resolved.error = "form_missing"` (renderer pokazuje surowy kod), a w admin podglądzie
-`resolved` jest `undefined`, więc renderer pada na ścieżkę „No fields configured yet.".
+**Wniosek historyczny:** renderer jest współdzielony — dla tej samej konfiguracji admin i SSR dają
+identyczny wynik strukturalny. Przed TASK-343-14 różnica dotyczyła **komunikatu stanu pustego**:
+front projektował `resolved.error = "form_missing"` i renderer pokazywał surowy kod, a admin
+podgląd bez `resolved` pokazywał „No fields configured yet.". TASK-343-14 mapuje znane kody na
+bezpieczne, user-facing public copy.
 
 ---
 
@@ -253,11 +254,28 @@ projektuje `resolved.error = "form_missing"` (renderer pokazuje surowy kod), a w
 | **I9** | **„Device visibility / Visibility summary: Hidden on all devices"** dla pustej tablicy `visibility.devices`, choć widget renderuje się i w podglądzie, i na froncie. To **generyczny panel bloku**, nie specyficzny dla form-embed (puste = „wszystkie widoczne", a UI pokazuje „Hidden"). Przełączniki działają (Desktop on→off zweryfikowane). | Drobna nuta (panel generyczny) |
 | **N4** | **„Add variant preset" jest bezczynne w tej fixturze** — kliknięcie nie otwiera dialogu, nie pokazuje toasta i nie dodaje karty wariantu (pozostaje 1 karta „Standard" [Selected]). Brak obserwowalnego efektu biznesowego dla pojedynczego wariantu. | Drobna nuta UX |
 
+> **Status TASK-343-14 (2026-05-30):** I2/I3/I4/N1/I5/I6/N2/N3
+> zamknięte w kodzie. `Spacing` aktualizuje teraz `sectionPaddingY`, domyślne
+> tokeny kolorów są traktowane jako `Theme default`, `Clear` usuwa zapisane
+> klucze kolorów, Advanced liczy tylko realne override'y, TTL `0` clampuje do
+> `1`, publiczny render nie pokazuje surowego `form_missing`, a karta nie
+> duplikuje klasy `border`. I8 ma poprawioną kopię sekcji multi-step:
+> kontrolki są widoczne jako zapisane etykiety, które działają po wybraniu
+> multi-step form. I7 pozostaje w `TASK-343-30`, I9 w `TASK-343-21`, a N4 jest
+> świadomie odroczone jako produktowy brak dodatkowych presetów dla jedynego
+> wariantu.
+
+> **Status TASK-343-30 (2026-05-30):** I7 jest zamknięte w zakresie
+> truthfulness: swatch-only pola nadal nie pokazują surowych pól hex, ale tokeny
+> i fallbacki są opisane jako token/default/preview, a `Background` ma jawne
+> `Transparent`/`returns to transparent background` copy zamiast generycznego
+> resetu do motywu.
+
 > Uwaga: **nie stwierdzono żadnego twardego buga renderera** ani błędu konsoli (admin i
 > frontend = 0 błędów / 0 ostrzeżeń). Wszystkie kontrolki, które miały obserwowalny cel w tym
 > stanie fixtury, aktualizowały podgląd na żywo. I1 oraz większość pozycji z 3.3 to brak
 > możliwości weryfikacji w tym środowisku (brak formularza), a nie potwierdzone defekty.
-> I2/I3/I4/N1/I6 to realne niuanse mylącego UI/UX (N1 to bug warstwy stanu kontrolki).
+> Historyczne I2/I3/I4/N1/I6 zostały domknięte w TASK-343-14.
 
 ---
 
@@ -282,15 +300,14 @@ projektuje `resolved.error = "form_missing"` (renderer pokazuje surowy kod), a w
   pozostał `{}`, a `updatedAt` bez zmian (`2026-05-24T10:52:02.234Z`). Wyjście/reload edytora z
   niezapisanymi zmianami wywołuje natywny dialog „leave site"; frontend audytowano w **osobnej
   karcie**, aby nie utracić stanu admina.
-- **Normalizacja wstrzykuje defaulty stylu** — host edytora hydratuje wartość defaultami, więc
-  obiekt `style` w edytorze jest pełny (kolory CSS-variable). To źródło I3/I4/N1. Gdyby zapisać
-  widget po jakiejkolwiek edycji, payload przestałby być `{}` i zawierałby pełny `style` z
-  defaultami (zamiana „theme default" na jawnie zapisane wartości + bloat payloadu). **Nie
-  potwierdzone zapisem** (celowo) — wniosek z analizy `normalize` + obserwacji etykiet.
+- **Normalizacja stylu po TASK-343-14** — Form Embed rozpoznaje własne domyślne tokeny kolorów
+  jako `Theme default`, a wyczyszczone kolory pozostają bez zapisanych kluczy. Shared, pełna
+  terminologia fallbacków i pickerów pozostaje w `TASK-343-30`.
 - **Wizard świadomie minimalny** — jedyną zapisywalną kontrolką jest selektor formularza; reszta
   to read-only diagnostyka. Spójne z kontraktem.
 - **Advanced uczciwie read-only** i reaktywny — dobre podsumowanie kontraktu i stanu, ale
-  dziedziczy mylące teksty I2 („spacing"), I4 („overrides") i N3 („success message configured").
+  po TASK-343-14 nie dziedziczy historycznych tekstów I2 („spacing"), I4 („overrides") ani N3
+  („success message configured" dla domyślnej wiadomości).
 - **Pozytywy a11y (stan pusty):** `aria-labelledby` sekcji jest poprawnie wiązany z id nagłówka
   i pozostaje spójny przy zmianie poziomu nagłówka (H2→H3→H4). Atrybuty pól (`aria-required`,
   `aria-label`/`aria-labelledby`, `aria-describedby`, `name`, `id`) są w kodzie renderera, ale
@@ -320,16 +337,11 @@ button-alignment/label-color/show-labels/required-indicator (brak pól/przycisku
 sekcji multi-step, wpisanie hex z klawiatury (picker OS), zapis/publikacja (ochrona współdzielonej
 fixtury).
 
-**Werdykt szczerości:** wszystko, co w tym stanie fixtury **miało obserwowalny cel**, działało
-poprawnie i aktualizowało podgląd na żywo (tytuł, opis, wyrównanie ×3, szerokość ×5, paddingi
-boczne ×3 i pionowe ×5, kolory tła/karty/obramowania/tytułu/helpera, grubość ×3 i zaokrąglenie ×4
-obramowania, rozmiar ×3 i grubość ×3 tytułu, poziom nagłówka ×3 z zachowaniem a11y, clamp TTL,
-przełączniki, Clear dla Background/Surface). Nie znaleziono twardych bugów renderera ani błędów
-konsoli. Główne zastrzeżenia: **martwa kontrolka Spacing** (I2), **mylące etykiety kolorów** na
-pristine (I3) i **zawyżony licznik overrides „8"** (I4), **nieskuteczny „Clear" dla 6/8 kolorów**
-(N1), **rozbieżność stanu pustego admin↔front z ekspozycją surowego `form_missing`** (I6) oraz
-**blokujące ograniczenie środowiska** — brak jakiegokolwiek formularza (I1), przez co rdzennej
-funkcji widgetu nie dało się zweryfikować.
+**Werdykt po TASK-343-14:** wszystko, co w tym stanie fixtury **miało obserwowalny cel**, działało
+poprawnie i aktualizowało podgląd na żywo, a lokalne drift points I2/I3/I4/N1/I5/I6/N2/N3 zostały
+zamknięte testami Vitest. Pozostałe ograniczenie środowiska to brak jakiegokolwiek formularza (I1),
+przez co pełnej funkcji wyboru formularza, renderowania pól, submisji i multi-step runtime nadal nie
+dało się zweryfikować w tej fixturze.
 
 ---
 
@@ -343,8 +355,8 @@ funkcji widgetu nie dało się zweryfikować.
 | Pola tekstowe / number | 7 + 1 (TTL: 6 przypadków granicznych) |
 | Funkcje zweryfikowane jako działające z obserwowalnym celem (asercja DOM) | ~24 |
 | Kontrolki działające w UI bez celu w podglądzie (brak formularza) | ~14 |
-| Potwierdzone niuanse mylącego UI/UX (I2, I3, I4, N1, I6, N2, N3) | 7 |
-| Drobne nuty / code smell (I5, I7, I8, I9, N4) | 5 |
+| Potwierdzone niuanse mylącego UI/UX zamknięte przez TASK-343-14 (I2, I3, I4, N1, I6, N2, N3) | 7 |
+| Drobne nuty / code smell (I5 zamknięte; I7/I9 shared; I8 copy; N4 odroczone) | 5 |
 | Twarde bugi renderera | 0 |
 | Błędy / ostrzeżenia konsoli (admin + frontend) | 0 |
 | Pozycje niezweryfikowane (brak formularza) | rdzeń: pola (13 typów) / submisja / multi-step / nonce / captcha |

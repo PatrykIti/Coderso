@@ -205,6 +205,8 @@ są ograniczeniami środowiska/fixtura, nie błędami — patrz sekcja 6.
    nadpisują pojedyncze karty (lock dotyczy samego włączenia, nie wartości).
 6. **Globalne kolory zapisane jako hex** (`#f8fafc`/`#e2e8f0`) Advanced opisuje jako „Custom color"
    (nie „Theme surface/border color"); swatch przy wartości var() pokazuje hex-fallback. Czysto kosmetyczne.
+   **Status TASK-343-30 (2026-05-30):** swatch przy wartości `var(...)` opisuje
+   teraz fallback preview, a token nie jest faux custom w shared control.
 7. **Asymmetric w Wizardzie wciąż bez „Reapply"** (z 28-05, nadal aktualne wg kodu `GridColumnsWizardEditor`):
    Wizard ma tylko karty wariantów; wybór Asymmetric nie zmienia widocznie układu, gdy kolumny mają jawne równe
    spany, a Wizard nie oferuje przycisku Reapply (jest tylko w Visual).

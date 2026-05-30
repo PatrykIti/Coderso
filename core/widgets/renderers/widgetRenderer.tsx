@@ -152,13 +152,9 @@ export function WidgetRenderer({
     );
   }
   if (normalized.visibility?.enabled === false) return null;
-  if (
-    previewDevice &&
-    Array.isArray(normalized.visibility?.devices) &&
-    (normalized.visibility.devices.length === 0 ||
-      !normalized.visibility.devices.includes(previewDevice))
-  ) {
-    return null;
+  if (Array.isArray(normalized.visibility?.devices)) {
+    if (normalized.visibility.devices.length === 0) return null;
+    if (previewDevice && !normalized.visibility.devices.includes(previewDevice)) return null;
   }
 
   const layout = normalized.layout ?? defaultLayout;

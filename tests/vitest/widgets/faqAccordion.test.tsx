@@ -203,13 +203,52 @@ test("faq accordion renders safe markdown answers, shared spacing collapse, and 
   );
 
   expect(html).toContain('aria-labelledby="faq-accordion-faq-block-heading"');
-  expect(html).toContain('aria-expanded="true"');
+  expect(html).not.toContain("aria-expanded=");
+  expect(html).toContain('summary.setAttribute("aria-expanded"');
   expect(html).toContain("data-coderso-faq-summary");
   expect(html).toContain("<strong>bold</strong>");
   expect(html).toContain('href="https://example.com"');
   expect(html).not.toContain("javascript:alert(1)");
   expect(html).toContain("margin-top:calc(-1 * 2px)");
   expect(html).toContain('type="application/ld+json"');
+});
+
+test("faq accordion spacing controls both list gap and panel padding", () => {
+  const spaciousHtml = renderToString(
+    <FaqAccordionBlock
+      data={normalizeFaqAccordionData({
+        ...faqAccordionDefaults,
+        style: {
+          ...faqAccordionDefaults.style,
+          spacing: "lg",
+        },
+      })}
+      variant="single-column"
+    />
+  );
+
+  expect(spaciousHtml).toContain('data-faq-spacing="lg"');
+  expect(spaciousHtml).toContain("grid grid-cols-1 gap-4");
+  expect(spaciousHtml).toContain("px-6 py-5");
+
+  const collapsedHtml = renderToString(
+    <FaqAccordionBlock
+      data={normalizeFaqAccordionData({
+        ...faqAccordionDefaults,
+        style: {
+          ...faqAccordionDefaults.style,
+          spacing: "none",
+          borderWidth: "2",
+        },
+      })}
+      variant="single-column"
+    />
+  );
+
+  expect(collapsedHtml).toContain('data-faq-spacing="none"');
+  expect(collapsedHtml).toContain("grid grid-cols-1 gap-0");
+  expect(collapsedHtml).toContain("px-0 py-0");
+  expect(collapsedHtml).toContain("margin-top:calc(-1 * 2px)");
 });
 
 test("faq accordion json-ld serialization escapes script-breakout characters", () => {

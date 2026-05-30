@@ -216,6 +216,29 @@ test("renderer hides widget when visibility devices are empty", () => {
   expect(html).toBe("");
 });
 
+test("renderer hides public widget output when visibility devices are empty", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-public-no-devices",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+    visibility: { enabled: true, devices: [] },
+  };
+
+  const html = renderToString(<WidgetRenderer block={block} />);
+
+  expect(html).toBe("");
+});
+
 test("renderer applies layout classes", () => {
   clearWidgets();
   registerWidget(

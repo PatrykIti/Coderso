@@ -1131,7 +1131,6 @@ export function FaqAccordionBlock({
                 <summary
                   id={summaryId}
                   aria-controls={contentId}
-                  aria-expanded={open ? "true" : "false"}
                   className={joinClasses(
                     "flex cursor-pointer list-none items-center justify-between gap-3",
                     panelPaddingClass,

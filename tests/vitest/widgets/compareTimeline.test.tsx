@@ -22,6 +22,14 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () => null;
 
+const extractFirstSegmentLabelClass = (html: string) => {
+  const match = html.match(
+    /<div[^>]*data-compare-segment="[^"]+"[^>]*>\s*<(?:a|div)\b[^>]*class="([^"]*)"/
+  );
+  if (!match?.[1]) throw new Error("Missing segment label class");
+  return match[1];
+};
+
 test("compare timeline renders defaults", () => {
   const html = renderToString(
     <CompareTimelineBlock data={compareTimelineDefaults} variant="dual-track" />
@@ -296,6 +304,43 @@ test("compare timeline renderer applies typography size tokens", () => {
   expect(html).toContain("text-base font-bold");
   expect(html).toContain("text-base font-medium");
   expect(html).toContain("font-semibold");
+});
+
+test("compare timeline segment label size owns the rendered badge text size", () => {
+  const expectations = [
+    { size: "none", expected: null },
+    { size: "xs", expected: "text-xs" },
+    { size: "sm", expected: "text-sm" },
+    { size: "base", expected: "text-base" },
+  ] as const;
+
+  for (const { size, expected } of expectations) {
+    const html = renderToString(
+      <CompareTimelineBlock
+        variant="dual-track-highlight"
+        data={{
+          ...compareTimelineDefaults,
+          style: {
+            ...compareTimelineDefaults.style,
+            segmentLabelSize: size,
+          },
+        }}
+      />
+    );
+    const className = extractFirstSegmentLabelClass(html);
+
+    expect(className).toContain("rounded-full");
+    if (expected) {
+      expect(className).toContain(expected);
+      for (const other of ["text-xs", "text-sm", "text-base"].filter(
+        (candidate) => candidate !== expected
+      )) {
+        expect(className).not.toContain(other);
+      }
+    } else {
+      expect(className).not.toMatch(/\btext-(?:xs|sm|base)\b/);
+    }
+  }
 });
 
 test("compare timeline renderer supports both-track highlight, track order, and safe step links", () => {

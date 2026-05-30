@@ -23,15 +23,16 @@ surface.
 ## Editor Modes
 
 ### Wizard
-- starter tab count
-- default tab selection with badge state
+- rendered panel count summary from Structure-owned repeatable slots
+- saved starter label count summary
 - read-only starter label and content-intro summary
 - repeatable content-area guidance
 
 Wizard is setup-only in the v2 editor contract. It does not own variant,
-layout, tab label style, color, or daily tab copy edits. The one-time Wizard
-lifecycle from `TASK-336-16` hides Wizard during normal daily editing and
-exposes setup through `Run setup again`.
+rendered panel count, layout, tab label style, color, or daily tab copy edits.
+Add/remove/reorder actions for rendered tabs live in the shared Visual
+Structure controls. The one-time Wizard lifecycle from `TASK-336-16` hides
+Wizard during normal daily editing and exposes setup through `Run setup again`.
 
 ### Visual
 Sections:
@@ -40,6 +41,7 @@ Sections:
 3. Layout
 4. Tab label style
 5. Colors
+6. Structure (shared builder slot controls)
 
 Notes:
 - Tabs owns variant selection in Visual (`visualOwnsVariantSelection = true`).
@@ -50,8 +52,11 @@ Notes:
   value is accepted only as legacy data and normalizes back to wrapping.
 - Tab label style owns text size, label weight, and content motion.
 - Colors use swatch-only controls plus clear/replace state. Existing theme
-  tokens or custom strings remain compatible but are not shown as editable CSS
-  text to nontechnical authors.
+  tokens, transparent values, and custom strings remain compatible and are
+  labelled separately from fallback previews without showing editable CSS text
+  to nontechnical authors.
+- Structure owns rendered tab panel count through repeatable `panel` slots.
+  Removing a panel prompts before deleting the slot and any nested blocks.
 
 ### Advanced
 - behavior summary for opening tab, default tab, unavailable count, and line
@@ -95,9 +100,13 @@ JSON snapshots, technical IDs, CSS token text, or implementation suffixes.
 
 ## Clear Controls
 
-- `style.surfaceColor`, `style.activeBackgroundColor`, and
+- `style.surfaceColor`, `style.borderColor`, `style.activeBackgroundColor`,
+  `style.activeTextColor`, `style.inactiveTextColor`, and
   `style.panelBackgroundColor` are clearable. Clear removes the field and keeps
-  the runtime from forcing an inline style for that surface.
+  the runtime from forcing an inline style for that color.
+- When `style.activeBackgroundColor` is cleared but `style.borderColor` remains
+  saved, the active trigger border falls back to the saved border color instead
+  of disappearing with the active background.
 
 ## Layout Ownership Notes
 
@@ -162,5 +171,6 @@ Legacy note:
 
 - `tests/vitest/widgets/tabs.test.tsx`
 - `tests/vitest/ui/tabs-editor-wave.test.tsx`
+- `tests/vitest/ui/block-layout-shared-wave.test.tsx`
 - `tests/vitest/ui-integration/tabs-preview-activation.test.tsx`
 - `tests/unit/widgets/validator.test.ts`

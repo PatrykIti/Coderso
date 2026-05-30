@@ -289,16 +289,6 @@ test("ProductGallery editors update source, links, curation, and preview status"
             setValue(next);
           }}
           variant="cards"
-          context={{
-            surface: "page-builder",
-            blockId: "block-1",
-            editorMode: "wizard",
-            previewState,
-            setPreviewState: (next) => {
-              latestPreviewState = next;
-              setPreviewState(next);
-            },
-          }}
         />
         <ProductGalleryVisualEditor
           value={value}
@@ -307,16 +297,6 @@ test("ProductGallery editors update source, links, curation, and preview status"
             setValue(next);
           }}
           variant="cards"
-          context={{
-            surface: "page-builder",
-            blockId: "block-1",
-            editorMode: "visual",
-            previewState,
-            setPreviewState: (next) => {
-              latestPreviewState = next;
-              setPreviewState(next);
-            },
-          }}
         />
         <ProductGalleryAdvancedEditor
           value={value}
@@ -488,23 +468,86 @@ test("ProductGallery visual editor keeps an intentionally blank empty-state desc
   }
 });
 
+test("ProductGallery visual editor surfaces missing routes and view-all disappearance", async () => {
+  const { ProductGalleryVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+
+  const view = mount(
+    <ProductGalleryVisualEditor
+      value={{
+        pagination: {
+          mode: "view-all",
+          viewAllLabel: "Browse catalog",
+        },
+        resolved: {
+          items: [
+            {
+              id: "product-1",
+              title: "Preview Home",
+              slug: "preview-home",
+              excerpt: null,
+              status: "published",
+              pricing: { amount: 19900, currency: "USD", compareAtAmount: null },
+              stock: { state: "in_stock", quantity: 4, inStock: true },
+              primaryMediaId: null,
+              mediaIds: [],
+              collectionIds: [],
+            },
+          ],
+          total: 3,
+          resolvedAt: "2026-05-19T12:00:00.000Z",
+        },
+      }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("product cards and CTA labels stay non-clickable")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("More products link is hidden until a destination page is selected.")
+    );
+    expect(
+      view.container.querySelector('[data-product-gallery-route-guidance="missing-route"]')
+    ).toBeInstanceOf(HTMLElement);
+    expect(
+      view.container.querySelector('[data-product-gallery-view-all-guidance="missing_destination"]')
+    ).toBeInstanceOf(HTMLElement);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test.each([
   ["wizard", "ProductGalleryWizardEditor"],
   ["visual", "ProductGalleryVisualEditor"],
 ] as const)(
-  "ProductGallery %s mode defers preview hydration until Advanced is opened",
+  "ProductGallery %s mode hydrates preview first and owns stale-source refresh",
   async (editorMode, exportName) => {
     const editors = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
     const Editor = editors[exportName];
 
     let latestPreviewState: WidgetPreviewState | null = null;
+    let setLimit: ((limit: number) => void) | null = null;
 
     const Harness = () => {
+      const [value, setValue] = useState<ProductGalleryData>({ source: { limit: 4 } });
       const [previewState, setPreviewState] = useState<WidgetPreviewState | null>(null);
+      setLimit = (limit: number) =>
+        setValue((current) => ({
+          ...current,
+          source: {
+            ...(current.source ?? {}),
+            limit,
+          },
+        }));
 
       return (
         <Editor
-          value={{ source: { limit: 4 } }}
+          value={value}
           onChange={() => undefined}
           variant="cards"
           context={{
@@ -525,8 +568,29 @@ test.each([
 
     try {
       await flushPromises();
-      expect(previewProductGalleryMock).not.toHaveBeenCalled();
-      expect(latestPreviewState).toBeNull();
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(1);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("ready");
+      expect(normalizeText(view.container.textContent)).toContain(normalizeText("Preview ready"));
+
+      React.act(() => {
+        setLimit?.(6);
+      });
+      await flushPromises();
+
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(1);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("idle");
+      expect((latestPreviewState as WidgetPreviewState | null)?.message).toBe(
+        "Source changed. Refresh products to update preview."
+      );
+      expect(normalizeText(view.container.textContent)).toContain(
+        normalizeText("Preview needs refresh")
+      );
+
+      clickButton(view.container, "Refresh products");
+      await flushPromises();
+
+      expect(previewProductGalleryMock).toHaveBeenCalledTimes(2);
+      expect((latestPreviewState as WidgetPreviewState | null)?.status).toBe("ready");
     } finally {
       view.cleanup();
     }

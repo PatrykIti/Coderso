@@ -215,6 +215,9 @@ _Zrzuty (lokalne): `section-public-desktop-29-05.png`, `section-public-mobile-37
    swatch pokazuje `#ffffff`, ale helper jawnie mówi „…Swatch preview uses transparent."
    — mniej mylące niż mogłoby się wydawać, choć sama próbka nadal sugeruje biel.
    (Analogicznie gradient po Clear pokazuje fallback `#f1f5f9` z „Theme default".)
+   **Status TASK-343-30 (2026-05-30):** shared swatch copy uses the same
+   fallback-preview vocabulary, and color clear accessible names no longer
+   imply a saved custom value.
 
 2. **Diagnostyka Advanced — niepełny opis media.** Podsumowanie „Background media"
    raportuje `type / source / fit / opacity`, ale **pomija** `position`, `blendMode`

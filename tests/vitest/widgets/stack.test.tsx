@@ -14,7 +14,10 @@ import {
   normalizeStackData,
   resolveStackVariant,
   StackBlock,
+  stackAlignTokens,
   stackDefaults,
+  stackGapTokens,
+  stackJustifyTokens,
   type StackData,
 } from "../../../core/widgets/core/stack";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -25,9 +28,16 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 
+const expectHtmlClasses = (html: string, classes: string[]) => {
+  for (const className of classes) {
+    expect(html).toContain(className);
+  }
+};
+
 test("stack renders defaults with responsive axis markers", () => {
   const html = renderToString(<StackBlock data={stackDefaults} variant="vertical" />);
 
+  expectHtmlClasses(html, ["gap-4", "md:gap-6", "lg:gap-6"]);
   expect(html).toContain('data-stack-variant="vertical"');
   expect(html).toContain('data-stack-direction-desktop="column"');
   expect(html).toContain('data-stack-align="stretch"');
@@ -36,6 +46,104 @@ test("stack renders defaults with responsive axis markers", () => {
   expect(html).toContain('data-stack-wrap-mobile="false"');
   expect(html).toContain('data-stack-items="0"');
   expect(html).toContain("Empty stack.");
+});
+
+test("stack renders every responsive utility as build-safe literal classes", () => {
+  const directions = ["row", "column"] as const;
+  for (const direction of directions) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          direction: {
+            desktop: direction,
+            tablet: direction,
+            mobile: direction,
+          },
+        }}
+      />
+    );
+    const suffix = direction === "row" ? "row" : "col";
+    expectHtmlClasses(html, [`flex-${suffix}`, `md:flex-${suffix}`, `lg:flex-${suffix}`]);
+  }
+
+  for (const gap of stackGapTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          gap: {
+            desktop: gap,
+            tablet: gap,
+            mobile: gap,
+          },
+        }}
+      />
+    );
+    const suffix = gap === "none" ? "0" : gap;
+    expectHtmlClasses(html, [`gap-${suffix}`, `md:gap-${suffix}`, `lg:gap-${suffix}`]);
+  }
+
+  const alignSuffixMap = {
+    start: "start",
+    center: "center",
+    end: "end",
+    stretch: "stretch",
+    baseline: "baseline",
+  } as const;
+  for (const align of stackAlignTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          align: {
+            desktop: align,
+            tablet: align,
+            mobile: align,
+          },
+        }}
+      />
+    );
+    const suffix = alignSuffixMap[align];
+    expectHtmlClasses(html, [`items-${suffix}`, `md:items-${suffix}`, `lg:items-${suffix}`]);
+  }
+
+  for (const justify of stackJustifyTokens) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          justify: {
+            desktop: justify,
+            tablet: justify,
+            mobile: justify,
+          },
+        }}
+      />
+    );
+    expectHtmlClasses(html, [
+      `justify-${justify}`,
+      `md:justify-${justify}`,
+      `lg:justify-${justify}`,
+    ]);
+  }
+
+  for (const wrap of [false, true]) {
+    const html = renderToString(
+      <StackBlock
+        variant="responsive"
+        data={{
+          wrap: {
+            desktop: wrap,
+            tablet: wrap,
+            mobile: wrap,
+          },
+        }}
+      />
+    );
+    const suffix = wrap ? "wrap" : "nowrap";
+    expectHtmlClasses(html, [`flex-${suffix}`, `md:flex-${suffix}`, `lg:flex-${suffix}`]);
+  }
 });
 
 test("stack normalization supports presets, legacy scalars, and responsive objects", () => {

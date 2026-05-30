@@ -6,7 +6,7 @@
 **Category:** Widgets + Appointment Form + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -23,11 +23,24 @@ immediately normalizes back to the default international pattern.
 
 ## Sub-Tasks
 
-- [ ] Allow an explicit empty phone pattern/message state to survive
+- [x] Allow an explicit empty phone pattern/message state to survive
   normalization.
-- [ ] Keep preset resolution truthful for `default`, `digits-spaces`, and
+- [x] Keep preset resolution truthful for `default`, `digits-spaces`, and
   `not-required`.
-- [ ] Add regression coverage for the preset round-trip and runtime markup.
+- [x] Add regression coverage for the preset round-trip and runtime markup.
+
+## Completion Notes
+
+- `normalizeAppointmentFormData` now preserves explicit empty
+  `phonePattern`/`phonePatternMessage` values while absent values and
+  accidental whitespace still fall back to the default international
+  validation.
+- Runtime output omits the phone `pattern`, `title`, and validation help text
+  when extra phone validation is intentionally disabled.
+- The Visual editor resolves the phone validation preset once per render and
+  keeps `not-required` selected after normalization.
+- Default international and digits/spaces presets remain non-empty and continue
+  to render their validation attributes.
 
 ## Files To Change
 
@@ -86,9 +99,28 @@ pattern/message fields.
 ## Documentation Updates Required
 
 - Update `_docs/PLAYWRIGHT/28-05-2026/REPORT_APPOINTMENT_FORM_WIDGET.md`.
+- Update `_docs/_WIDGETS/APPOINTMENT_FORM.md`.
 - Update `_docs/_TASKS/README.md` on status changes.
+- Add `_docs/_CHANGELOG/1029-2026-05-30-task-343-02-appointment-form-phone-validation.md`.
 
 ## Acceptance Criteria
 
 - `No extra validation` no longer snaps back to the default preset.
 - Runtime and editor state agree on whether phone validation is active.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun scripts/playwright-widget-contract-smoke.ts --widget appointment-form --session task-343-02-appointment-form-final --admin http://localhost:5173/admin --front http://localhost:3000 --strict --output-json .tmp/task-343-02-appointment-form-final-smoke.json --output-md .tmp/task-343-02-appointment-form-final-smoke.md`
+- `claude -p --tools "" --input-format text --output-format text`
+  diff-fed read-only review for TASK-343-02. Claude raised a whitespace-only
+  fallback concern; local verification showed the implementation already falls
+  back through `text()`, and `tests/vitest/widgets/appointmentForm.test.tsx`
+  now locks that behavior. Claude's README/parent-closure concern was checked
+  against `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/README.md`, and
+  `TASK-343*.md` statuses.
+
+Strict smoke passed with `adminFailures=0`, `publicFailures=0`,
+`fixtureGaps=0`, and `metadataGaps=0`.

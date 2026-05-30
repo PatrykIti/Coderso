@@ -6,7 +6,7 @@
 **Category:** Widgets + Product Gallery + Admin Preview + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, TASK-342
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,17 +25,28 @@ requires public section naming and truthful `view all` disappearance handling.
 
 ## Sub-Tasks
 
-- [ ] Make first-load preview hydration truthful in Wizard/Visual without
+- [x] Make first-load preview hydration truthful in Wizard/Visual without
   requiring an Advanced detour.
-- [ ] Surface stale-source state and refresh ownership more clearly in daily
+- [x] Surface stale-source state and refresh ownership more clearly in daily
   modes.
-- [ ] Make missing `link.basePath` consequences explicit for cards and CTA.
-- [ ] Explain or prevent silent `view all` link disappearance when the destination
+- [x] Make missing `link.basePath` consequences explicit for cards and CTA.
+- [x] Explain or prevent silent `view all` link disappearance when the destination
   is cleared or `total <= items.length`.
-- [ ] Decide whether the orphan `fields.showMediaHint` should be removed or
+- [x] Decide whether the orphan `fields.showMediaHint` should be removed or
   wired through.
-- [ ] Add an accessible name for the public Product Gallery section, including a
+- [x] Add an accessible name for the public Product Gallery section, including a
   fallback when the section title is omitted.
+
+## Implementation Notes
+
+- Added Wizard and Visual preview summaries that hydrate first-load preview
+  data and keep source/curation changes stale until `Refresh products` is used.
+- Added route and view-all state helpers that drive runtime `data-*` markers,
+  editor guidance, and Advanced summaries.
+- Added public section naming with title-based `aria-labelledby` and a fallback
+  `aria-label="Product gallery"`.
+- Retired `fields.showMediaHint` from normalized owned data while leaving schema
+  acceptance in place for legacy saved payloads.
 
 ## Files To Change
 
@@ -91,6 +102,8 @@ No new public route. Existing commerce/admin preview boundaries stay unchanged.
 ## Documentation Updates Required
 
 - Update `_docs/PLAYWRIGHT/28-05-2026/REPORT_PRODUCT_GALLERY_WIDGET.md`.
+- Update `_docs/_WIDGETS/PRODUCT_GALLERY.md`.
+- Add `_docs/_CHANGELOG/1020-2026-05-30-task-343-16-product-gallery-truthfulness.md`.
 - Update `_docs/_TASKS/README.md` on status changes.
 
 ## Acceptance Criteria

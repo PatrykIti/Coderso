@@ -8,6 +8,8 @@ import {
   buildProductGalleryQueryInput,
   normalizeProductGalleryData,
   productGalleryDefaults,
+  resolveProductGalleryRouteState,
+  resolveProductGalleryViewAllState,
   type ProductGalleryData,
 } from "../../../../widgets/core/productGallery";
 import {
@@ -405,12 +407,15 @@ function useProductGalleryPreview({
   previewState?: WidgetPreviewState | null;
   setPreviewState?: (state: WidgetPreviewState | null) => void;
 }) {
-  const [refreshToken, setRefreshToken] = useState(0);
+  const [refreshRequest, setRefreshRequest] = useState<{ key?: string; token: number }>({
+    token: 0,
+  });
   const queryKey = buildPreviewKey(value);
   const previewKey = `${blockId ?? "product-gallery"}:${queryKey}`;
   const lastResolvedPatchRef = useRef<Record<string, unknown> | undefined>(undefined);
   const previewDataPatchRef = useRef<Record<string, unknown> | undefined>(previewState?.dataPatch);
   const previewRequestKeyRef = useRef<string | undefined>(previewState?.requestKey);
+  const previewStatusRef = useRef<WidgetPreviewState["status"] | undefined>(previewState?.status);
   const canPreview = Boolean(setPreviewState);
   const previewInput = useMemo(() => {
     const parsed = JSON.parse(queryKey) as {
@@ -435,7 +440,8 @@ function useProductGalleryPreview({
   useEffect(() => {
     previewDataPatchRef.current = previewState?.dataPatch;
     previewRequestKeyRef.current = previewState?.requestKey;
-  }, [previewState?.dataPatch, previewState?.requestKey]);
+    previewStatusRef.current = previewState?.status;
+  }, [previewState?.dataPatch, previewState?.requestKey, previewState?.status]);
 
   useEffect(() => {
     if (!active || !canPreview) return;
@@ -444,18 +450,25 @@ function useProductGalleryPreview({
     const previewIsStale =
       typeof previewRequestKeyRef.current === "string" &&
       previewRequestKeyRef.current !== previewKey;
+    const manualRefreshForCurrentKey =
+      refreshRequest.token > 0 && refreshRequest.key === previewKey;
 
-    if (refreshToken === 0) {
-      if (previewIsStale) {
-        setPreviewStateEvent({
-          status: "idle",
-          requestKey: previewKey,
-          message: productGalleryPreviewStaleMessage,
-          ...(previousPatch ? { dataPatch: previousPatch } : {}),
-        });
-        return;
-      }
-      if (previewDataPatchRef.current) return;
+    if (previewIsStale && !manualRefreshForCurrentKey) {
+      setPreviewStateEvent({
+        status: "idle",
+        requestKey: previewKey,
+        message: productGalleryPreviewStaleMessage,
+        ...(previousPatch ? { dataPatch: previousPatch } : {}),
+      });
+      return;
+    }
+
+    if (
+      !manualRefreshForCurrentKey &&
+      previewRequestKeyRef.current === previewKey &&
+      (previewDataPatchRef.current || previewStatusRef.current === "loading")
+    ) {
+      return;
     }
 
     setPreviewStateEvent({
@@ -495,10 +508,15 @@ function useProductGalleryPreview({
     return () => {
       activeRequest = false;
     };
-  }, [active, canPreview, previewInput, previewKey, refreshToken]);
+  }, [active, canPreview, previewInput, previewKey, refreshRequest]);
 
   return {
-    refresh: () => setRefreshToken((current) => current + 1),
+    refresh: () =>
+      setRefreshRequest((current) => ({
+        key: previewKey,
+        token: current.token + 1,
+      })),
+    isLoading: previewState?.status === "loading",
   };
 }
 
@@ -520,15 +538,135 @@ function previewStatusLabel(
   }
 }
 
+function ProductGalleryPreviewSummary({
+  value,
+  context,
+  onRefresh,
+  disabled,
+}: {
+  value: ProductGalleryData;
+  context: WidgetEditorProps<ProductGalleryData>["context"];
+  onRefresh?: () => void;
+  disabled?: boolean;
+}) {
+  const normalized = normalizeProductGalleryData(value);
+  const previewResolved = resolvePreviewResolved(normalized, context?.previewState);
+  const previewStatus = previewStatusLabel(context?.previewState, previewResolved);
+  const status = context?.previewState?.status ?? "idle";
+  const tone =
+    status === "error"
+      ? "border-amber-300 bg-amber-50 text-amber-900"
+      : status === "loading"
+        ? "border-sky-300 bg-sky-50 text-sky-900"
+        : "border-border/70 bg-background text-muted-foreground";
+
+  return (
+    <div
+      className={`space-y-2 rounded-md border p-3 text-sm ${tone}`}
+      data-product-gallery-preview-summary={status}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">{previewStatus}</p>
+          <p className="text-xs">
+            Resolved items: {previewResolved.items?.length ?? 0} · Total:{" "}
+            {previewResolved.total ?? 0}
+          </p>
+          <p className="text-xs">
+            Last resolved: {previewResolved.resolvedAt || "Not resolved yet"}
+          </p>
+          {previewResolved.error ? (
+            <p className="text-xs text-amber-700">Runtime warning: {previewResolved.error}</p>
+          ) : null}
+          {context?.previewState?.message ? (
+            <p className="text-xs text-amber-700">{context.previewState.message}</p>
+          ) : null}
+        </div>
+        {typeof onRefresh === "function" ? (
+          <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={disabled}>
+            Refresh products
+          </Button>
+        ) : null}
+      </div>
+      {typeof onRefresh !== "function" ? (
+        <p className="text-xs">
+          Preview refresh is available inside page and widget-template editors.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ProductGalleryRouteNotice({ value }: { value: ProductGalleryData }) {
+  const routeState = resolveProductGalleryRouteState(value);
+
+  if (routeState.cardLinks.mode === "ready") {
+    return (
+      <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        Product cards link through the configured product detail route.
+      </p>
+    );
+  }
+
+  return (
+    <p
+      className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+      data-product-gallery-route-guidance="missing-route"
+    >
+      {routeState.cardLinks.reason}
+    </p>
+  );
+}
+
+function ProductGalleryViewAllNotice({
+  value,
+  previewState,
+}: {
+  value: ProductGalleryData;
+  previewState?: WidgetPreviewState | null;
+}) {
+  const normalized = normalizeProductGalleryData(value);
+  const previewResolved = resolvePreviewResolved(normalized, previewState);
+  const viewAllState = resolveProductGalleryViewAllState(
+    normalized,
+    previewResolved.total ?? 0,
+    previewResolved.items?.length ?? 0
+  );
+
+  if (viewAllState.mode === "disabled") return null;
+
+  const message =
+    viewAllState.mode === "visible"
+      ? `More products link points to ${viewAllState.href}.`
+      : viewAllState.reason;
+
+  return (
+    <p
+      className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+      data-product-gallery-view-all-guidance={viewAllState.mode}
+    >
+      {message}
+    </p>
+  );
+}
+
 export function ProductGalleryWizardEditor({
   value,
   onChange,
+  context,
 }: WidgetEditorProps<ProductGalleryData>) {
   const normalized = normalizeProductGalleryData(value);
   const source = normalizeSourceForEditor(normalized.source, {
     limit: productGalleryDefaults.source?.limit ?? 8,
     sortField: "updatedAt",
     sortDir: "desc",
+  });
+  const preview = useProductGalleryPreview({
+    value: normalized,
+    blockId: context?.blockId,
+    active: context?.editorMode === "wizard" && typeof context?.setPreviewState === "function",
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
   });
 
   return (
@@ -580,6 +718,21 @@ export function ProductGalleryWizardEditor({
           onChange={(next) => updateSource(normalized, onChange, { maxPriceMinor: next })}
         />
       </CommerceEditorSection>
+
+      <CommerceEditorSection
+        id="product-gallery.wizard.preview-summary"
+        mode="wizard"
+        role="diagnostics"
+        title="Preview summary"
+        description="Read-only product preview for the selected source."
+      >
+        <ProductGalleryPreviewSummary
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
+        />
+      </CommerceEditorSection>
     </div>
   );
 }
@@ -589,12 +742,35 @@ export function ProductGalleryVisualEditor({
   onChange,
   variant,
   onVariantChange,
+  context,
 }: WidgetEditorProps<ProductGalleryData>) {
   const normalized = normalizeProductGalleryData(value);
   const resolvedVariant = variant === "compact" ? "compact" : "cards";
+  const preview = useProductGalleryPreview({
+    value: normalized,
+    blockId: context?.blockId,
+    active: context?.editorMode === "visual" && typeof context?.setPreviewState === "function",
+    previewState: context?.previewState,
+    setPreviewState: context?.setPreviewState,
+  });
 
   return (
     <div className="space-y-4">
+      <CommerceEditorSection
+        id="product-gallery.visual.preview-summary"
+        mode="visual"
+        role="diagnostics"
+        title="Preview summary"
+        description="Read-only product preview for the current source and curation."
+      >
+        <ProductGalleryPreviewSummary
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
+        />
+      </CommerceEditorSection>
+
       <CommerceEditorSection
         id="product-gallery.visual.variant-structure"
         mode="visual"
@@ -711,10 +887,7 @@ export function ProductGalleryVisualEditor({
         title="Product links"
         description="Control product card calls to action without typing product-route paths."
       >
-        <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          Product detail routing is managed outside the daily widget editor. Existing saved product
-          routes stay active and are reported in Advanced diagnostics.
-        </div>
+        <ProductGalleryRouteNotice value={normalized} />
         <label className="space-y-1 text-sm">
           <span className="font-medium text-foreground">Link target</span>
           <select
@@ -832,6 +1005,7 @@ export function ProductGalleryVisualEditor({
               value={normalized.pagination?.viewAllLabel}
               onChange={(next) => updatePagination(normalized, onChange, { viewAllLabel: next })}
             />
+            <ProductGalleryViewAllNotice value={normalized} previewState={context?.previewState} />
           </>
         ) : null}
       </CommerceEditorSection>
@@ -881,9 +1055,14 @@ export function ProductGalleryAdvancedEditor({
 }: WidgetEditorProps<ProductGalleryData>) {
   const normalized = normalizeProductGalleryData(value);
   const previewResolved = resolvePreviewResolved(normalized, context?.previewState);
-  const previewStatus = previewStatusLabel(context?.previewState, previewResolved);
   const queryInput = buildProductGalleryQueryInput(normalized);
-  const { refresh } = useProductGalleryPreview({
+  const routeState = resolveProductGalleryRouteState(normalized);
+  const viewAllState = resolveProductGalleryViewAllState(
+    normalized,
+    previewResolved.total ?? 0,
+    previewResolved.items?.length ?? 0
+  );
+  const preview = useProductGalleryPreview({
     value: normalized,
     blockId: context?.blockId,
     active:
@@ -927,13 +1106,25 @@ export function ProductGalleryAdvancedEditor({
           id="product-gallery-advanced-card-route"
           label="Card route"
           path="link.basePath"
-          value={normalized.link?.basePath ? "Configured" : "Not configured"}
+          value={
+            routeState.cardLinks.mode === "ready"
+              ? "Configured"
+              : "Missing - cards and CTA are non-clickable"
+          }
         />
         <ReadonlyWidgetSummaryRow
           id="product-gallery-advanced-more-products"
           label="More products link"
           path="pagination"
-          value={normalized.pagination?.mode === "view-all" ? "Shown" : "Hidden"}
+          value={
+            viewAllState.mode === "visible"
+              ? "Shown"
+              : viewAllState.mode === "missing_destination"
+                ? "Hidden - destination missing"
+                : viewAllState.mode === "all_products_visible"
+                  ? "Hidden - all products shown"
+                  : "Hidden"
+          }
         />
       </CommerceEditorSection>
 
@@ -983,37 +1174,12 @@ export function ProductGalleryAdvancedEditor({
         title="Preview status"
         description="Refresh preview data without publishing the page."
       >
-        <div className="rounded-md border border-border/70 bg-background p-3 text-sm">
-          <p className="font-medium text-foreground">{previewStatus}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Resolved items: {previewResolved.items?.length ?? 0} · Total:{" "}
-            {previewResolved.total ?? 0}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Last resolved: {previewResolved.resolvedAt || "Not resolved yet"}
-          </p>
-          {previewResolved.error ? (
-            <p className="mt-2 text-xs text-amber-700">Runtime warning: {previewResolved.error}</p>
-          ) : null}
-          {context?.previewState?.message ? (
-            <p className="mt-2 text-xs text-amber-700">{context.previewState.message}</p>
-          ) : null}
-        </div>
-        {context?.setPreviewState ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={refresh}
-            disabled={context.previewState?.status === "loading"}
-          >
-            Refresh products
-          </Button>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Preview refresh is available inside page and widget-template editors.
-          </p>
-        )}
+        <ProductGalleryPreviewSummary
+          value={normalized}
+          context={context}
+          onRefresh={context?.setPreviewState ? preview.refresh : undefined}
+          disabled={preview.isLoading}
+        />
       </CommerceEditorSection>
 
       <CommerceEditorSection

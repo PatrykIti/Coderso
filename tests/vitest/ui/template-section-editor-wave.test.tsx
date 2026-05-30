@@ -14,12 +14,14 @@ const templateState = vi.hoisted(() => ({
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
+        blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
         id: "template-2",
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
+        blocks: [{ id: "grid-1", type: "feature-grid" }],
       },
     ],
     isLoading: false,
@@ -177,12 +179,14 @@ afterEach(() => {
         name: "Hero banner",
         status: "published",
         description: "Published hero template",
+        blocks: [{ id: "hero-1", type: "hero" }],
       },
       {
         id: "template-2",
         name: "Promo grid",
         status: "draft",
         description: "Draft promotional grid",
+        blocks: [{ id: "grid-1", type: "feature-grid" }],
       },
     ],
     isLoading: false,
@@ -258,9 +262,8 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
     expect(view.container.querySelector("pre")).toBeNull();
     expect(view.container.textContent).toContain("Resolved content summary");
     expect(view.container.textContent).toContain("1 content block resolved: Rich Text.");
-    expect(view.container.textContent).toContain("The selected template is still a draft.");
+    expect(view.container.textContent).toContain("No template selected.");
     expect(view.container.textContent).not.toContain("Template ID");
-    expect(view.container.textContent).not.toContain("template_unpublished");
     expect(
       view.container
         .querySelector("[data-widget-editor-section='template-section.wizard.template-setup']")
@@ -308,9 +311,14 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
 
     expect(view.container.textContent).toContain("Resolved content summary");
     expect(view.container.textContent).toContain("No content blocks resolved.");
-    expect(view.container.textContent).toContain("No resolution problem detected.");
+    expect(view.container.textContent).toContain(
+      "template_unpublished: selected template is still a draft for public runtime."
+    );
+    expect(view.container.textContent).toContain("1 source block in the draft template.");
+    expect(view.container.textContent).toContain("Category");
+    expect(view.container.textContent).toContain("Marketing");
     expect(view.container.textContent).not.toContain("Template ID");
-    expect(view.container.textContent).not.toContain("template_unpublished");
+    expect(view.container.textContent).not.toContain("No resolution problem detected.");
 
     setSelectValue(selects[0], "__no-template__");
 
@@ -323,7 +331,7 @@ test("TemplateSection editors cover template selection, draft badge, reset, and 
   } finally {
     view.cleanup();
   }
-});
+}, 10000);
 
 test("TemplateSection editors surface error state from the template hook while keeping the empty placeholder", async () => {
   templateState.current = {

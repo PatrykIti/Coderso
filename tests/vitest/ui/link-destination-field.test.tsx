@@ -249,6 +249,7 @@ test("LinkDestinationField keeps custom legacy destinations read-only with clear
     const clearButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Clear destination")
     );
+    expect(clearButton?.getAttribute("aria-label")).toBe("Clear Destination");
     React.act(() => {
       clearButton?.click();
     });

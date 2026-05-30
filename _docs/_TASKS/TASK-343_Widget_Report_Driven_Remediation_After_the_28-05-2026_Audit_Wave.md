@@ -6,7 +6,7 @@
 **Category:** Widgets + Admin UI + Runtime + UX + QA + Docs
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-341, TASK-342
-**Status:** In Progress (2026-05-29)
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -104,37 +104,37 @@ not justify a physical implementation family in `TASK-343`.
 
 ## Sub-Tasks
 
-- [ ] TASK-343-01: Hero Audit Remediation Family
-- [ ] TASK-343-02: Appointment Form Audit Remediation Family
-- [ ] TASK-343-03: Newsletter Audit Remediation Family
-- [ ] TASK-343-04: Accordion Audit Remediation Family
-- [ ] TASK-343-05: FAQ Accordion Audit Remediation Family
-- [ ] TASK-343-06: Booking Calendar Audit Remediation Family
-- [ ] TASK-343-07: Feature Grid Audit Remediation Family
-- [ ] TASK-343-08: Compare Timeline Audit Remediation Family
-- [ ] TASK-343-09: Stack Audit Remediation Family
-- [ ] TASK-343-10: Toggle Block Audit Remediation Family
-- [ ] TASK-343-11: Team Audit Remediation Family
-- [ ] TASK-343-12: Template Section Audit Remediation Family
-- [ ] TASK-343-13: Timeline Audit Remediation Family
-- [ ] TASK-343-14: Form Embed Audit Remediation Family
-- [ ] TASK-343-15: Navigation Audit Remediation Family
-- [ ] TASK-343-16: Product Gallery Audit Remediation Family
-- [ ] TASK-343-17: Rich Text Section Audit Remediation Family
-- [ ] TASK-343-18: Listing Filters Audit Remediation Family
-- [ ] TASK-343-19: Posts Feed Audit Remediation Family
-- [ ] TASK-343-20: Search Box Audit Remediation Family
-- [ ] TASK-343-21: Shared Block Layout and Device Visibility Audit Remediation Family
-- [ ] TASK-343-22: CTA Banner Audit Remediation Family
-- [ ] TASK-343-23: Gallery Mosaic Audit Remediation Family
-- [ ] TASK-343-24: Logo Cloud Audit Remediation Family
-- [ ] TASK-343-25: Pricing Plans Audit Remediation Family
-- [ ] TASK-343-26: Stats KPI Audit Remediation Family
-- [ ] TASK-343-27: Tabs Audit Remediation Family
-- [ ] TASK-343-28: Split Layout Audit Remediation Family
-- [ ] TASK-343-29: Entry Teaser Audit Remediation Family
-- [ ] TASK-343-30: Shared Widget Color State Truthfulness Audit Remediation Family
-- [ ] TASK-343-31: Shared MediaPicker Dialog Accessibility Audit Remediation Family
+- [x] TASK-343-01: Hero Audit Remediation Family
+- [x] TASK-343-02: Appointment Form Audit Remediation Family
+- [x] TASK-343-03: Newsletter Audit Remediation Family
+- [x] TASK-343-04: Accordion Audit Remediation Family
+- [x] TASK-343-05: FAQ Accordion Audit Remediation Family
+- [x] TASK-343-06: Booking Calendar Audit Remediation Family
+- [x] TASK-343-07: Feature Grid Audit Remediation Family
+- [x] TASK-343-08: Compare Timeline Audit Remediation Family
+- [x] TASK-343-09: Stack Audit Remediation Family
+- [x] TASK-343-10: Toggle Block Audit Remediation Family
+- [x] TASK-343-11: Team Audit Remediation Family
+- [x] TASK-343-12: Template Section Audit Remediation Family
+- [x] TASK-343-13: Timeline Audit Remediation Family
+- [x] TASK-343-14: Form Embed Audit Remediation Family
+- [x] TASK-343-15: Navigation Audit Remediation Family
+- [x] TASK-343-16: Product Gallery Audit Remediation Family
+- [x] TASK-343-17: Rich Text Section Audit Remediation Family
+- [x] TASK-343-18: Listing Filters Audit Remediation Family
+- [x] TASK-343-19: Posts Feed Audit Remediation Family
+- [x] TASK-343-20: Search Box Audit Remediation Family
+- [x] TASK-343-21: Shared Block Layout and Device Visibility Audit Remediation Family
+- [x] TASK-343-22: CTA Banner Audit Remediation Family
+- [x] TASK-343-23: Gallery Mosaic Audit Remediation Family
+- [x] TASK-343-24: Logo Cloud Audit Remediation Family
+- [x] TASK-343-25: Pricing Plans Audit Remediation Family
+- [x] TASK-343-26: Stats KPI Audit Remediation Family
+- [x] TASK-343-27: Tabs Audit Remediation Family
+- [x] TASK-343-28: Split Layout Audit Remediation Family
+- [x] TASK-343-29: Entry Teaser Audit Remediation Family
+- [x] TASK-343-30: Shared Widget Color State Truthfulness Audit Remediation Family
+- [x] TASK-343-31: Shared MediaPicker Dialog Accessibility Audit Remediation Family
 
 ## Files To Change
 
@@ -156,8 +156,8 @@ not justify a physical implementation family in `TASK-343`.
 
 1. Start with the high-risk public/runtime and destructive-data families:
    `TASK-343-01`, `TASK-343-03`, `TASK-343-07`, `TASK-343-09`,
-   `TASK-343-10`, `TASK-343-14`, `TASK-343-18`, `TASK-343-19`,
-   `TASK-343-21`, `TASK-343-30`, and `TASK-343-31`.
+   `TASK-343-10`, `TASK-343-11`, `TASK-343-12`, `TASK-343-13`, `TASK-343-14`, `TASK-343-18`, `TASK-343-19`,
+   `TASK-343-21`, `TASK-343-29`, `TASK-343-30`, and `TASK-343-31`.
 2. Then close medium-risk widget-local truthfulness families in dependency
    order, especially families that depend on shared decisions (`TASK-343-24`,
    `TASK-343-25`, `TASK-343-27` after `TASK-343-30`; `TASK-343-28` after
@@ -244,3 +244,23 @@ Each promoted family owns its concrete lint/type/test commands.
   families.
 - Deferred, current-state, or environment-only reports are explicitly documented
   instead of being lost in free-form notes.
+
+## Validation Evidence
+
+- All `31` TASK-343 physical remediation families are closed.
+- Final family validation for `TASK-343-02`:
+  `bun run test:vitest -- tests/vitest/widgets/appointmentForm.test.tsx tests/vitest/ui/appointment-form-editor-wave.test.tsx`,
+  `bun --cwd core lint`, `bun --cwd core lint:types`, and strict
+  `appointment-form` Playwright smoke with `adminFailures=0`,
+  `publicFailures=0`, `fixtureGaps=0`, `metadataGaps=0`.
+- `claude -p --tools "" --input-format text --output-format text` reviewed
+  the TASK-343 closure summaries, status audit, board, changelog index, diff
+  checks, and staged diff stat; it reported no blockers. The status audit was
+  also verified locally: every `TASK-343*.md` file is `Done (2026-05-30)` and
+  no unchecked TASK-343 checklist items remain.
+- Retrospective `claude -p` closure reviews were also run for the completed
+  family files that did not already carry per-family Claude evidence. Claude
+  initially flagged `TASK-343-25` for missing task-file validation evidence;
+  that docs drift was fixed in
+  `TASK-343-25_Pricing_Plans_Audit_Remediation_Family.md`, and the focused
+  rerun then reported no blockers.

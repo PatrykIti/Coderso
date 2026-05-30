@@ -12,6 +12,7 @@ import {
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
 export type ListingFiltersVariantId = "default" | "horizontal" | "sidebar" | "drawer";
 
@@ -544,6 +545,33 @@ const resolveFacetDateInputMode = (facet: ListingFacetConfig) =>
 
 const resolveFacetRangeStep = (facet: ListingFacetConfig) => facet.presentation?.rangeStep ?? 1;
 
+const optionBackedFacetKinds = new Set<ListingFacetConfig["kind"]>([
+  "checkbox",
+  "radio",
+  "taxonomy",
+]);
+
+export function resolveFacetOptionOwnership(
+  facet: ListingFacetConfig,
+  renderedOptionCount: number,
+  hasResolvedMetric: boolean
+): { mode: "configured" } | { mode: "needs_options"; reason: string } | { mode: "not_applicable" } {
+  if (!optionBackedFacetKinds.has(facet.kind)) {
+    return { mode: "not_applicable" };
+  }
+
+  if (renderedOptionCount > 0) {
+    return { mode: "configured" };
+  }
+
+  return {
+    mode: "needs_options",
+    reason: hasResolvedMetric
+      ? "No matching options are available from the selected listing data yet."
+      : "Options will appear when listing data resolves or a safe option list is configured.",
+  };
+}
+
 const toCompositeBoundaryValue = (value: unknown) =>
   value === null || value === undefined ? "" : String(value).trim();
 
@@ -682,6 +710,22 @@ function ListingFacetControl({
   const controlMode = resolveFacetControlMode(facet);
   const resolvedOptions =
     metric.kind === "taxonomy" ? flattenTaxonomyOptions(metric.options) : metric.options;
+  const optionOwnership = resolveFacetOptionOwnership(
+    facet,
+    metric.options.length,
+    hasResolvedMetric
+  );
+  const emptyOptionsMessage =
+    optionOwnership.mode === "needs_options" ? optionOwnership.reason : null;
+  const renderEmptyOptionsMessage = () =>
+    emptyOptionsMessage ? (
+      <p
+        className="rounded-md border border-dashed border-[var(--color-border)]/70 bg-[var(--color-bg)]/30 px-3 py-2 text-xs text-[var(--color-text)]/65"
+        data-listing-empty-options="1"
+      >
+        {emptyOptionsMessage}
+      </p>
+    ) : null;
 
   const renderShell = (content: ReactElement) => {
     if (!collapsible) return content;
@@ -866,25 +910,31 @@ function ListingFacetControl({
 
   if (metric.kind === "radio") {
     return renderShell(
-      <fieldset className="space-y-2 text-sm">
+      <fieldset className="space-y-2 text-sm" aria-label={collapsible ? metric.label : undefined}>
         {!collapsible ? <legend className="font-medium">{metric.label}</legend> : null}
-        <div className="grid gap-1.5">
-          {metric.options.map((option) => (
-            <label key={option.value} className="flex items-center gap-2">
-              <input
-                type="radio"
-                name={inputName}
-                value={option.value}
-                defaultChecked={option.active}
-                data-listing-token={metric.token}
-              />
-              <span>{option.label}</span>
-              {hasResolvedMetric ? (
-                <span className="ml-auto text-xs text-[var(--color-text)]/60">{option.count}</span>
-              ) : null}
-            </label>
-          ))}
-        </div>
+        {metric.options.length > 0 ? (
+          <div className="grid gap-1.5">
+            {metric.options.map((option) => (
+              <label key={option.value} className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name={inputName}
+                  value={option.value}
+                  defaultChecked={option.active}
+                  data-listing-token={metric.token}
+                />
+                <span>{option.label}</span>
+                {hasResolvedMetric ? (
+                  <span className="ml-auto text-xs text-[var(--color-text)]/60">
+                    {option.count}
+                  </span>
+                ) : null}
+              </label>
+            ))}
+          </div>
+        ) : (
+          renderEmptyOptionsMessage()
+        )}
       </fieldset>
     );
   }
@@ -923,7 +973,11 @@ function ListingFacetControl({
 
   if (controlMode === "searchable") {
     return renderShell(
-      <fieldset className="space-y-2 text-sm" data-listing-searchable-options="1">
+      <fieldset
+        className="space-y-2 text-sm"
+        aria-label={collapsible ? metric.label : undefined}
+        data-listing-searchable-options="1"
+      >
         {!collapsible ? <legend className="font-medium">{metric.label}</legend> : null}
         <input
           className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
@@ -931,15 +985,15 @@ function ListingFacetControl({
           placeholder={`Search ${metric.label.toLowerCase()} options`}
           data-listing-option-search="1"
         />
-        {optionContent}
+        {resolvedOptions.length > 0 ? optionContent : renderEmptyOptionsMessage()}
       </fieldset>
     );
   }
 
   return renderShell(
-    <fieldset className="space-y-2 text-sm">
+    <fieldset className="space-y-2 text-sm" aria-label={collapsible ? metric.label : undefined}>
       {!collapsible ? <legend className="font-medium">{metric.label}</legend> : null}
-      {optionContent}
+      {resolvedOptions.length > 0 ? optionContent : renderEmptyOptionsMessage()}
     </fieldset>
   );
 }
@@ -993,6 +1047,13 @@ export function ListingFiltersBlock({
   const legacyFrameClass =
     normalized.style === undefined ? "border-[var(--color-border)] bg-[var(--color-bg)]/80" : "";
   const legacyActionClass = normalized.style === undefined ? "bg-[var(--color-primary)]" : "";
+  const rootInstanceId = createWidgetInstanceId(
+    "listing-filters",
+    blockId,
+    listingQueryId ?? resolvedVariant
+  );
+  const titleId = scopedId(rootInstanceId, "title");
+  const searchInputId = scopedId(rootInstanceId, "search");
 
   if (!listingQueryId) {
     return (
@@ -1005,6 +1066,7 @@ export function ListingFiltersBlock({
         data-listing-variant={resolvedVariant}
         data-listing-block-id={blockId ?? ""}
         data-listing-query-id=""
+        aria-label="Listing filters configuration"
       >
         <p className="text-sm text-[var(--color-text)]/75">
           Select a listing query in widget settings to enable runtime filters.
@@ -1039,19 +1101,26 @@ export function ListingFiltersBlock({
       data-listing-runtime-form
       data-listing-query-id={listingQueryId}
       data-listing-auto-apply={autoApply ? "1" : "0"}
+      aria-labelledby={titleId}
     >
       <div className="space-y-1">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75">
+        <p
+          id={titleId}
+          className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text)]/75"
+        >
           {title}
         </p>
         {description ? <p className="text-sm text-[var(--color-text)]/70">{description}</p> : null}
       </div>
 
       {showSearch ? (
-        <label className="grid gap-2 text-sm">
+        <label className="grid gap-2 text-sm" htmlFor={searchInputId}>
           <span className="font-medium">{resolveText(normalized.searchLabel, "Search")}</span>
           <input
+            id={searchInputId}
             className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
+            type="search"
+            autoComplete="off"
             name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
             data-listing-token={listingRuntimeTokens.search}
             defaultValue={searchValue}
@@ -1158,6 +1227,7 @@ export function ListingFiltersBlock({
       data-listing-variant={resolvedVariant}
       data-listing-block-id={blockId ?? ""}
       data-listing-query-id={listingQueryId}
+      aria-labelledby={titleId}
     >
       {renderedFrame}
       <script dangerouslySetInnerHTML={{ __html: getListingRuntimeClientScript() }} />

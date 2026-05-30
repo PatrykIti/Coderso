@@ -20,8 +20,12 @@ styling.
 ### Wizard
 - source/query basics
 - bounded shopper-facing price filters
+- read-only preview summary with refresh when source edits make preview data
+  stale
 
 ### Visual
+- read-only preview summary with refresh when source or curation edits make
+  preview data stale
 - variant and structure
 - section header
 - card metadata and link controls
@@ -40,8 +44,11 @@ Notes:
 
 - Product Gallery now owns its variant selector inside Visual instead of relying
   on the shared wrapper variant surface.
-- Advanced now opens with an explicit read-only banner plus a contract summary,
-  while the preview refresh button remains a diagnostics-only action.
+- Wizard, Visual, and Advanced can hydrate the admin preview through the shared
+  internal preview state. The first daily-mode open no longer depends on an
+  Advanced detour; source and curation edits keep the last resolved cards until
+  `Refresh products` runs.
+- Advanced opens with an explicit read-only banner plus a contract summary.
 
 ## Runtime Behavior Notes
 
@@ -49,14 +56,28 @@ Notes:
   - `data-widget="product-gallery"`
   - `data-product-gallery-count`
   - `data-product-gallery-total`
+  - `data-product-gallery-route-state`
+  - `data-product-gallery-cta-state`
+  - `data-product-gallery-view-all-state`
   - `data-product-id` per resolved item
+- The public section is named by the configured section title when present, and
+  otherwise falls back to `aria-label="Product gallery"`.
 - Empty-state copy is rendered when no items resolve.
 - Resolved runtime cards stay normalized through the commerce widget shared
   contract.
 - Admin preview resolves products through an internal `/admin/api/widgets/*`
   route and patches preview data through `WidgetPreviewState.dataPatch`.
+- If `link.basePath` is missing, product cards stay non-clickable and CTA labels
+  are hidden in public render. Editor preview and editor panels show explicit
+  missing-route guidance.
+- `view-all` pagination renders only when a destination is configured and the
+  resolved total is greater than the shown cards. Hidden states are exposed as
+  `missing_destination` or `all_products_visible` in runtime/editor guidance.
 - Editor previews never render raw media IDs. Media diagnostics stay
   backend/support-owned instead of becoming beginner-facing card controls.
+- Legacy `fields.showMediaHint` payloads are accepted for backward
+  compatibility but dropped during normalization; the field has no editor or
+  renderer surface.
 
 ## Clear Controls
 
@@ -134,3 +155,6 @@ Notes:
 - `TASK-336-19` also removes raw CSS/token color text inputs, raw media-ID
   preview hints, phantom `runtime.*` contract paths, and the Advanced raw query
   disclosure.
+- `TASK-343-16` adds daily-mode preview hydration, explicit stale-preview
+  refresh ownership, route/view-all truthfulness markers, public section naming,
+  and legacy `fields.showMediaHint` normalization.

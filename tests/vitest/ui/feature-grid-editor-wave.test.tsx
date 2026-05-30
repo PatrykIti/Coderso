@@ -1266,6 +1266,111 @@ test("FeatureGrid editor integrates media picker, emoji presets, alt text, and i
   }
 });
 
+test("FeatureGrid visual editor keeps emoji presets clickable and confirms destructive count reduction", async () => {
+  const { FeatureGridVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  let latestValue: FeatureGridData = {
+    ...featureGridDefaults,
+    items: [
+      {
+        id: "feature-1",
+        title: "Feature one",
+        icon: "⚡",
+        description: "First card copy",
+      },
+      {
+        id: "feature-2",
+        title: "Feature two",
+        icon: "🧩",
+        description: "Second card copy",
+      },
+      {
+        id: "feature-3",
+        title: "Feature three",
+        icon: "📈",
+        description: "Third card copy",
+      },
+      {
+        id: "feature-4",
+        title: "Feature four",
+        icon: "🔒",
+        description: "Fourth card copy",
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FeatureGridData>(latestValue);
+
+    return (
+      <FeatureGridVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards-4"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const getLayoutSection = () =>
+      findSectionByTitle(view.container, "Variant and layout structure") as ParentNode;
+    const featureCardsSection = findSectionByTitle(
+      view.container,
+      "Feature cards and actions"
+    ) as ParentNode;
+    const firstCard = Array.from(
+      featureCardsSection.querySelectorAll(".space-y-3.rounded-lg.border.p-3")
+    )[0] as ParentNode;
+    const cardFieldGrid = firstCard.querySelector(
+      '[data-feature-grid-card-fields="single-column"]'
+    );
+    const rocketPreset = firstCard.querySelector('[data-feature-grid-emoji-preset="🚀"]');
+    const getCountSelect = () =>
+      findSelectsByOptions(getLayoutSection(), ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
+
+    expect(cardFieldGrid?.className).toBe("grid gap-3");
+    expect(cardFieldGrid?.className).not.toContain("sm:grid-cols-2");
+    expect(rocketPreset).toBeInstanceOf(HTMLButtonElement);
+    expect((rocketPreset as HTMLButtonElement).getAttribute("aria-label")).toBe(
+      "Set card 1 icon to 🚀"
+    );
+
+    React.act(() => {
+      (rocketPreset as HTMLButtonElement).click();
+    });
+    expect(latestValue.items[0]?.icon).toBe("🚀");
+
+    clickByText(getLayoutSection(), "Cards 3");
+    expect(latestValue.items).toHaveLength(4);
+    expect(view.container.textContent).toContain(
+      "Switching to Cards 3 reduces this grid from 4 cards to 3"
+    );
+    clickByText(view.container, "confirm-remove");
+    expect(latestValue.items).toHaveLength(3);
+
+    setSelectValue(getCountSelect(), "2");
+    expect(latestValue.items).toHaveLength(3);
+    expect(view.container.textContent).toContain("Reduce feature cards");
+    expect(view.container.textContent).toContain(
+      "Reducing this grid from 3 cards to 2 removes 1 card"
+    );
+
+    clickByText(view.container, "confirm-remove");
+    expect(latestValue.items).toHaveLength(2);
+    expect(latestValue.items.some((item) => item.title === "Feature three")).toBe(false);
+    expect(latestValue.items.some((item) => item.title === "Feature four")).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("FeatureGrid editor supports CTA toggle, target selection, and rich descriptions", async () => {
   const { FeatureGridVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");

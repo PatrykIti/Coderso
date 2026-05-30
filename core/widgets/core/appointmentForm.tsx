@@ -268,6 +268,9 @@ const text = (value: string | undefined, fallback: string) => {
   return trimmed.length > 0 ? trimmed : fallback;
 };
 
+const validationText = (value: string | undefined, fallback: string) =>
+  value === "" ? "" : text(value, fallback);
+
 const optionalText = (value: string | undefined) => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -581,11 +584,11 @@ export function normalizeAppointmentFormData(data: AppointmentFormData): Appoint
       bool(data.showPhone, appointmentFormDefaults.showPhone !== false) &&
       bool(data.requiredPhone, appointmentFormDefaults.requiredPhone === true),
     nameMode: nameMode(data.nameMode),
-    phonePattern: text(
+    phonePattern: validationText(
       data.phonePattern,
       appointmentFormDefaults.phonePattern ?? "^\\+?[0-9()\\-.\\s]{7,20}$"
     ),
-    phonePatternMessage: text(
+    phonePatternMessage: validationText(
       data.phonePatternMessage,
       appointmentFormDefaults.phonePatternMessage ??
         "Use digits, spaces, parentheses, or an optional leading +."
@@ -823,12 +826,18 @@ export function AppointmentFormBlock({
   const showPhone = normalized.showPhone !== false;
   const showNotes = normalized.showNotes !== false;
   const isSplitName = normalized.nameMode === "split";
-  const phonePattern =
+  const resolvedPhonePattern =
     normalized.phonePattern ?? appointmentFormDefaults.phonePattern ?? "^\\+?[0-9()\\-.\\s]{7,20}$";
-  const phonePatternMessage =
+  const phoneValidationEnabled = resolvedPhonePattern.trim().length > 0;
+  const phonePattern = phoneValidationEnabled ? resolvedPhonePattern : undefined;
+  const resolvedPhonePatternMessage =
     normalized.phonePatternMessage ??
     appointmentFormDefaults.phonePatternMessage ??
     "Use digits, spaces, parentheses, or an optional leading +.";
+  const phonePatternMessage =
+    phoneValidationEnabled && resolvedPhonePatternMessage.trim().length > 0
+      ? resolvedPhonePatternMessage
+      : undefined;
   const notesMaxLength = normalized.notesMaxLength ?? appointmentFormDefaults.notesMaxLength ?? 500;
   const consent = normalized.consent ?? appointmentFormDefaults.consent ?? {};
   const showConsent = (consent.enabled ?? false) && (consent.label ?? "").trim().length > 0;
@@ -961,7 +970,9 @@ export function AppointmentFormBlock({
               autoComplete="tel"
               className="w-full rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm text-[var(--color-text)]"
             />
-            <p className="text-[11px] text-[var(--color-text)]/65">{phonePatternMessage}</p>
+            {phonePatternMessage ? (
+              <p className="text-[11px] text-[var(--color-text)]/65">{phonePatternMessage}</p>
+            ) : null}
           </Field>
         ) : null}
 

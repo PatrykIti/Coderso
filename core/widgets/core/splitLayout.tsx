@@ -156,6 +156,8 @@ export type SplitLayoutRatioDisclosure = {
   mobile: SplitLayoutRatio;
   hasExplicitMobile: boolean;
   hasOverride: boolean;
+  hasDeviceSpecificChanges: boolean;
+  effectiveMatchesStarter: boolean;
 };
 
 export type SplitLayoutDiagnostics = {
@@ -445,18 +447,21 @@ export function getSplitLayoutRatioDisclosure(
     mobile: resolvedVariant,
   };
   const hasExplicitMobile = typeof data.ratio?.mobile !== "undefined";
+  const desktop = ratios.desktop ?? resolvedVariant;
+  const tablet = ratios.tablet ?? resolvedVariant;
+  const mobile = ratios.mobile ?? tablet;
+  const effectiveMatchesStarter =
+    desktop === resolvedVariant && tablet === resolvedVariant && mobile === resolvedVariant;
 
   return {
     variant: resolvedVariant,
-    desktop: ratios.desktop ?? resolvedVariant,
-    tablet: ratios.tablet ?? resolvedVariant,
-    mobile: ratios.mobile ?? ratios.tablet ?? resolvedVariant,
+    desktop,
+    tablet,
+    mobile,
     hasExplicitMobile,
-    hasOverride:
-      ratios.desktop !== resolvedVariant ||
-      ratios.tablet !== resolvedVariant ||
-      ratios.mobile !== ratios.tablet ||
-      (hasExplicitMobile && ratios.mobile !== resolvedVariant),
+    hasOverride: !effectiveMatchesStarter,
+    hasDeviceSpecificChanges: tablet !== desktop || mobile !== tablet,
+    effectiveMatchesStarter,
   };
 }
 

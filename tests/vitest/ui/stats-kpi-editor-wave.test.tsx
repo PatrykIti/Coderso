@@ -545,6 +545,7 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     expect(onVariantChangeSpy).toHaveBeenCalledWith("split-highlight");
 
     clickByText(view.container, "Normalize now");
+    expect(view.container.textContent).toContain("Stats KPI payload normalized.");
     expect(onChangeSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({ style: expect.any(Object) })
     );
@@ -552,6 +553,10 @@ test("StatsKpi editors cover variant, count, item editing, layout/style controls
     clickByText(view.container, "Reset to defaults");
     const resetPayload = onChangeSpy.mock.lastCall?.[0];
     expect(resetPayload.header?.title).toBe("Proof in numbers");
+    expect(onVariantChangeSpy).toHaveBeenCalledWith("cards");
+    expect(view.container.textContent).toContain(
+      "Stats KPI defaults restored; layout reset to Cards."
+    );
 
     const advancedSection = view.container.querySelector(
       '[data-widget-editor-section="stats-kpi.advanced.runtime-diagnostics"]'
@@ -620,10 +625,28 @@ test("StatsKpi visual and advanced editors cover isolated variant-card, direct i
       )[0]
     );
     expect(visualHarness.getLatestValue().style?.valueColor).toBeUndefined();
+    expect(visualHarness.container.textContent).toContain(
+      "Dividers render only in Inline. Saved divider settings are preserved, but this variant renders no divider output."
+    );
 
     clickByText(visualHarness.container, "Inline");
     expect(visualHarness.getLatestVariant()).toBe("inline");
     expect(visualHarness.onVariantChangeSpy).toHaveBeenLastCalledWith("inline");
+    expect(visualHarness.container.textContent).toContain("Inline has no card boxes.");
+
+    const inlineCardBackgroundControl = getControlById(
+      visualHarness.container,
+      "stats-kpi.style.cardBackground"
+    );
+    const inlineCardBorderControl = getControlById(
+      visualHarness.container,
+      "stats-kpi.style.cardBorderColor"
+    );
+    expect(inlineCardBackgroundControl.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(inlineCardBorderControl.getAttribute("data-widget-control-readonly")).toBe("true");
+    expect(
+      findColorInputByControl(visualHarness.container, "stats-kpi.style.cardBackground").disabled
+    ).toBe(true);
 
     setInputValue(getInputByPlaceholder(visualHarness.container, "120"), "300%");
     setInputValue(

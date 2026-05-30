@@ -451,6 +451,12 @@ vi.mock("@/services/pagesClient", () => ({
   }),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+  },
+}));
+
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     value,
@@ -1296,6 +1302,143 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
   }
 });
 
+test("NavigationVisualEditor surfaces runtime boundaries, cleared-link feedback, and full color reset policy", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    style: {
+      surfaceColor: "var(--color-bg)",
+      borderColor: "#cbd5e1",
+      textColor: "#0f172a",
+      logoColor: "#1f2937",
+      linkColor: "#475569",
+      linkHoverColor: "#0f172a",
+      linkActiveColor: "#1d4ed8",
+      ctaBackgroundColor: "var(--color-primary)",
+      ctaTextColor: "var(--color-bg)",
+      ctaBorderColor: "transparent",
+    },
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="with-cta"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const linksSection = findSectionByTitle(view.container, "Navigation Links");
+    const colorsSection = findSectionByTitle(view.container, "Colors, Borders, Typography");
+
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText(
+        "Admin preview renders static navigation markup. Drawer, submenu, collapse-on-scroll, and active-link updates are activated by the public runtime script."
+      )
+    );
+
+    expect(normalizeText(colorsSection?.textContent)).toContain(normalizeText("Theme default"));
+    expect(normalizeText(colorsSection?.textContent)).toContain(
+      normalizeText(
+        "The admin swatch is a fallback preview; public pages resolve `var(--color-bg)` from the active theme."
+      )
+    );
+    expect(normalizeText(colorsSection?.textContent)).not.toContain(
+      normalizeText("Saved custom color")
+    );
+
+    clickByText(linksSection ?? view.container, "Clear destination", 0);
+    await flush();
+
+    expect(latestValue.items[0].href).toBe("");
+    expect(normalizeText(linksSection?.textContent)).toContain(
+      normalizeText(
+        "This link is saved in the editor but hidden from runtime until a public-safe destination is selected."
+      )
+    );
+
+    const clearButtons = Array.from(
+      (colorsSection ?? view.container).querySelectorAll("button")
+    ).filter((button) => normalizeText(button.textContent) === "clear");
+
+    expect(clearButtons).toHaveLength(10);
+    clickElement(clearButtons[1]);
+    await flush();
+
+    expect(latestValue.style?.borderColor).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("NavigationVisualEditor clear image leaves image mode without a broken fallback source", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  let latestValue = createNavigationValue({
+    logo: {
+      type: "image",
+      value: "https://cdn.example.com/logo.png",
+      href: "/",
+      alt: "Northwind",
+      source: "external",
+    },
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const brandSection = findSectionByTitle(view.container, "Brand and Logo");
+    clickByText(brandSection ?? view.container, "Clear image");
+    await flush();
+
+    expect(latestValue.logo).toMatchObject({
+      type: "image",
+      value: "",
+      source: "external",
+    });
+    expect(normalizeText(brandSection?.textContent)).toContain(
+      normalizeText(
+        "No image is saved. Runtime uses the logo alt text as a safe text fallback until a Media Library image is selected."
+      )
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("NavigationVisualEditor reorders top-level links with move controls", async () => {
   const { NavigationVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
@@ -1372,6 +1515,17 @@ test("NavigationAdvancedEditor keeps layout and runtime behavior diagnostics rea
     );
     expect(normalizeText(view.container.textContent)).toContain(
       normalizeText("Runtime behavior summary")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Transparent surface")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Mobile mode"));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Hide CTA on mobile")
+    );
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Active link mode"));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Admin preview runtime")
     );
     expect(findSelectByOptions(view.container, ["left", "center", "right"])).toBeUndefined();
     expect(findSelectByOptions(view.container, ["5xl", "6xl", "7xl"])).toBeUndefined();

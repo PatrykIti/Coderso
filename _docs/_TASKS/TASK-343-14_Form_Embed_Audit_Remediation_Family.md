@@ -6,7 +6,7 @@
 **Category:** Widgets + Form Embed + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,13 +24,13 @@ public empty-state messaging.
 
 ## Sub-Tasks
 
-- [ ] Make `Spacing` either visibly affect layout or stop pretending to own
+- [x] Make `Spacing` either visibly affect layout or stop pretending to own
   vertical spacing when `sectionPaddingY` is the real owner.
-- [ ] Treat theme-default CSS-variable values truthfully in the color controls
+- [x] Treat theme-default CSS-variable values truthfully in the color controls
   and Advanced summary.
-- [ ] Make `Clear` genuinely return affected colors to `Theme default`.
-- [ ] Fix TTL lower-bound coercion and public empty-state/error messaging.
-- [ ] Route report items I5/I7/I8/I9/N3/N4 explicitly: either add local
+- [x] Make `Clear` genuinely return affected colors to `Theme default`.
+- [x] Fix TTL lower-bound coercion and public empty-state/error messaging.
+- [x] Route report items I5/I7/I8/I9/N3/N4 explicitly: either add local
   follow-up acceptance here or mark them deferred/shared in the implementation
   notes so they are not silently lost.
 
@@ -95,3 +95,34 @@ codes if a friendlier safe message can be used.
 
 - Form Embed controls describe and reset real state truthfully.
 - Empty-state/runtime messaging is user-facing rather than raw-code-facing.
+
+## Completion Notes (2026-05-30)
+
+- `Spacing` now applies the matching `sectionPaddingY` token in the Visual
+  editor, so changing the spacing macro produces visible vertical padding
+  changes instead of only updating `data-form-embed-spacing`.
+- Form Embed now owns theme-default color values in the widget contract module.
+  Visual controls hide pristine theme-token defaults as `Theme default`, `Clear`
+  removes authored color keys, and Advanced counts only non-default authored
+  color overrides.
+- Saved-progress TTL coercion now uses `clampSavedProgressTtl`, so `0` clamps
+  to `1` in both editor input and normalization.
+- Public runtime error copy now maps known internal codes to user-facing
+  messages and does not render raw `form_missing`/runtime codes.
+- I5 is fixed locally by removing the duplicate base `border` class from the
+  surface; N3 is fixed by distinguishing default success copy from authored
+  success copy. I8 is handled with truthful Visual copy for multi-step controls.
+  I7 remains shared color-control UX scope under `TASK-343-30`; I9 remains
+  shared visibility-wrapper scope under `TASK-343-21`; N4 remains deferred
+  product scope because the widget has only one runtime variant.
+
+## Validation Executed (2026-05-30)
+
+- `bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/form-embed-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p --tools "" --input-format text --output-format text` (TASK-343-14
+  drift review: no blockers; verified and fixed the noted task-board counter
+  drift)

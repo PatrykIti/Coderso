@@ -753,6 +753,31 @@ test("Newsletter visual editor covers forms-runtime binding, semantics, preview,
   }
 });
 
+test("Newsletter visual editor explains disconnected public submit guard", async () => {
+  const { NewsletterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+
+  const { cleanup, container } = mountNewsletterHarness({
+    initialValue: newsletterDefaults,
+    initialVariant: "inline",
+    render: (props) => <NewsletterVisualEditor {...props} />,
+  });
+
+  try {
+    const runtimeSection = getSectionByTitle(container, "Submission runtime");
+    const connectionSection = getSectionByTitle(container, "Connection status");
+
+    expect(normalizeText(runtimeSection.textContent)).toContain(
+      "public render stays disabled and cannot submit until a destination is selected"
+    );
+    expect(normalizeText(connectionSection.textContent)).toContain(
+      "not connected yet; visitor submit disabled"
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test("Newsletter visual editor warns when a bound form is internal or incompatible", async () => {
   formsRuntimeMockState.forms = [];
   formsRuntimeMockState.details.set("form-internal", {

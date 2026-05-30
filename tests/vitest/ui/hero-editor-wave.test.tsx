@@ -1174,6 +1174,63 @@ test("HeroVisualEditor keeps centered media editable and clears incompatible med
   }
 });
 
+test("HeroVisualEditor keeps single CTA and colored overlay opacity changes round-trippable", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  let latestValue: HeroData = {
+    headline: "Hero",
+    primaryCta: { label: "Only CTA", href: "/start" },
+    secondaryCta: { label: "Learn more", href: "/learn" },
+    media: {
+      type: "image",
+      source: "library",
+      assetId: "asset-hero",
+      src: "/media/hero.jpg",
+      overlay: "rgba(255, 0, 0, 0.20)",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<HeroData>(latestValue);
+    return (
+      <HeroVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="split"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "single");
+    });
+    expect(latestValue.secondaryCta).toBeUndefined();
+    expect(view.container.textContent).not.toContain("Secondary CTA Label");
+
+    React.act(() => {
+      setInputValue(
+        view.container.querySelector(
+          '[data-widget-control="hero.media.overlay"] input[type="range"]'
+        ),
+        "70"
+      );
+    });
+    expect(latestValue.media?.overlay).toBe("rgba(255, 0, 0, 0.70)");
+    expect(findColorInputByControl(view.container, "hero.media.overlay")?.value).toBe("#ff0000");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("HeroVisualEditor applies palettes without erasing content and keeps gradient contrast guidance unknown", async () => {
   const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
 

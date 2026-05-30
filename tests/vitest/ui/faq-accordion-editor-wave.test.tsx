@@ -352,6 +352,18 @@ const findSelectByOptions = (container: HTMLElement, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findSelectByControl = (container: HTMLElement, id: string) => {
+  const control = container.querySelector(`[data-widget-control="${id}"]`);
+  return control?.querySelector("select");
+};
+
+const findSelectByFieldText = (container: HTMLElement, text: string) => {
+  const fieldLabel = Array.from(container.querySelectorAll("p, span")).find(
+    (element) => normalizeText(element.textContent) === normalizeText(text)
+  );
+  return fieldLabel?.parentElement?.querySelector("select");
+};
+
 const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).filter(
     (element) =>
@@ -557,6 +569,9 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
         "data-widget-editor-section"
       )
     ).toBe("faq-accordion.visual.layout-typography");
+    expect(findSelectByControl(view.container, "faq-accordion.style.spacing")).toBeInstanceOf(
+      HTMLSelectElement
+    );
     expect(
       findSectionByTitle(view.container, "Colors and panel style")?.getAttribute(
         "data-widget-editor-section"
@@ -702,7 +717,8 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
     setSelectValue(findSelectByOptions(view.container, ["left", "center", "right"]), "left");
     setSelectValue(findSelectByOptions(view.container, ["auto", "sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(view.container, ["none", "smooth"]), "smooth");
-    setSelectValue(findSelectByOptions(view.container, ["none", "sm", "md", "lg"]), "lg");
+    setSelectValue(findSelectByControl(view.container, "faq-accordion.style.spacing"), "lg");
+    setSelectValue(findSelectByFieldText(view.container, "Horizontal padding"), "lg");
     setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "2");
     toggleCheckbox(unnamedCheckboxes[1], true);
 
@@ -742,6 +758,7 @@ test("FaqAccordion visual editor covers FAQ item management, drag/drop, open-sta
           maxWidth: "full",
           headerAlign: "left",
           headerTitleSize: "xl",
+          spacing: "lg",
           motion: "smooth",
           borderWidth: "2",
           sectionPaddingX: "lg",
@@ -806,7 +823,7 @@ test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates
         surface: "surface-token",
         border: "border-token",
         divider: "divider-token",
-        spacing: "invalid" as "md",
+        spacing: "lg",
       },
       seo: {
         emitFaqJsonLd: false,
@@ -854,6 +871,7 @@ test("FaqAccordion advanced editor keeps diagnostics read-only and confirm-gates
     expect(view.container.textContent).toContain("Questions");
     expect(view.container.textContent).toContain("2/12 questions configured");
     expect(view.container.textContent).toContain("Saved custom color");
+    expect(view.container.textContent).toContain("Extra wide · Center · Spacious");
     expect(view.container.textContent).toContain("Header title");
     expect(view.container.textContent).toContain("Header description");
     expect(view.container.textContent).toContain("Wizard owns");

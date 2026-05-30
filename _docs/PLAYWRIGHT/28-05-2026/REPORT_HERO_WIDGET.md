@@ -36,6 +36,14 @@
 > opublikowana strona** — patrz §9. Save draft był wykonany świadomie wyłącznie po to, by
 > potwierdzić defekt trwałości „Single CTA" (§4.1).
 
+> **Remediation status (TASK-343-01, 2026-05-30).** Trzy defekty funkcjonalne z §4 są zamknięte w
+> kodzie: zapisany brak `secondaryCta` jest zachowywany dla niepustych zapisanych bloków Hero, zmiana
+> siły overlaya zachowuje kolor z RGBA, a overlay jawnego obrazu tła renderuje się jako poprawna
+> warstwa `linear-gradient(color, color)` nad gradientem i `url(...)`. Pokrycie regresji:
+> `bun test tests/unit/widgets/validator.test.ts`,
+> `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`,
+> `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -176,7 +184,7 @@
 
 ---
 
-## 4. Co NIE działa / defekty funkcjonalne
+## 4. Defekty funkcjonalne z audytu i status remediacji
 
 ### 4.1 „Single CTA" nie utrzymuje się po zapisie (potwierdzony w tym przebiegu)
 - Ustawienie **CTA layout → Single CTA** poprawnie usuwa secondary z canvasu (w canvasie zostaje tylko primary „Jedyne CTA").
@@ -184,6 +192,10 @@
 - **Po reloadzie** stan jest taki sam: dwa CTA (`Jedyne CTA` /homepage + `Learn more` `#`).
 - Mechanizm: round-trip zapisu re-merguje `heroDefaults.secondaryCta = { label: "Learn more", href: "#" }`.
   **Z perspektywy użytkownika nie da się trwale zapisać Hero z jednym CTA.** Realny błąd trwałości.
+- **Status TASK-343-01:** naprawione. `createHeroWidget` oznacza `secondaryCta` jako absent-default key,
+  a `normalizeWidgetBlock` zachowuje jego brak dla zapisanych niepustych danych. Regresja w
+  `tests/vitest/widgets/hero.test.tsx` potwierdza, że zapisany Hero z jednym CTA nie odzyskuje
+  domyślnego „Learn more".
 
 ### 4.2 Overlay media: zmiana „siły" kasuje wybrany kolor na czarny (potwierdzony na żywo)
 - Media overlay: kolor `#ff0000` → `rgba(255, 0, 0, 0.2)` (domyślna siła 20%).
@@ -193,6 +205,10 @@
   `#000000` dla wartości z alfą („nie round-trip-uje przez `input[type=color]`"), więc `HeroOverlayField`
   przy zmianie siły odbudowuje kolor z czerni. Skutek UX: **nie da się wyregulować przezroczystości
   kolorowego overlaya bez utraty koloru** — kolor trzeba ustawiać jako ostatni krok. Dotyczy też overlaya tła.
+- **Status TASK-343-01:** naprawione. `HeroOverlayField` odczytuje RGB z zapisanego `rgba(...)` dla
+  wartości color inputa, więc zmiana siły zachowuje hue. Regresja w
+  `tests/vitest/ui/hero-editor-wave.test.tsx` potwierdza przejście `rgba(255, 0, 0, 0.20)` →
+  `rgba(255, 0, 0, 0.70)`.
 
 ### 4.3 [NOWE] Background media overlay z jawnym obrazem (warianty inne niż centered) — nie renderuje się i potrafi wykasować obraz
 - Scenariusz: wariant `split` (lub media-left/media-center), `background.media.type = image` z przypiętym
@@ -212,6 +228,10 @@
   co gorsza, **przy świeżym renderze** (publiczna strona po zapisaniu / po reloadzie) ta sama
   konfiguracja daje `background-image: none` — **znika również obraz tła**. (Overlay inline media — §4.2 —
   to osobna, działająca ścieżka renderowana jako `<div>` z `rgba`, gdzie `rgba` jest poprawne.)
+- **Status TASK-343-01:** naprawione. Renderer opakowuje overlay w warstwę
+  `linear-gradient(color, color)` przed gradientem i `url(...)`, dzięki czemu deklaracja
+  `background-image` pozostaje poprawna. Regresja w `tests/vitest/widgets/hero.test.tsx`
+  potwierdza obecność `url(/hero-bg.jpg)` i brak surowego `background-image: rgba(...)`.
 
 ---
 
@@ -223,8 +243,9 @@
    (treść secondary przepada); powrót na Dual daje **puste** pola secondary (`{label:"", href:""}`) → secondary
    nie renderuje się, dopóki użytkownik nie wpisze ponownie label + destynacji. (Zachowanie zgodne z kodem, ale myli.)
 3. **Badge / social-proof włączone, lecz puste, nie renderują nic** (`normalizeHeroBadge` / `normalizeHeroSocialProof` → `undefined`).
-4. **`HeroColorField` overlaya zawsze pokazuje czarny swatch dla wartości z alfą.** Nawet gdy model trzyma
-   kolorowy overlay (`rgba(0,0,255,…)`), pole pokazuje `rgba(0,0,0,…)` (fallback `#000000`) — mylące dla autora (powiązane z §4.2).
+4. **Overlay swatch dla wartości z alfą** był czarny w oryginalnym audycie. TASK-343-01 naprawia
+   `HeroOverlayField`, aby pokazywał hue z zapisanego RGBA; szersze zachowanie zwykłych pól koloru
+   pozostaje własnością shared color-state tasków.
 5. **Alignment ignorowane w media-center** (`effectiveAlign` wymusza `center`); w `split` z kolei klasy
    pozycjonowania (`mr-auto`/`mx-auto`/`ml-auto`) nie są dodawane — działa tylko `text-*`.
 6. **Media-center duplikuje klasy** kolumny treści: `space-y-4 text-center max-w-xl mx-auto mx-auto text-center`
@@ -234,6 +255,10 @@
    opcji wymaga etykiety, nie wartości — pomyłka „none" zamiast „None" zostawia otwarty dropdown blokujący kolejne kliknięcia.)
 8. **Dialog `MediaPicker` emituje ostrzeżenie a11y** w konsoli admina: *„Missing `Description` or
    `aria-describedby={undefined}` for {DialogContent}"* — **jedyne** ostrzeżenie konsoli (0 błędów).
+   **Status TASK-343-31 (2026-05-30):** zamknięte w shared `MediaPicker`.
+   Dialog `Media library` ma teraz `DialogDescription` podłączone przez Radix
+   `aria-describedby`, a regresja otwiera shared picker z dwóch pól widgetowych
+   bez ostrzeżenia `Missing Description`.
 9. **Dwa przyciski „Dark" w adminie** (globalny przełącznik motywu + paleta Hero). Paletę trzeba kierować
    do grupy „Hero palettes", inaczej `.first()` trafia w motyw admina.
 10. **Wyczyszczenie destynacji CTA usuwa cały przycisk** (CTA wymaga label + href jednocześnie).
@@ -265,8 +290,9 @@
 
 - „Save draft" zapisuje wersję roboczą; większość pól przeżywa zapis (z poprzedniego i bieżącego przebiegu
   potwierdzono trwałość wariantu, headline, typografii, tła, ramek, full-bleed, height itd.).
-- **Jedyny potwierdzony wyjątek trwałości:** CTA layout **Single → po zapisie wraca Dual** z secondary
-  „Learn more" → `#` (§4.1) — potwierdzone bezpośrednio po zapisie **oraz** po reloadzie.
+- Oryginalnie potwierdzony wyjątek trwałości CTA layout **Single → po zapisie wraca Dual** z secondary
+  „Learn more" → `#` (§4.1) został zamknięty w TASK-343-01 przez zachowanie braku `secondaryCta`
+  podczas normalizacji zapisanych danych.
 
 ---
 
@@ -297,7 +323,7 @@
 |---|---|
 | **Domknięte luki** (secondary size, content width, height, bleed, hide-media, media border/radius, text sizes/weights, destynacje, kolory Clear/transparent, overlay+siła, gradient, pickery media/tła) | ✅ Wszystkie opcje realnie przeklikane i potwierdzone w renderze |
 | **Visual — pozostałe rodziny** (warianty, badge, CTA, typografia, cienie, fonty/motion, palety, ratio, padding, alignment, contrast) | ✅ Działają i aktualizują render |
-| **Defekty funkcjonalne** | ❌ 3: Single CTA nie persystuje (§4.1) · overlay traci kolor przy zmianie siły (§4.2) · **NOWY** background-media-overlay z obrazem nie renderuje się i może wykasować obraz (§4.3) |
+| **Defekty funkcjonalne** | ✅ 3/3 zamknięte w TASK-343-01: Single CTA persystuje (§4.1) · overlay zachowuje kolor przy zmianie siły (§4.2) · background-media-overlay z obrazem renderuje valid layered CSS (§4.3) |
 | **Nie-do-zweryfikowania** | wideo inline/tła/poster (brak assetów video + brak pola URL), diagnostyka sanitizera (wymaga wklejenia HTML), systemowy dialog koloru, karty Media Left/Centered (nieklikane w tej sesji) |
 | **Advanced** | ✅ 49 read-only, 0 interaktywnych kontrolek widgetu |
 | **Front `/homepage`** | ✅ HTTP 200, 0 błędów konsoli, brak overflow (1280/375), render semantyczny `<h1>` |
@@ -305,20 +331,19 @@
 **Werdykt.** W zakresie **wszystkich rodzin wymienionych jako luki** widget `hero` jest spójny między
 edytorem a rendererem — każda dyskretna opcja (rozmiary, szerokości, wysokości, bleed, ramki, typografia,
 kolory z Clear/transparent, gradient, pickery media i tła, ratio, destynacje) działa i poprawnie aktualizuje
-canvas. **Trzy realne defekty:** (1) „Single CTA" nie utrzymuje się po zapisie (re-merge
-`heroDefaults.secondaryCta`), (2) zmiana siły overlaya kasuje wybrany kolor na czarny (alfa-rgba nie
-round-tripuje przez `input[type=color]`), oraz **(3) nowo wykryty**: overlay tła z jawnym obrazem w
-wariantach innych niż centered nie renderuje się, a przy świeżym renderze wykasowuje cały `background-image`
-(surowy `rgba` doklejony jako nieprawidłowa warstwa `background-image`). Najważniejsze niuanse a11y/UX: brak
-landmarku na korzeniu Hero, mylące czyszczenie secondary CTA przy Single→Dual, oraz overlay zawsze
-pokazujący czarny swatch dla wartości z alfą.
+canvas. **Trzy realne defekty z audytu zostały zamknięte w TASK-343-01:** (1) „Single CTA" utrzymuje się
+po zapisie dzięki zachowaniu braku `secondaryCta`, (2) zmiana siły overlaya zachowuje wybrany kolor, oraz
+(3) overlay tła z jawnym obrazem w wariantach innych niż centered renderuje poprawną warstwę CSS zamiast
+kasować `background-image`. Najważniejsze pozostałe niuanse a11y/UX: brak
+landmarku na korzeniu Hero oraz mylące czyszczenie secondary CTA przy Single→Dual.
 
 ---
 
 ## 11. Środowisko i powtarzalność
 
 - Sesja izolowana: `claude-29-05-hero-gap-close`. Admin: 302→login (zalogowano podanym kontem); 0 błędów
-  konsoli (1 ostrzeżenie a11y `DialogContent`, 1 info React DevTools).
+  konsoli (historycznie 1 ostrzeżenie a11y `DialogContent`, zamknięte przez
+  `TASK-343-31`; 1 info React DevTools).
 - Wszystkie zmiany wykonane realnymi zdarzeniami UI; wartości natywnych `color`/`range` ustawiane setterem
   + `input`/`change` (równoważne realnej interakcji dla React), bo systemowych dialogów OS nie da się
   obsłużyć w headless.

@@ -6,7 +6,7 @@
 **Category:** Widgets + Hero + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Large
 **Dependencies:** TASK-343, TASK-342
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -24,12 +24,12 @@ image overlay composition outside the centered-image branch.
 
 ## Sub-Tasks
 
-- [ ] Make `Single CTA` persist through save/reload without silently restoring
+- [x] Make `Single CTA` persist through save/reload without silently restoring
   `heroDefaults.secondaryCta`.
-- [ ] Preserve the chosen overlay color when only the overlay strength changes.
-- [ ] Replace invalid `background-image: rgba(...), url(...)` composition with a
+- [x] Preserve the chosen overlay color when only the overlay strength changes.
+- [x] Replace invalid `background-image: rgba(...), url(...)` composition with a
   valid layered overlay strategy for background images.
-- [ ] Add renderer/editor regression coverage and update the report routing.
+- [x] Add renderer/editor regression coverage and update the report routing.
 
 ## Files To Change
 
@@ -78,6 +78,10 @@ derives single/dual mode from the secondary CTA control state, so the
 normalizer must preserve the raw "secondary CTA absent" state before default
 merge restores `heroDefaults.secondaryCta`.
 
+Implementation note: the shipped fix keeps the editor's existing `Single CTA`
+emission (`secondaryCta` absent) and makes widget default normalization preserve
+that absent key for saved non-empty Hero data.
+
 ## Regression Test Shape
 
 - Assert `single` CTA save/reload keeps `secondaryCta` absent.
@@ -114,3 +118,26 @@ No API routes are added.
 - Overlay strength changes preserve the chosen color.
 - Background image overlay works on non-centered variants and never wipes the
   image on fresh render.
+
+## Completion Notes (2026-05-30)
+
+- Added widget-definition support for preserving selected absent default keys
+  on saved non-empty widget data and applied it to Hero `secondaryCta`, so
+  saved single-CTA blocks do not rehydrate the default `Learn more` CTA.
+- Updated `HeroOverlayField` to derive the color input value from saved RGBA
+  channels, preserving hue while changing opacity.
+- Converted explicit background image overlays into valid
+  `linear-gradient(color, color)` background-image layers above the authored
+  gradient and image URL.
+- Synchronized the Hero audit report, widget docs, task board, and changelog.
+
+## Validation Executed (2026-05-30)
+
+- `bun test tests/unit/widgets/validator.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/hero.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/hero-editor-wave.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+- `claude -p` diff-fed read-only review for TASK-343-01 (no blockers; minor
+  notes addressed)

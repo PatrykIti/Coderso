@@ -728,6 +728,10 @@ test("LogoCloud visual invalidates in-flight media requests after structural log
   const logosSection = getSectionByTitle(container, "Logos list and links");
   const layoutSection = getSectionByTitle(container, "Variant and layout structure");
   const picker = getMediaPickers(logosSection)[0]!;
+  Object.defineProperty(window, "confirm", {
+    value: vi.fn(() => true),
+    configurable: true,
+  });
 
   clickButton(getButtonsByText(picker, "pick-logo-media")[0]!);
   setSelectValue(getSelectByOptions(layoutSection, ["1", String(logoCloudLogoMax)]), "1");
@@ -786,6 +790,18 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   expect(getLatestValue().logos).toHaveLength(logoCloudLogoMax);
   expect(getButtonsByText(logosSection, "Add logo")[0]?.disabled).toBe(true);
 
+  const confirmSpy = vi.fn(() => false);
+  Object.defineProperty(window, "confirm", {
+    value: confirmSpy,
+    configurable: true,
+  });
+  setSelectValue(countSelect, "2");
+  expect(getLatestValue().logos).toHaveLength(logoCloudLogoMax);
+  expect(confirmSpy).toHaveBeenCalledWith(
+    expect.stringContaining("Reduce logo count to 2? This removes 22 logos")
+  );
+
+  confirmSpy.mockReturnValue(true);
   setSelectValue(countSelect, "2");
   expect(getLatestValue().logos).toHaveLength(2);
   expect(getButtonsByText(logosSection, "Add logo")[0]?.disabled).toBe(false);
@@ -886,6 +902,7 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   const switches = getCheckboxes(styleSection);
   expect(switches).toHaveLength(3);
   setCheckboxValue(switches[1]!, false);
+  expect(switches[2]?.checked).toBe(false);
   setCheckboxValue(switches[2]!, false);
 
   expect(getLatestValue().style).toMatchObject({
@@ -981,6 +998,7 @@ test("LogoCloud visual gates strip layout controls by variant and motion mode", 
 
   expect(rowModeSelect.disabled).toBe(true);
   expect(motionModeSelect.disabled).toBe(true);
+  expect(styleSection.textContent).toContain("Effective in Grid: not active");
 
   clickButton(getButtonsByText(layoutSection, "Strip")[0]);
   expect(getLatestVariant()).toBe("strip");
@@ -993,11 +1011,15 @@ test("LogoCloud visual gates strip layout controls by variant and motion mode", 
   setSelectValue(motionModeSelect, "marquee");
   expect(getLatestValue().style?.motionMode).toBe("marquee");
   expect(rowModeSelect.disabled).toBe(true);
+  expect(styleSection.textContent).toContain("Effective in Strip: Single row scroll / Marquee");
 
   clickButton(getButtonsByText(layoutSection, "Dense")[0]);
   expect(getLatestVariant()).toBe("dense");
   expect(rowModeSelect.disabled).toBe(true);
   expect(motionModeSelect.disabled).toBe(true);
+  expect(styleSection.textContent).toContain(
+    "Effective in Dense: not active. Saved Strip settings: Single row scroll / Marquee."
+  );
 
   cleanup();
 });
@@ -1086,6 +1108,9 @@ test("LogoCloud advanced renders read-only human summaries without raw payload c
   expect(contentSection.textContent).toContain("1 of 2 logos have images");
   expect(contentSection.textContent).toContain("1 logo link opens in the same tab");
   expect(presentationSection.textContent).toContain("Center");
+  expect(presentationSection.textContent).toContain("Effective in Dense: not active");
+  expect(presentationSection.textContent).toContain("tile: Theme token");
+  expect(presentationSection.textContent).toContain("border: Theme token");
   expect(boundarySection.textContent).toContain("Use Visual for logos");
   expect(container.textContent).not.toContain("Raw payload");
   expect(container.textContent).not.toContain("Normalize now");

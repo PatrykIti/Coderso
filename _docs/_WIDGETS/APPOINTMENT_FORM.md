@@ -37,7 +37,7 @@ future product scope rather than an implicit variant of this widget.
 - optional service/resource summary context
 - name mode (`full` or `split`)
 - truthful field visibility and required toggles
-- phone validation presets and help copy
+- phone validation presets and help copy, including explicit no-extra-validation
 - notes length limit
 - consent label/required plus page-first privacy/terms pickers
 - custom fields
@@ -62,6 +62,9 @@ server-injected nonce values and show presence only.
 - Success redirect and consent links are authored through page pickers in
   Wizard/Visual. Legacy custom destinations remain compatible as replace-or-
   clear state.
+- `phonePattern: ""` and `phonePatternMessage: ""` explicitly disable extra
+  browser phone validation. Runtime omits the phone `pattern`, `title`, and
+  validation help text instead of serializing empty attributes.
 - Consent metadata and CAPTCHA token acquisition stay backend-owned; widget data
   does not store provider secrets.
 
@@ -126,6 +129,10 @@ shared control state is routed to `TASK-256-02`.
   "submissionEndpoint": "/api/booking/reservations"
 }
 ```
+
+Set both `phonePattern` and `phonePatternMessage` to `""` to represent the
+Visual `No extra validation` preset. Missing values still normalize to the
+default international phone validation.
 
 ## Shared Contract Notes
 

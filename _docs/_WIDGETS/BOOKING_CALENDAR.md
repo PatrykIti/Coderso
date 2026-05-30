@@ -38,6 +38,8 @@ bounded public slot lookup, and runtime slot handoff to `appointment-form`.
 - read-only slot-loading route status
 - read-only booking flow and default service/resource diagnostics
 - read-only resolved runtime/admin-preview diagnostics
+- booking flow diagnostics use the same peer-calendar filtering as Wizard and
+  never report the current calendar block as its own match
 
 Wizard never asks editors to type raw flow keys or service/resource IDs. Visual
 surface colors use swatches and clear controls instead of CSS-variable/token
@@ -86,6 +88,12 @@ offer endpoint text editing in normal authoring.
 - `style.selectedSlotBackground` is clearable.
 - `style.selectedSlotBorderColor` is clearable.
 - `style.slotHoverBorderColor` is clearable.
+
+Clearing frame background or frame border removes only that explicit override.
+The renderer restores the matching legacy theme class per field, even when
+selected-slot or hover swatches remain saved. Selected-slot colors continue to
+render as CSS variables on the root frame and do not suppress frame fallback
+classes.
 
 ## Data Model (summary)
 

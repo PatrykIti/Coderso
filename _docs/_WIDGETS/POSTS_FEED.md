@@ -53,9 +53,14 @@ Render a ready-to-use feed of posts without building a custom listing query.
 - Detail links and `resolved.listPath` come only from enabled
   `site.contentRoutes` for `post` / `posts`.
   - If no enabled post detail route exists, item CTA hrefs are omitted instead
-    of falling back to `/post/:slug`.
+    of falling back to `/post/:slug`; cards render an explicit non-link note
+    instead of silently losing navigation.
   - `view-all` falls back to `resolved.listPath` when `pagination.viewAllHref`
     is empty.
+  - If neither a selected `viewAllHref` nor a resolved `listPath` exists,
+    `view-all` renders a disabled explanatory state instead of disappearing.
+  - Visual mode surfaces the same route state before publish, including the
+    all-items-visible case where the View all action may be redundant.
 - Media ids resolve through the shared media lookup seam:
   `core/services/content/contentMediaResolver.ts`.
 - Runtime hydration writes the resolved payload to `data.resolved` before public
@@ -90,6 +95,8 @@ Render a ready-to-use feed of posts without building a custom listing query.
   pagination/freshness status, human runtime summary, and contract summary.
 - Advanced does not expose a raw resolved-query JSON snapshot.
 - Advanced has no writable Posts Feed controls.
+- Advanced route capability reports whether cards/CTAs can link or whether
+  they render as non-links because no posts list/detail route is resolved.
 
 ## Manual Selection UX
 

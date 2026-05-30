@@ -13,7 +13,9 @@ import {
   ctaBannerDefaults,
   CtaBannerBlock,
   normalizeCtaBannerData,
+  resolveCtaBannerActionRenderState,
   resolveCtaBannerVariant,
+  resolveCtaBannerVariantPresentation,
   type CtaBannerData,
 } from "../../../core/widgets/core/ctaBanner";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -30,6 +32,7 @@ test("cta banner renders defaults with accessible ids and runtime markers", () =
   expect(html).toContain(ctaBannerDefaults.content?.title ?? "");
   expect(html).toContain('aria-labelledby="cta-1-cta-title"');
   expect(html).toContain('data-cta-banner-variant="centered"');
+  expect(html).toContain('data-cta-banner-presentation="centered"');
   expect(html).toContain('data-cta-banner-padding="md"');
   expect(html).toContain('data-cta-banner-border-width="1"');
   expect(html).toContain('data-cta-banner-motion="none"');
@@ -37,6 +40,30 @@ test("cta banner renders defaults with accessible ids and runtime markers", () =
   expect(html).toContain('data-cta-button="primary"');
   expect(html).toContain('data-cta-button="secondary"');
   expect(html).not.toContain('data-cta-button="tertiary"');
+});
+
+test("cta banner with-badge presentation is visually distinct from centered", () => {
+  const centered = renderToString(
+    <CtaBannerBlock data={ctaBannerDefaults} variant="centered" blockId="cta-centered" />
+  );
+  const withBadge = renderToString(
+    <CtaBannerBlock data={ctaBannerDefaults} variant="with-badge" blockId="cta-badge" />
+  );
+
+  expect(resolveCtaBannerVariantPresentation("with-badge", true)).toEqual({
+    variant: "with-badge",
+    presentation: "badge-panel",
+    badgeState: "visible",
+  });
+  expect(resolveCtaBannerVariantPresentation("with-badge", false)).toEqual({
+    variant: "with-badge",
+    presentation: "badge-panel",
+    badgeState: "missing",
+  });
+  expect(centered).toContain('data-cta-banner-presentation="centered"');
+  expect(withBadge).toContain('data-cta-banner-presentation="badge-panel"');
+  expect(withBadge).toContain("max-w-2xl rounded-2xl border border-current/15");
+  expect(centered).not.toContain("max-w-2xl rounded-2xl border border-current/15");
 });
 
 test("cta banner normalization enforces deterministic style, action, background, and motion", () => {
@@ -315,6 +342,52 @@ test("cta banner strips unsafe CTA hrefs and background media urls during normal
   const html = renderToString(<CtaBannerBlock data={normalized} variant="centered" />);
   expect(html).not.toContain("javascript:alert");
   expect(html).not.toContain("//evil.example");
+});
+
+test("cta banner renders disabled guidance when an enabled CTA has label but no safe destination", () => {
+  const html = renderToString(
+    <CtaBannerBlock
+      data={{
+        ...ctaBannerDefaults,
+        actions: {
+          primaryCta: {
+            label: "Start now",
+            href: "",
+            enabled: true,
+          },
+          secondaryCta: {
+            label: "Talk",
+            href: "/talk",
+            enabled: true,
+          },
+          tertiaryCta: {
+            label: "Maybe later",
+            href: "",
+            enabled: true,
+          },
+        },
+      }}
+      variant="centered"
+      blockId="cta-missing-destination"
+    />
+  );
+
+  expect(
+    resolveCtaBannerActionRenderState({ label: "Start now", href: "", enabled: true })
+  ).toEqual({
+    render: "missing_destination",
+  });
+  expect(resolveCtaBannerActionRenderState({ label: "", href: "/start", enabled: true })).toEqual({
+    render: "hidden",
+    reason: "missing_label",
+  });
+  expect(html).toContain('data-cta-button="primary"');
+  expect(html).toContain('data-cta-button-state="missing-destination"');
+  expect(html).toContain("Destination required");
+  expect(html).toContain('data-cta-button="secondary"');
+  expect(html).toContain('data-cta-button-state="active"');
+  expect(html).toContain('data-cta-button="tertiary"');
+  expect(html).not.toContain('href=""');
 });
 
 test("cta banner validator rejects unsupported variant", () => {

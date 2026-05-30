@@ -406,16 +406,24 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     .mockReturnValueOnce("https://example.com")
     .mockReturnValueOnce("Example link")
     .mockReturnValueOnce("https://example.com/selected")
-    .mockReturnValueOnce("   ");
+    .mockReturnValueOnce("   ")
+    .mockReturnValueOnce("javascript:alert(1)");
   Object.defineProperty(window, "prompt", {
     value: prompt,
     configurable: true,
     writable: true,
   });
 
+  const unsafeLinkAttempt = vi.fn();
   const Harness = () => {
     const [value, setValue] = useState("<p>Link target</p>");
-    return <PostRichTextAdapter value={value} onChange={setValue} />;
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onUnsafeLinkAttempt={unsafeLinkAttempt}
+      />
+    );
   };
 
   const view = mount(<Harness />);
@@ -439,6 +447,8 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     setRangeSelection(targetNode, 0, targetNode, targetNode.nodeValue?.length ?? 6);
     clickByText(view.container, "link");
     clickByText(view.container, "link");
+    setRangeSelection(targetNode, 0, targetNode, targetNode.nodeValue?.length ?? 6);
+    clickByText(view.container, "link");
 
     expect(execCommand).toHaveBeenCalledWith("italic", false, undefined);
     expect(execCommand).toHaveBeenCalledWith("underline", false, undefined);
@@ -450,6 +460,8 @@ test("PostRichTextAdapter routes native-inline and link commands", async () => {
     );
     expect(execCommand).toHaveBeenCalledWith("createLink", false, "https://example.com/selected");
     expect(execCommand).toHaveBeenCalledWith("unlink", false, undefined);
+    expect(unsafeLinkAttempt).toHaveBeenCalledWith("javascript:alert(1)");
+    expect(execCommand).toHaveBeenCalledWith("createLink", false, "#");
   } finally {
     Object.defineProperty(window, "prompt", {
       value: originalPrompt,

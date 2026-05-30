@@ -17,6 +17,22 @@ export type CtaBackgroundMediaSource = "library" | "external";
 export type CtaBackgroundMediaFit = "cover" | "contain";
 export type CtaBackgroundMediaPosition = "center" | "top" | "bottom";
 export type CtaMotionPreset = "none" | "fade-in" | "slide-up";
+export type CtaBannerVariantPresentation = {
+  variant: CtaBannerVariantId;
+  presentation: "centered" | "split" | "badge-panel";
+  badgeState: "visible" | "missing" | "not-required";
+};
+export type CtaBannerActionRenderState =
+  | {
+      render: "hidden";
+      reason: "disabled" | "missing_label";
+    }
+  | {
+      render: "link";
+    }
+  | {
+      render: "missing_destination";
+    };
 
 export type CtaBannerAction = {
   label?: string;
@@ -547,6 +563,42 @@ export const resolveCtaBannerVariant = (variant: string): CtaBannerVariantId => 
   return "centered";
 };
 
+export function resolveCtaBannerVariantPresentation(
+  variant: string,
+  hasBadge: boolean
+): CtaBannerVariantPresentation {
+  const resolvedVariant = resolveCtaBannerVariant(variant);
+  if (resolvedVariant === "split") {
+    return {
+      variant: resolvedVariant,
+      presentation: "split",
+      badgeState: hasBadge ? "visible" : "not-required",
+    };
+  }
+  if (resolvedVariant === "with-badge") {
+    return {
+      variant: resolvedVariant,
+      presentation: "badge-panel",
+      badgeState: hasBadge ? "visible" : "missing",
+    };
+  }
+  return {
+    variant: resolvedVariant,
+    presentation: "centered",
+    badgeState: hasBadge ? "visible" : "not-required",
+  };
+}
+
+export function resolveCtaBannerActionRenderState(
+  action: CtaBannerAction | undefined
+): CtaBannerActionRenderState {
+  if (action?.enabled === false) return { render: "hidden", reason: "disabled" };
+  if (trimText(action?.label).length === 0) return { render: "hidden", reason: "missing_label" };
+  return normalizeWidgetSafeHref(action?.href, ctaHrefOptions)
+    ? { render: "link" }
+    : { render: "missing_destination" };
+}
+
 export function normalizeCtaBannerData(data: CtaBannerData): CtaBannerData {
   const contentDefaults = ctaBannerDefaults.content ?? {
     badge: "",
@@ -802,6 +854,7 @@ export function CtaBannerBlock({
   const hasStyleObject = normalized.style !== undefined;
 
   const hasBadge = trimText(content.badge).length > 0;
+  const presentation = resolveCtaBannerVariantPresentation(resolvedVariant, hasBadge);
   const hasTitle = trimText(content.title).length > 0;
   const showDescription =
     (content.showDescription ?? true) && trimText(content.description).length > 0;
@@ -810,14 +863,34 @@ export function CtaBannerBlock({
   const buttonRadiusClass = resolveCtaButtonRadius(style.buttonRadius, style.radius ?? "xl");
 
   const wrapperClassName =
-    resolvedVariant === "split"
+    presentation.presentation === "split"
       ? "flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-      : "flex flex-col items-center gap-4 text-center";
+      : presentation.presentation === "badge-panel"
+        ? "flex flex-col items-center gap-5 text-center"
+        : "flex flex-col items-center gap-4 text-center";
+
+  const contentClassName = joinClasses(
+    "space-y-2",
+    presentation.presentation === "split"
+      ? "md:max-w-2xl"
+      : presentation.presentation === "badge-panel"
+        ? "max-w-2xl rounded-2xl border border-current/15 bg-[var(--color-bg)]/40 px-4 py-3 shadow-sm"
+        : "max-w-2xl"
+  );
+
+  const badgeClassName = joinClasses(
+    "inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide",
+    presentation.presentation === "badge-panel"
+      ? "mx-auto ring-2 ring-current/10 shadow-sm"
+      : undefined
+  );
 
   const actionsClassName =
-    resolvedVariant === "split"
+    presentation.presentation === "split"
       ? "flex flex-wrap items-center gap-3 md:justify-end"
-      : "flex flex-wrap items-center justify-center gap-3";
+      : presentation.presentation === "badge-panel"
+        ? "flex flex-wrap items-center justify-center gap-4"
+        : "flex flex-wrap items-center justify-center gap-3";
 
   const containerStyle: CSSProperties = {
     ...(compactStyle({
@@ -848,18 +921,9 @@ export function CtaBannerBlock({
     openInNewTab: actions.tertiaryCta?.openInNewTab,
   });
 
-  const hasPrimary =
-    actions.primaryCta?.enabled !== false &&
-    trimText(actions.primaryCta?.label).length > 0 &&
-    primaryLinkAttrs;
-  const hasSecondary =
-    actions.secondaryCta?.enabled !== false &&
-    trimText(actions.secondaryCta?.label).length > 0 &&
-    secondaryLinkAttrs;
-  const hasTertiary =
-    actions.tertiaryCta?.enabled !== false &&
-    trimText(actions.tertiaryCta?.label).length > 0 &&
-    tertiaryLinkAttrs;
+  const primaryActionState = resolveCtaBannerActionRenderState(actions.primaryCta);
+  const secondaryActionState = resolveCtaBannerActionRenderState(actions.secondaryCta);
+  const tertiaryActionState = resolveCtaBannerActionRenderState(actions.tertiaryCta);
 
   const primaryButtonStyle: CSSProperties =
     compactStyle({
@@ -906,19 +970,16 @@ export function CtaBannerBlock({
         )}
         style={containerStyle}
         data-cta-banner-variant={resolvedVariant}
+        data-cta-banner-presentation={presentation.presentation}
+        data-cta-banner-badge-state={presentation.badgeState}
         data-cta-banner-padding={resolveCtaBannerPadding(style.padding)}
         data-cta-banner-border-width={borderWidth}
       >
         <div className={wrapperClassName}>
-          <div
-            className={joinClasses(
-              "space-y-2",
-              resolvedVariant === "split" ? "md:max-w-2xl" : "max-w-2xl"
-            )}
-          >
+          <div className={contentClassName}>
             {hasBadge ? (
               <span
-                className="inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide"
+                className={badgeClassName}
                 style={compactStyle({
                   backgroundColor: resolveClearableStyleValue(style.badgeBackground),
                   color: style.badgeText ?? "var(--color-bg)",
@@ -942,7 +1003,7 @@ export function CtaBannerBlock({
           </div>
 
           <div className={actionsClassName}>
-            {hasPrimary && primaryLinkAttrs ? (
+            {primaryActionState.render === "link" && primaryLinkAttrs ? (
               <a
                 {...primaryLinkAttrs}
                 className={joinClasses(
@@ -952,12 +1013,29 @@ export function CtaBannerBlock({
                 )}
                 style={primaryButtonStyle}
                 data-cta-button="primary"
+                data-cta-button-state="active"
               >
                 <span>{actions.primaryCta?.label}</span>
                 {resolveActionIconNode(actions.primaryCta?.icon ?? "none")}
               </a>
             ) : null}
-            {hasSecondary && secondaryLinkAttrs ? (
+            {primaryActionState.render === "missing_destination" ? (
+              <span
+                className={joinClasses(
+                  "inline-flex cursor-not-allowed items-center gap-2 border font-semibold opacity-70",
+                  buttonRadiusClass,
+                  buttonSizeClassMap[resolveCtaButtonSize(style.primaryButtonSize)]
+                )}
+                style={primaryButtonStyle}
+                aria-disabled="true"
+                data-cta-button="primary"
+                data-cta-button-state="missing-destination"
+              >
+                <span>{actions.primaryCta?.label}</span>
+                <span className="text-[0.65rem] font-medium opacity-80">Destination required</span>
+              </span>
+            ) : null}
+            {secondaryActionState.render === "link" && secondaryLinkAttrs ? (
               <a
                 {...secondaryLinkAttrs}
                 className={joinClasses(
@@ -967,21 +1045,51 @@ export function CtaBannerBlock({
                 )}
                 style={secondaryButtonStyle}
                 data-cta-button="secondary"
+                data-cta-button-state="active"
               >
                 <span>{actions.secondaryCta?.label}</span>
                 {resolveActionIconNode(actions.secondaryCta?.icon ?? "none")}
               </a>
             ) : null}
-            {hasTertiary && tertiaryLinkAttrs ? (
+            {secondaryActionState.render === "missing_destination" ? (
+              <span
+                className={joinClasses(
+                  "inline-flex cursor-not-allowed items-center gap-2 border font-semibold opacity-70",
+                  buttonRadiusClass,
+                  buttonSizeClassMap[resolveCtaButtonSize(style.secondaryButtonSize)]
+                )}
+                style={secondaryButtonStyle}
+                aria-disabled="true"
+                data-cta-button="secondary"
+                data-cta-button-state="missing-destination"
+              >
+                <span>{actions.secondaryCta?.label}</span>
+                <span className="text-[0.65rem] font-medium opacity-80">Destination required</span>
+              </span>
+            ) : null}
+            {tertiaryActionState.render === "link" && tertiaryLinkAttrs ? (
               <a
                 {...tertiaryLinkAttrs}
                 className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2"
                 style={compactStyle({ color: style.text ?? "var(--color-text)" })}
                 data-cta-button="tertiary"
+                data-cta-button-state="active"
               >
                 <span>{actions.tertiaryCta?.label}</span>
                 {resolveActionIconNode(actions.tertiaryCta?.icon ?? "none")}
               </a>
+            ) : null}
+            {tertiaryActionState.render === "missing_destination" ? (
+              <span
+                className="inline-flex cursor-not-allowed items-center gap-1 text-sm font-medium opacity-70"
+                style={compactStyle({ color: style.text ?? "var(--color-text)" })}
+                aria-disabled="true"
+                data-cta-button="tertiary"
+                data-cta-button-state="missing-destination"
+              >
+                <span>{actions.tertiaryCta?.label}</span>
+                <span className="text-[0.65rem] font-medium opacity-80">Destination required</span>
+              </span>
             ) : null}
           </div>
         </div>
@@ -1014,7 +1122,7 @@ export function createCtaBannerWidget(editors: {
       {
         id: "with-badge",
         label: "With Badge",
-        description: "CTA with highlighted badge above heading.",
+        description: "CTA with a framed badge treatment above the heading.",
       },
     ],
     schema: ctaBannerSchema,

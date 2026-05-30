@@ -19,6 +19,7 @@ import { getSiteSettings, type SiteContentRoute } from "@/services/siteSettingsC
 import {
   normalizePostsFeedData,
   postsFeedDefaults,
+  resolvePostsFeedRouteState,
   type PostsFeedData,
   type PostsFeedMotion,
   type PostsFeedSourceMode,
@@ -1187,13 +1188,19 @@ function PostsFeedPreviewBridge({
 
 function DisplayOptions({
   value,
+  context,
   onChange,
 }: {
   value: PostsFeedData;
+  context?: WidgetEditorContext;
   onChange: (next: PostsFeedData) => void;
 }) {
   const normalized = normalizePostsFeedData(value);
   const fields = normalized.fields ?? postsFeedDefaults.fields!;
+  const routeState = resolvePostsFeedRouteState(
+    normalized,
+    resolvePreviewResolvedData(normalized, context?.previewState)
+  );
 
   const renderToggle = (
     label: string,
@@ -1224,6 +1231,14 @@ function DisplayOptions({
       {renderToggle("Show author", Boolean(fields.showAuthor), "showAuthor")}
       {renderToggle("Show publish date", Boolean(fields.showDate), "showDate")}
       {renderToggle("Show CTA link", Boolean(fields.showCta), "showCta")}
+      {routeState.cardLinks.mode === "missing_detail_route" ? (
+        <p
+          className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+          data-posts-feed-route-guidance="cards"
+        >
+          {routeState.cardLinks.reason}
+        </p>
+      ) : null}
     </EditorSection>
   );
 }
@@ -1543,14 +1558,20 @@ function LayoutOptions({
 
 function PaginationOptions({
   value,
+  context,
   onChange,
 }: {
   value: PostsFeedData;
+  context?: WidgetEditorContext;
   onChange: (next: PostsFeedData) => void;
 }) {
   const normalized = normalizePostsFeedData(value);
   const paginationMode = normalized.pagination?.mode ?? "none";
   const paginationActive = paginationMode !== "none";
+  const routeState = resolvePostsFeedRouteState(
+    normalized,
+    resolvePreviewResolvedData(normalized, context?.previewState)
+  );
 
   return (
     <EditorSection
@@ -1669,6 +1690,20 @@ function PaginationOptions({
                   />
                 )}
               </WidgetControlRow>
+              {routeState.viewAll.mode === "missing_view_all_destination" ? (
+                <p
+                  className="rounded-md border border-dashed border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+                  data-posts-feed-route-guidance="view-all"
+                >
+                  {routeState.viewAll.reason}
+                </p>
+              ) : routeState.viewAll.mode === "ready" ? (
+                <p className="text-xs text-muted-foreground">
+                  {routeState.viewAll.allItemsVisible
+                    ? "All resolved posts already fit in the initial items count; keep a destination only if visitors should still open the full posts page."
+                    : `View all links to ${routeState.viewAll.href}.`}
+                </p>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -1761,6 +1796,7 @@ function ResolvedQueryDiagnostics({
   const pagination = normalized.pagination ?? postsFeedDefaults.pagination!;
   const resolvedItems = typeof resolved.total === "number" ? resolved.total : 0;
   const runtime = resolved.runtime ?? {};
+  const routeState = resolvePostsFeedRouteState(normalized, resolved);
   const sourceLabel =
     sourceModeOptions.find((option) => option.id === source.mode)?.label ?? source.mode ?? "Latest";
 
@@ -1831,7 +1867,11 @@ function ResolvedQueryDiagnostics({
         label="Route capability"
         path="resolved.listPath"
         value={
-          resolved.listPath?.trim() ? `List route: ${resolved.listPath}` : "No list route resolved"
+          routeState.cardLinks.mode === "ready"
+            ? routeState.cardLinks.listPath
+              ? `List route: ${routeState.cardLinks.listPath}`
+              : "Card/detail links are resolved; no posts list route resolved."
+            : "No posts list/detail route resolved; cards and CTAs render as non-links."
         }
       />
       <ReadonlyWidgetSummaryRow
@@ -1885,7 +1925,7 @@ function PostsFeedVisualBody(props: WidgetEditorProps<PostsFeedData>) {
   return (
     <div className="space-y-4">
       <PostsFeedPreviewBridge value={props.value} context={props.context} />
-      <DisplayOptions value={props.value} onChange={props.onChange} />
+      <DisplayOptions value={props.value} context={props.context} onChange={props.onChange} />
       <SectionChromeOptions value={props.value} onChange={props.onChange} />
       <LayoutOptions
         value={props.value}
@@ -1893,7 +1933,7 @@ function PostsFeedVisualBody(props: WidgetEditorProps<PostsFeedData>) {
         variant={props.variant}
         onVariantChange={props.onVariantChange}
       />
-      <PaginationOptions value={props.value} onChange={props.onChange} />
+      <PaginationOptions value={props.value} context={props.context} onChange={props.onChange} />
       <EmptyStateOptions value={props.value} onChange={props.onChange} />
     </div>
   );

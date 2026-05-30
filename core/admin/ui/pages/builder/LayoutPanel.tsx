@@ -7,20 +7,40 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 
-import { containerTokens, spacingTokens, type LayoutValue } from "./types";
-import { sanitizeLayout } from "./blockUtils";
+import {
+  containerTokens,
+  spacingTokens,
+  type LayoutValue,
+  type WidgetLayoutDefaults,
+} from "./types";
+import { resolveSharedBlockLayoutState, sanitizeLayout } from "./blockUtils";
 import { WidgetControlRow } from "../../widgets/editors/WidgetEditorControls";
 
 type LayoutPanelProps = {
   value: LayoutValue;
+  pageDefaults?: WidgetLayoutDefaults;
   onChange: (next: LayoutValue) => void;
 };
 
-export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
+const inheritableContainerTokens = ["inherit", ...containerTokens] as const;
+const inheritableSpacingTokens = ["inherit", ...spacingTokens] as const;
+
+const optionLabel = (value: string) =>
+  value === "inherit" ? "Inherit page default" : value === "none" ? "None" : value;
+
+const spacingSummaryLabel = (value: string) => (value === "none" ? "None" : value.toUpperCase());
+
+export function LayoutPanel({ value, pageDefaults, onChange }: LayoutPanelProps) {
   const update = (next: LayoutValue) => onChange(sanitizeLayout(next));
+  const layoutState = resolveSharedBlockLayoutState(value, pageDefaults);
 
   return (
     <div className="space-y-4">
+      <p className="text-xs text-muted-foreground" data-builder-layout-inheritance-summary>
+        Inherited values keep the page section default until you choose a token. Current effective
+        padding is top {spacingSummaryLabel(layoutState.padding.top.effective)}, bottom{" "}
+        {spacingSummaryLabel(layoutState.padding.bottom.effective)}.
+      </p>
       <WidgetControlRow id="builder.layout.container" label="Content width" path="layout.container">
         {(fieldProps) => (
           <Select
@@ -37,9 +57,9 @@ export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
               <SelectValue placeholder="Container" />
             </SelectTrigger>
             <SelectContent>
-              {containerTokens.map((token) => (
+              {inheritableContainerTokens.map((token) => (
                 <SelectItem key={token} value={token}>
-                  {token}
+                  {optionLabel(token)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -71,9 +91,9 @@ export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
                 <SelectValue placeholder="Top" />
               </SelectTrigger>
               <SelectContent>
-                {spacingTokens.map((token) => (
+                {inheritableSpacingTokens.map((token) => (
                   <SelectItem key={token} value={token}>
-                    {token}
+                    {optionLabel(token)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -106,9 +126,9 @@ export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
                 <SelectValue placeholder="Bottom" />
               </SelectTrigger>
               <SelectContent>
-                {spacingTokens.map((token) => (
+                {inheritableSpacingTokens.map((token) => (
                   <SelectItem key={token} value={token}>
-                    {token}
+                    {optionLabel(token)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,9 +158,9 @@ export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
                 <SelectValue placeholder="Top" />
               </SelectTrigger>
               <SelectContent>
-                {spacingTokens.map((token) => (
+                {inheritableSpacingTokens.map((token) => (
                   <SelectItem key={token} value={token}>
-                    {token}
+                    {optionLabel(token)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -173,9 +193,9 @@ export function LayoutPanel({ value, onChange }: LayoutPanelProps) {
                 <SelectValue placeholder="Bottom" />
               </SelectTrigger>
               <SelectContent>
-                {spacingTokens.map((token) => (
+                {inheritableSpacingTokens.map((token) => (
                   <SelectItem key={token} value={token}>
-                    {token}
+                    {optionLabel(token)}
                   </SelectItem>
                 ))}
               </SelectContent>

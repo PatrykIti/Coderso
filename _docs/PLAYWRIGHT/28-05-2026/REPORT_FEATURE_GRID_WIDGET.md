@@ -214,7 +214,21 @@ Trasa zwraca **HTTP 200** i renderuje **opublikowany** stan fixture (inny niż d
 | **N7 — Wizard ukryty za „Run setup again"** | UX nawigacji | Tryb Wizard nie jest równorzędną zakładką — dla osoby szukającej „kreatora" nie jest to oczywiste (spójne z `tabs`/`accordion`). |
 | **N8 — „Wiszący" otwarty Radix Select przykrywa edytor (obserwacja narzędziowa)** | Visual | Pozostawiony otwarty `Select` portal-overlay przykrywa panel i przechwytuje kliknięcia do zamknięcia (Escape). W normalnym przepływie (trigger → opcja) zamyka się poprawnie. |
 
+> **Status TASK-343-30 (2026-05-30):** N3 jest zamknięte przez wspólną
+> klasyfikację stanu koloru: domyślne tokeny nie są już etykietowane jako
+> `Saved custom color`, a swatch wyjaśnia fallback preview. N4 pozostaje tylko
+> historyczną różnicą słownictwa Visual/Advanced dla wartości hex.
+
 **Nie wykryto** żadnych błędów konsoli na froncie, żadnego twardego buga renderowania ani rozjazdu render między wspólnie testowanymi opcjami admin↔front (poza celową izolacją niezapisanych zmian). Wszystkie kontrolki Visual aktualizują podgląd na żywo; Advanced wiernie podsumowuje stan roboczy.
+
+**Status TASK-343-07:** N1, N2, N6 i N9 są naprawione. Edytor kart używa teraz
+jednokolumnowego układu pól z markerami `data-feature-grid-emoji-preset`, więc MediaPicker nie
+przykrywa presetów emoji. Redukcja liczby kart oraz zmiana wariantu, która zmniejsza zapisaną
+tablicę `items`, wymagają destrukcyjnego potwierdzenia. Renderer dodaje `aria-labelledby` dla
+tytułu sekcji albo fallback `aria-label="Feature grid"`. Walidacja obejmuje Vitest oraz
+ograniczony Playwright CLI smoke 1280×720, w którym `elementFromPoint` trafiało we wszystkie 8
+przycisków emoji i każdy click dochodził do przycisku. Pełny zalogowany replay admina nie został
+uruchomiony lokalnie z powodu braku Playwright admin credentials w `.env`.
 
 ---
 
@@ -227,7 +241,7 @@ Trasa zwraca **HTTP 200** i renderuje **opublikowany** stan fixture (inny niż d
 | Renderowany stan | przy wejściu/po reload: **defaulty**; potem: niezapisane edycje | **opublikowana** konfiguracja (cards-4/2/lg/przestawione) | ⚠ rozjazd (N5) |
 | Linki CTA (safe href, rel) | te same reguły | `rel="noopener noreferrer"` dla zewnętrznego | ✓ |
 | Semantyka (`header`/`h3`/`h4`, ikona aria-hidden) | obecna | obecna | ✓ |
-| `aria-label` na `<section>` | brak | brak | ⚠ oba (N6) |
+| `aria-label` na `<section>` | `aria-labelledby` albo fallback label | `aria-labelledby` albo fallback label | ✓ TASK-343-07 |
 | Niezapisane edycje z Visual | widoczne w sesji edytora | **nieobecne** | ✓ poprawna izolacja |
 | Responsywność 375 px | n/d | single-column, brak overflow | ✓ |
 
@@ -250,11 +264,12 @@ Trasa zwraca **HTTP 200** i renderuje **opublikowany** stan fixture (inny niż d
 ## 8. Podsumowanie
 
 - Widget **feature-grid jest w bardzo dobrym stanie funkcjonalnym**. W tym passie przeszedłem przez **wszystkie dyskretne opcje wszystkich kontrolek** dostępnych w fixture: 3 warianty (Wizard + Visual), kolumny (2/3/4), gap (4), liczbę kart (1–8), copy nagłówka, treść kart (title, opis Plain/Rich, ikona + 8 emoji, MediaPicker z realnym obrazem + precedencja obraz>ikona + `loading=eager`, CTA toggle/label/destination-picker/target), reorder (Move + drag-handler), add/remove (z dialogiem), card layout/text align/padding/media size, kolory (3× set+clear), border width (4), radius (4), container width (4), header size (3), card title size (3), hover effect (3). **Wszystkie aktualizują podgląd na żywo i odwzorowują się w DOM zgodnie z mapą klas renderera.**
-- **Najważniejszy realny bug (N1):** 8 szybkich przycisków emoji jest przy 1280 px **zasłoniętych przez sąsiedni blok MediaPickera** i nieklikalnych myszą (Playwright: „intercepts pointer events", timeout). Handler i pole tekstowe „Icon" działają — to usterka layoutu, nie logiki.
-- **Najważniejsze ryzyko danych (N9, nowe):** redukcja „Cards count" jest **niszcząca i nieodwracalna** — ponowne zwiększenie nie przywraca treści usuniętych kart (wracają puste, z fallback-tytułami). W połączeniu z brakiem potwierdzenia (N2) to ciche ryzyko utraty pracy autora.
-- **Niespójności UX:** domyślne kolory motywu jako „Saved custom color" (N3); „Selected color" vs „Selected swatch" (N4).
+- **N1 / N2 / N9 / N6 zamknięte w TASK-343-07:** presety emoji mają bezpieczny
+  jednokolumnowy układ, destrukcyjne redukcje kart wymagają potwierdzenia, a publiczny
+  `<section>` ma dostępną nazwę.
+- **Najważniejsze pozostałe niespójności UX:** domyślne kolory motywu jako
+  „Saved custom color" (N3); „Selected color" vs „Selected swatch" (N4).
 - **Do wyjaśnienia (N5):** draft (defaulty po reload) vs front (bogata opublikowana konfiguracja) — bez zapisu/publikacji nie rozstrzygałem.
-- **A11y (N6):** brak `aria-label` na `<section>`; reszta semantyki poprawna.
 - **Plusy:** spójne, działające „Clear" dla **wszystkich trzech** pól kolorów; bezpieczne linki CTA (`rel=noopener noreferrer` dla zewnętrznych); realne sterowanie liczbą kart z danych (brak rozjazdu „slot vs render"); poprawna precedencja obraz>ikona i `loading=eager` dla wyróżnionej karty; pełna izolacja niezapisanych zmian; front 200, responsywny, 0 błędów konsoli.
 
 ---

@@ -75,6 +75,10 @@ actions.
 - Consent renders inside the `<form>` and submits a bounded checkbox field only
   when consent is enabled and labeled.
 - Static mode never silently submits to the current page.
+- Disconnected or otherwise non-interactive states render a non-submitting
+  `div role="form"` shell with disabled controls instead of a native `<form>`,
+  so browser implicit Enter submission cannot leak field values into the
+  current URL.
 - Valid Forms-runtime bindings reuse `POST /forms/:id/submissions`, shared nonce
   handling, shared CAPTCHA/runtime script markers, loading state, success state,
   error state, and redirect behavior returned by the bound Form owner.
@@ -130,6 +134,20 @@ transparent/inherited surfaces.
 - No Coderso-owned Newsletter confirmation flow, provider secrets, or backend
   opt-in automation are stored in widget JSON.
 
+## Submit Shell Semantics
+
+- Disconnected and otherwise non-interactive renders use a
+  `div role="form" aria-disabled="true"` shell with
+  `data-newsletter-native-submit="blocked"`, so browser implicit Enter submit
+  has no native form target.
+- Only interactive safe external `action-url` submissions and public
+  Forms-runtime renders emit a native `<form>`.
+- Editor preview can show a bound Forms contract with
+  `data-newsletter-submit-ready="true"` while
+  `data-newsletter-submit-interactive="false"` and native submit remains
+  blocked; public runtime injects the nonce and bot-protection data needed to
+  submit.
+
 ## Deterministic Markers
 
 The renderer emits bounded data markers including:
@@ -141,6 +159,8 @@ The renderer emits bounded data markers including:
 - `data-newsletter-integration-mode`
 - `data-newsletter-action-status`
 - `data-newsletter-submit-ready`
+- `data-newsletter-submit-interactive`
+- `data-newsletter-native-submit`
 - `data-newsletter-submission-mode`
 - `data-newsletter-consent-required`
 - `data-newsletter-opt-in`

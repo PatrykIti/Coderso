@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import {
   normalizeStatsKpiData,
   normalizeStatsKpiItems,
+  resolveStatsKpiCardSurfaceState,
+  resolveStatsKpiDividerState,
   resolveStatsKpiVariant,
   statsKpiDefaults,
   statsKpiItemMax,
@@ -216,9 +218,11 @@ function VariantCards({
 function ClearActionButton({
   value,
   onClear,
+  disabled,
 }: {
   value: string | undefined;
   onClear?: () => void;
+  disabled?: boolean;
 }) {
   if (!onClear) return null;
 
@@ -228,7 +232,7 @@ function ClearActionButton({
       variant="ghost"
       size="sm"
       onClick={onClear}
-      disabled={!hasClearableFieldValue(value)}
+      disabled={disabled === true || !hasClearableFieldValue(value)}
     >
       Clear
     </Button>
@@ -242,6 +246,9 @@ function StatsKpiColorField({
   onChange,
   pickerFallback = "#0f172a",
   onClear,
+  disabled,
+  readOnly,
+  help,
 }: {
   id: string;
   label: string;
@@ -249,6 +256,9 @@ function StatsKpiColorField({
   onChange: (next: string) => void;
   pickerFallback?: string;
   onClear?: () => void;
+  disabled?: boolean;
+  readOnly?: boolean;
+  help?: ReactNode;
 }) {
   const hasValue = hasClearableFieldValue(value);
   const hasCustomValue = hasValue && !isPickerRepresentableColorValue(value);
@@ -258,7 +268,9 @@ function StatsKpiColorField({
     <WidgetControlRow
       id={id}
       label={label}
-      actions={<ClearActionButton value={value} onClear={onClear} />}
+      help={help}
+      ownership={readOnly === true ? "readonly" : undefined}
+      actions={<ClearActionButton value={value} onClear={onClear} disabled={disabled} />}
     >
       {(fieldProps) => (
         <div className="space-y-3">
@@ -268,6 +280,7 @@ function StatsKpiColorField({
               type="color"
               value={pickerValue}
               onChange={(event) => onChange(event.target.value)}
+              disabled={disabled}
               className="h-9 w-10 p-1"
               aria-labelledby={fieldProps["aria-labelledby"]}
               aria-describedby={fieldProps["aria-describedby"]}
@@ -301,6 +314,9 @@ function StatsKpiSurfaceColorField({
   onChange,
   onClear,
   pickerFallback,
+  disabled,
+  readOnly,
+  help,
 }: {
   id: string;
   label: string;
@@ -308,6 +324,9 @@ function StatsKpiSurfaceColorField({
   onChange: (next: string) => void;
   onClear?: () => void;
   pickerFallback: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  help?: ReactNode;
 }) {
   return (
     <StatsKpiColorField
@@ -317,6 +336,9 @@ function StatsKpiSurfaceColorField({
       onChange={onChange}
       onClear={onClear}
       pickerFallback={pickerFallback}
+      disabled={disabled}
+      readOnly={readOnly}
+      help={help}
     />
   );
 }
@@ -679,6 +701,28 @@ function renderLinkValidation(href: string | undefined) {
   );
 }
 
+function resetStatsKpiToDefaults({
+  onChange,
+  onVariantChange,
+  onBlockPatch,
+}: {
+  onChange: (next: StatsKpiData) => void;
+  onVariantChange?: (next: string) => void;
+  onBlockPatch?: WidgetEditorProps<StatsKpiData>["onBlockPatch"];
+}) {
+  if (onBlockPatch) {
+    onBlockPatch((current) => ({
+      ...current,
+      variant: "cards",
+      data: statsKpiDefaults,
+    }));
+    return;
+  }
+
+  onChange(statsKpiDefaults);
+  onVariantChange?.("cards");
+}
+
 export function StatsKpiWizardEditor({ value, variant }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
@@ -746,6 +790,9 @@ export function StatsKpiVisualEditor({
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
   const resolvedVariant = resolveStatsKpiVariant(variant);
+  const cardSurfaceState = resolveStatsKpiCardSurfaceState(resolvedVariant);
+  const cardSurfaceControlsDisabled = cardSurfaceState.writable === false;
+  const dividerState = resolveStatsKpiDividerState(resolvedVariant, normalized.style);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleMetricDrop = (targetIndex: number) => {
@@ -1187,6 +1234,15 @@ export function StatsKpiVisualEditor({
         title="Card and icon surfaces"
         description="Keep per-card surfaces separate from section layout and metric text colors."
       >
+        {cardSurfaceControlsDisabled ? (
+          <p
+            className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+            data-stats-kpi-inline-card-surface-note="true"
+          >
+            Inline has no card boxes. Card background and Card border are preserved for Cards and
+            Split Highlight only; icon surface controls still affect Inline metrics.
+          </p>
+        ) : null}
         <StatsKpiSurfaceColorField
           id="stats-kpi.style.cardBackground"
           label="Card background"
@@ -1194,6 +1250,13 @@ export function StatsKpiVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { cardBackground: next })}
           onClear={() => clearStyle(value, onChange, "cardBackground")}
           pickerFallback="#ffffff"
+          disabled={cardSurfaceControlsDisabled}
+          readOnly={cardSurfaceControlsDisabled}
+          help={
+            cardSurfaceControlsDisabled
+              ? "Inline has no card boxes, so this saved value has no visible output until Cards or Split Highlight is selected."
+              : undefined
+          }
         />
         <StatsKpiSurfaceColorField
           id="stats-kpi.style.cardBorderColor"
@@ -1202,6 +1265,13 @@ export function StatsKpiVisualEditor({
           onChange={(next) => updateStyle(value, onChange, { cardBorderColor: next })}
           onClear={() => clearStyle(value, onChange, "cardBorderColor")}
           pickerFallback="#e2e8f0"
+          disabled={cardSurfaceControlsDisabled}
+          readOnly={cardSurfaceControlsDisabled}
+          help={
+            cardSurfaceControlsDisabled
+              ? "Inline has no card boxes, so this saved value has no visible output until Cards or Split Highlight is selected."
+              : undefined
+          }
         />
         <WidgetControlRow id="stats-kpi.style.iconSize" label="Icon size">
           {(fieldProps) => (
@@ -1389,26 +1459,35 @@ export function StatsKpiVisualEditor({
             </>
           )}
         </WidgetControlRow>
+        {dividerState.writable ? null : (
+          <p
+            className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+            data-stats-kpi-divider-inactive-note="true"
+          >
+            Dividers render only in Inline. Saved divider settings are preserved, but this variant
+            renders no divider output.
+          </p>
+        )}
         <WidgetControlRow
           id="stats-kpi.style.divider"
           label="Show dividers"
           help={
             resolvedVariant === "inline"
               ? "Inline metrics can use left dividers between items."
-              : "Inline-only. Other variants ignore divider output, so this toggle stays locked."
+              : "Inline-only. Other variants preserve divider settings but render no dividers."
           }
         >
           {() => (
             <Switch
-              disabled={resolvedVariant !== "inline"}
-              checked={Boolean(normalized.style?.divider)}
+              disabled={!dividerState.writable}
+              checked={dividerState.rendered}
               onCheckedChange={(checked) =>
                 updateStyle(value, onChange, { divider: Boolean(checked) })
               }
             />
           )}
         </WidgetControlRow>
-        {resolvedVariant === "inline" && normalized.style?.divider ? (
+        {dividerState.rendered ? (
           <WidgetControlRow id="stats-kpi.style.dividerIntensity" label="Divider intensity">
             {(fieldProps) => (
               <Select
@@ -1446,11 +1525,15 @@ export function StatsKpiAdvancedEditor({
   value,
   onChange,
   variant,
+  onVariantChange,
+  onBlockPatch,
 }: WidgetEditorProps<StatsKpiData>) {
   const normalized = normalizeValue(value);
   const items = normalizeStatsKpiItems(normalized.items);
   const style = normalized.style ?? {};
   const resolvedVariant = resolveStatsKpiVariant(variant);
+  const dividerState = resolveStatsKpiDividerState(resolvedVariant, style);
+  const [repairFeedback, setRepairFeedback] = useState<string | null>(null);
   const variantLabel =
     variantOptions.find((option) => option.id === resolvedVariant)?.label ?? resolvedVariant;
 
@@ -1548,7 +1631,11 @@ export function StatsKpiAdvancedEditor({
           id="stats-kpi.advanced.style.divider"
           label="Divider policy"
           path="style.divider"
-          value={`${formatBoolean(style.divider)}; ${resolvedVariant === "inline" ? `intensity ${style.dividerIntensity ?? "default"}` : "rendered by inline variant only"}`}
+          value={
+            dividerState.writable
+              ? `${formatBoolean(dividerState.rendered)}; intensity ${dividerState.intensity}`
+              : `Inactive in ${variantLabel}; saved setting ${formatBoolean(dividerState.saved)}`
+          }
         />
       </EditorSection>
 
@@ -1576,6 +1663,7 @@ export function StatsKpiAdvancedEditor({
             onClick={() => {
               if (!confirmStatsKpiRepair("Normalize this Stats KPI payload now?")) return;
               onChange(normalizeValue(value));
+              setRepairFeedback("Stats KPI payload normalized.");
             }}
           >
             Normalize now
@@ -1585,12 +1673,22 @@ export function StatsKpiAdvancedEditor({
             variant="outline"
             onClick={() => {
               if (!confirmStatsKpiRepair("Reset this Stats KPI widget to defaults?")) return;
-              onChange(statsKpiDefaults);
+              resetStatsKpiToDefaults({ onChange, onVariantChange, onBlockPatch });
+              setRepairFeedback("Stats KPI defaults restored; layout reset to Cards.");
             }}
           >
             Reset to defaults
           </Button>
         </RepairActionRow>
+        {repairFeedback ? (
+          <p
+            className="rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+            role="status"
+            data-stats-kpi-repair-feedback="true"
+          >
+            {repairFeedback}
+          </p>
+        ) : null}
         <ReadonlyWidgetSummaryRow
           id="stats-kpi.advanced.runtime.payload"
           label="Runtime summary"

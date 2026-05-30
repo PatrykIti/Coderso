@@ -472,7 +472,9 @@ test("logo cloud visual renders section-based IA", () => {
   expect(html).toContain("Display style");
   expect(html).toContain("Strip row behavior");
   expect(html).toContain("Strip motion");
+  expect(html).toContain("Effective in Grid: not active");
   expect(html).toContain("Open logo links in new tab");
+  expect(html).toContain("Theme token");
 });
 
 test("logo cloud advanced keeps technical-only scope", () => {
@@ -491,6 +493,8 @@ test("logo cloud advanced keeps technical-only scope", () => {
   expect(html).toContain("Authoring boundaries");
   expect(html).toContain("Logo height");
   expect(html).toContain("Alignment");
+  expect(html).toContain("Effective in Strip");
+  expect(html).toContain("Theme token");
   expect(html).not.toContain("Raw payload snapshot");
   expect(html).not.toContain("Normalize now");
   expect(html).not.toContain("Reset to defaults");

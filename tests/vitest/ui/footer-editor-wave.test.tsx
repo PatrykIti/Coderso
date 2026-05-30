@@ -491,7 +491,8 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-
       HTMLInputElement
     );
     expect(findColorTextInputByLabel(colorsPanel as ParentNode, "Link color")).toBeFalsy();
-    expect(colorsPanel?.textContent).toContain("Saved custom color");
+    expect(colorsPanel?.textContent).toContain("Theme token");
+    expect(colorsPanel?.textContent).toContain("fallback preview");
     setInputValue(findColorInputByLabel(colorsPanel as ParentNode, "Link color"), "#1d4ed8");
     clickByText(
       findColorFieldByLabel(colorsPanel as ParentNode, "Text color") as ParentNode,

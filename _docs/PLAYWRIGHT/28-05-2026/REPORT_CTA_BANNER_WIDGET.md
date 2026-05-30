@@ -203,26 +203,34 @@ _Zrzuty (lokalne): `cta-banner-public-desktop-29-05.png`, `cta-banner-public-mob
 
 ## 4. Co NIE działa / problemy
 
-### 4.1 Wariant „With Badge" jest wizualnie nieodróżnialny od „Centered" (potwierdzony, admin + front)
+### 4.1 Wariant „With Badge" jest wizualnie nieodróżnialny od „Centered" (zamknięte przez TASK-343-22)
 
-- Renderer rozróżnia **tylko** `split` vs reszta:
-  ```ts
-  const wrapperClassName =
-    resolvedVariant === "split" ? "…md:flex-row…" : "flex flex-col items-center gap-4 text-center";
-  ```
-- Dla `with-badge` `resolvedVariant` to „with-badge", ale klasy wrappera i akcji są **dokładnie takie same jak dla `centered`**. Zmiana wariantu zmienia **wyłącznie atrybut** `data-cta-banner-variant`. Badge i tak renderuje się nad nagłówkiem również w `centered`.
-- Potwierdzone w adminie (klik karty → identyczne klasy) **oraz** na froncie (opublikowana strona używa `with-badge` i renderuje klasy Centered).
-- **Skutek dla użytkownika:** opis karty obiecuje „Highlights badge above CTA heading", ale wybór tej opcji nie daje żadnej wizualnej różnicy względem „Centered" z włączonym badge. **Mylący/nadmiarowy wariant.**
+- **Zamknięte przez TASK-343-22.** Renderer rozdziela teraz wariant logiczny
+  od prezentacji przez `resolveCtaBannerVariantPresentation`.
+- `with-badge` renderuje prezentację `badge-panel` z osobnym framed treatment
+  (`data-cta-banner-presentation="badge-panel"`) zamiast dzielić wrapper
+  Centered.
+- Renderer emituje też `data-cta-banner-badge-state`, aby rozróżnić widoczny
+  badge od pustego tekstu badge.
+- Visual pokazuje guidance dla wariantu With Badge, że jest to framed badge
+  treatment i że tekst badge kontroluje samą pigułkę.
 
-### 4.2 Każdy CTA wymaga prawidłowej destynacji, by się wyrenderować (pułapka UX, spójna z kodem)
+### 4.2 Każdy CTA wymaga prawidłowej destynacji, by się wyrenderować (zamknięte przez TASK-343-22)
 
-- Wyczyszczenie „Destination" (lub brak href) dla **dowolnego** z trzech CTA powoduje, że przycisk **nie renderuje się** w podglądzie — bo `resolveWidgetLinkAttrs("")` zwraca `null`, a `has{Primary|Secondary|Tertiary}` wymaga prawidłowego href.
-- Szczególnie myli to przy **Tertiary**: domyślnie `tertiaryCta.href === ""`, więc samo „Enabled = on" + wpisanie etykiety **nie pokazuje** przycisku, dopóki nie wybierze się strony w „Destination". Primary/Secondary mają default `"#"`, więc renderują się od razu — ale po kliknięciu „Clear destination" znikają identycznie.
-- Brak inline-hintu „ten CTA wymaga celu". Nie jest to defekt renderera (spójny z modelem), lecz realna pułapka UX.
+- **Zamknięte przez TASK-343-22.** Enabled CTA z etykietą, ale bez
+  bezpiecznej destynacji, nie znika już po cichu.
+- Runtime pokazuje disabled CTA hint z
+  `data-cta-button-state="missing-destination"` oraz bez `href`, więc
+  `resolveWidgetLinkAttrs` i safe-link/new-tab polityka pozostają niezmienione.
+- Valid CTA dalej renderują jako linki z
+  `data-cta-button-state="active"`.
+- Visual pokazuje inline warning przy label-without-destination, zanim autor
+  wybierze stronę lub wyczyści etykietę.
 
-### 4.3 Brak feedbacku po „Normalize now" / „Reset to defaults"
+### 4.3 Brak feedbacku po „Normalize now" / „Reset to defaults" (zamknięte przez TASK-343-22)
 
-- Po potwierdzeniu w dialogu akcja wykonuje się, ale **nie ma żadnego toast/inline** informującego, czy i co się zmieniło. Przy „Normalize", gdy dane były już poprawne, użytkownik nie wie, czy cokolwiek się stało. (Dla kontrastu — „Save draft" pokazuje toast „Draft saved.")
+- **Zamknięte przez TASK-343-22.** Advanced pokazuje inline status po obu
+  akcjach: `CTA banner data normalized.` i `CTA banner reset to defaults.`.
 
 ### 4.4 Brak regresji smoke
 
@@ -261,7 +269,7 @@ Wszystkie pozycje to ograniczenia harnessu/środowiska, **nie** defekty widgetu 
 | Funkcjonalność | Admin Preview | Frontend (`/test-cta-banner-0516`) | Zgodność |
 |---|---|---|---|
 | Renderowanie `centered` | ✅ `flex flex-col items-center gap-4 text-center` | n/d (strona używa with-badge) | — |
-| Renderowanie `with-badge` | ✅ identyczne z centered | ✅ identyczne z centered | ✅ zgodne (oba „puste") |
+| Renderowanie `with-badge` | ✅ po TASK-343-22 `data-cta-banner-presentation="badge-panel"` + framed content | ✅ po TASK-343-22 ten sam renderer | ✅ distinct / spójne |
 | Renderowanie `split` | ✅ `md:flex-row …` | n/d (nieopublikowany na froncie) | — |
 | Badge / title / description | ✅ render warunkowy | ✅ badge + `<h3>` | ✅ OK |
 | Przyciski CTA jako `<a>` | ✅ (3 CTA) | ✅ primary/secondary | ✅ OK |
@@ -279,8 +287,8 @@ Wszystkie pozycje to ograniczenia harnessu/środowiska, **nie** defekty widgetu 
 | Tryb | Charakter | Wynik audytu |
 |---|---|---|
 | **Wizard** | 1 sekcja read-only + Live preview | ✅ Działa zgodnie z kontraktem (0 writable, 2 readonly; bez akcji seedującej) |
-| **Visual** | 5 sekcji edytowalnych | ✅ **Wszystkie rodziny opcji przeklikane i zweryfikowane** (3 warianty, 5 paddingów, 3 CTA × ikony/new-tab/clear, 3 palety, 10 clear-ów kolorów, transparent, border/radius/button-radius/size, gradient, **media picker + fit/position + clear image**, 3 motion). **Jeden mylący wariant (With Badge ≈ Centered)** i **jedna pułapka UX (każdy CTA wymaga href)** |
-| **Advanced** | 3 sekcje diagnostyczne + 2 akcje | ✅ Diagnostyka wierna; Normalize i Reset realnie działają (z dialogami); brak feedbacku po akcji |
+| **Visual** | 5 sekcji edytowalnych | ✅ **Wszystkie rodziny opcji przeklikane i zweryfikowane** (3 warianty, 5 paddingów, 3 CTA × ikony/new-tab/clear, 3 palety, 10 clear-ów kolorów, transparent, border/radius/button-radius/size, gradient, **media picker + fit/position + clear image**, 3 motion). Po TASK-343-22 With Badge ma distinct framed presentation, a missing destination ma inline guidance. |
+| **Advanced** | 3 sekcje diagnostyczne + 2 akcje | ✅ Diagnostyka wierna; Normalize i Reset realnie działają (z dialogami) i po TASK-343-22 pokazują inline feedback |
 | **Front** | `/test-cta-banner-0516` (osobna, opublikowana strona) | ✅ Ładuje się, 0 błędów konsoli, poprawny render i a11y, brak overflow (1280/375) |
 
 **Werdykt końcowy:** Widget `cta-banner` jest w przeważającej części sprawny i spójny między edytorem a
@@ -289,11 +297,12 @@ asset z Media Library (render `url(...)` + `cover/contain` + `center/top/bottom`
 Clear kolorów oraz wszystkie 3 „Clear destination" działają, a wszystkie rodziny selectów i ikon zostały
 przeklikane. **Cały sprawdzony stan jest trwały po Save draft → reload — nie wykryto defektu trwałości.**
 
-**Najważniejsze ustalenia negatywne (oba realne, oba potwierdzone admin + render):**
-1. **Wariant „With Badge" nie ma własnego układu** — renderuje się identycznie jak „Centered" (admin i front). Mylący/nadmiarowy wariant.
-2. **Każdy CTA wymaga prawidłowej destynacji, by się wyrenderować** — wyczyszczenie href usuwa przycisk (najbardziej myli przy Tertiary, którego default href jest pusty). Brak inline-hintu. Pułapka UX (spójna z kodem).
+**Najważniejsze ustalenia negatywne z raportu zostały zamknięte przez TASK-343-22:**
+1. **Wariant „With Badge" ma własną prezentację** (`badge-panel`) zamiast dzielić output z Centered.
+2. **CTA bez destynacji nie znika po cichu** — renderer pokazuje disabled hint, a Visual pokazuje inline guidance.
+3. **Normalize/Reset mają feedback** — Advanced pokazuje status po wykonaniu akcji.
 
-**Niuanse:** brak feedbacku po Normalize/Reset; „Destination" to page-picker bez wolnego inputu; „Primary button border" Clear wraca do `transparent`, nie do tokenu; natywny próbnik koloru OS nieobsługiwalny w headless (ścieżka `onChange` zweryfikowana programowo). Obszary niezweryfikowane wymieniono jawnie w sekcji 5.
+**Niuanse:** „Destination" to page-picker bez wolnego inputu; „Primary button border" Clear wraca do `transparent`, nie do tokenu; natywny próbnik koloru OS nieobsługiwalny w headless (ścieżka `onChange` zweryfikowana programowo). Obszary niezweryfikowane wymieniono jawnie w sekcji 5.
 
 ---
 

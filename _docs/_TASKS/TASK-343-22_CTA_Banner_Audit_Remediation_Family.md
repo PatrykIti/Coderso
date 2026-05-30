@@ -6,7 +6,7 @@
 **Category:** Widgets + CTA Banner + Admin UI + Runtime + QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-343
-**Status:** To Do
+**Status:** Done (2026-05-30)
 
 ---
 
@@ -25,12 +25,29 @@ visible feedback.
 
 ## Sub-Tasks
 
-- [ ] Make `With Badge` visually distinct or remove/rename the variant so it no
+- [x] Make `With Badge` visually distinct or remove/rename the variant so it no
   longer promises a different layout.
-- [ ] Add inline guidance when a CTA label exists but no safe destination is
+- [x] Add inline guidance when a CTA label exists but no safe destination is
   configured.
-- [ ] Add completion feedback for `Normalize now` and `Reset to defaults`.
-- [ ] Keep safe-link/new-tab behavior unchanged.
+- [x] Add completion feedback for `Normalize now` and `Reset to defaults`.
+- [x] Keep safe-link/new-tab behavior unchanged.
+
+## Implementation Notes
+
+- Added domain-owned presentation/action-state helpers:
+  `resolveCtaBannerVariantPresentation` and
+  `resolveCtaBannerActionRenderState`.
+- `with-badge` now renders through a distinct framed `badge-panel`
+  presentation with deterministic `data-cta-banner-presentation` and
+  `data-cta-banner-badge-state` markers.
+- Enabled CTA actions with a label but no safe destination now render a disabled
+  hint with `data-cta-button-state="missing-destination"` instead of silently
+  disappearing. Valid links still render through the existing
+  `resolveWidgetLinkAttrs` path.
+- Visual action fields show inline missing-destination guidance before authors
+  choose a published page or clear the label.
+- Advanced support actions now show inline `role="status"` feedback after
+  Normalize and Reset.
 
 ## Files To Change
 

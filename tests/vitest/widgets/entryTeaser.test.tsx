@@ -13,6 +13,7 @@ import {
   createEntryTeaserWidget,
   entryTeaserDefaults,
   normalizeEntryTeaserData,
+  resolveEntryTeaserCtaRenderState,
   type EntryTeaserData,
 } from "../../../core/widgets/core/entryTeaser";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
@@ -26,6 +27,7 @@ test("entry teaser renders source placeholder without content type", () => {
 
   expect(html).toContain("Select content type");
   expect(html).toContain('data-entry-teaser-state="missing-source"');
+  expect(html).toContain('aria-label="Entry teaser"');
 });
 
 test("entry teaser renders listing placeholder when listing query is missing", () => {
@@ -55,6 +57,7 @@ test("entry teaser renders resolved item and markers", () => {
   const html = renderToString(
     <EntryTeaserBlock
       variant="vertical"
+      blockId="entry-block-1"
       data={normalizeEntryTeaserData({
         ...entryTeaserDefaults,
         sourceMode: "manual",
@@ -106,6 +109,8 @@ test("entry teaser renders resolved item and markers", () => {
   );
 
   expect(html).toContain("Featured article");
+  expect(html).toContain('aria-labelledby="entry-teaser-entry-block-1-section-heading"');
+  expect(html).toContain('id="entry-teaser-entry-block-1-section-heading"');
   expect(html).toContain("Quarterly update");
   expect(html).toContain("Open post");
   expect(html).toContain("max-w-6xl");
@@ -202,6 +207,74 @@ test("entry teaser custom CTA sanitizes unsafe hrefs", () => {
   });
 
   expect(normalized.cta?.href).toBe("");
+  expect(resolveEntryTeaserCtaRenderState(normalized)).toEqual({
+    mode: "non_link",
+    reason: "missing_custom_destination",
+  });
+});
+
+test("entry teaser marks custom CTA as non-link when no safe destination is configured", () => {
+  const html = renderToString(
+    <EntryTeaserBlock
+      variant="vertical"
+      data={normalizeEntryTeaserData({
+        ...entryTeaserDefaults,
+        sourceMode: "manual",
+        source: {
+          contentTypeId: "blog-type-id",
+          entryId: "entry-1",
+        },
+        cta: {
+          label: "Read more",
+          hrefMode: "custom",
+          href: "",
+          style: "filled",
+        },
+        resolved: {
+          item: {
+            id: "entry-1",
+            title: "Quarterly update",
+            href: "/blog/quarterly-update",
+            status: "published",
+          },
+        },
+      })}
+    />
+  );
+
+  expect(html).not.toContain("<a ");
+  expect(html).toContain('aria-disabled="true"');
+  expect(html).toContain('data-entry-teaser-cta-unavailable="missing_custom_destination"');
+});
+
+test("entry teaser marks auto CTA as non-link when resolved entry has no safe route", () => {
+  const normalized = normalizeEntryTeaserData({
+    ...entryTeaserDefaults,
+    sourceMode: "manual",
+    source: {
+      contentTypeId: "blog-type-id",
+      entryId: "entry-1",
+    },
+    cta: {
+      label: "Read more",
+      hrefMode: "auto",
+    },
+    resolved: {
+      item: {
+        id: "entry-1",
+        title: "Quarterly update",
+        status: "published",
+      },
+    },
+  });
+  const html = renderToString(<EntryTeaserBlock variant="vertical" data={normalized} />);
+
+  expect(resolveEntryTeaserCtaRenderState(normalized)).toEqual({
+    mode: "non_link",
+    reason: "missing_auto_destination",
+  });
+  expect(html).toContain('data-entry-teaser-state="ready"');
+  expect(html).toContain('data-entry-teaser-cta-unavailable="missing_auto_destination"');
 });
 
 test("entry teaser CTA uses safe target rel output and outline style", () => {

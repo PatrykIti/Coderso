@@ -79,8 +79,10 @@ controls the live-status suffix and defaults to `selected`.
 
 ### Motion
 
-Public page renders register the Toggle Block runtime payload once per page through
- the shared widget script collector. Editor-preview output stays script-free.
+Public page renders register the Toggle Block runtime payload once per page
+through the shared widget script collector. Editor-preview output stays
+script-free and is documented in the editor as a static preview; authors inspect
+the alternate pane by changing the default state.
 
 Supported motion values:
 - `none`
@@ -107,12 +109,14 @@ theme fallbacks without persisting CSS variable strings as saved custom values.
 
 `style.accentColor`
 - Clearable.
-- Drives the active trigger background/text accent pair.
+- Drives the active trigger background and optional inactive trigger text accent.
+- Must not render as inline text color on the active trigger.
 
 `style.accentContrastColor`
 - Clearable.
 - Falls back to `var(--color-background)` when omitted.
-- Keeps active trigger text readable against `accentColor`.
+- Renders active trigger text through `--nextless-toggle-accent-contrast` so it
+  stays readable against `accentColor`.
 
 ### Per-pane tokens
 

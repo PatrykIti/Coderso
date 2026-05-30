@@ -4,7 +4,11 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { searchBoxDefaults, type SearchBoxData } from "../../../core/widgets/core/searchBox";
+import {
+  SearchBoxBlock,
+  searchBoxDefaults,
+  type SearchBoxData,
+} from "../../../core/widgets/core/searchBox";
 
 const searchBoxState = vi.hoisted(() => ({
   queries: [
@@ -458,6 +462,8 @@ test("SearchBox visual owns visitor copy, interaction, and surface only", async 
 
   const view = mount(<Harness />);
   try {
+    expect(view.container.textContent).toContain("No inline color");
+    expect(view.container.textContent).toContain("stays unstyled");
     setInputValue(findInputByPlaceholder(view.container, "Search"), "Catalog search");
     setTextareaValue(
       findTextareaByPlaceholder(view.container, "Optional helper text."),
@@ -498,6 +504,85 @@ test("SearchBox visual owns visitor copy, interaction, and surface only", async 
       "style.actionBackground",
     ]);
     expect(view.container.textContent).not.toContain("Search source");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SearchBox visual labels saved theme default color tokens truthfully", async () => {
+  const { SearchBoxVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
+
+  const view = mount(
+    <SearchBoxVisualEditor
+      value={searchBoxDefaults}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    const colorStates = Array.from(
+      view.container.querySelectorAll("[data-shared-color-state]")
+    ).map((element) => element.getAttribute("data-shared-color-state"));
+
+    expect(colorStates).toEqual([
+      "theme_default_token",
+      "theme_default_token",
+      "theme_default_token",
+    ]);
+    expect(view.container.textContent).toContain("Theme default");
+    expect(view.container.textContent).not.toContain("Saved custom color");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("SearchBox renderer keeps global source checkboxes in sync across preview rerenders", () => {
+  let latestValue: SearchBoxData = {
+    ...searchBoxDefaults,
+    mode: "global",
+    sources: {
+      pages: true,
+      entries: true,
+      posts: false,
+    },
+  };
+  let updateValue: ((next: SearchBoxData) => void) | undefined;
+  const Harness = () => {
+    const [value, setValue] = useState<SearchBoxData>(latestValue);
+    updateValue = (next) => {
+      latestValue = next;
+      setValue(next);
+    };
+    return <SearchBoxBlock variant="default" blockId="global-preview" data={value} />;
+  };
+  const sourceInput = (container: ParentNode, source: string) =>
+    container.querySelector(`input[name="sources"][value="${source}"]`);
+
+  const view = mount(<Harness />);
+
+  try {
+    const initialPosts = sourceInput(view.container, "posts");
+    expect(initialPosts).toBeInstanceOf(HTMLInputElement);
+    expect((initialPosts as HTMLInputElement).checked).toBe(false);
+    expect((initialPosts as HTMLInputElement).readOnly).toBe(false);
+
+    React.act(() => {
+      updateValue?.({
+        ...latestValue,
+        sources: {
+          pages: false,
+          entries: true,
+          posts: true,
+        },
+      });
+    });
+
+    expect((sourceInput(view.container, "pages") as HTMLInputElement).checked).toBe(false);
+    expect((sourceInput(view.container, "entries") as HTMLInputElement).checked).toBe(true);
+    expect((sourceInput(view.container, "posts") as HTMLInputElement).checked).toBe(true);
   } finally {
     view.cleanup();
   }

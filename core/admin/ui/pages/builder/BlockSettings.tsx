@@ -18,6 +18,7 @@ import type {
   WidgetBlockPatcher,
   WidgetDefinition,
   WidgetEditorContext,
+  WidgetLayoutDefaults,
 } from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel, type VisualPanelSlotControls } from "./VisualPanel";
@@ -47,6 +48,7 @@ export type BlockSettingsProps = {
   onChange: (next: Block) => void;
   onBlockPatch?: WidgetBlockPatcher;
   editorContext?: WidgetEditorContext;
+  pageDefaults?: WidgetLayoutDefaults;
 };
 
 type WidgetPreviewErrorBoundaryProps = {
@@ -58,6 +60,31 @@ type WidgetPreviewErrorBoundaryProps = {
 type WidgetPreviewErrorBoundaryState = {
   hasError: boolean;
 };
+
+type WidgetSlotDefinition = NonNullable<WidgetDefinition["slots"]>[number];
+
+function resolveRepeatableSlotRemovalLabel(definition: WidgetSlotDefinition, slotId: string) {
+  const parsed = parseRepeatableSlotId(slotId);
+  return [definition.label, parsed?.instanceId].filter(Boolean).join(" ");
+}
+
+function confirmRepeatableSlotRemoval(
+  definition: WidgetSlotDefinition,
+  slotId: string,
+  nestedBlocksCount: number
+) {
+  if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
+
+  const label = resolveRepeatableSlotRemovalLabel(definition, slotId);
+  const nestedBlocksCopy =
+    nestedBlocksCount > 0
+      ? ` and ${nestedBlocksCount} nested block${nestedBlocksCount === 1 ? "" : "s"}`
+      : "";
+
+  return window.confirm(
+    `Remove ${label}? This removes the ${label.toLowerCase()} slot${nestedBlocksCopy}. This cannot be undone.`
+  );
+}
 
 class WidgetPreviewErrorBoundary extends Component<
   WidgetPreviewErrorBoundaryProps,
@@ -91,10 +118,12 @@ function WidgetEditorLivePreview({
   block,
   mode,
   previewState,
+  pageDefaults,
 }: {
   block: Block;
   mode: EditorMode;
   previewState?: WidgetEditorContext["previewState"];
+  pageDefaults?: WidgetLayoutDefaults;
 }) {
   const previewBlock =
     previewState?.dataPatch && block.data && typeof block.data === "object"
@@ -159,6 +188,7 @@ function WidgetEditorLivePreview({
         >
           <WidgetRenderer
             block={previewBlock}
+            pageDefaults={pageDefaults}
             renderContext={{ mode: "editor-preview", previewState: previewState ?? null }}
           />
         </WidgetPreviewErrorBoundary>
@@ -173,6 +203,7 @@ export function BlockSettings({
   onChange,
   onBlockPatch,
   editorContext,
+  pageDefaults,
 }: BlockSettingsProps) {
   if (!block || !widget) {
     return (
@@ -256,6 +287,9 @@ export function BlockSettings({
       : 0;
     if (existing.length <= minimum) return;
     if (!(slotId in slotMap)) return;
+    const nestedBlocks = slotMap[slotId];
+    const nestedBlocksCount = Array.isArray(nestedBlocks) ? nestedBlocks.length : 0;
+    if (!confirmRepeatableSlotRemoval(definition, slotId, nestedBlocksCount)) return;
 
     patchBlock((current) =>
       syncSectionRegionBlock(removeRepeatableSlotInstanceForWidget(current, widget, slotId))
@@ -410,6 +444,7 @@ export function BlockSettings({
             block={block}
             mode={editorState.mode}
             previewState={resolvedEditorContext?.previewState}
+            pageDefaults={pageDefaults}
           />
         ) : null}
       </>
@@ -488,6 +523,7 @@ export function BlockSettings({
             onBlockPatch={patchBlock}
             editorContext={resolvedEditorContext}
             slotControls={slotControls}
+            pageDefaults={pageDefaults}
           />
         </TabsContent>
         <TabsContent value="advanced">
@@ -497,6 +533,7 @@ export function BlockSettings({
             onChange={onChange}
             onBlockPatch={patchBlock}
             editorContext={resolvedEditorContext}
+            pageDefaults={pageDefaults}
           />
         </TabsContent>
       </Tabs>

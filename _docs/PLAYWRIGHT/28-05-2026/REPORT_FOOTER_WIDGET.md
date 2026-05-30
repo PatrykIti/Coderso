@@ -267,6 +267,9 @@ rozbieżności rendererów.
    konsoli ostrzeżenie React: „Missing `Description` or `aria-describedby={undefined}`
    for {DialogContent}". Pochodzi ze wspólnego komponentu `Dialog`, ale ujawnia się
    m.in. przez `MediaPicker` footera. Drobna luka dostępności (brak opisu dialogu).
+   **Status TASK-343-31 (2026-05-30):** zamknięte w shared `MediaPicker`.
+   Dialog `Media library` ma opis i regresję warning-free dla dwóch wejść
+   widgetowych; Footer nie potrzebuje lokalnego obejścia.
 
 2. **„Add link" tworzy destynację `#`, nie pustą (NOWE).** Świeżo dodany link ma w
    edytorze `href: ""`, ale po round-tripie normalizacji bloku zapisuje się jako `#`,
@@ -325,9 +328,10 @@ typ custom social, wszystkie selecty typografii/kolorów/layoutu, wstawianie i
 reorder slotów, wariant minimal) zadziałała i natychmiast aktualizowała podgląd.
 Tryb Advanced wiernie odzwierciedlał stan.
 
-**Konsola:** front 0/0. Admin: 0 błędów, **1 ostrzeżenie** — a11y `DialogContent`
-(brak `Description`/`aria-describedby`) wyzwalane przez dialog biblioteki mediów
-(§8 pkt 1). To wspólny komponent, nie logika footera, ale ujawnia się przez footer.
+**Konsola:** front 0/0. Admin: 0 błędów, historycznie **1 ostrzeżenie** — a11y
+`DialogContent` (brak `Description`/`aria-describedby`) wyzwalane przez dialog
+biblioteki mediów (§8 pkt 1). To wspólny komponent, nie logika footera, i jest
+zamknięte przez `TASK-343-31`.
 
 Zastrzeżenia mają charakter **UX/a11y** (§8): a11y dialogu media (1), `#` jako
 destynacja świeżego linku (2), niespójna semantyka „Clear destination" między

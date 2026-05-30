@@ -4,7 +4,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { SharedColorControl } from "../../../core/admin/ui/widgets/editors/SharedColorControl";
+import {
+  SharedColorControl,
+  describeSharedColorControlState,
+} from "../../../core/admin/ui/widgets/editors/SharedColorControl";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -153,7 +156,7 @@ test("routes swatch and text edits through their respective handlers", () => {
   }
 });
 
-test("can hide the technical text input while keeping swatch overrides", () => {
+test("can hide the technical text input while keeping theme token truthfulness", () => {
   const onChange = vi.fn();
   const view = mount(
     <SharedColorControl
@@ -170,8 +173,9 @@ test("can hide the technical text input while keeping swatch overrides", () => {
     const text = view.container.querySelector('input[aria-label="Frame value"]');
     expect((swatch as HTMLInputElement | null)?.value).toBe("#ffffff");
     expect(text).toBeNull();
-    expect(view.container.textContent).toContain("Saved custom color");
-    expect(view.container.textContent).not.toContain("token");
+    expect(view.container.textContent).toContain("Theme token");
+    expect(view.container.textContent).toContain("fallback preview");
+    expect(view.container.textContent).not.toContain("Saved custom color");
 
     dispatchInputValue(swatch as HTMLInputElement, "#112233");
 
@@ -197,10 +201,44 @@ test("can treat known token values as theme defaults in swatch-only mode", () =>
 
   try {
     expect(view.container.textContent).toContain("Theme default");
+    expect(view.container.textContent).toContain("matches the widget default");
     expect(view.container.textContent).not.toContain("Saved custom color");
   } finally {
     view.cleanup();
   }
+});
+
+test("describes shared color state vocabulary", () => {
+  expect(describeSharedColorControlState({ value: undefined }).kind).toBe("cleared");
+  expect(
+    describeSharedColorControlState({
+      value: undefined,
+      clearedState: {
+        label: "No inline color",
+        description: "No inline value is saved.",
+        clearResultLabel: "removes the inline value",
+      },
+    })
+  ).toMatchObject({
+    kind: "cleared",
+    label: "No inline color",
+    description: "No inline value is saved.",
+    clearResultLabel: "removes the inline value",
+  });
+  expect(describeSharedColorControlState({ value: "transparent" }).kind).toBe("transparent");
+  expect(
+    describeSharedColorControlState({
+      value: "var(--color-bg)",
+      treatAsThemeDefaultValues: ["var(--color-bg)"],
+    }).kind
+  ).toBe("theme_default_token");
+  expect(describeSharedColorControlState({ value: "var(--color-accent)" }).kind).toBe(
+    "theme_token"
+  );
+  expect(describeSharedColorControlState({ value: "#112233" }).kind).toBe("selected_swatch");
+  expect(describeSharedColorControlState({ value: "rgba(10, 20, 30, 0.4)" }).kind).toBe(
+    "saved_custom"
+  );
 });
 
 test("can expose a transparent shortcut in swatch-only mode", () => {
@@ -243,6 +281,7 @@ test("clear stays disabled when only fallback swatch state exists", () => {
   try {
     const button = view.container.querySelector("button");
     expect(button?.disabled).toBe(true);
+    expect(button?.getAttribute("aria-label")).toBe("Clear Border; removes the saved color value");
 
     React.act(() => {
       button?.click();
@@ -275,6 +314,7 @@ test("rgba text keeps fallback swatch preview while still allowing clear", () =>
     expect((swatch as HTMLInputElement | null)?.value).toBe("#102030");
     expect((text as HTMLInputElement | null)?.value).toBe("rgba(10, 20, 30, 0.4)");
     expect(button?.disabled).toBe(false);
+    expect(button?.getAttribute("aria-label")).toBe("Clear Overlay; removes the saved color value");
 
     React.act(() => {
       button?.click();

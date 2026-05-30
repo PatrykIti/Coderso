@@ -15,9 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
+  countTimelineIconMarkerFallbacks,
   normalizeTimelineData,
   normalizeTimelineStepCount,
   normalizeTimelineSteps,
+  resolveTimelineMaxWidthDiagnostics,
   resolveTimelineMode,
   timelineStepMax,
   timelineStepMin,
@@ -178,7 +180,7 @@ const titleSizeOptions: Array<{ id: TimelineTitleSize; label: string }> = [
 ];
 
 const descriptionSizeOptions: Array<{ id: TimelineDescriptionSize; label: string }> = [
-  { id: "none", label: "None" },
+  { id: "none", label: "None (inherit)" },
   { id: "xs", label: "Extra small" },
   { id: "sm", label: "Small" },
   { id: "base", label: "Base" },
@@ -639,7 +641,7 @@ function findOptionLabel(
   return options.find((option) => option.id === value)?.label ?? fallback;
 }
 
-function formatTimelineLayoutSummary(layout: TimelineData["layout"]) {
+function formatTimelineLayoutSummary(layout: TimelineData["layout"], stepCount: number) {
   const normalized = {
     orientation: layout?.orientation ?? "horizontal",
     align: layout?.align ?? "center",
@@ -649,13 +651,22 @@ function formatTimelineLayoutSummary(layout: TimelineData["layout"]) {
     sectionSpacing: layout?.sectionSpacing ?? "none",
     maxWidth: layout?.maxWidth ?? "6xl",
   };
+  const maxWidthDiagnostics = resolveTimelineMaxWidthDiagnostics(normalized, stepCount);
+  const widthLabel = findOptionLabel(maxWidthOptions, normalized.maxWidth, "6XL");
+  const effectiveWidthLabel = findOptionLabel(
+    maxWidthOptions,
+    maxWidthDiagnostics.effective,
+    widthLabel
+  );
 
   return [
     `Orientation: ${findOptionLabel(orientationOptions, normalized.orientation, "Horizontal")}`,
     `Alignment: ${findOptionLabel(alignOptions, normalized.align, "Center")}`,
     `Spacing: ${findOptionLabel(spacingOptions, normalized.spacing, "Default")}`,
     `Padding: ${findOptionLabel(paddingOptions, normalized.padding, "Default")}`,
-    `Width: ${findOptionLabel(maxWidthOptions, normalized.maxWidth, "6XL")}`,
+    maxWidthDiagnostics.narrowed
+      ? `Width: ${widthLabel} (renders as ${effectiveWidthLabel} for 3 or fewer steps)`
+      : `Width: ${widthLabel}`,
     `Labels: ${findOptionLabel(labelPositionOptions, normalized.labelPosition, "Top")}`,
   ].join("; ");
 }
@@ -668,12 +679,20 @@ function formatTimelineGuidesSummary(guides: TimelineData["guides"]) {
     : "Disabled.";
 }
 
-function formatTimelineStyleSummary(style: TimelineData["style"]) {
+function formatTimelineStyleSummary(style: TimelineData["style"], steps: TimelineStep[]) {
+  const markerDisplay = style?.markerDisplay ?? "dot";
+  const markerFallbackCount = countTimelineIconMarkerFallbacks(steps, markerDisplay);
+  const markerFallbackSummary =
+    markerFallbackCount > 0
+      ? ` (${markerFallbackCount} step${markerFallbackCount === 1 ? "" : "s"} fall back to dots without marker icons)`
+      : "";
+
   return [
     `Line: ${findOptionLabel(lineStyleOptions, style?.lineStyle, "Solid")}`,
     `Thickness: ${findOptionLabel(thicknessOptions, style?.thickness, "2px")}`,
-    `Marker: ${findOptionLabel(markerDisplayOptions, style?.markerDisplay, "Dot")} / ${findOptionLabel(markerSizeOptions, style?.markerSize, "Medium")}`,
+    `Marker: ${findOptionLabel(markerDisplayOptions, markerDisplay, "Dot")} / ${findOptionLabel(markerSizeOptions, style?.markerSize, "Medium")}${markerFallbackSummary}`,
     `Title: ${findOptionLabel(titleSizeOptions, style?.titleSize, "Base")} ${findOptionLabel(titleWeightOptions, style?.titleWeight, "Semibold")}`,
+    `Description: ${findOptionLabel(descriptionSizeOptions, style?.descriptionSize, "Extra small")}`,
   ].join("; ");
 }
 
@@ -730,11 +749,15 @@ function TimelineStructureFields({
   value,
   onChange,
   variant = "milestones",
+  onVariantChange,
+  onBlockPatch,
   includeStepCount = true,
 }: {
   value: TimelineData;
   onChange: (next: TimelineData) => void;
   variant?: string;
+  onVariantChange?: (next: string) => void;
+  onBlockPatch?: WidgetEditorProps<TimelineData>["onBlockPatch"];
   includeStepCount?: boolean;
 }) {
   const steps = getNormalizedSteps(value);
@@ -767,7 +790,9 @@ function TimelineStructureFields({
         <p className="text-sm font-medium">Timeline mode</p>
         <Select
           value={mode}
-          onValueChange={(next) => updateMode(value, onChange, next as TimelineMode)}
+          onValueChange={(next) =>
+            updateMode(value, onChange, next as TimelineMode, onVariantChange, onBlockPatch)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select mode" />
@@ -956,6 +981,8 @@ function TimelineMarkerFields({
   onChange: (next: TimelineData) => void;
 }) {
   const steps = getNormalizedSteps(value);
+  const markerDisplay = value.style?.markerDisplay ?? "dot";
+  const markerFallbackCount = countTimelineIconMarkerFallbacks(steps, markerDisplay);
 
   return (
     <div className="space-y-4">
@@ -986,7 +1013,7 @@ function TimelineMarkerFields({
         <div className="space-y-2">
           <p className="text-sm font-medium">Marker display</p>
           <Select
-            value={value.style?.markerDisplay ?? "dot"}
+            value={markerDisplay}
             onValueChange={(next) =>
               updateStyle(value, onChange, {
                 markerDisplay: next as TimelineStyle["markerDisplay"],
@@ -1005,12 +1032,17 @@ function TimelineMarkerFields({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {
-              markerDisplayOptions.find(
-                (option) => option.id === (value.style?.markerDisplay ?? "dot")
-              )?.description
-            }
+            {markerDisplayOptions.find((option) => option.id === markerDisplay)?.description}
           </p>
+          {markerDisplay === "icon" ? (
+            <p className="text-xs text-amber-700">
+              {markerFallbackCount > 0
+                ? `${markerFallbackCount} step${
+                    markerFallbackCount === 1 ? "" : "s"
+                  } without a marker icon or decorative step icon will render dot markers.`
+                : "Every step has a marker icon or decorative step icon for icon marker mode."}
+            </p>
+          ) : null}
         </div>
 
         <ColorField
@@ -1163,6 +1195,9 @@ function TimelineTypographyFields({
   value: TimelineData;
   onChange: (next: TimelineData) => void;
 }) {
+  const steps = getNormalizedSteps(value);
+  const maxWidthDiagnostics = resolveTimelineMaxWidthDiagnostics(value.layout, steps.length);
+
   return (
     <div className="space-y-4">
       {value.style?.titleSize === "none" ? (
@@ -1259,6 +1294,12 @@ function TimelineTypographyFields({
               ))}
             </SelectContent>
           </Select>
+          {value.style?.descriptionSize === "none" ? (
+            <p className="text-xs text-muted-foreground">
+              None keeps descriptions visible and clears the explicit size class so the surrounding
+              typography can inherit.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -1356,6 +1397,11 @@ function TimelineTypographyFields({
               ))}
             </SelectContent>
           </Select>
+          {maxWidthDiagnostics.narrowed ? (
+            <p className="text-xs text-muted-foreground">
+              6XL renders as 5XL while this timeline has 3 or fewer steps.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
@@ -1485,7 +1531,13 @@ export function TimelineVisualEditor({
           />
           <p className="text-xs text-muted-foreground">{getTimelineModeCopy(mode)}</p>
         </div>
-        <TimelineStructureFields value={value} onChange={onChange} variant={variant} />
+        <TimelineStructureFields
+          value={value}
+          onChange={onChange}
+          variant={variant}
+          onVariantChange={onVariantChange}
+          onBlockPatch={onBlockPatch}
+        />
       </EditorSection>
 
       <EditorSection
@@ -1794,7 +1846,7 @@ export function TimelineAdvancedEditor({ value, variant }: WidgetEditorProps<Tim
           id="timeline-advanced-layout"
           label="Layout"
           path="layout"
-          value={formatTimelineLayoutSummary(normalized.layout)}
+          value={formatTimelineLayoutSummary(normalized.layout, normalizedSteps.length)}
         />
         <ReadonlyWidgetSummaryRow
           id="timeline-advanced-guides"
@@ -1806,7 +1858,7 @@ export function TimelineAdvancedEditor({ value, variant }: WidgetEditorProps<Tim
           id="timeline-advanced-style"
           label="Style"
           path="style"
-          value={formatTimelineStyleSummary(normalized.style)}
+          value={formatTimelineStyleSummary(normalized.style, normalizedSteps)}
         />
         <ReadonlyWidgetSummaryRow
           id="timeline-advanced-line-color"

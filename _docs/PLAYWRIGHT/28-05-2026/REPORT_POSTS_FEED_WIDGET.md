@@ -25,6 +25,13 @@ Zadanie wskazywało dla widgetu **posts-feed** następujące namiary, które **n
 
 > Wniosek poboczny (środowiskowy, nie bug widgetu): rodzina audytowa `*-0516` **nie zawiera** strony dla posts-feed — odpowiednik `test-posts-feed-0516` najprawdopodobniej nigdy nie powstał.
 
+> **Status TASK-343-19 (2026-05-30):** aktualny
+> `_docs/PLAYWRIGHT/widget-contract-smoke-inventory.json` wskazuje Posts Feed na
+> `/posts-feed-test-page` jako admin/public fixture. Nie było potrzeby
+> naprawiać fixture'a; dodano test regresyjny, który blokuje powrót do
+> historycznego `ctr-listing-filters-2305` albo nieistniejącego
+> `/test-posts-feed-0516`.
+
 ---
 
 ## 1. Metodyka i uczciwe zastrzeżenia
@@ -142,10 +149,11 @@ Przełączanie z powrotem na `none` poprawnie **usuwa** wrapper i wstrzyknięty 
 
 ## 6. Route / link — najważniejsze realne znalezisko
 
-- **Kanwa (admin):** w widgetcie **0 elementów `<a>`**; tytuły renderują się jako `<h3>` (zwykły tekst), a CTA „Read more" jako `<span>` (nie w `<a>`).
+- **Kanwa (admin):** przed TASK-343-19 w widgetcie było **0 elementów `<a>`** bez jasnej noty; tytuły renderowały się jako `<h3>` (zwykły tekst), a CTA „Read more" jako `<span>` (nie w `<a>`).
 - **Front (`/posts-feed-test-page`):** identycznie — **0 `<a>`** w widgetcie.
 - **Przyczyna:** Advanced „**Route capability: No list route resolved**" — dla tej witryny nie rozwiązuje się trasa listy/detali postów, więc elementy nie dostają `href`, a CTA renderuje się jako link tylko gdy `href` istnieje.
-- **Skutek:** feed jest **nienawigowalny** w tym fixture (zarówno w adminie, jak i na froncie — to **nie** rozjazd admin↔front, lecz wspólny skutek braku trasy). Zależne od konfiguracji tras, ale istotne dla realnego użytkownika.
+- **Skutek przed TASK-343-19:** feed był **nienawigowalny** w tym fixture (zarówno w adminie, jak i na froncie — to **nie** rozjazd admin↔front, lecz wspólny skutek braku trasy), ale użytkownik nie dostawał wystarczającego wyjaśnienia w miejscu renderu.
+- **Status po TASK-343-19:** brak trasy pozostaje prawdziwym stanem konfiguracji, ale nie jest już niemy. Karty bez `href` renderują `data-content-list-link-unavailable` i tekst „Links unavailable until a detail route is configured.", disabled CTA ma `data-content-list-cta-disabled="missing-route"`, Visual pokazuje `data-posts-feed-route-guidance="cards"`, a Advanced mówi wprost, że karty i CTA renderują się jako non-links bez post route.
 
 ---
 
@@ -154,7 +162,7 @@ Przełączanie z powrotem na `none` poprawnie **usuwa** wrapper i wstrzyknięty 
 | # | Obszar | Obserwacja |
 |---|--------|-----------|
 | **U1 — „Clear" kolorów jest ASYMETRYCZNE** | Visual / kolory | Po ustawieniu 3 kolorów i kliknięciu „Clear" na każdym, inline `style` karty = **`color: var(--color-text);`** (bez `background-color` i bez `border-color`). Czyli: **Clear tła** → usuwa `background-color` całkowicie (karta przezroczysta); **Clear obramowania** → usuwa `border-color` całkowicie; **Clear tekstu** → **wraca do tokenu `var(--color-text)`**, a nie do „braku". Źródło w `mapPostsFeedToContentListData`: `textColor: normalized.style?.textColor ?? contentListDefaults.style?.textColor` (fallback tylko dla tekstu; `backgroundColor`/`borderColor` mapują się na `undefined` bez fallbacku). To **uściśla/koryguje** wcześniejszą notkę N3 (która twierdziła, że wszystkie 3 „Clear" dają jednakową przezroczystość). |
-| **U2 — Link „View all" znika cicho bez celu** | Visual / pagination | Przy domyślnym „Use posts list route" i braku rozwiązanej trasy link **nie pojawia się** (0 `<a>`), bez żadnego inline-ostrzeżenia. Po wskazaniu strony („HomePage") link renderuje się poprawnie (`/homepage`). |
+| **U2 — Status po TASK-343-19: Link „View all" nie znika już cicho bez celu** | Visual / pagination | Przy domyślnym „Use posts list route" i braku rozwiązanej trasy renderer pokazuje disabled state `data-content-list-view-all-unavailable`, a Visual pokazuje `data-posts-feed-route-guidance="view-all"`. Po wskazaniu strony link nadal renderuje się poprawnie. Jeśli wszystkie posty mieszczą się w `Initial items`, Visual wyjaśnia, że akcja może być redundantna. |
 | **U3 — `featuredFirst` „pamiętany", ale bez widocznej kontrolki w trybie featured** | Wizard / Advanced | Toggle „Featured posts first" jest ukryty w trybie `featured` (kontrolka tylko dla latest/category), lecz wartość `featuredFirst=true` zostaje w danych i **Advanced dalej raportuje „Source filters: Featured first"** — ustawienie wpływa na diagnostykę, choć nie ma go czym zmienić w bieżącym trybie. |
 | **U4 — „View all destination" to picker stron, bez pola dowolnego URL** | Visual / pagination | `LinkDestinationField` oferuje **combobox opublikowanych stron + „Clear destination"** — **brak** pola na ręczny, dowolny URL (np. zewnętrzny). To domyka wcześniejsze „nie testowane: własny URL": w tym widgetcie taka ścieżka po prostu **nie istnieje w UI**. |
 | **U5 — Dwa liczniki: „Initial item count" (Wizard, `source.limit`) vs „Page size"/„Initial items" (Visual, `pagination.pageSize`)** | Wizard + Visual | Dwa odrębne pola 1–24 bez wyjaśniającego powiązania w UI; etykieta tego drugiego zmienia się na „Initial items" tylko w trybie view-all. Potencjalne zamieszanie, które rządzi początkowym renderem. |
@@ -169,7 +177,9 @@ Render **zapisanego** stanu fixture:
 - 3 posty w kolejności `published-desc` (QA Deep Test → Deep Post Test → Test Post). ✓
 - Brak nagłówka → sekcja ma fallback **`aria-label="Content list"`** (`aria-labelledby=null`). ✓
 - `showImage=false` + brak mediów → **0** `<img>`; `motion=none` → **0** wrapperów animacji; `pagination=none` → brak nav. ✓
-- Karty **bez `<a>`** (0 anchorów) — spójne z brakiem trasy (sekcja 6). ✓
+- Karty **bez `<a>`** przy braku trasy — spójne z sekcją 6; po TASK-343-19
+  ten stan ma widoczne `data-content-list-link-unavailable`/disabled CTA
+  wyjaśnienie. ✓
 - **Konsola: 0 błędów, 0 ostrzeżeń.** ✓
 - **Responsywność 375 px:** brak poziomego overflow (`scrollWidth == clientWidth == 375`); siatka zwija się do **jednej** kolumny (`grid-template-columns: 343px`). ✓
 - **Izolacja:** moje niezapisane edycje w adminie (kolory, motion fade/slide-up, paged/load-more/view-all, image aspect) **NIE wyciekły** na front — front pokazuje wyłącznie stan zapisany. ✓
@@ -180,7 +190,8 @@ Render **zapisanego** stanu fixture:
 
 - **Rodziny luk domknięte:** **motion** (none/fade/slide-up + guard reduced-motion) i **pagination/view-all** (paged + hrefy, load-more + etykieta, view-all + label + picker celu + Clear destination) działają w pełni i są zweryfikowane w DOM. **Kolory** ustawiają się poprawnie (3/3); ich **„Clear" jest asymetryczne** (U1) — to nowe, kodowo potwierdzone uściślenie. **Featured** i **media** działają na poziomie konfiguracji i rozwiązania zapytania, ale ich **efekt merytoryczny jest nieweryfikowalny** z powodu stanu katalogu (0 postów featured, 0 mediów przy postach) — sekcja 5 nazywa dokładne kontrolki i powody. **Route/link**: karty są **nienawigowalne** (brak rozwiązanej trasy postów) — sekcja 6, identycznie w adminie i na froncie.
 - **Brak twardych bugów:** żadnego błędu konsoli (front 0/0), żadnego crashu kontrolek, żadnego rozjazdu admin↔front w zakresie wspólnie testowanych opcji. Advanced jest w 100% read-only i wiernie odbija stan (łącznie z żywym timestampem i runtime paginacji).
-- **Blokada środowiskowa (sekcja 0):** przydzielony `f9435704-…` to strona **listing-filters**, a route `/test-posts-feed-0516` **nie istnieje (404)**. Audyt wykonano na realnym fixture `/posts-feed-test-page` (`a5555d60-…`). Brak strony `test-posts-feed-0516` w rodzinie `*-0516` to samodzielne znalezisko środowiskowe.
+- **Blokada środowiskowa (sekcja 0):** przydzielony `f9435704-…` był stroną **listing-filters**, a route `/test-posts-feed-0516` **nie istnieje (404)**. TASK-343-19 potwierdził, że bieżący smoke inventory wskazuje już `/posts-feed-test-page`, oraz dodał regresję blokującą powrót starego przydziału.
+- **Route/link po TASK-343-19:** brak trasy listy/detali nadal oznacza brak linków, ale karty, CTA, View all, Visual i Advanced pokazują jawne wyjaśnienie zamiast cichego znikania akcji.
 
 ---
 

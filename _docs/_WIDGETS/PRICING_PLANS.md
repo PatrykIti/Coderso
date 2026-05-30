@@ -20,7 +20,8 @@ Pricing table for plans, tiers, and comparison-style rows.
 ### Wizard
 
 - read-only current layout summary
-- fixed-count layout guidance
+- fixed-count layout guidance that separates layout capacity from currently
+  rendered saved plans
 - read-only visible-plan preview that points daily copy, pricing, features,
   badges, and CTAs to Visual
 
@@ -35,13 +36,17 @@ Pricing table for plans, tiers, and comparison-style rows.
   - `Comparison rows behavior` (comparison variant only)
   - `Layout and notes`
   - `Colors and emphasis`
-- billing toggle labels and default cycle
+- billing toggle labels and default cycle; public rendering is a static billing
+  cycle status, not an interactive toggle
 - highlighted plan
 - plan-level card hierarchy, CTA style, CTA destination, and product copy
 - comparison-table hierarchy, layout, notes, and width controls
 - spacing, radius, colors, and feature marker style
 - color fields use swatches plus clear/legacy-token summaries instead of raw
   token textboxes in the beginner UI
+- color fields use the shared widget color-state labels, so theme tokens,
+  selected swatches, custom values, and cleared/inherited states are not
+  conflated
 
 ### Advanced
 
@@ -69,15 +74,16 @@ Pricing table for plans, tiers, and comparison-style rows.
 
 - Fixed-count variants preserve hidden authored plans instead of truncating
   them on variant changes.
-- Wizard and Visual now show truthful layout-count guidance instead of a
-  conflicting writable plan-count selector.
+- Wizard and Visual show truthful layout-count guidance: the variant capacity is
+  reported separately from the number of saved plans that actually render.
 - Advanced alignment is now the only destructive count-reset path and confirms
   before trimming preserved hidden plans.
 
 ## Billing And Price Semantics
 
 - Billing-cycle rendering is intentionally truthful-static. Runtime announces
-  the active authored cycle instead of pretending the toggle is interactive.
+  the active authored cycle in a non-interactive status label instead of
+  pretending the toggle is interactive.
 - `plans[].priceDisplay.mode` supports:
   - `legacy`: keep existing `price` and `prices.monthly/annual` strings
   - `structured`: bounded numeric amount + currency + optional annual amount
@@ -100,6 +106,15 @@ Pricing table for plans, tiers, and comparison-style rows.
 - `plans[].highlightLabel`: optional top-banner label for highlighted plans
 - `plans[].features[]`: legacy strings remain valid; typed feature items may
   also carry bounded `status` and `icon` presets
+- Highlighted plans still render their badge when the badge text matches the
+  highlight banner label, so saved badge tone remains visible and testable.
+
+## Destructive Authoring Guardrails
+
+- Visual plan removal and feature removal both use the shared
+  `ConfirmActionDialog` pattern.
+- Advanced repair actions keep the same confirmation pattern before aligning
+  plan count or normalizing the payload.
 
 ## Comparison And Layout Fields
 

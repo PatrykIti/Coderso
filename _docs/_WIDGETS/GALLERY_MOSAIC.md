@@ -25,7 +25,10 @@ Media storytelling section for portfolios, product highlights, and campaigns.
 Wizard does not seed `header.description`; Visual owns supporting copy after
 setup. Wizard now points authors toward the final flow: Visual owns per-item
 captions, destinations, alt text, posters, lightbox, overlay, density, and
-motion controls.
+motion controls. If the one-time count seed is rerun against existing authored
+tiles, reducing the count opens the same destructive confirmation used by
+Visual and explains that restoring the count creates placeholders rather than
+recovering removed tile data.
 
 ### Visual (primary editing mode)
 Sections:
@@ -49,7 +52,9 @@ Notes:
 - Visual item rows now support drag reorder with keyboard fallback
   (`Alt` + arrow keys), explicit confirmation before destructive count
   reductions or row removal, and a `feature-left` warning when only a single
-  lead tile remains.
+  lead tile remains. Count-reduction confirmation names removed tiles and calls
+  out that saved media, captions, alt text, posters, and destinations are
+  removed from the widget data.
 - Per-item media presentation fields now include dedicated `alt` text, an
   image-only MediaPicker for video poster frames, bounded focus point
   (`center/top/bottom/left/right`), and an optional per-item ratio override that
@@ -64,7 +69,8 @@ Notes:
 - Interaction controls now include an opt-in lightbox mode plus bounded
   `fit` / `fill` zoom behavior. Items with `href` keep navigation precedence,
   and Visual explains that the link must be cleared before that tile can open
-  the lightbox.
+  the lightbox. In admin, the editor also explains that the canvas shows static
+  lightbox markup; published pages bind the widget-local script.
 - Overlay color authoring uses a swatch-only control with clear/legacy-state
   support and visible saved-opacity guidance instead of asking authors to type
   raw `rgba(...)` or CSS token values.
@@ -87,6 +93,9 @@ raw payload snapshot or mutating support actions in the daily tab flow.
 ## Runtime Behavior Notes
 
 - Invalid/unknown variant falls back to `mosaic`.
+- The root section exposes an accessible name in admin and public output:
+  `aria-labelledby` points at the visible section heading when present, and
+  titleless sections fall back to `aria-label="Gallery"`.
 - Renderer outputs deterministic markers:
   - `data-gallery-mosaic-variant`
   - `data-gallery-mosaic-gap`
@@ -116,6 +125,8 @@ raw payload snapshot or mutating support actions in the daily tab flow.
   class maps for each variant.
 - Motion presets are opt-in and use static Tailwind `motion-safe:*` /
   `motion-reduce:*` classes. `none` remains the default.
+- `feature-left` density presets own the grid container classes directly so the
+  renderer does not duplicate `grid grid-cols-1` when density changes.
 - Shared runtime semantics currently use semantic `<figure>` / `<figcaption>`
   wrappers for gallery media and keep current caption-derived naming/title
   behavior unless a dedicated per-item `alt` value overrides them.
@@ -132,6 +143,10 @@ raw payload snapshot or mutating support actions in the daily tab flow.
   video items.
 - Destinations are clearable through `LinkDestinationField`; caption position
   remains controlled by bounded presets.
+- Count reduction is destructive by model. Wizard and Visual both require
+  confirmation before reducing authored tiles and explicitly state that
+  increasing the count later creates placeholder tiles rather than restoring
+  removed media, captions, alt text, posters, or destinations.
 
 ## Data Model (summary)
 

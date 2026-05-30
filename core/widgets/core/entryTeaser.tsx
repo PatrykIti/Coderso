@@ -7,6 +7,7 @@ import type {
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
@@ -18,6 +19,18 @@ export type EntryTeaserListingManualTarget = {
 };
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
 export type EntryTeaserCtaStyle = "link" | "filled" | "outline";
+export type EntryTeaserCtaUnavailableReason =
+  | "missing_auto_destination"
+  | "missing_custom_destination";
+export type EntryTeaserCtaRenderState =
+  | {
+      mode: "link";
+      linkAttrs: NonNullable<ReturnType<typeof resolveWidgetLinkAttrs>>;
+    }
+  | {
+      mode: "non_link";
+      reason: EntryTeaserCtaUnavailableReason;
+    };
 export type EntryTeaserRadius = "none" | "sm" | "md" | "lg" | "xl";
 export type EntryTeaserSpacing = "none" | "sm" | "md" | "lg";
 export type EntryTeaserHeadingLevel = "h2" | "h3" | "h4";
@@ -814,6 +827,31 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
   };
 }
 
+export function resolveEntryTeaserCtaRenderState(data: EntryTeaserData): EntryTeaserCtaRenderState {
+  const normalized = normalizeEntryTeaserData(data);
+  const cta = normalized.cta ?? entryTeaserDefaults.cta!;
+  const item = normalizeRuntimeItem(normalized.resolved?.item ?? null);
+  const hrefCandidate = cta.hrefMode === "custom" ? cta.href : item?.href;
+  const linkAttrs = resolveWidgetLinkAttrs(hrefCandidate, {
+    allowRelative: true,
+    allowHash: true,
+    allowHttp: true,
+    openInNewTab: cta.opensInNewTab,
+  });
+
+  if (linkAttrs) {
+    return {
+      mode: "link",
+      linkAttrs,
+    };
+  }
+
+  return {
+    mode: "non_link",
+    reason: cta.hrefMode === "custom" ? "missing_custom_destination" : "missing_auto_destination",
+  };
+}
+
 const formatRuntimeDate = (value: string | undefined) => {
   if (!value) return undefined;
   const parsed = new Date(value);
@@ -880,18 +918,14 @@ export function EntryTeaserBlock({
   const media = normalized.media ?? entryTeaserDefaults.media!;
   const layout = normalized.layout ?? entryTeaserDefaults.layout!;
   const item = normalizeRuntimeItem(normalized.resolved?.item ?? null);
+  const rootInstanceId = createWidgetInstanceId("entry-teaser", blockId, resolvedVariant);
   const hasSource =
     sourceDataMode === "listing"
       ? (source.listingQueryId ?? "").trim().length > 0
       : (source.contentTypeId ?? "").trim().length > 0;
   const state = !hasSource ? "missing-source" : item ? "ready" : "empty";
   const errorText = normalized.resolved?.error;
-  const ctaLinkAttrs = resolveWidgetLinkAttrs(cta.hrefMode === "custom" ? cta.href : item?.href, {
-    allowRelative: true,
-    allowHash: true,
-    allowHttp: true,
-    openInNewTab: cta.opensInNewTab,
-  });
+  const ctaRenderState = resolveEntryTeaserCtaRenderState(normalized);
 
   const wrapperClassName =
     resolvedVariant === "horizontal"
@@ -933,9 +967,14 @@ export function EntryTeaserBlock({
     previewState?.status === "error" && !errorText && hasSource && !item
       ? previewState.message
       : null;
+  const sectionHeadingId = sectionHeadingText
+    ? scopedId(rootInstanceId, "section-heading")
+    : undefined;
 
   return (
     <section
+      aria-labelledby={sectionHeadingId}
+      aria-label={sectionHeadingId ? undefined : "Entry teaser"}
       className={joinClasses(
         "mx-auto w-full border p-5",
         maxWidthClassMap[layout.maxWidth ?? "lg"],
@@ -959,7 +998,10 @@ export function EntryTeaserBlock({
       }
     >
       {sectionHeadingText ? (
-        <SectionHeadingTag className="mb-4 text-xl font-semibold text-[var(--color-text)]">
+        <SectionHeadingTag
+          id={sectionHeadingId}
+          className="mb-4 text-xl font-semibold text-[var(--color-text)]"
+        >
           {sectionHeadingText}
         </SectionHeadingTag>
       ) : null}
@@ -1039,9 +1081,9 @@ export function EntryTeaserBlock({
               </div>
             ) : null}
             <div>
-              {ctaLinkAttrs ? (
+              {ctaRenderState.mode === "link" ? (
                 <a
-                  {...ctaLinkAttrs}
+                  {...ctaRenderState.linkAttrs}
                   className={joinClasses(
                     "inline-flex items-center",
                     ctaStyleClassMap[cta.style ?? "link"]
@@ -1051,6 +1093,8 @@ export function EntryTeaserBlock({
                 </a>
               ) : (
                 <span
+                  aria-disabled="true"
+                  data-entry-teaser-cta-unavailable={ctaRenderState.reason}
                   className={joinClasses(
                     "inline-flex items-center opacity-70",
                     ctaStyleClassMap[cta.style ?? "link"]

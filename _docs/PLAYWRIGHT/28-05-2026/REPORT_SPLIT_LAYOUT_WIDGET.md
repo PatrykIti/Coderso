@@ -24,6 +24,12 @@
 > przechwyceń Playwright (zapisane w katalogu roboczym podczas tej sesji). Same pliki
 > nie są wymaganym evidence i nie są commitowane do repo.
 
+> **Status TASK-343-28 (2026-05-30):** uwagi UX #1, #2 i #3 są zamknięte w kodzie. Ratio
+> disclosure rozróżnia teraz jawnie zapisany phone split, który efektywnie nadal pasuje do startera,
+> od rzeczywistej zmiany urządzeniowej. Karty Visual podświetlają efektywny desktop split, a nie
+> wyłącznie zapisany seed wariantu. Klik karty desktop split zachowuje tablet/phone overrides, gdy
+> różnią się one od desktopu; Wizard nadal seeduje wszystkie trzy ratio.
+
 ---
 
 ## 1. Przegląd widgetu
@@ -305,6 +311,11 @@ Wymienione precyzyjnie z powodem:
 7. **Sekcje block-level w panelu** („Structure", „Block layout", „Device visibility") należą do
    page-buildera/bloku, **nie** do edytora split-layout. Odnotowane jako kontekst; nie wpływają na
    model widgetu.
+
+**Status TASK-343-28:** #1/#2/#3 są zamknięte. Visual opisuje explicit phone ratio jako zapisany
+stan pasujący do startera, jeżeli wartości są równe; desktop cards nie kasują już istniejących
+tablet/phone overrides; selected card idzie za `ratio.desktop`. #4-#7 pozostają świadomymi
+ograniczeniami lub kontekstem spoza modelu widgetu.
 
 ---
 

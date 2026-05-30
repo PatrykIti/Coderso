@@ -36,7 +36,8 @@ routine edits.
 
 - read-only form preview summary with field count/type summary
 - title, description, submit label, and success-message copy
-- layout controls, including spacing, padding, field gap, and button alignment
+- layout controls, including a spacing macro that updates vertical padding,
+  explicit padding, field gap, and button alignment
 - field label toggles
 - surface, border, title, helper, and submit-button styling through swatches
   and clear controls, without raw CSS/token text inputs
@@ -106,6 +107,8 @@ explicit unsupported scope under the current trusted-field contract.
 - Redirects follow `runtime.redirectUrl` from the submit response.
 - Shared public HTML cache freshness for nonce-bearing Form Embed runtime now
   skips site HTML caching at the shared runtime layer.
+- Public unresolved/error states render user-facing unavailable messages and do
+  not expose raw internal runtime error codes.
 
 ## Security Notes
 
@@ -126,6 +129,9 @@ The current editor exposes clear behavior for the Form Embed-owned color/surface
 fields it controls through the shared swatch-only color helper. Saved custom
 color values can be replaced through the picker or cleared, but nontechnical
 authors are not asked to type CSS variables, token names, or color code strings.
+Pristine theme-token defaults are treated as `Theme default`, not saved custom
+overrides. The `Background` field clears to transparent; other authored colors
+remove the saved key and fall back to their runtime theme defaults.
 
 ## Data Model (summary)
 
