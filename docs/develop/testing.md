@@ -42,7 +42,7 @@ happy-dom component tests must not do real navigation or network calls. The shar
 
 ## Commands
 
-Every test script loads repo env first via `set -a && source .env && set +a`, so you don't have to source `.env` by hand.
+Every test script loads repo env first when `.env` exists, so you don't have to source `.env` by hand locally. CI may provide the same values through job environment variables without creating a `.env` file.
 
 ```bash
 bun run test            # full default run: test:bun then test:vitest
@@ -57,7 +57,7 @@ bun run test:security   # bun test tests/security
 A few details worth knowing:
 
 - `test:bun` runs serially (`--parallel=1`) with a `--timeout=15000` per-test budget, because real DB and runtime renders exceed Bun's default 5000 ms.
-- `test:vitest` sets `NODE_ENV=test` after loading `.env`.
+- `test:vitest` sets `NODE_ENV=test` after the optional `.env` load.
 - `test:coverage` is the canonical Vitest coverage report; the curated Bun-owned coverage lane is `bun run test:coverage:bun`, and `bun run test:coverage:all` runs both.
 - More entry points exist for narrower work: `bun run test:unit`, `bun run test:integration`, and `bun run test:bun:lane` (curated route/plugin/perf suites that can skip env-dependent route suites when `DATABASE_URL` is absent).
 

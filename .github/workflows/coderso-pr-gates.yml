@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,11 +39,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Verify CI database secret
+      - name: Verify CI database env
         shell: bash
         run: |
           if [ -z "${DATABASE_URL:-}" ]; then
-            echo "::error::DATABASE_URL repository secret is required for Coderso PR gates."
+            echo "::error::DATABASE_URL repository secret or variable is required for Coderso PR gates."
             exit 1
           fi
 
@@ -54,6 +54,8 @@ jobs:
     needs: database-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -106,7 +108,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -242,7 +244,7 @@ jobs:
       CODERSO_PERF_LISTING_P95_CACHED_MS: "300"
       CODERSO_PERF_LISTING_P95_COLD_MS: "900"
       CODERSO_PERF_ADMIN_NAV_P95_MS: "150"
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || vars.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

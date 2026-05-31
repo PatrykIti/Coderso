@@ -123,9 +123,10 @@ then that test should move to Vitest.
 - Full `bun run test:vitest` should be both green and log-clean; happy-dom
   `AsyncTaskManager` errors or `ECONNREFUSED localhost:3000` output indicate a
   test harness or component-test isolation bug.
-- The repo `test:vitest` command forces `NODE_ENV=test` after loading `.env`;
-  inherited production shell environments must not disable React `act` or
-  test-only assistant blueprint-shadow diagnostics.
+- The repo `test:vitest` command loads `.env` when present and then forces
+  `NODE_ENV=test`; inherited production shell environments must not disable
+  React `act` or test-only assistant blueprint-shadow diagnostics. CI may
+  provide the same values directly through job environment variables.
 
 ### Do Not Do
 
@@ -293,8 +294,8 @@ The `Coderso PR Gates` CI workflow mirrors the split after a database preflight:
 then `vitest-lane` runs Vitest tests and Vitest coverage while `bun-lane` runs
 curated Bun tests first and then Bun coverage. The local Bun lane helper can
 still skip env-dependent route suites when `DATABASE_URL` is unavailable, but
-repository PR gates require the secret so clean CI databases can be migrated
-before DB-backed suites run. Runtime jobs pin `BUN_VERSION=1.3.13` and
+repository PR gates require `DATABASE_URL` from a repository secret or variable
+so clean CI databases can be migrated before DB-backed suites run. Runtime jobs pin `BUN_VERSION=1.3.13` and
 `NODE_VERSION=22.14.0`; do not rely on the runner's default Node 20 for CI
 test or migration execution.
 
@@ -308,7 +309,8 @@ bun run test:assistant:live:cms:openrouter
 ```
 
 The live CMS matrix is Bun-owned and intentionally opt-in. DB-backed live suites
-must load `.env` and require a disposable database behind `DATABASE_URL`;
+must load `.env` when present or receive equivalent job environment variables,
+and require a disposable database behind `DATABASE_URL`;
 provider-only composition suites may run without DB fixtures when they prove
 local-first/gated planner behavior. The matrix uses test-only provider
 variables:

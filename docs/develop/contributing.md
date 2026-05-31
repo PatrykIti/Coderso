@@ -78,11 +78,11 @@ bun run test:vitest
 # Bun runtime / SSR / plugin / security / perf suites
 bun run test:bun
 
-# Both lanes (sources .env first)
+# Both lanes (loads .env first when present)
 bun run test
 ```
 
-DB-backed Bun suites need a reachable PostgreSQL via `DATABASE_URL`. Most test and DB scripts source `.env` automatically; if you run lower-level commands, load it first:
+DB-backed Bun suites need a reachable PostgreSQL via `DATABASE_URL`. Most test and DB scripts load `.env` automatically when present; if you run lower-level commands, load it first:
 
 ```bash
 set -a && source .env && set +a
@@ -104,7 +104,7 @@ When you open a PR, the workflow at `.github/workflows/coderso-pr-gates.yml` enf
 
 | Job | What it verifies |
 |-----|------------------|
-| `database-preflight` | Confirms `DATABASE_URL` and applies Drizzle migrations (`bun run db:migrate`) before tests. |
+| `database-preflight` | Confirms `DATABASE_URL` from a repository secret or variable and applies Drizzle migrations (`bun run db:migrate`) before tests. |
 | `vitest-lane` | Runs the Vitest (Bun-free) suite. |
 | `bun-lane` | Runs the Bun runtime suite. Parallel with `vitest-lane`. |
 | `security-gate` | Semgrep, Trivy, and Gitleaks with SARIF uploads; blocks the PR on HIGH/CRITICAL findings. |

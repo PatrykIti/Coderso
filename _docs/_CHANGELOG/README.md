@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1030 | 2026-05-31 | CI env loading for test lanes | CI/Testing/Docs |
 | 1029 | 2026-05-30 | TASK-343-02 Appointment Form phone validation | CMS Widgets/Appointment Form/Admin UI/Runtime/QA/Docs |
 | 1028 | 2026-05-30 | TASK-343-04 Accordion preview truthfulness | CMS Widgets/Accordion/Admin UI/Runtime/Accessibility/QA/Docs |
 | 1027 | 2026-05-30 | TASK-343-05 FAQ Accordion spacing and preview truthfulness | CMS Widgets/FAQ/Admin UI/Runtime/Accessibility/QA/Docs |

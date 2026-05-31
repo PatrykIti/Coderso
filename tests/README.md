@@ -43,9 +43,10 @@ bun run test:coverage:bun:full
 bun run test:coverage:all
 ```
 
-`test:vitest` loads `.env` and then forces `NODE_ENV=test` for the Vitest
-process so React test helpers and test-only assistant diagnostics do not inherit
-production shell settings.
+`test:vitest` loads `.env` when the file exists and then forces `NODE_ENV=test`
+for the Vitest process so React test helpers and test-only assistant diagnostics
+do not inherit production shell settings. CI can provide the same values through
+job environment variables without creating a local `.env` file.
 `test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
 the lane exercises real database and runtime flows that can exceed Bun's default
 `5000ms` timeout under full-suite load.
